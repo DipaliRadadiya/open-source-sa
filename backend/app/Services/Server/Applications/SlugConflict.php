@@ -12,41 +12,22 @@ use App\Services\Server\WebServers\WebServerManager;
 /**
  * Would a site with this slug write over a file that is not the panel's?
  *
- * The slug is a filename in three places the panel does not own outright: the
- * PHP-FPM pool directory, the web server's sites directory, and (on
- * OpenLiteSpeed) the vhost directory. Nothing checked, and uniqueness was
- * asked of the `applications` table only — which knows what the panel has
- * made and nothing at all about what is already on the disk. So:
+ * The slug becomes a filename in the PHP-FPM pool directory, the web server's sites directory and
+ * (on OpenLiteSpeed) the vhost directory. Uniqueness in the `applications` table knows nothing
+ * about what is already on disk, so:
  *
- *  - a site named **www** takes `pool.d/www.conf`, the pool the distro ships
- *    and the one every *non-isolated* PHP site reaches through
- *    `/run/php/php{version}-fpm.sock`. Overwriting it moves that pool onto a
- *    different socket and a different user; deleting the site removes it.
- *  - a site named **panel** takes `sites-available/panel.conf` — the panel's
- *    own vhost, written by install.sh. The reply to that request is the last
- *    thing the API ever says.
+ *  - a site named **www** would take `pool.d/www.conf`, the distro pool every non-isolated PHP
+ *    site uses;
+ *  - a site named **panel** would take `sites-available/panel.conf`, the panel's own vhost.
  *
- * Both were reachable from create *and* from rename, since a rename
- * regenerates the slug ({@see UpdateApplication}).
+ * Both are reachable from create and from rename, since a rename regenerates the slug
+ * ({@see UpdateApplication}).
  *
- * **Asked of the disk, not of a list of reserved words.** A list would need
- * `www`, `panel`, `panel-le-ssl`, `000-default`, `default-ssl`, `Example`,
- * and whatever the next web server ships — and `config/server.php` already
- * makes the argument against name-matching the panel's own files: install.sh
- * writes `{PANEL_SLUG}.conf` *and* `{PANEL_SLUG}-tls.conf`, PANEL_SLUG is
- * overridable, so every name-based guess breaks on a custom install. The disk
- * also knows about files this code has never heard of, which is most of them
- * on a server the panel was pointed at rather than installed alone on.
- *
- * Paths come from the real writers — {@see PoolManager::poolPath()} and the
- * driver's `configPath()` — reached through a throwaway model carrying the
- * proposed slug. A second copy of the path arithmetic would be free to drift
- * from the one that does the writing, and a probe of the wrong path is worse
- * than no probe: it reports "clear" about a file it never looked at.
- *
- * The question is put to each *directory* once rather than to each path —
- * see {@see SlugConflict::entries()} for why that distinction is the
- * difference between a guard and an outage.
+ * Asked of the disk, not a reserved-word list: `PANEL_SLUG` is overridable and the disk also holds
+ * files this code has never heard of. Paths come from the real writers
+ * ({@see PoolManager::poolPath()} and the driver's `configPath()`) via a throwaway model, so the
+ * path arithmetic cannot drift. Each *directory* is listed once, not each path; see
+ * {@see SlugConflict::entries()}.
  */
 class SlugConflict
 {
@@ -60,12 +41,8 @@ class SlugConflict
     /**
      * What this slug would collide with, or null for nothing.
      *
-     * **Null also means "could not find out".** A server whose sudo grant
-     * predates this build answers no probe at all, and refusing every site
-     * creation on a box that cannot be probed is far worse than the bug being
-     * fixed — the failure mode would be "the panel cannot make sites any
-     * more". Same reasoning as {@see PoolManager::exists()}, opposite default,
-     * because that one reports and this one refuses.
+     * Null also means "could not find out": refusing every site on a box that cannot be probed
+     * would be worse (opposite default to {@see PoolManager::exists()}, which only reports).
      *
      * @return 'pool'|'vhost'|null
      */
@@ -75,9 +52,7 @@ class SlugConflict
             return null;
         }
 
-        // Renaming a site to the name it already has, or saving a form that
-        // round-trips the name unchanged, must not trip over the site's own
-        // files.
+        // An unchanged name must not trip over the site's own files.
         if ($ignore !== null && (string) $ignore->slug === $slug) {
             return null;
         }
@@ -100,13 +75,10 @@ class SlugConflict
     }
 
     /**
-     * Apache answers an unknown name with the first virtual host it loads for
-     * the port, in file-name order, and the panel's answer is v7's
-     * `000-default.conf` / `000-default-ssl.conf` in sites-enabled. A site
-     * whose file sorts before them — `00-shop.conf`, `000-a.conf` — would be
-     * loaded first and answer for every name this server does not serve.
-     * nginx chooses by `default_server` and OpenLiteSpeed by its listener
-     * map, so only Apache is asked.
+     * Apache answers an unknown name with the first vhost loaded in file-name order, which is
+     * v7's `000-default.conf` / `000-default-ssl.conf`; a site sorting before them (`00-shop.conf`)
+     * would answer for every unknown name. nginx and OpenLiteSpeed choose differently, so only
+     * Apache is asked.
      */
     private function sortsBeforeDefault(string $slug): bool
     {
@@ -122,13 +94,10 @@ class SlugConflict
     }
 
     /**
-     * The directories a site with this slug would put a file in, by what that
-     * file would be.
+     * The directories a site with this slug would put a file in, by what that file would be.
      *
-     * Pool directories are collected for **every installed PHP version**, not
-     * just the default: the version is chosen per site and changed later from
-     * the PHP screen, and a pool written under 8.3 collides with
-     * `pool.d/www.conf` exactly as one written under 8.4 does.
+     * Pool directories are collected for every installed PHP version: the version is chosen per
+     * site and can change later.
      *
      * @return array<string, array<int, array{dir: string, entry: string}>>
      */
@@ -149,10 +118,8 @@ class SlugConflict
 
         $vhost = $this->webServers->driver()->configPath($probe);
 
-        // OpenLiteSpeed's unit is a *directory* named after the slug, holding
-        // the vhost file — so what gets claimed there, and what already exists
-        // for the panel's own `panel` and `panel-api`, is one level up. On
-        // nginx and Apache the file itself is the thing.
+        // OpenLiteSpeed's unit is a directory named after the slug, so the claim is one level up;
+        // on nginx and Apache it is the file itself.
         $vhostTarget = basename(dirname($vhost)) === $slug
             ? ['dir' => dirname(dirname($vhost)), 'entry' => basename(dirname($vhost))]
             : ['dir' => dirname($vhost), 'entry' => basename($vhost)];
@@ -181,43 +148,20 @@ class SlugConflict
     /**
      * Read a directory once and look for the name in it.
      *
-     * **Listing, rather than `test -e` on each candidate path.** The first
-     * version asked the path directly, which is the obvious thing and was
-     * wrong twice over: it cost one elevated call per PHP version plus one for
-     * the vhost on every create, and — the part that mattered — an
-     * indiscriminately successful probe reads as "every path exists", so
-     * anything that answers yes to everything refuses every name a user could
-     * type. That is not a hypothetical fake: it turned 39 existing create
-     * tests into 422s in one run.
-     *
-     * A listing cannot fail that way. Nothing back means no entries, which
-     * means no collision — the same answer an unreachable server gives, and
-     * the safe one.
-     *
-     * That is also where the fail-open property actually lives. The
-     * `answered && ok` test below reads like the thing holding the door open
-     * and is not: removing it leaves `true ? parse : []`, and a refused listing
-     * has no output to parse, so the answer is the empty list either way.
-     * Measured — the sabotage is green. It is kept for what it says about
-     * intent, not for what it does.
+     * A listing, not `test -e` per path: that costs one elevated call per PHP version, and a probe
+     * that answers yes to everything would refuse every name. A listing with nothing back means no
+     * entries, so no collision (fail open, same as an unreachable server).
      *
      * @param  array<int, string>  $cache
      */
     private function entries(string $dir, array &$cache): array
     {
         if (! array_key_exists($dir, $cache)) {
-            // `find`, not `ls`: only binaries on the privilege allowlist run
-            // under sudo, and `ls` is not on it. Unelevated, `ls` could read
-            // `sites-available` and `pool.d` (world-readable) and not
-            // OpenLiteSpeed's vhosts directory (`lsadm`, 0750) — so on OLS
-            // every listing came back "Permission denied", read as empty, and
-            // a site named `panel` took over the panel's own vhost
-            // (2026-09-29, live). `find` is granted on every installed box, so
-            // this needs no `panel:sudoers` run to take effect.
+            // `find`, not `ls`: only allowlisted binaries run under sudo, and unelevated `ls` cannot
+            // read OpenLiteSpeed's 0750 vhosts directory, which read as empty and let `panel`
+            // take over the panel's own vhost.
             $result = $this->serverOps->probe(
-                // `-H`: follow the directory itself when it is a symlink, as
-                // `ls` did. Without it `find` lists nothing inside a linked
-                // `sites-available` or `pool.d`, which reads as "clear".
+                // `-H`: follow the directory itself if it is a symlink, else nothing is listed.
                 ['find', '-H', $dir, '-mindepth', '1', '-maxdepth', '1', '-printf', '%f\n'],
                 ['feature' => 'application', 'op' => 'slug_conflict', 'dir' => $dir],
                 timeout: 15,

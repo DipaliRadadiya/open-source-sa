@@ -28,17 +28,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * PHP as one feature: versions, the default, extensions, and each version's
- * ini — behind one permission.
+ * PHP as one feature: versions, the default, extensions, and each version's ini, behind one
+ * permission (not `setting`, which also grants the SSH port and reboot).
  *
- * These were previously split between the Services screen (`service`) and the
- * Settings screen (`setting`), which meant managing PHP required both, and
- * `setting` also grants the SSH port and the reboot button. Granting "can
- * change the PHP version" meant granting "can reboot the server".
- *
- * Starting and stopping the FPM daemon deliberately stays on Services: that
- * is the same job there as for nginx or redis, and it is not the same thing
- * as managing PHP.
+ * Starting and stopping the FPM daemon stays on Services, as for nginx or redis.
  */
 class PhpController extends Controller
 {
@@ -58,27 +51,14 @@ class PhpController extends Controller
     {
         $version = (string) $request->validated('version');
 
-        // Idempotent: asking for a version that is already here is a no-op
-        // rather than an error, since the outcome the caller wanted is true.
-        //
-        // 🔴 But "already here" has to mean *usable*, not merely present. The
-        // `openlitespeed` package installs `lsphp83` as its own dependency, so
-        // the panel lists a version it never set up: a bare interpreter with
-        // no curl, sqlite3, redis, intl or pgsql. Checking only `installed()`
-        // answered "already installed" and did nothing, which left the one
-        // control that could have fixed it refusing to act — on a version the
-        // panel was still offering for new sites.
-        //
-        // Falling through to the install completes it: apt is idempotent, so
-        // this is the existing path rather than a new one, and "Install PHP
-        // 8.3" now means what the person pressing it meant.
+        // Idempotent: an already-installed version is a no-op, but "installed" must mean
+        // *usable*. `openlitespeed` pulls in a bare `lsphp83` (no curl, sqlite3, redis, ...),
+        // so missing base packages fall through to the install, which apt makes idempotent.
         if ($php->installed($version) && $php->missingBasePackages($version) === []) {
             return response()->json(['message' => __('php.already_installed', ['version' => $version])], 200);
         }
 
-        // Before dispatch, not inside the job: a client that polls straight
-        // after this 202 must see the version, and the worker may not have
-        // picked the job up yet.
+        // Before dispatch: a client polling right after this 202 must already see the version.
         $installs->start('php', $version);
 
         InstallPhpVersion::dispatch($version, Auth::id());
@@ -90,17 +70,14 @@ class PhpController extends Controller
     /**
      * Remove a version.
      *
-     * Three refusals, the last of which is the important one: the panel runs
-     * on PHP itself, and removing the version underneath it would take the
-     * panel offline from inside the panel — with no way back in to undo it.
+     * Refuses the panel's own version: removing it would take the panel offline with no way
+     * back in.
      */
     public function destroy(string $version, PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): JsonResponse
     {
         if (! $php->installed($version)) {
-            // OLD-7: a failed install leaves an entry with nothing installed
-            // behind it, which Remove answered 404 for — so it could only be
-            // retried, never dismissed. Clearing it is what Remove means here,
-            // as it already does for Node (bug #31).
+            // A failed install leaves an entry with nothing installed behind it; Remove
+            // dismisses it (as for Node).
             $failed = $installs->current('php', $version);
             abort_unless($failed?->status === InstallStatus::Failed, 404);
 
@@ -121,9 +98,8 @@ class PhpController extends Controller
             ], 422);
         }
 
-        // Same rule as the sites above, for the cron jobs that name this
-        // version: removing it would leave each failing on every tick,
-        // silently. Plain `php` is not counted — it follows the default.
+        // Same rule for cron jobs naming this version (each would fail on every tick).
+        // Plain `php` is not counted: it follows the default.
         $crons = app(CronPhpBinary::class)->namingVersion($version);
 
         if ($crons !== []) {
@@ -136,15 +112,8 @@ class PhpController extends Controller
             return response()->json(['message' => __('errors/php.version_is_default')], 422);
         }
 
-        // Queued, and recorded before dispatch for the same reason installing
-        // is: a client that reloads straight after this must see the version
-        // marked `removing` rather than watch it sit there looking untouched.
-        //
-        // It used to purge inside this request. apt takes minutes and nginx
-        // ends a request at fastcgi_read_timeout, so the browser got a
-        // timeout while the purge carried on — the screen never refreshed,
-        // the version vanished on its own a minute later, and pressing Remove
-        // again answered 404 for something already gone.
+        // Queued (apt takes minutes, past nginx's fastcgi_read_timeout), and recorded before
+        // dispatch so a reload straight after sees the version as `removing`.
         $installs->startRemoval('php', $version);
         RemovePhpVersion::dispatch($version, Auth::id());
 
@@ -157,8 +126,7 @@ class PhpController extends Controller
     /**
      * Choose the version bare `php` resolves to, via update-alternatives.
      *
-     * Only the CLI default moves. A site keeps whatever version its FPM pool
-     * runs — this must not migrate a running site.
+     * Only the CLI default moves; a site keeps the version its FPM pool runs.
      */
     public function setDefault(PhpDefaultRequest $request, PhpRuntime $php, PhpOverview $overview, ActivityLogger $log): JsonResponse
     {
@@ -171,9 +139,7 @@ class PhpController extends Controller
 
         return response()->json([
             'php' => $overview->read(),
-            // Plain `php` is the default, so these now run on `$version` —
-            // Linux moved them, not the panel. Said so the user can pin one
-            // to a version instead; nothing here changes them.
+            // Plain `php` is the default, so these now run on `$version`; lets the user pin them.
             'cronjobs_on_default_php' => app(CronPhpBinary::class)->onServerDefault(),
         ]);
     }
@@ -187,9 +153,8 @@ class PhpController extends Controller
     }
 
     /**
-     * Replace the ini. Backed up, validated, and rolled back if PHP rejects
-     * it — a broken ini can stop FPM from starting at all, which would take
-     * every site on that version down.
+     * Replace the ini. Backed up, validated, and rolled back if PHP rejects it: a broken ini can
+     * stop FPM and take every site on that version down.
      */
     public function updateIni(string $version, UpdatePhpIniRequest $request, PhpVersionManager $php, ActivityLogger $log): JsonResponse
     {
@@ -201,8 +166,8 @@ class PhpController extends Controller
     }
 
     /**
-     * RC-8: the common settings of one version's php.ini, as fields. `null`
-     * where the file sets nothing and PHP's built-in default applies.
+     * The common settings of one version's php.ini, as fields. `null` where the file sets
+     * nothing and PHP's built-in default applies.
      */
     public function showIniSettings(string $version, PhpVersionManager $php, PhpIniDirectives $directives): JsonResponse
     {
@@ -213,9 +178,7 @@ class PhpController extends Controller
     }
 
     /**
-     * Save those settings: only their lines change, and the file is written
-     * the same way as the raw editor's — backed up, checked by PHP, put back
-     * if PHP refuses it.
+     * Save those settings: only their lines change; written like the raw editor's save.
      */
     public function updateIniSettings(string $version, SavePhpIniSettingsRequest $request, PhpVersionManager $php, PhpIniDirectives $directives, ActivityLogger $log): JsonResponse
     {
@@ -241,8 +204,7 @@ class PhpController extends Controller
 
         return response()->json([
             'extensions' => $extensions->catalog($version),
-            // False on OpenLiteSpeed: an installed extension is simply on, and
-            // switching one off is refused. Install still works either way.
+            // False on OpenLiteSpeed: installed extensions are always on; install still works.
             'toggle_supported' => $extensions->togglesExtensions(),
             'panel_required' => $version === $php->panelVersion() ? $extensions->panelRequired() : [],
         ]);
@@ -251,10 +213,8 @@ class PhpController extends Controller
     /**
      * Turn one extension on or off for a version.
      *
-     * One toggle, not two controls. On installs the package if it is missing;
-     * off only unlinks it. Nothing is ever purged — a disabled extension
-     * costs a few megabytes, and purging is how `php8.4-common` goes with it
-     * and takes every site on the server down.
+     * On installs the package if missing; off only unlinks it. Never purge: that can remove
+     * `php8.4-common` with it and take every site down.
      */
     public function updateExtension(
         PhpExtensionRequest $request,
@@ -267,8 +227,7 @@ class PhpController extends Controller
     ): JsonResponse {
         abort_unless($php->installed($version), 404);
 
-        // The name becomes an apt package and a path. A pattern is not enough
-        // — it has to be something this server actually offers.
+        // The name becomes an apt package and a path, so it must be one this server offers.
         $row = $extensions->find($version, $extension);
 
         abort_if($row === null, 404);
@@ -281,8 +240,7 @@ class PhpController extends Controller
         $properties = ['version' => $version, 'extension' => $extension];
 
         if (! $enabled) {
-            // Only on the panel's own version. Another version may disable
-            // whatever it likes — the panel is not running on it.
+            // Only the panel's own version is restricted.
             if ($version === $php->panelVersion() && ($blockers = $extensions->panelBlockers($row['modules'])) !== []) {
                 return response()->json([
                     'message' => __('errors/php.extension_runs_panel', [
@@ -299,8 +257,7 @@ class PhpController extends Controller
         }
 
         if (! $row['installed']) {
-            // Same ordering as a version install: recorded before dispatch so
-            // the row is already `installing` when the client re-reads.
+            // Recorded before dispatch, as for a version install.
             $installs->start('php', $version, $extension);
 
             InstallPhpExtension::dispatch($version, $extension, Auth::id());
@@ -320,10 +277,8 @@ class PhpController extends Controller
     /**
      * The ionCube Loader card for one PHP version.
      *
-     * State is read from the server, never stored — the loader is a file on
-     * disk, and a stored flag would go on claiming it was there after the PHP
-     * version itself had been removed. The in-flight and last-failed run come
-     * from the same tracker the extension rows use.
+     * State is read from the server, never stored: a stored flag would outlive the PHP version.
+     * The in-flight and last-failed run come from the tracker the extension rows use.
      */
     public function ionCube(string $version, IonCubeLoader $loader, PhpRuntime $php, InstallTracker $installs): JsonResponse
     {
@@ -336,8 +291,7 @@ class PhpController extends Controller
                 ...$loader->status($version),
                 'status' => $run?->status->value ?? 'idle',
                 'reason' => $run?->reason,
-                // What to show. `reason` is a code for the frontend to branch
-                // on, never text for the user.
+                // `reason` is a code for the frontend, never user text.
                 'message' => $loader->failureMessage($run, $version),
                 'reference' => $run?->reference,
             ],
@@ -345,25 +299,21 @@ class PhpController extends Controller
     }
 
     /**
-     * Install it. 202 and a queued job: the archive is ~29 MB and a request
-     * held open that long dies at the web server with the work half done.
+     * Install it. Queued (202): the ~29 MB archive would outlive the web server's request timeout.
      */
     public function installIonCube(string $version, IonCubeRequest $request, IonCubeLoader $loader, PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): JsonResponse
     {
         abort_unless($php->installed($version), 404);
 
-        // Refused before the row exists, so a version ionCube does not publish
-        // a loader for cannot leave a tracker row that never completes. PHP
-        // 8.0 is the live case.
+        // Refused before the row exists, so an unsupported version (PHP 8.0) leaves no
+        // tracker row that never completes.
         if (! $loader->supports($version)) {
             return response()->json([
                 'message' => __('errors/php.ioncube_unsupported_version', ['version' => $version]),
             ], 422);
         }
 
-        // Refused here too, not only in the job: a queued install that can
-        // only fail would show a spinner and then an error for something the
-        // card already knew.
+        // Refused here too, not only in the job: a queued install that can only fail is noise.
         $source = $loader->source($version);
         if ($source === IonCubeLoader::SOURCE_EXTERNAL || $source === IonCubeLoader::SOURCE_V7) {
             return response()->json([
@@ -371,8 +321,7 @@ class PhpController extends Controller
             ], 422);
         }
 
-        // A second click while this is running must not queue a second
-        // download over the top of the first.
+        // A second click must not queue a second download over the first.
         if ($installs->current(InstallIonCubeLoader::RUNTIME, $version)?->status === InstallStatus::Installing) {
             return response()->json(['ioncube' => $loader->status($version)], 202);
         }
@@ -387,8 +336,7 @@ class PhpController extends Controller
     }
 
     /**
-     * Remove it. Synchronous, unlike the install: this deletes two files and
-     * reloads, with nothing to download.
+     * Remove it. Synchronous: it only deletes two files and reloads.
      */
     public function removeIonCube(string $version, IonCubeRequest $request, IonCubeLoader $loader, PhpRuntime $php, ActivityLogger $log): JsonResponse
     {

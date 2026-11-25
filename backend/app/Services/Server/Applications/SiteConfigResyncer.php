@@ -14,33 +14,18 @@ use App\Services\Server\WebServers\OlsVhostLayout;
 use App\Services\Server\WebServers\WebServerManager;
 
 /**
- * Re-render every live site's vhost from the current templates and shipped
- * lists.
+ * Re-render every live site's vhost from the current templates and shipped lists.
  *
- * Why this exists: a vhost is a *rendered file*. The AI bot list, the 8G
- * ruleset and the templates themselves all ship inside the panel, so a panel
- * update changes what a site's config *would* say without changing what it
- * does say. Until now nothing closed that gap — the panel would report "31
- * bots blocked" from the new list while the site on disk still blocked the
- * old set, and neither side could detect the difference.
+ * The bot list, the 8G ruleset and the templates ship inside the panel, so an update changes what
+ * a site's config would say without changing what it does say; this closes that gap.
  *
- * That is worse than a missing feature. Protection the user believes is on,
- * silently running a version behind, is a security control that has quietly
- * stopped being one. Drift the user has to notice by hand is not a design.
+ * Safety rules (this touches every site at once):
  *
- * The safety rules, which matter more here than anywhere else because this
- * touches every site at once:
- *
- *  - the previous file is read before it is overwritten, so a site can be put
- *    back byte-for-byte;
- *  - the config is tested after every single site, not once at the end — the
- *    test is server-wide, so testing in a batch tells you something is broken
- *    without telling you which one;
- *  - a site that fails its test is restored and the run *continues*, because
- *    one bad site must not leave the other forty un-updated;
- *  - nothing is reloaded unless something actually changed — a site's config
- *    text, or a grant the running web server can only pick up on a restart —
- *    and the config tests clean at the end.
+ *  - the previous file is read first, so a site can be restored byte-for-byte;
+ *  - the config is tested after every site (the test is server-wide, so a batch hides which one broke);
+ *  - a failing site is restored and the run continues;
+ *  - nothing is reloaded unless something changed (config text, or a group grant that needs a
+ *    restart) and the config tests clean at the end.
  */
 class SiteConfigResyncer
 {
@@ -60,19 +45,15 @@ class SiteConfigResyncer
     {
         $driver = $this->webServers->driver();
 
-        // Which layout this OpenLiteSpeed server has, asked before any vhost is
-        // written: a v7 server that only ever had its data imported has never
-        // been detected, and its sites would be rewritten where OpenLiteSpeed
-        // does not look.
+        // Detect the OpenLiteSpeed layout before any vhost is written; an imported v7 server may
+        // never have been detected and its sites would land where OLS does not look.
         if ($driver->name() === 'openlitespeed') {
             app(OlsVhostLayout::class)->detect();
         }
 
         $applications = Application::query()
             ->where('status', ApplicationStatus::Active)
-            // A disabled site's vhost deliberately points at the disabled
-            // page. Re-rendering the real one here would put it back online
-            // as a side effect of a panel update.
+            // A disabled site's vhost points at the disabled page; re-rendering would bring it back online.
             ->whereNull('disabled_at')
             ->with(['systemUser', 'certificate', 'botRules', 'wafRules'])
             ->get();
@@ -84,10 +65,8 @@ class SiteConfigResyncer
 
         foreach ($applications as $application) {
             try {
-                // The application config is rendered state too: certificates
-                // and primary domains can change its canonical URL after the
-                // installer has finished. Reconcile it on every panel update
-                // so existing installations converge as well as new ones.
+                // The app config is rendered state too: certificates and primary domains can change
+                // its canonical URL after install.
                 $this->installers->syncUrl($application);
             } catch (ProvisioningFailedException $exception) {
                 $failed[] = $this->failure($application, $exception->reference);
@@ -95,27 +74,17 @@ class SiteConfigResyncer
                 continue;
             }
 
-            // Sites provisioned before configs were named after the
-            // application still have a `{domain}.conf` on disk. Writing the new
-            // one without removing that leaves both loaded, two server blocks
-            // claiming the same names, and a web server picking one — so the
-            // stale file goes first, while its name is still derivable.
+            // Older sites still have a `{domain}.conf`; leaving it beside the new file loads two
+            // server blocks for the same names.
             $this->removeLegacyConfig($driver, $application);
 
-            // Before the vhost is rendered, never after. The credential file
-            // moved above the document root, so a site protected before that
-            // change still has it in the old place — and the config about to
-            // be written points at the new one. Rendering first would leave a
-            // protected site pointing at a file that is not there, which fails
-            // closed: every visitor gets a 500 until someone re-saves the
-            // password. Rewritten from the stored hash, so it needs nothing
-            // from the user.
+            // Before the vhost is rendered, never after: the credential file moved above the
+            // document root, and a vhost pointing at a missing file fails closed (500 for everyone).
+            // Rewritten from the stored hash.
             $this->basicAuth->publish($application);
 
-            // Every file the site has, not one: on nginx and Apache a site with a
-            // certificate is two files, as v7 lays it out (step B1), and a file
-            // that must no longer exist (an HTTPS file after the certificate
-            // went, or under the other name) is null here.
+            // Every file the site has: with a certificate nginx/Apache use two (as in v7). A null
+            // entry is a file that must no longer exist.
             $files = $driver->configFiles($application, $this->provisioner->documentRoot($application));
             $previous = [];
 
@@ -123,42 +92,17 @@ class SiteConfigResyncer
                 $previous[$path] = $this->read($path);
             }
 
-            // The directories the config about to be written names. This class
-            // writes the file itself rather than going through `apply()` — so
-            // that it can compare the rendered output and skip a site nothing
-            // changed for — and it used to skip this preparation with it.
-            //
-            // That made the standing advice wrong. A site provisioned before
-            // the challenge root was created at provision time had none, a
-            // resync rewrote its vhost still naming one, and on OpenLiteSpeed —
-            // where a context's `location` is resolved at config-load — the
-            // test failed and the site was rolled back. "Deploy, then resync"
-            // did not repair the very thing it was given for.
-            //
-            // Deliberately before the unchanged check below, not after it.
-            // The site this exists for has a *correct* config already — its
-            // vhost names a challenge root that was simply never created — so
-            // it is exactly the site the skip would pass over. Repairing only
-            // the sites whose text changed would leave the broken ones broken.
-            //
-            // Cheap enough to do every time: three `mkdir -p`-shaped calls
-            // that do nothing when the directories are there, which is the
-            // normal case.
-            // The return matters, and only for one of the steps inside it.
-            // Creating a directory is visible to the next config test; adding
-            // the web server's account to this site's log group is not, because
-            // supplementary groups are read when a process starts. A site whose
-            // config text is unchanged still needs the restart when this is
-            // true, which is exactly the case the reload condition below used
-            // to miss.
+            // Create the directories the config names. This class skips `apply()` so it can compare
+            // output, so it must do this itself, and before the unchanged check: the sites it repairs
+            // already have correct config text (on OLS a missing `location` fails the config test).
+            // Cheap: no-ops when the directories exist.
+            // Returns true when the web server's account was added to the site's log group; that only
+            // takes effect on restart, so an unchanged site still needs one.
             if ($driver->ensureDirectories($application)) {
                 $granted++;
             }
 
-            // Nothing shipped changed for this site. Skipping keeps a routine
-            // update from rewriting forty files to identical content.
-            // The site's conf-folder files are v7's names: one that is v7's
-            // or its owner's (not the panel's marker) is left exactly as it is.
+            // A conf-folder file that is v7's or the owner's (no panel marker) is left exactly as is.
             foreach (array_keys($files) as $path) {
                 if ($driver->isSiteConfPath($application, $path)
                     && $previous[$path] !== null
@@ -204,14 +148,10 @@ class SiteConfigResyncer
             $updated++;
         }
 
-        // One reload for the whole batch: each site was already proved safe
-        // individually, and forty reloads would be forty chances to drop a
-        // connection for no extra safety.
+        // One reload for the whole batch; each site was already tested.
         $reloaded = false;
 
-        // `$granted` as well as `$updated`: a server whose sites were all
-        // already current got the grant and no restart, so the web server went
-        // on running without the group and the site went on logging nothing.
+        // `$granted` too: otherwise the web server keeps running without the new group.
         if (($updated > 0 || $granted > 0) && $driver->test()->ok) {
             $driver->reload();
             $reloaded = true;
@@ -267,10 +207,7 @@ class SiteConfigResyncer
     private function rollback(WebServerDriver $driver, Application $application, array $changed, array $previous): void
     {
         if (array_filter($previous, fn (?string $contents) => $contents !== null) === []) {
-            // There was no file before this run, so removing ours is the
-            // restore — via the driver, because on a web server whose site
-            // lives partly in a shared file, deleting only the per-site file
-            // leaves the shared one pointing at something gone.
+            // No file existed before; remove via the driver, since a shared file may reference the site.
             $driver->remove($application);
 
             return;
@@ -292,18 +229,11 @@ class SiteConfigResyncer
     }
 
     /**
-     * Remove the config this site would have had under the old domain-based
-     * naming, if it is still there and is not the file we are about to write.
+     * Remove the config this site would have had under the old domain-based naming.
      *
-     * Deliberately narrow: it only ever removes the one path that this exact
-     * application would have owned before the rename, never anything it finds
-     * lying around. A resync that swept `sites-enabled` for files it did not
-     * recognise would delete a hand-written vhost the operator put there.
-     *
-     * Goes through the driver's own remove() rather than a raw `rm -f`, so the
-     * legacy sites-enabled symlink is cleaned up too, not just the
-     * sites-available file — a dangling symlink left in sites-enabled fails
-     * the web server's own config test on every reload after this one.
+     * Deliberately narrow: only the one path this application owned, never a sweep (it would delete
+     * hand-written vhosts). Uses the driver's remove() so the sites-enabled symlink goes too; a
+     * dangling symlink fails the web server's config test.
      */
     private function removeLegacyConfig(WebServerDriver $driver, Application $application): void
     {
@@ -311,9 +241,7 @@ class SiteConfigResyncer
             return;
         }
 
-        // Addressed by asking the driver what the path *would* be for a
-        // slug-less copy, so the answer stays correct for whichever driver is
-        // active rather than assuming nginx's layout here.
+        // Ask the driver for the slug-less path rather than assuming nginx's layout.
         $legacyApplication = (clone $application)->forceFill(['slug' => null]);
         $legacy = $driver->configPath($legacyApplication);
 
@@ -336,8 +264,7 @@ class SiteConfigResyncer
     }
 
     /**
-     * Trailing-whitespace differences are not drift; comparing raw would make
-     * every run report every site as updated.
+     * Trailing-whitespace differences are not drift.
      */
     private function normalize(string $config): string
     {

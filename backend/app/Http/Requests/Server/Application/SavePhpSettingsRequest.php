@@ -28,9 +28,8 @@ class SavePhpSettingsRequest extends FormRequest
     public const MAX_CHILDREN = 100;
 
     /**
-     * The site being saved. Set directly when the PHP screen's rules are run
-     * on a body that is not this request's own — the v7 extra-conf preview
-     * checks its translated body with them before anyone saves it.
+     * The site being saved. Set directly when these rules run on a body that is not this
+     * request's own (the v7 extra-conf preview).
      */
     public ?Application $forApplication = null;
 
@@ -49,18 +48,12 @@ class SavePhpSettingsRequest extends FormRequest
      */
     public function rules(): array
     {
-        // `128M`, `1G`, or `-1` for unlimited — PHP's own vocabulary rather
-        // than a number of megabytes, so what the user types is what ends up
-        // in the file and they can read it back.
+        // `128M`, `1G`, or `-1` for unlimited: PHP's own vocabulary, written to the file as typed.
         $size = ['sometimes', 'nullable', 'string', 'regex:/^(-1|\d+[KMG]?)$/i', 'max:12'];
 
         return [
-            // Checked against what is actually on the server, not just the
-            // shape of the string. Unvalidated, `8.9` was accepted, saved, and
-            // only surfaced as a pool write into an /etc/php directory that
-            // does not exist — a failure the user could not read as "that
-            // version is not installed". Resolved lazily so a save that does
-            // not touch the version costs nothing.
+            // Checked against what is installed, not just the string's shape (`8.9` would
+            // otherwise fail later as an unreadable pool write). Lazy: free if not saved.
             'php_version' => array_merge([
                 'sometimes', 'string', 'max:8',
                 function (string $attribute, mixed $value, Closure $fail) {
@@ -70,12 +63,8 @@ class SavePhpSettingsRequest extends FormRequest
                         return;
                     }
 
-                    // Its directory exists as soon as apt starts, so "exists"
-                    // passed mid-install — and the site's pool, written into
-                    // it then, made apt's own start of php-fpm fail on a
-                    // socket the old version still held: the install was
-                    // marked failed and the switch refused (measured on a
-                    // real server, 09:19:40). Wait for the install instead.
+                    // The directory exists as soon as apt starts; a pool written mid-install
+                    // makes apt's own php-fpm start fail. Wait for the install instead.
                     $install = app(InstallTracker::class)->versions('php')->get((string) $value);
 
                     if (in_array($install?->status, [InstallStatus::Installing, InstallStatus::Removing], true)) {
@@ -95,8 +84,8 @@ class SavePhpSettingsRequest extends FormRequest
             'pm_type' => ['sometimes', 'nullable', Rule::in(ApplicationPhpSettings::PM_TYPES)],
             'pm_max_children' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:'.self::MAX_CHILDREN],
             'pm_max_requests' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100000'],
-            // Kept from v7 when a site has them; empty = derived from
-            // max_children. They must agree with it — checked in after().
+            // Kept from v7 when a site has them; empty = derived from max_children.
+            // They must agree with it (checked in after()).
             'pm_start_servers' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:'.self::MAX_CHILDREN],
             'pm_min_spare_servers' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:'.self::MAX_CHILDREN],
             'pm_max_spare_servers' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:'.self::MAX_CHILDREN],
@@ -114,20 +103,14 @@ class SavePhpSettingsRequest extends FormRequest
                             continue;
                         }
 
-                        // Absolute only. A relative entry is resolved against
-                        // the worker's working directory, which is not a thing
-                        // the user can see or predict.
+                        // Absolute only: a relative entry resolves against the worker's cwd.
                         if (! str_starts_with($path, '/')) {
                             $fail(__('php_settings.errors.basedir_absolute', ['path' => $path]));
 
                             return;
                         }
 
-                        // `/` allows everything, so the pool would say
-                        // open_basedir is on while enforcing nothing — the
-                        // panel would be reporting a protection it does not
-                        // have. Turning the toggle off is the honest way to
-                        // get the same result.
+                        // `/` allows everything: open_basedir would look on while enforcing nothing.
                         if (rtrim($path, '/') === '') {
                             $fail(__('php_settings.errors.basedir_root'));
 
@@ -142,25 +125,17 @@ class SavePhpSettingsRequest extends FormRequest
                     }
                 },
             ],
-            // A comma-separated list of function names and nothing else. This
-            // lands in the pool file verbatim, so anything that is not a
-            // function name has no business being here.
+            // Function names only: this lands in the pool file verbatim.
             'disable_functions' => ['sometimes', 'nullable', 'string', 'max:2000', 'regex:/^[A-Za-z0-9_,\s]*$/'],
             'allow_url_fopen' => ['sometimes', 'nullable', 'boolean'],
-            // `all_with_bc` (FS-B8): plain `timezone` is PHP's canonical list
-            // only, and refused 79 zones the form offers from the OS list —
-            // `Etc/UTC`, every `Etc/GMT±N`, `EST` — all of which PHP's
-            // date.timezone accepts. Still PHP's own list, so nothing PHP
-            // would reject at start-up gets in.
+            // `all_with_bc`: plain `timezone` is PHP's canonical list only and refuses zones the
+            // form offers (`Etc/UTC`, `Etc/GMT±N`, `EST`) that date.timezone accepts.
             'php_timezone' => ['sometimes', 'nullable', 'timezone:all_with_bc'],
             'auto_prepend_file' => ['sometimes', 'nullable', 'string', 'max:255', 'not_regex:/\.\./', $this->prependInsideSiteRule()],
 
-            // The escape hatch, and the only free-text field. Newlines are
-            // allowed because it is ini; a `[section]` header is not, because
-            // that would silently start a second pool inside this file.
+            // The escape hatch and only free-text field: ini lines, but no `[section]` header
+            // (it would start a second pool inside the file). See AdditionalDirectives.
             'additional_directives' => ['sometimes', 'nullable', 'string', 'max:4000', 'not_regex:/^\s*\[/m',
-                // PHP settings the panel does not set itself, one per line —
-                // see AdditionalDirectives.
                 function (string $attribute, mixed $value, Closure $fail): void {
                     $application = $this->target();
                     $refusal = app(AdditionalDirectives::class)->refusal(
@@ -185,16 +160,9 @@ class SavePhpSettingsRequest extends FormRequest
     private const MEMORY_MINIMUM = 32 * 1024 * 1024;
 
     /**
-     * Bug #61: `-1` and `99G` passed, being the right shape.
-     *
-     * `-1` is unlimited, which on a pool lets one site's script take the
-     * whole server's memory and every other site with it. Operator's call
-     * (2026-10-03): refused for everyone. A site that already has it keeps
-     * it until the value is changed: refusing an unchanged field would
-     * make every other setting on the screen unsaveable.
-     *
-     * Above the server's RAM is not a limit at all. Unknown RAM (no
-     * /proc/meminfo) checks nothing rather than refusing everything.
+     * Refuses `-1` (unlimited lets one site take the server's memory) and values above the
+     * server's RAM. An unchanged stored value passes, or no other setting could be saved.
+     * Unknown RAM (no /proc/meminfo) checks nothing.
      */
     private function memoryLimitRule(): Closure
     {
@@ -211,9 +179,8 @@ class SavePhpSettingsRequest extends FormRequest
                 return;
             }
 
-            // Bug #19: `64` is 64 *bytes* to PHP, and `0` is none at all;
-            // either is accepted by the format and takes the site down on its
-            // next request. Nothing a site runs fits below 32M.
+            // `64` is 64 *bytes* to PHP and `0` is none: either takes the site down. Nothing
+            // fits below 32M.
             if (ApplicationPhpSettings::toBytes($value) < self::MEMORY_MINIMUM) {
                 $fail(__('php_settings.errors.memory_too_low', [
                     'suggestion' => ctype_digit($value) && (int) $value > 0 ? $value.'M' : '128M',
@@ -231,13 +198,11 @@ class SavePhpSettingsRequest extends FormRequest
     }
 
     /**
-     * An upload travels inside the POST body, so a post_max_size below
-     * upload_max_filesize makes every upload between the two fail, and PHP
-     * says so only by handing the script an empty `$_POST` (bug #61).
+     * A post_max_size below upload_max_filesize makes uploads between the two fail, and PHP
+     * reports it only as an empty `$_POST`.
      *
-     * Compared as they will be after the save: a field not sent keeps its
-     * stored value, so raising only the upload size is caught too. `0` and
-     * `-1` mean no limit and are left alone.
+     * Compared as they will be after the save (an unsent field keeps its stored value).
+     * `0` and `-1` mean no limit and are left alone.
      *
      * @return array<int, Closure>
      */
@@ -266,10 +231,8 @@ class SavePhpSettingsRequest extends FormRequest
     }
 
     /**
-     * PHP-FPM refuses to start a dynamic pool whose numbers disagree:
-     * min_spare <= start <= max_spare <= max_children (php-fpm's fpm_conf.c). All
-     * three or none — one set and two derived is a combination nobody chose.
-     * Compared as they will be after the save, like the size check below.
+     * PHP-FPM refuses to start a dynamic pool unless min_spare <= start <= max_spare <=
+     * max_children (fpm_conf.c). All three or none. Compared as they will be after the save.
      */
     private function spareServersAgree(Validator $validator): void
     {
@@ -297,9 +260,8 @@ class SavePhpSettingsRequest extends FormRequest
     }
 
     /**
-     * Bug #61: only `..` was refused, so any absolute path passed, another
-     * site's files included, run at the top of every request of this one.
-     * Now it must be an absolute path inside this site's own folder.
+     * Must be an absolute path inside this site's own folder: it runs at the top of every
+     * request, so another site's file must not be allowed.
      */
     private function prependInsideSiteRule(): Closure
     {
@@ -336,19 +298,11 @@ class SavePhpSettingsRequest extends FormRequest
     }
 
     /**
-     * The site type's supported PHP range, as a rule — or nothing, for a type
-     * that declares no range.
+     * The site type's supported PHP range, as a rule, or nothing for a type with no range.
      *
-     * The same rule object `StoreApplicationRequest` appends, deliberately:
-     * until this existed the range was enforced when a site was *created* and
-     * never again, so a PrestaShop site correctly created on 8.0 could be
-     * moved to 8.4 from the PHP screen and simply break. One field, two paths,
-     * one of them validated — the same shape as the 2026-09-03 bug where the
-     * settings screen refused an uninstalled version and creation did not.
-     *
-     * No fallback version is passed: unlike creation there is no empty case to
-     * resolve. The field is `sometimes`, so not sending it changes nothing,
-     * and sending a blank one fails the is-it-installed check above.
+     * The same rule `StoreApplicationRequest` appends, so the range is enforced on a version
+     * change too, not only at creation. No fallback version is passed: the field is `sometimes`,
+     * and a blank one fails the is-it-installed check above.
      *
      * @return array<int, SupportedPhpVersion>
      */

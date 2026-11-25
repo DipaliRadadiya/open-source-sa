@@ -10,13 +10,11 @@ use App\Services\Server\Php\PoolManager;
 use App\Services\Server\WebServers\OlsVhostLayout;
 
 /**
- * Whether each PHP site actually has the pool the panel thinks it has, and
- * whether the pools together fit in the machine.
+ * Whether each PHP site has the pool the panel thinks it has, and whether the pools together
+ * fit in the machine.
  *
- * Both failures are silent by nature. A site whose pool file went missing
- * keeps serving — from the shared pool, as www-data, with none of the limits
- * anyone set — and nothing anywhere says so. Over-commitment shows up as the
- * OOM killer taking out a *different* site at three in the morning.
+ * Both failures are silent: a site with a missing pool keeps serving from the shared pool as
+ * www-data without its limits, and over-commitment surfaces as the OOM killer hitting another site.
  */
 class PhpIsolationCheck implements DoctorCheck
 {
@@ -37,26 +35,14 @@ class PhpIsolationCheck implements DoctorCheck
     public function run(): array
     {
         if (! $this->pools->supported()) {
-            // OpenLiteSpeed spawns LSPHP itself, so there are no pools — but
-            // this used to stop here and report `pass`, which made it a check
-            // that answered "fine" on the one stack it had never looked at.
-            //
-            // There is something to check, and it is the OLS equivalent of the
-            // orphaned pool above: the vhost names an `lsphp` binary by path,
-            // and OpenLiteSpeed does not stat it when the config is tested. A
-            // site on a version with no lsphp installed is therefore accepted,
-            // reported Active, and answers 503 on every request with nothing
-            // anywhere saying why. Creating one is now refused up front, but a
-            // site created before that, adopted from a brownfield server, or
-            // left behind when a version was removed still needs naming.
+            // OpenLiteSpeed spawns LSPHP itself, so there are no pools to check. The vhost names
+            // an `lsphp` binary by path and OLS does not stat it when testing config, so a site
+            // on a version with no lsphp is accepted, reported Active, and answers 503.
             return $this->interpreters();
         }
 
-        // First, because it is the only one here that is already breaking
-        // things elsewhere. A pool naming an account that no longer exists
-        // fails `php-fpm -t` server-wide, so every new PHP site fails to
-        // provision and is blamed for it — and php-fpm will not start at all
-        // after the next restart.
+        // First: a pool naming a missing account fails `php-fpm -t` server-wide, so every new
+        // PHP site fails to provision, and php-fpm will not start after the next restart.
         $orphans = $this->pools->unresolvableAccounts();
 
         if ($orphans !== []) {
@@ -78,26 +64,18 @@ class PhpIsolationCheck implements DoctorCheck
         $isolated = $applications->filter(fn (Application $a): bool => $a->isolated_at !== null);
         $shared = $applications->count() - $isolated->count();
 
-        // A site the panel believes is isolated but whose pool file is gone.
-        // It is still being served — by the shared pool, as www-data, with
-        // none of its settings — and nothing else would ever report it.
+        // An isolated site whose pool file is gone is still served, by the shared pool.
         $states = $isolated->map(fn (Application $a): array => ['app' => $a, 'exists' => $this->pools->exists($a)]);
 
-        // Null is "could not look", and it must not be reported as "gone".
-        // Every probe fails at once on a server whose sudo grant is out of
-        // date, so reading null as false announced a missing pool for every
-        // isolated site on the box — a false alarm at its loudest, in the tool
-        // someone opens when something is already wrong. The missing grant is
-        // PrivilegeCheck's finding and it fails there; this one says only what
-        // it knows.
+        // Null is "could not look", not "gone": with an out-of-date sudo grant every probe
+        // fails at once. That is PrivilegeCheck's finding; this check says only what it knows.
         $unknown = $states
             ->filter(fn (array $s): bool => $s['exists'] === null)
             ->map(fn (array $s): string => (string) $s['app']->domain)
             ->values();
 
-        // `===`, because Collection::where() compares loosely and `null == false`
-        // is true — which would have folded every could-not-check straight back
-        // into "missing", the exact bug this is fixing.
+        // `===`: Collection::where() compares loosely and `null == false`, which would fold
+        // could-not-check into "missing".
         $missing = $states
             ->filter(fn (array $s): bool => $s['exists'] === false)
             ->map(fn (array $s): string => (string) $s['app']->domain)
@@ -111,8 +89,7 @@ class PhpIsolationCheck implements DoctorCheck
             ];
         }
 
-        // After the real failure, so a genuinely missing pool is never buried
-        // under "could not check the others".
+        // After the real failure, so a missing pool is never buried under "could not check".
         if ($unknown->isNotEmpty()) {
             return [
                 'status' => 'warn',
@@ -136,9 +113,7 @@ class PhpIsolationCheck implements DoctorCheck
         }
 
         if ($shared > 0) {
-            // Not a failure — every site worked this way until pools existed,
-            // and isolating is deliberately one site at a time. But it is the
-            // difference between per-site users meaning something and not.
+            // Not a failure (isolation is opt-in per site), but without it per-site users mean little.
             return [
                 'status' => 'warn',
                 'detail' => __('doctor.details.php_shared', ['count' => $shared]),
@@ -156,13 +131,10 @@ class PhpIsolationCheck implements DoctorCheck
     }
 
     /**
-     * Every PHP site's interpreter is on the box — the check for a stack that
-     * has no pools.
+     * Every PHP site's interpreter is on the box: the check for a stack with no pools.
      *
-     * The version is resolved the same way the vhost resolves it, falling back
-     * to the configured default for a site that names none: checking only the
-     * sites with an explicit version would miss exactly the ones that inherit
-     * a default nobody has installed.
+     * The version resolves as the vhost does, falling back to the configured default, so sites
+     * that inherit an uninstalled default are caught too.
      *
      * @return array{status: 'pass'|'warn'|'fail', detail: string|null, fix: string|null}
      */
@@ -191,9 +163,7 @@ class PhpIsolationCheck implements DoctorCheck
             ];
         }
 
-        // Interpreter present is not the same as isolation present. On this
-        // stack they are two separate silent failures, and the second is the
-        // dangerous one.
+        // Interpreter present is not isolation present: two separate silent failures.
         $shared = $this->vhostsRunningAsNobody();
 
         if ($shared !== []) {
@@ -204,9 +174,8 @@ class PhpIsolationCheck implements DoctorCheck
             ];
         }
 
-        // Every vhost can name its user and still not run as it: OpenLiteSpeed
-        // keeps one external app per name, so vhosts sharing a processor name
-        // all run as whichever of them it loaded first.
+        // OLS keeps one external app per name, so vhosts sharing a processor name all run as
+        // whichever was loaded first.
         $collisions = $this->sharedProcessorNames();
 
         if ($collisions !== []) {
@@ -229,16 +198,9 @@ class PhpIsolationCheck implements DoctorCheck
     /**
      * OpenLiteSpeed vhosts with no `extUser`, which therefore run as nobody.
      *
-     * The runtime half of the guard in `OlsDriver::assertHasSystemUser()`.
-     * That one stops the panel writing such a vhost; this one finds the ones
-     * already on disk — written before the guard existed, adopted from a
-     * brownfield server, or edited by hand.
-     *
-     * Worth being precise about what it costs when it is missing: every site
-     * without it runs as the server's own user, so it is not one site losing
-     * its boundary but all of them sharing one. Any of them can read the
-     * others' `.env`, database credentials and uploads. Nothing about such a
-     * server looks wrong from the outside.
+     * The runtime half of the guard in `OlsDriver::assertHasSystemUser()`: finds vhosts already on
+     * disk (older, adopted or hand-edited). Without `extUser` every such site shares one user,
+     * so any of them can read the others' `.env`, database credentials and uploads.
      *
      * @return array<int, string>
      */
@@ -258,12 +220,9 @@ class PhpIsolationCheck implements DoctorCheck
     /**
      * LSAPI processor names defined by more than one vhost, with the vhosts.
      *
-     * The panel used to write `extprocessor lsphp84` into every site's vhost.
-     * OpenLiteSpeed keeps one external app per name, so the first vhost loaded
-     * supplied the extUser and socket for every site on that version: on a
-     * real server (2026-09-24) three sites' PHP ran as a fourth site's user.
-     * The panel now names each site's processor after the site; this finds the
-     * vhosts still written the old way, or edited by hand.
+     * OpenLiteSpeed keeps one external app per name, so a shared name like `extprocessor lsphp84`
+     * means the first vhost loaded supplies the extUser and socket for all. The panel now names
+     * each processor after its site; this finds vhosts still written the old way or hand-edited.
      *
      * @return array<string, list<string>>
      */
@@ -288,27 +247,21 @@ class PhpIsolationCheck implements DoctorCheck
      * Every OpenLiteSpeed vhost that runs PHP over LSAPI, keyed by its
      * directory name, with the file's contents.
      *
-     * Read from disk rather than from the database on purpose: the question is
-     * what OpenLiteSpeed will actually do, and the file is the only thing that
-     * answers it.
+     * Read from disk, not the database: the file is what OpenLiteSpeed actually does.
      *
      * @return array<string, string>
      */
     private function lsapiVhosts(): array
     {
-        // Where this server actually keeps them, not where config guesses: a
-        // migrated box uses the old panel's branded directory, and globbing the
-        // configured one there finds nothing.
+        // Where this server keeps them: a migrated box uses the old panel's directory.
         $root = rtrim(app(OlsVhostLayout::class)->root(), '/');
 
         if ($root === '' || ! is_dir($root)) {
             return [];
         }
 
-        // Both names a vhost may have. A server migrated from the old panel
-        // calls it `main.conf`, and matching only ours meant this check saw no
-        // sites at all there and reported clean — a check that cannot see is
-        // worse than no check, because it answers.
+        // Both names a vhost may have (a migrated server uses `main.conf`); matching only ours
+        // would see no sites and report clean.
         $paths = [];
 
         foreach (OlsVhostLayout::FILENAMES as $filename) {
@@ -320,15 +273,12 @@ class PhpIsolationCheck implements DoctorCheck
         foreach ($paths as $path) {
             $contents = @file_get_contents((string) $path);
 
-            // Unreadable is not the same as missing. Reporting a permissions
-            // problem as an isolation failure would send whoever reads it to
-            // rewrite a vhost that is fine.
+            // Unreadable is not missing: don't report a permissions problem as an isolation failure.
             if ($contents === false) {
                 continue;
             }
 
-            // Only vhosts that actually run PHP. A static or proxy site has no
-            // extprocessor and needs no extUser.
+            // Only vhosts that run PHP; static and proxy sites need no extUser.
             if (! str_contains($contents, 'type                    lsapi')
                 && ! str_contains($contents, 'type lsapi')) {
                 continue;

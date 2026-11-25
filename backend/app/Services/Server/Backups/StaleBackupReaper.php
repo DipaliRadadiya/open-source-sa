@@ -13,28 +13,16 @@ use Illuminate\Support\Facades\Log;
 /**
  * Closes out backup rows whose job is provably gone.
  *
- * A backup normally leaves `running` one of two ways: the runner catches the
- * failure, or `RunBackup::failed()` fires. Neither happens when the worker dies
- * without warning — `kill -9`, an OOM, a reboot mid-archive — and the row is
- * then stranded at `running` forever.
+ * A worker that dies without warning (`kill -9`, OOM, reboot) leaves its row stranded at
+ * `running`. Every start path refuses while one is in flight, so a stranded row would block
+ * that site's backups for good.
  *
- * That is not merely untidy. Every path that starts a backup refuses while one
- * is in flight, so a single stranded row means the site can never be backed up
- * again, with nothing on screen saying why and no way out short of editing the
- * database. A backup feature that has silently stopped backing up is the one
- * failure this feature cannot have.
+ * Two bounds: a run that has reported bytes is judged on its heartbeat, one that has not on
+ * its age. Both err late on purpose: expiring early frees the guard for a second backup to
+ * write the same archive key alongside a first that is still running.
  *
- * **Two bounds, because there are two kinds of evidence.** A run that has
- * reported bytes is judged on its heartbeat; one that has not is judged on its
- * age. Both err the same way on purpose — late rather than early. Expiring late
- * costs a delayed run; expiring early frees the guard for a second backup to
- * start alongside a first that is still writing, and both then archive one site
- * to one key.
- *
- * Reaped rows are marked `Failed` rather than deleted or ignored. Ignoring one
- * would let backups resume while the screen still showed a run in progress that
- * ended yesterday; deleting it would erase the only evidence that anything went
- * wrong.
+ * Reaped rows are marked `Failed`, not deleted or ignored, so the evidence stays and the
+ * screen stops showing a run in progress.
  */
 class StaleBackupReaper
 {
@@ -67,24 +55,11 @@ class StaleBackupReaper
     /**
      * How long a run with *no heartbeat at all* is given before it counts dead.
      *
-     * Used only before the upload has reported a single byte — in practice a
-     * crash during the dump or the archive, where there is no progress to read
-     * and the only evidence is age.
+     * Used only before the upload has reported a byte (a crash during dump or archive).
      *
-     * **Deliberately not `RunBackup::uniqueFor()` any more.** This used to
-     * borrow the job's timeout so the row and the queue lock could not
-     * disagree. Two things changed: the lock is released at pickup now, so it
-     * no longer describes a running job at all, and the timeout was raised from
-     * one hour to six. Still borrowing it would have quietly stretched this
-     * bound sixfold — a backup killed during archiving would have locked its
-     * target out for six hours instead of 65 minutes, a regression introduced
-     * by a change that had nothing to do with it.
-     *
-     * So it is pinned, and pinned to the value it effectively had before, which
-     * has the operational history behind it. The bound must stay comfortably
-     * above the longest archive step: reaping early does not stop the worker,
-     * it just frees the guard for a second backup to start alongside the first,
-     * and both then write one key.
+     * Deliberately not `RunBackup::uniqueFor()`: the job timeout is six hours, which would lock
+     * a target out that long. Must stay comfortably above the longest archive step, or the
+     * reaper frees the guard while the first backup is still writing.
      */
     public static function staleAfterSeconds(): int
     {
@@ -94,10 +69,8 @@ class StaleBackupReaper
     /**
      * Whether this row is old enough that nothing can still be working on it.
      *
-     * Measured from `created_at`, not `started_at`: a job that never reached a
-     * worker at all — dispatched while the queue was down — sits at `pending`
-     * with no start time, and that is precisely one of the cases that strands a
-     * target.
+     * Measured from `created_at` when `started_at` is empty: a job that never reached a worker
+     * sits at `pending` with no start time.
      */
     public function isStale(Backup $backup): bool
     {
@@ -105,27 +78,15 @@ class StaleBackupReaper
             return false;
         }
 
-        // The worker that ran it is dead: nothing can still be writing, so
-        // there is nothing to wait for (QA, 2026-11-24 — a killed worker held
-        // its target for 65 minutes). Only a definite "gone" counts; anything
-        // uncertain falls through to the time-based rules below.
+        // Worker is dead: nothing can still be writing. Only a definite "gone" counts;
+        // anything uncertain falls through to the time-based rules below.
         if ($backup->worker_pid !== null && WorkerProcess::gone($backup->worker_pid, $backup->worker_started)) {
             return true;
         }
 
-        // A run that is reporting bytes is alive, whatever its age. This is the
-        // half that was missing: the bound below is the job's whole timeout,
-        // so before there was a heartbeat, a backup killed one minute in
-        // locked its target out for the remaining six hours — the site could
-        // not be backed up again, and nothing on screen said why. Measuring the
-        // last sign of life instead of the first means a crashed run is
-        // collectable within the stall window rather than within the timeout.
-        //
-        // Deliberately *not* `staleAfterSeconds()`: that bound answers "could a
-        // job still be running", and a heartbeat answers the stronger question
-        // "is one". A transfer that has moved nothing for longer than the
-        // upload guard allows has already been abandoned by the guard, so
-        // waiting the full timeout on top of it adds nothing but the lockout.
+        // A run reporting bytes is alive whatever its age; measure the last sign of life, so a
+        // crashed run is collectable within the stall window, not the full timeout. Not
+        // `staleAfterSeconds()`: a transfer stalled past the upload guard is already abandoned.
         if ($backup->progress_at !== null) {
             return $backup->progress_at->addSeconds(self::heartbeatGraceSeconds())->isPast();
         }
@@ -139,20 +100,13 @@ class StaleBackupReaper
     /**
      * How long a silent heartbeat is tolerated before the run counts as dead.
      *
-     * The upload stall guard plus a grace, so the two cannot contradict each
-     * other: cURL abandons a transfer that has moved nothing for
-     * `upload_stall_seconds`, and this waits slightly longer before declaring
-     * the row dead. Reversing that order would let the reaper close a run the
-     * worker is still inside — freeing the guard for a second backup to start
-     * alongside the first, both writing one archive key, which is the outcome
-     * every bound in this class exists to prevent.
+     * Must stay above the upload stall guard: cURL abandons a transfer after
+     * `upload_stall_seconds`, and this waits slightly longer. Reversed, the reaper would close a
+     * run the worker is still inside and a second backup would write the same archive key.
      */
     public static function heartbeatGraceSeconds(): int
     {
-        // Reached through RunBackup, not through the trait: PHP does not allow
-        // `Trait::CONSTANT` (only a *using* class exposes it), and reading it
-        // off the job is also the more honest reference — the grace belongs to
-        // the job whose death this is waiting on.
+        // Via RunBackup: PHP does not allow `Trait::CONSTANT`.
         return (int) config('server.backups.upload_stall_seconds', 1200)
             + RunBackup::UNIQUE_LOCK_GRACE;
     }
@@ -160,9 +114,7 @@ class StaleBackupReaper
     /**
      * Close out every abandoned run for a target. Returns how many were reaped.
      *
-     * Called before the in-flight check on every path that starts a backup, so
-     * that a stranded row unblocks itself the next time somebody asks for a
-     * backup rather than needing to be noticed first.
+     * Called before the in-flight check on every path that starts a backup.
      */
     public function reap(BackupTarget $target): int
     {
@@ -182,9 +134,7 @@ class StaleBackupReaper
     /**
      * Mark one run abandoned.
      *
-     * `finished_at` is set to now rather than to when the job actually died,
-     * which is unknowable — the point at which we noticed is the honest answer
-     * and is the one a duration on screen can be computed from.
+     * `finished_at` is when we noticed; the real time of death is unknowable.
      */
     public function close(Backup $backup): void
     {
@@ -199,9 +149,7 @@ class StaleBackupReaper
         $backup->update([
             'status' => BackupStatus::Failed,
             'reason' => 'abandoned',
-            // Where it had got to and the likely why (2026-10-29): `reason`
-            // held the running step until now, and this is the last chance
-            // to keep it.
+            // `reason` held the running step until now; this is the last chance to keep it.
             'stopped_step' => self::runningStep($backup),
             'stopped_cause' => app(BackupStopCause::class)->for($backup),
             'finished_at' => now(),
@@ -213,13 +161,8 @@ class StaleBackupReaper
     /**
      * Remove what a dead run left on this server's disk.
      *
-     * The runner deletes its working folder in a `finally`, which never
-     * runs when the worker is killed — and its `tar` and `pigz` carry on
-     * without it, writing a half archive nobody will upload. Found live
-     * on 2026-10-29: 464 MB in `storage/app/backups/run-N` from two killed
-     * runs, kept forever and counted against the server's disk (Dipali: no
-     * copy may stay on a user's server unasked). The run is over by now,
-     * so nothing still needs it.
+     * The runner's `finally` cleanup never runs when the worker is killed, leaving a half
+     * archive in `storage/app/backups/run-N`. No copy may stay on a user's server unasked.
      */
     public static function discardWorkingDirectory(Backup $backup): void
     {
@@ -237,10 +180,8 @@ class StaleBackupReaper
     /**
      * The step a run was on when it stopped, or null.
      *
-     * While a backup runs, `reason` holds the step it is on (BackupRunner
-     * writes it before each one), so a row that died mid-run still says
-     * where. Only a real step key is kept: anything else is a reason, not
-     * a place.
+     * While a backup runs, `reason` holds the step it is on; any other value is a reason, not
+     * a step.
      */
     public static function runningStep(Backup $backup): ?string
     {

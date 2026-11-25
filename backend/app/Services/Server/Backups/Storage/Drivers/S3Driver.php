@@ -14,13 +14,8 @@ use GuzzleHttp\Exception\TransferException;
 use Throwable;
 
 /**
- * Any S3-compatible service: AWS, Cloudflare R2, Backblaze B2, Wasabi,
- * DigitalOcean Spaces, or a self-hosted one.
- *
- * This is the original — and until now the only — destination driver. Its
- * config is carried over unchanged from `DestinationDisk`, including the two
- * flags whose defaults are wrong and whose docblocks are the reason they are
- * set explicitly here.
+ * Any S3-compatible service: AWS, Cloudflare R2, Backblaze B2, Wasabi, DigitalOcean Spaces,
+ * or a self-hosted one.
  */
 class S3Driver implements StorageDriver
 {
@@ -46,44 +41,30 @@ class S3Driver implements StorageDriver
             'bucket' => $destination->configValue('bucket'),
             'endpoint' => $endpoint !== '' ? $endpoint : null,
 
-            // Behind the prefix, so one destination shared by several
-            // applications cannot read or overwrite another's artefacts.
+            // Behind the prefix, so applications sharing a destination cannot touch each other's files.
             'root' => $destination->prefix ?: '',
 
-            // Path-style only for a custom endpoint. Wasabi, B2 and the
-            // self-hosted services route through the path; real AWS deprecated
-            // it and does not support it for buckets in regions launched after
-            // 2019 — and an empty endpoint *means* AWS.
+            // Path-style only for a custom endpoint: Wasabi, B2 and self-hosted services need it,
+            // while AWS (empty endpoint) does not support it for newer regions.
             'use_path_style_endpoint' => $endpoint !== '',
 
-            // Pinned to an address checked now (bug #34): the endpoint was
-            // checked when it was saved, but a name can point somewhere else
-            // later. A blocked one throws BlockedHostException, and the backup
-            // fails before anything connects.
+            // Pinned to an address checked now: the endpoint was validated at save time, but a name
+            // can later resolve elsewhere. A blocked one throws BlockedHostException before connecting.
             ...$this->pinned($endpoint),
 
-            // MUST stay true. With `throw => false` the adapter swallows
-            // failures and returns null/false, so an upload that never
-            // happened looks identical to one that did — a backup reporting
+            // MUST stay true: with `false` the adapter swallows failures, so a backup could report
             // success over an empty bucket.
             'throw' => true,
 
-            // MUST stay true. Laravel defaults this to *false* and so
-            // overrides Flysystem's own `true`, which leaves `@http.stream`
-            // unset on GetObject: Guzzle then buffers the whole object into
-            // memory and hands readStream() a stream over an already-loaded
-            // body. DownloadArtifact's stream_copy_to_stream looks streamed
-            // and isn't — a 5.8 GB archive OOMs the worker on exactly the
-            // large sites that most need restoring.
+            // MUST stay true: Laravel defaults it to false, so Guzzle buffers the whole object in
+            // memory and a multi-GB archive OOMs the worker.
             'stream_reads' => true,
         ];
     }
 
     /**
-     * Only the endpoint's address: for this provider a successful write
-     * really does mean the destination works, so the round trip is the rest
-     * of the test. Checked here as well as in config() so the Test button
-     * says why rather than "could not connect" (bug #34).
+     * Only the endpoint's address; the write round trip is the rest of the test. Checked here as
+     * well as in config() so the Test button says why.
      */
     public function preflight(StorageDestination $destination): ?string
     {
@@ -94,8 +75,7 @@ class S3Driver implements StorageDriver
     }
 
     /**
-     * The SDK's curl option pinning a custom endpoint's host. Nothing for
-     * AWS itself (no endpoint) or a name that does not resolve.
+     * The SDK's curl option pinning a custom endpoint's host. Nothing for AWS or an unresolvable name.
      *
      * @return array<string, mixed>
      *
@@ -116,10 +96,8 @@ class S3Driver implements StorageDriver
         $secret = $requireSecrets ? ['required'] : ['sometimes', 'required'];
 
         return [
-            // Endpoint is optional: S3-compatible providers (AWS, R2, B2,
-            // Wasabi, …) carry their region inside the bucket host. When
-            // set, it must be a reachable https URL and must not point at
-            // loopback or the cloud metadata range.
+            // Optional. When set it must be a reachable https URL, not loopback or the cloud
+            // metadata range.
             'config.endpoint' => ['nullable', 'string', 'max:255', new SafeProviderHost(
                 'storage.test.invalid_endpoint',
                 'storage.test.forbidden_host',
@@ -127,8 +105,7 @@ class S3Driver implements StorageDriver
             'config.region' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9-]+$/'],
             'config.bucket' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9._-]+$/', new SingleLine],
 
-            // Sizes are generous but capped to keep a stray paste of a
-            // megabyte log from filling the database.
+            // Capped so a stray large paste cannot fill the database.
             'config.access_key' => [...$secret, 'string', 'max:255'],
             'config.secret_key' => [...$secret, 'string', 'max:512'],
         ];
@@ -157,9 +134,8 @@ class S3Driver implements StorageDriver
     /**
      * Every S3 error code that means "these keys are wrong or not allowed".
      *
-     * Asked of the provider's own error code, not of the exception class: the
-     * SDK throws one `S3Exception` for every failure, so the class says only
-     * that S3 answered, never what it said.
+     * Matched on the provider's error code, not the exception class: the SDK throws one
+     * `S3Exception` for every failure.
      */
     private const CREDENTIAL_CODES = [
         'InvalidAccessKeyId',
@@ -171,10 +147,8 @@ class S3Driver implements StorageDriver
     ];
 
     /**
-     * Codes AWS answers with when the bucket exists in another region.
-     * Measured: a PUT signed for us-east-1 against an ap-south-1 bucket is
-     * `AuthorizationHeaderMalformed` (400), which reads like a credentials
-     * problem and is not one.
+     * Codes AWS answers with when the bucket exists in another region (e.g.
+     * `AuthorizationHeaderMalformed`, which reads like a credentials problem but is not).
      */
     private const REGION_CODES = [
         'AuthorizationHeaderMalformed',
@@ -183,29 +157,20 @@ class S3Driver implements StorageDriver
     ];
 
     /**
-     * cURL errors that mean the TLS handshake or certificate failed: the
-     * server was reached, but no request was ever sent. 35 is a broken
-     * handshake, 60 an untrusted certificate (self-signed, expired, wrong name).
+     * cURL errors for a failed TLS handshake or certificate: the server was reached but no request
+     * was sent. 35 is a broken handshake, 60 an untrusted certificate.
      */
     private const TLS_ERRNOS = [35, 51, 53, 54, 58, 59, 60, 77, 80, 82, 83, 90, 91];
 
     /**
      * Classify by what the provider or cURL actually reported.
      *
-     * This used to answer "credentials" for any `Aws\S3\Exception`, and every
-     * S3 failure is one: a wrong bucket, a wrong region and a server whose TLS
-     * is broken all told the user their keys were wrong, sending them to
-     * replace keys that worked. Measured against real AWS and a real broken
-     * host, 2026-09-24.
+     * Not every `Aws\S3\Exception` means bad credentials (wrong bucket, region or broken TLS are
+     * all one). A network failure carries no error code, so it answers null here and the wrapped
+     * Guzzle exception answers from its cURL errno.
      *
-     * The chain walk asks each link in turn. An `S3Exception` for a network
-     * failure carries no error code, so it answers null here and the Guzzle
-     * exception it wraps answers instead, from its cURL errno.
-     *
-     * One case stays "credentials" on purpose: Backblaze B2 keys belong to one
-     * region, and an endpoint in another region answers `InvalidAccessKeyId`
-     * ("the key is not valid"). Nothing in that answer says region, so calling
-     * it one would be a guess.
+     * One case stays "credentials" on purpose: a B2 key used against another region's endpoint
+     * answers `InvalidAccessKeyId`, which says nothing about region.
      */
     protected function categoryForType(Throwable $e): ?string
     {
@@ -245,14 +210,12 @@ class S3Driver implements StorageDriver
     }
 
     /**
-     * Nothing to repair: this destination's location is not something the panel
-     * created, so its absence is somebody else's decision to undo.
+     * Nothing to repair: the panel did not create this location.
      */
     public function heal(StorageDestination $destination): void {}
 
     /**
-     * No special path needed: this driver's `readStream()` genuinely streams,
-     * so the caller's copy never holds the whole archive anywhere.
+     * No special path needed: `readStream()` genuinely streams.
      */
     public function downloadTo(StorageDestination $destination, string $key, string $path): bool
     {
@@ -260,13 +223,8 @@ class S3Driver implements StorageDriver
     }
 
     /**
-     * Null, because S3 already has a better answer.
-     *
-     * The adapter implements Flysystem's `TemporaryUrlGenerator`, so
-     * `BackupController::download()` falls through to `temporaryUrl()` and gets
-     * a signed, expiring link — narrower than anything this method could
-     * return, since it carries its own expiry rather than relying on who the
-     * browser is signed in as.
+     * Null: the adapter's `temporaryUrl()` (used by `BackupController::download()`) gives a
+     * signed, expiring link, which is narrower than anything returned here.
      */
     public function downloadUrl(StorageDestination $destination, string $key): ?string
     {
@@ -274,9 +232,7 @@ class S3Driver implements StorageDriver
     }
 
     /**
-     * Null: the S3 adapter's `writeStream()` already does multipart uploads
-     * with the SDK's own retry behind it. Reimplementing that here would
-     * replace a well-tested path with a worse one.
+     * Null: the adapter's `writeStream()` already does multipart uploads with the SDK's retry.
      */
     public function uploadFrom(StorageDestination $destination, string $key, string $path, ?callable $onProgress = null): bool
     {

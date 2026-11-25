@@ -28,13 +28,9 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
     /**
      * Whether a remote user could connect at all.
      *
-     * Ubuntu's MariaDB and MySQL packages ship `bind-address = 127.0.0.1`,
-     * so without this a user saved as "remote" or "anywhere" was an account
-     * that existed, had the right grants and could never be reached — found on
-     * the 26.04 test server, where the panel even opened 3306 in the firewall
-     * for a server listening on loopback only. Anything other than loopback
-     * counts: an operator who bound a specific interface decided that
-     * themselves, and restarting to widen it further is not ours to do.
+     * Ubuntu's packages ship `bind-address = 127.0.0.1`, so a "remote" user would exist but
+     * never be reachable. Anything other than loopback counts: a specific interface bound by
+     * the operator is their decision, and widening it is not ours to do.
      */
     public function listensRemotely(): bool
     {
@@ -42,8 +38,7 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
 
         $addresses = array_filter(array_map('trim', explode(',', trim($result->output()))));
 
-        // Unreadable reads as "already listening": the alternative is a
-        // restart asked for, and made, on a guess.
+        // Unreadable counts as "already listening": never restart on a guess.
         if ($result->failed() || $addresses === []) {
             return true;
         }
@@ -52,21 +47,13 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * A drop-in after the package's own file (`50-server.cnf` /
-     * `mysqld.cnf`), so the operator's configuration stays theirs and the
-     * override sits in one obvious, removable place. Then a restart:
-     * `bind_address` is read-only at runtime on both engines.
+     * Writes a drop-in after the package's own file (`50-server.cnf` / `mysqld.cnf`), then
+     * restarts: `bind_address` is read-only at runtime on both engines.
      *
-     * "After" is alphabetical, and digits sort before letters (MY-01). On
-     * MySQL the drop-in was `99-panel-remote.cnf`, read BEFORE `mysqld.cnf`,
-     * whose `bind-address = 127.0.0.1` then won: the panel reported success,
-     * 3306 stayed closed, and every later remote user asked for (and made)
-     * another restart. It is `zz-panel-remote.cnf` now. The old file never
-     * did anything, so it goes the next time this runs rather than in an
-     * update step — that is exactly when a server that has one needs this.
-     *
-     * Binding is not granting: the account's host and the firewall rule the
-     * panel opens are the other two locks.
+     * Load order is alphabetical and digits sort before letters, so the file is
+     * `zz-panel-remote.cnf`; a `99-` name is read before `mysqld.cnf` and loses. Legacy files
+     * are removed here. Binding is not granting: the account's host and the firewall rule are
+     * the other two locks.
      */
     public function openRemoteListening(): void
     {
@@ -120,10 +107,8 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * A question, not an operation: "no" is an answer (bug #48). On a box
-     * with MariaDB only, every screen asking whether MySQL is there logged
-     * "Access denied for user 'root'" as an error. A failure that matters
-     * shows up on the operation that needs the engine.
+     * A question, not an operation: "no" is an answer, so it is not logged as an error.
+     * A failure that matters shows up on the operation that needs the engine.
      */
     public function available(): bool
     {
@@ -154,17 +139,11 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
 
     public function listUsers(): array
     {
-        // `mysql.user` rather than a SHOW: it is the only place that lists an
-        // account with no grants at all, and an account nobody can see is
-        // exactly the one worth surfacing on a migrated box.
+        // `mysql.user` rather than a SHOW: it is the only place that lists an account with no
+        // grants at all.
         //
-        // Two columns, not CONCAT(user, '\t', host). In --batch mode the
-        // client escapes a tab *inside* a value as a literal backslash-t, so
-        // the concatenated column came back as `brown_user\tlocalhost`, the
-        // split found no tab, and SHOW GRANTS ran for an account that does not
-        // exist. Every MySQL and MariaDB user was therefore found with no
-        // databases, and Server Sync never offered one. Found on a real
-        // server, 2026-09-24. Between columns the tab is a real one.
+        // Two columns, not CONCAT(user, '\t', host): --batch mode escapes a tab inside a value
+        // as a literal backslash-t, so the split would find no tab. Between columns it is real.
         $result = $this->run(
             "SELECT user, host FROM mysql.user WHERE user <> '';"
         );
@@ -220,7 +199,6 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
     public function userExists(string $username, string $host, string $database): bool
     {
         $result = $this->run(sprintf(
-            // A word, not a count: "1" is what every other probe answers.
             "SELECT IF(EXISTS (SELECT 1 FROM mysql.user WHERE user = '%s' AND host = '%s'), 'user_exists', 'user_free');",
             $this->esc($username),
             $this->esc($host),
@@ -236,11 +214,8 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
     /**
      * The databases one account has been granted something on.
      *
-     * Parsed from SHOW GRANTS rather than information_schema, because that is
-     * the only view that accounts for grants made at the table level as well
-     * as the database level. A `*.*` grant is skipped: an account with
-     * server-wide privileges is an admin account, not a site's database user,
-     * and attaching it to one database would misdescribe it.
+     * Parsed from SHOW GRANTS: the only view that includes table-level grants. A `*.*` grant is
+     * skipped: server-wide privileges mean an admin account, not a site's database user.
      *
      * @return array<int, string>
      */
@@ -258,8 +233,7 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
 
         $databases = [];
 
-        // GRANT ... ON `shop`.* TO ... — the backticks are optional in the
-        // output depending on server version, so both forms are matched.
+        // GRANT ... ON `shop`.* TO ... — backticks are optional depending on server version.
         if (preg_match_all('/\sON\s+`?([^`\s.]+)`?\.\S+\s+TO\s/i', $result->output(), $matches)) {
             foreach ($matches[1] as $database) {
                 if ($database !== '*' && ! in_array($database, $databases, true)) {
@@ -285,21 +259,14 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
 
     public function dropDatabase(string $name): void
     {
-        // A deletion can have dropped the schema but failed while cleaning up
-        // its owned users. Retrying must finish that cleanup, not fail here.
+        // IF EXISTS: a retry after a half-finished teardown must continue, not fail here.
         $this->must('DROP DATABASE IF EXISTS '.$this->ident($name).';');
     }
 
     /**
-     * Database first, then its users — the order this engine has always used.
-     * Removing the users first can leave a live database unreachable if its
-     * drop then fails, which is the worse of the two half-finished states.
-     *
-     * MySQL's `DROP USER` needs nothing from the database it granted access
-     * to, so it survives the drop above unchanged. ({@see PgsqlEngine} is the
-     * engine where that is not true — a separate implementation of this
-     * interface, not a subclass, so it states its own teardown rather than
-     * inheriting this one.)
+     * Database first, then its users: dropping users first can leave a live database
+     * unreachable if its drop then fails. `DROP USER` needs nothing from the dropped database
+     * ({@see PgsqlEngine} is where that differs).
      *
      * @param  array<int, array{username: string, host: string}>  $users
      */
@@ -325,10 +292,7 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * MySQL and MariaDB both answer from `information_schema.schemata`.
-     *
-     * One row, two columns, tab-separated by the client — parsed positionally
-     * rather than by name because the batch client prints no header.
+     * One row, two tab-separated columns, parsed positionally: the batch client prints no header.
      *
      * @return array{charset: ?string, collation: ?string}
      */
@@ -385,23 +349,13 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
     /**
      * Everything running except the connection doing the asking.
      *
-     * `SHOW FULL PROCESSLIST` includes the thread executing it, so the panel
-     * was always in its own list: a row with `Command = Query` and our own
-     * statement as its text. That row is not `Sleep`, so it survived the
-     * active-query filter and an idle database never read as idle — on a quiet
-     * server the entire list was the panel watching itself. It was also given
-     * a Stop Query button that could not work: the KILL is issued on a new
-     * connection, by which time that thread has gone, so MySQL answers
-     * `Unknown thread id` and the user gets an error for pressing a control we
-     * offered them.
+     * `SHOW FULL PROCESSLIST` includes the thread running it, so the panel listed itself as an
+     * active query (and offered a Stop Query that cannot work: the KILL runs on a new
+     * connection). `information_schema.PROCESSLIST` has the same columns and lets the server
+     * exclude our own connection; matching on statement text would misfire on a user's own
+     * `SHOW FULL PROCESSLIST`.
      *
-     * `information_schema.PROCESSLIST` carries the same columns in the same
-     * order and lets the server exclude us by its own reckoning of who we are.
-     * Matching on the statement text instead would misfire the moment somebody
-     * legitimately runs `SHOW FULL PROCESSLIST` themselves.
-     *
-     * NULL is selected as the literal 'NULL' the batch client would have
-     * printed, so the parsing below is unchanged.
+     * NULL is selected as the literal 'NULL' the batch client prints, so parsing is unchanged.
      */
     public function processes(): array
     {
@@ -485,8 +439,7 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
         $authFile = $this->writeAuthFile();
 
         try {
-            // `--result-file` writes straight to disk (no stdout buffering) and
-            // the creds live in the 0600 auth file — nothing sensitive on argv.
+            // `--result-file` writes straight to disk; creds stay in the 0600 auth file.
             $result = $this->serverOps->run(
                 [$client, '--defaults-extra-file='.$authFile, '--single-transaction', '--quick',
                     '--routines', '--triggers', '--result-file='.$path, $database],
@@ -507,12 +460,9 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
     public function reattachUsers(string $database, array $usernames): void {}
 
     /**
-     * As the database's own user, over the admin connection's transport, with
-     * `--binary-mode`: that switch turns off every client command but `\C` and
-     * `DELIMITER` for piped input, so `\! command` or `system command` in an
-     * uploaded file reaches the server as (failing) SQL instead of a shell —
-     * one run as root, since the client is elevated. Fed over stdin rather than
-     * `source`, which is itself a client command.
+     * Runs as the database's own user with `--binary-mode`, which disables client commands
+     * (except `\C` and `DELIMITER`) so `\!` or `system` in an uploaded file cannot reach a root
+     * shell. Fed over stdin rather than `source`, which is itself a client command.
      */
     public function importAs(string $database, string $path, string $username, string $password, bool $gzip = false): void
     {
@@ -554,12 +504,8 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
         $authFile = $this->writeAuthFile();
 
         try {
-            // `source` rather than piping the file in on stdin: a site dump is
-            // routinely larger than the whole PHP memory limit, and reading it
-            // into a string to pass as process input would kill the worker on
-            // exactly the databases that most need restoring. The path is ours
-            // (working directory + an upstream-validated database name), so
-            // nothing user-controlled reaches the client's parser.
+            // `source` rather than stdin: a dump can exceed the PHP memory limit. The path is
+            // ours (working directory + validated database name), nothing user-controlled.
             $result = $this->serverOps->run(
                 [$client, '--defaults-extra-file='.$authFile, '--batch', $database,
                     '-e', 'source '.$path],
@@ -617,7 +563,7 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
                 ['feature' => 'database', 'engine' => $this->connection->engine, 'op' => 'query'],
                 60,
                 $sql, // statements over stdin — never on argv
-                // 127: `env` found no client, so the engine is not installed (2026-11-05).
+                // 127: `env` found no client, so the engine is not installed.
                 expectedExitCodes: $probe ? [1, 127] : [],
             );
         } finally {

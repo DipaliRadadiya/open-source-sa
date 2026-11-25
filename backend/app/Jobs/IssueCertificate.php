@@ -25,21 +25,15 @@ use Throwable;
 /**
  * Obtains a certificate and puts it in front of the site.
  *
- * Queued because ACME is not fast: two DNS lookups, an HTTP round trip back to
- * this box and a retry, which routinely outlasts the request. Inline it would
- * time out at the proxy while certbot carried on and succeeded — telling the
- * user it failed about work that worked.
+ * Queued because ACME routinely outlasts the request; inline it would time out at the proxy while
+ * certbot carried on and succeeded.
  *
- * One attempt, no retries, and this one matters more than usual. Let's Encrypt
- * counts five failed authorisations per hostname per hour; a job that retried
- * on its own would spend that budget in seconds and lock the user out of the
- * thing they are trying to fix.
+ * One attempt, no retries: Let's Encrypt allows five failed authorisations per hostname per hour,
+ * which an automatic retry would spend in seconds.
  *
- * It takes turns with deleting the site ({@see CertificateLock}), from the
- * check that the site still exists to the certificate being in front of it.
- * Found waiting, it does not wait inside the worker — that spends this job's
- * own timeout — but dispatches a fresh copy of itself a little later, which
- * is still one attempt and never a retry of a certbot that failed.
+ * It takes turns with deleting the site ({@see CertificateLock}), from the check that the site
+ * exists to the certificate being in front of it. Finding the lock held, it dispatches a fresh copy
+ * a little later instead of waiting inside the worker; that is not a retry of a failed certbot.
  */
 class IssueCertificate implements ShouldQueue
 {
@@ -51,9 +45,8 @@ class IssueCertificate implements ShouldQueue
     public int $timeout = 600;
 
     /**
-     * How many times this certificate has already been put back because the
-     * site's certificate lock was held. A plain property, not a constructor
-     * argument: a job queued before this existed unserializes to 0.
+     * How many times this certificate was put back because the site's certificate lock was held.
+     * A plain property, not a constructor argument: older queued jobs unserialize to 0.
      */
     public int $requeues = 0;
 
@@ -91,16 +84,15 @@ class IssueCertificate implements ShouldQueue
         $lock = $locks->forIssue($name);
 
         if ($lock === null) {
-            // A delete of this site — or another issuance under this name — is
-            // running. Back on the queue, untouched: still Pending.
+            // A delete of this site, or another issuance under this name, is running: back on the
+            // queue, still Pending.
             $this->requeue($certificate, $name);
 
             return;
         }
 
         try {
-            // Asked again now that nothing can delete the site underneath:
-            // a delete that held the lock until a moment ago has removed it.
+            // Asked again under the lock: a delete that held it a moment ago may have removed the site.
             $certificate = Certificate::with('application.domains')->find($this->certificateId);
 
             if ($certificate === null || $certificate->application === null) {
@@ -123,8 +115,7 @@ class IssueCertificate implements ShouldQueue
         ActivityLogger $activityLogger,
         InstallerManager $installers,
     ): void {
-        // Requests snapshot before changing Active to Pending. Older queued
-        // jobs have no snapshot; read their current scheme before Issuing.
+        // Requests snapshot the URL before Active becomes Pending; older queued jobs have none.
         $previousUrl = $this->previousUrl ?? $certificate->application->fresh(['certificate'])->url();
 
         $certificate->update([
@@ -149,10 +140,8 @@ class IssueCertificate implements ShouldQueue
             return;
         }
 
-        // The site went while certbot was working — by a path that does not
-        // take the lock (a half-made clone or staging copy being discarded),
-        // or after a holder died and its lock lapsed. What was just made is
-        // nobody's: removed, unless a site now answers to the same name.
+        // The site went while certbot worked (a path that skips the lock, or a lapsed lock).
+        // What was just made is nobody's: removed, unless a site now answers to the same name.
         $application = $certificate->application->fresh(['domains', 'certificate', 'systemUser']);
 
         if ($application === null || ! Certificate::whereKey($certificate->id)->exists()) {
@@ -165,9 +154,8 @@ class IssueCertificate implements ShouldQueue
             : 'http://'.$application->domain;
 
         try {
-            // Reconcile before advertising the certificate as active. If an
-            // application's own config cannot be changed, its existing HTTP
-            // site stays coherent and the certificate job fails visibly.
+            // Reconcile before advertising the certificate as active: if the application's own
+            // config cannot change, the HTTP site stays coherent and the job fails visibly.
             $installers->syncUrl($application, $targetUrl);
 
             $certificate->update([
@@ -175,23 +163,18 @@ class IssueCertificate implements ShouldQueue
                 'certificate_path' => $paths['certificate'],
                 'private_key_path' => $paths['private_key'],
                 'chain_path' => $paths['chain'] ?? null,
-                // An uploaded key has nothing left to belong to once another
-                // certificate is serving the site.
+                // An uploaded key belongs to nothing once another certificate serves the site.
                 'uploaded_private_key' => null,
                 'issued_at' => now(),
-                // Read off the file rather than assumed from the lifetime. Let's
-                // Encrypt has started issuing shorter-lived certificates, so a
-                // hardcoded 90 days would quietly become wrong.
+                // Read off the file: Let's Encrypt lifetimes change, so 90 days must not be assumed.
                 'expires_at' => $files->expiresAt($paths['certificate']),
-                // What was served before belongs to the certificate this one
-                // replaces (FS-C47); asked again once the vhost has reloaded.
+                // What was served before belonged to the replaced certificate; asked again after reload.
                 'served_expires_at' => null,
                 'served_checked_at' => null,
             ]);
 
-            // Only now does the vhost gain its TLS directives — pointing a
-            // server block at files that are not there fails the config test
-            // and takes the site down over a certificate it never had.
+            // Only now does the vhost gain its TLS directives: pointing it at missing files fails the
+            // config test and takes the site down.
             $vhost->execute($application->fresh(['domains', 'certificate']));
             app(CertificateExpiry::class)->recheckServed($certificate->fresh());
         } catch (Throwable $exception) {
@@ -213,25 +196,19 @@ class IssueCertificate implements ShouldQueue
             $certbot->ensureRenewalHook(implode(' ', $webServers->driver()->reloadCommandForHook()));
         }
 
-        // What this certificate replaced, removed only now: the site is
-        // already serving the replacement, so nothing is left without a
-        // certificate at any point. A lineage left behind renews itself
-        // forever — spending rate limit and mailing the user about a name
-        // nothing uses — whether it was renamed by a primary-domain change or
-        // replaced by a self-signed certificate. Same lineage name and still
-        // Let's Encrypt means certbot reused it, and it is the one in use.
+        // What this certificate replaced is removed only now, once the replacement is serving. A
+        // lineage left behind renews forever (rate limit, emails about an unused name). Same name and
+        // still Let's Encrypt means certbot reused it, and it is in use.
         if ($this->previousCertName !== null
             && ($certificate->type !== CertificateType::LetsEncrypt || $this->previousCertName !== $certificate->application->slug)) {
             $certbot->revoke($this->previousCertName, $certificate->application_id);
         }
 
-        // An uploaded pair — the private key especially — should not outlive
-        // the certificate it belonged to. A self-signed reissue for the same
-        // name writes to the same paths, so those are not touched.
+        // An uploaded pair (the private key especially) must not outlive its certificate. A
+        // self-signed reissue for the same name writes the same paths, which are kept.
         $staleFiles = array_values(array_diff($this->previousFiles, [$paths['certificate'], $paths['private_key']]));
 
-        // A self-signed pair written over a certificate v7 left here: v7's
-        // chain file beside it belonged to the certificate that was replaced.
+        // v7's chain file beside a self-signed pair belonged to the replaced certificate.
         if ($certificate->type === CertificateType::SelfSigned) {
             try {
                 $files->removeV7Bundle((string) $certificate->application->slug, $certificate->application_id);
@@ -244,9 +221,8 @@ class IssueCertificate implements ShouldQueue
             try {
                 $files->remove($staleFiles, (string) $certificate->application->slug, $certificate->application_id);
             } catch (Throwable) {
-                // A path outside the certificate directory is refused and left
-                // alone. The new certificate is already serving; tidying up the
-                // old one must not turn that into a failed job.
+                // A path outside the certificate directory is refused and left alone; tidying up
+                // must not fail a job whose new certificate is already serving.
             }
         }
 
@@ -264,9 +240,8 @@ class IssueCertificate implements ShouldQueue
     {
         $certbot->ensureChallengeRoot();
 
-        // Named after the site, as v7 names it (v7 layout B3): a lineage named
-        // after a domain changed name with the primary domain, and a server
-        // moved from v7 already has its certificates under the site's name.
+        // Named after the site, as v7 does: a domain-named lineage would change with the primary
+        // domain, and a server moved from v7 already has certificates under the site's name.
         $certName = (string) $certificate->application->slug;
 
         $result = $certbot->issue(
@@ -297,8 +272,7 @@ class IssueCertificate implements ShouldQueue
     {
         $name = (string) $certificate->application->slug;
 
-        // Asked again here, not only when it was requested: the queue may have
-        // held the job while something else took the name in /etc/ssl.
+        // Asked again: the queue may have held the job while something else took the name in /etc/ssl.
         if ($files->conflict($name, $this->previousFiles, $certificate->application->domainNames()) !== null) {
             $this->fail($certificate, 'file_taken');
 
@@ -331,10 +305,9 @@ class IssueCertificate implements ShouldQueue
     }
 
     /**
-     * Put this certificate back on the queue while the site's lock is held,
-     * as a fresh job: `$tries = 1` stays true of every copy. Bounded — past
-     * `max_requeues` the lock has outlived even a dead holder's ttl, and the
-     * certificate is failed rather than left on Pending.
+     * Put this certificate back on the queue as a fresh job while the site's lock is held
+     * (`$tries = 1` stays true of every copy). Bounded: past `max_requeues` the lock has outlived
+     * even a dead holder's ttl, so the certificate is failed rather than left Pending.
      */
     private function requeue(Certificate $certificate, string $name): void
     {
@@ -373,14 +346,11 @@ class IssueCertificate implements ShouldQueue
     }
 
     /**
-     * Remove what this job just created for a site that no longer exists —
-     * but only if nothing live claims the name. A site that has since taken
-     * the same slug owns the lineage now (its own request reuses it, its own
-     * delete removes it); another site's imported lineage of that name is
-     * that site's. Either way it is left, and said so.
+     * Remove what this job just created for a site that no longer exists, unless something live
+     * claims the name: a site that has since taken the same slug, or another site's imported
+     * lineage of that name, owns it. Then it is left, and logged.
      *
-     * Never throws: the work is over, and a failed job here would only repeat
-     * the crash this replaces.
+     * Never throws: the work is over, and a failed job would only repeat the crash.
      *
      * @param  array{certificate: string, private_key: string, chain?: string}  $paths
      */
@@ -395,8 +365,8 @@ class IssueCertificate implements ShouldQueue
             'reference' => $reference,
         ];
 
-        // What certbot and the self-signed writer were given — the slug. The
-        // lock's fallback name for a blank slug names nothing on disk.
+        // The name certbot and the self-signed writer were given is the slug; the lock's fallback
+        // name for a blank slug names nothing on disk.
         if ($name !== (string) $certificate->application?->slug || $this->owned($certificate, $name, $paths)) {
             Log::channel('server-ops')->warning('certificate issued for a deleted site left to the site that now owns its name', $context + ['op' => 'certificate_left_for_owner']);
 
@@ -419,9 +389,8 @@ class IssueCertificate implements ShouldQueue
     }
 
     /**
-     * Does a live site claim this name? By slug, which is what lineages and
-     * self-signed files are named after; and, for Let's Encrypt, by any
-     * certificate whose lineage on disk has this name (an imported one).
+     * Does a live site claim this name? By slug (what lineages and self-signed files are named
+     * after) and, for Let's Encrypt, by any certificate whose lineage has this name (imported).
      *
      * @param  array{certificate: string, private_key: string, chain?: string}  $paths
      */
@@ -444,9 +413,7 @@ class IssueCertificate implements ShouldQueue
     }
 
     /**
-     * A crash still has to leave a row the screen can read. Without this the
-     * certificate sits on `issuing` forever and the only honest thing the UI
-     * could show is a spinner that never stops.
+     * A crash must still leave a readable row, or the certificate sits on `issuing` forever.
      */
     public function failed(?Throwable $exception): void
     {

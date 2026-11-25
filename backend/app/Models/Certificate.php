@@ -26,9 +26,7 @@ class Certificate extends Model
             'type' => CertificateType::class,
             'status' => CertificateStatus::class,
             'domains' => 'array',
-            // The one private key the panel holds that it did not generate on
-            // the box. Encrypted at rest so a database copy is not a set of
-            // usable keys.
+            // The only private key the panel holds that it did not generate; encrypted at rest.
             'uploaded_private_key' => 'encrypted',
             'force_https' => 'boolean',
             'auto_renew' => 'boolean',
@@ -45,17 +43,8 @@ class Certificate extends Model
     }
 
     /**
-     * Whether the web server should be given TLS directives at all. A pending
-     * or failed certificate has no files behind it, and pointing a server block
-     * at a path that is not there fails the config test and takes the site down
-     * with it.
-     */
-    /**
-     * The certbot lineage this certificate lives in, read from where its files
-     * are — not rebuilt from a name rule. v7 names a lineage after the site
-     * (as v8 does now, v7 layout B3), and certificates issued under an older
-     * rule keep the name they were issued under; the path is the one fact that
-     * is right for all of them. Null for a certificate certbot does not manage.
+     * The certbot lineage this certificate lives in, read from where its files are, since
+     * older certificates keep the name they were issued under. Null if certbot does not manage it.
      */
     public function lineageName(): ?string
     {
@@ -71,20 +60,21 @@ class Certificate extends Model
     }
 
     /**
-     * An uploaded certificate whose chain is a file of its own — v7's
-     * `{app}_ca_bundle.crt` on Apache and OpenLiteSpeed — so the vhost has to
-     * name it. Uploads made here bundle the chain into the `.crt` and have
-     * none; a Let's Encrypt `chain_path` is already inside `fullchain.pem`.
+     * An uploaded certificate whose chain is a file of its own (v7's `{app}_ca_bundle.crt` on
+     * Apache and OpenLiteSpeed), so the vhost has to name it. Uploads made here bundle the
+     * chain into the `.crt`.
      */
     public function servesSeparateChain(): bool
     {
-        // By its name, which only v7 gave a file: a row can still carry a
-        // Let's Encrypt `chain.pem` from before an upload, and that names a
-        // lineage this certificate has nothing to do with.
+        // Matched by name: a row may still carry a stale Let's Encrypt `chain.pem`.
         return $this->type === CertificateType::Custom
             && str_ends_with((string) $this->chain_path, '_ca_bundle.crt');
     }
 
+    /**
+     * Whether the web server should be given TLS directives at all. A pending or failed
+     * certificate has no files, and pointing a server block at a missing path takes the site down.
+     */
     public function servable(): bool
     {
         return $this->status === CertificateStatus::Active
@@ -132,21 +122,10 @@ class Certificate extends Model
     /**
      * Days left, negative once expired.
      *
-     * Worth surfacing because certificate lifetimes are shrinking: Let's
-     * Encrypt has begun issuing shorter-lived certificates, and a renewal that
-     * silently stopped working now has far less slack before the site breaks.
+     * Null means "no expiry known" (pending, issuing or failed), which is NOT zero days.
      *
-     * Null means "no expiry known" — a pending, issuing or failed certificate
-     * has no date yet. That is NOT zero days, and the distinction matters: this
-     * was written as `$this->expires_at?->diffInDays(...) * -1`, where the
-     * null-safe operator short-circuits only the call, leaving `null * -1` to
-     * evaluate as `0`. Every freshly created application therefore reported a
-     * certificate expiring today, and the dashboard called it critical.
-     *
-     * Rounded up, not truncated: Carbon 3 returns a float here, and a cast to
-     * int rounds toward zero, so a certificate with ten hours left came out as
-     * `0` as well. A certificate that still has any life in it reports at least
-     * one day; only a genuinely expired one goes negative.
+     * Rounded up, not truncated: Carbon 3 returns a float, and an int cast would report `0` for
+     * a certificate with ten hours left. Only a genuinely expired one goes negative.
      */
     public function daysRemaining(): ?int
     {
@@ -158,9 +137,8 @@ class Certificate extends Model
     }
 
     /**
-     * The localized sentence for a failure, in the *viewer's* locale — the same
-     * rule the activity log and the runtime installer follow, which is why the
-     * classified code is stored rather than a finished string.
+     * The localized sentence for a failure, in the *viewer's* locale; hence the stored code
+     * rather than a finished string.
      */
     public function message(): ?string
     {
@@ -170,32 +148,24 @@ class Certificate extends Model
 
         $key = 'certificate.failed.'.($this->reason ?: 'unknown');
 
-        // An unrecognised code falls back rather than rendering the key at the
-        // user: a missing translation must not become UI text.
+        // An unrecognised code falls back: a missing translation must not become UI text.
         return __($key) === $key ? __('certificate.failed.unknown') : __($key);
     }
 
     /**
-     * Names that are on the site but not on the certificate. Its own question
-     * because it is the one thing that silently breaks after everything looked
-     * fine: a domain added later is served by a certificate that does not
-     * mention it, and the browser refuses it.
+     * Names that are on the site but not on the certificate: a domain added later is served by a
+     * certificate that does not mention it, and the browser refuses it.
      *
      * @return array<int, string>
      */
     /**
      * The web server is presenting an older certificate than the one on disk.
      *
-     * Which means a renewal landed and never reached the running process: the
-     * files are current, the panel's countdown is healthy, and every visitor is
-     * being handed something that expires sooner — eventually something expired.
-     * It is the one certificate failure with no symptom anywhere else in the
+     * A renewal landed but never reached the running process. No other symptom shows in the
      * panel, because everything else reads the file.
      *
-     * Null when the served certificate has not been read, or could not be:
-     * nothing listening, TLS refused. Not knowing is not the same as agreeing,
-     * and a screen showing a reassuring tick for a check that never ran is the
-     * habit this whole field exists to break.
+     * Null when the served certificate could not be read (nothing listening, TLS refused):
+     * not knowing is not agreeing.
      */
     public function servingStale(): ?bool
     {
@@ -203,21 +173,15 @@ class Certificate extends Model
             return null;
         }
 
-        // A minute of slack: the two dates come from the same certificate when
-        // things are healthy, and a strict comparison would flag clock skew
-        // between reading the file and completing a handshake.
+        // A minute of slack for clock skew between reading the file and the handshake.
         return $this->served_expires_at->lt($this->expires_at->subMinute());
     }
 
     /**
      * The site's certifiable names this certificate does not cover.
      *
-     * Asks {@see covers()} rather than comparing names: a wildcard
-     * `*.example.com` covers `shop.example.com` without naming it, and an
-     * exact-match list reported every such name missing on a certificate
-     * that serves them fine (support item #16, 2026-10-27). It still reports
-     * what a wildcard does not cover — the bare `example.com` and anything
-     * two labels deep.
+     * Asks {@see covers()} rather than comparing names: a wildcard `*.example.com` covers
+     * `shop.example.com` without naming it, but not the bare `example.com` or deeper labels.
      *
      * @return array<int, string>
      */
@@ -232,20 +196,12 @@ class Certificate extends Model
     /**
      * Names on the certificate that the application no longer has.
      *
-     * The opposite of {@see missingDomains()}, and the dangerous direction.
-     * A missing domain is a name without HTTPS — visible the moment somebody
-     * visits it. A *stale* one is invisible and then fatal: `certbot renew`
-     * re-validates every name in a lineage and fails the whole renewal if any
-     * one of them cannot be validated. So removing an alias from a site quietly
-     * stops the certificate covering its *remaining, perfectly good* domains
-     * from ever renewing, and the first anyone hears of it is a browser warning
-     * up to ninety days later.
+     * The opposite of {@see missingDomains()}, and the dangerous direction: `certbot renew`
+     * re-validates every name in a lineage and fails the whole renewal if one cannot be
+     * validated, so a removed alias silently stops the remaining domains from renewing.
      *
-     * Reported rather than corrected. Fixing it means reissuing, which spends
-     * from a rate limit and replaces a certificate that is working today — not
-     * something to do behind someone's back.
-     *
-     * Only Let's Encrypt renews, so only Let's Encrypt can be broken this way.
+     * Reported, not corrected: fixing it means reissuing, which spends a rate limit.
+     * Only Let's Encrypt renews, so only it can be broken this way.
      *
      * @return array<int, string>
      */
@@ -255,9 +211,7 @@ class Certificate extends Model
             return [];
         }
 
-        // Every name the application answers to, not just the certifiable
-        // ones: a domain that has stopped resolving is still attached, and the
-        // user has not asked us to drop it from anything.
+        // Every name the application answers to, not just the certifiable ones.
         $current = $this->application?->domains->pluck('domain')->all() ?? [];
 
         return array_values(array_diff($this->domains ?? [], $current));

@@ -5,20 +5,12 @@ namespace App\Support;
 /**
  * Static enumerations for site-type installer fields.
  *
- * These were free-text inputs. The values are not free text — they are codes a
- * specific installer accepts, and a typo produces a site installed in the
- * wrong language or a country that does not exist, discovered later by the
- * person who owns the site.
+ * The values are codes a specific installer accepts, not free text: a typo installs a site in
+ * the wrong language or a country that does not exist.
  *
- * One source per list, shared by the field definition and the validation rule.
- * The two drifting apart is the failure this class exists to prevent: a
- * dropdown offering a value the API rejects wastes the user's time and looks
- * like a bug in the panel rather than in its data.
- *
- * The lists are complete for their domain rather than a popular subset,
- * because a subset is a decision to exclude somebody. Where an installer
- * genuinely supports fewer values than the standard defines, the list follows
- * the installer.
+ * One source per list, shared by the field definition and the validation rule, so a dropdown
+ * never offers a value the API rejects. Lists are complete for their domain, not a popular
+ * subset; where an installer supports fewer values than the standard, the list follows it.
  */
 class FieldOptions
 {
@@ -45,9 +37,8 @@ class FieldOptions
     /**
      * WordPress locale codes, as `wp core install --locale` takes them.
      *
-     * Note the shape: underscore, and a region on most but not all. `ja` and
-     * `he_IL` are both correct — WordPress is not consistent here and the list
-     * has to follow it rather than a rule.
+     * Underscore form, with a region on most but not all (`ja`, `he_IL`): the list follows
+     * WordPress, not a rule.
      *
      * @return list<string>
      */
@@ -59,9 +50,7 @@ class FieldOptions
     /**
      * Hyphenated locale codes, used by Craft CMS and Akaunting.
      *
-     * Both take the BCP 47 form. Kept as one list because they are the same
-     * enumeration — splitting it would mean maintaining the same values twice
-     * and letting them diverge.
+     * BCP 47 form; one list because both take the same enumeration.
      *
      * @return list<string>
      */
@@ -73,10 +62,8 @@ class FieldOptions
     /**
      * Shape the field schema uses: a value plus the label to show for it.
      *
-     * Labels are the codes themselves — right for a list whose values *are*
-     * the names people know, like timezone identifiers. Locales and countries
-     * are not that: `he_IL` and `bq` tell nobody anything, and they go through
-     * the three helpers below instead.
+     * Labels are the codes themselves, which suits lists like timezone identifiers. Locales,
+     * countries and languages use the three helpers below instead.
      *
      * @param  list<string>  $values
      * @return list<array{value: string, label: string}>
@@ -93,14 +80,8 @@ class FieldOptions
      * Locale codes labelled with their own name — `en_US` → "English (United
      * States)", `pt_BR` → "portugais (Brésil)" for a viewer reading French.
      *
-     * This used to hand back the code as its own label, on the reasoning that
-     * inventing display names for eighty locales would mean translating those
-     * names into eight languages to stay honest. ICU has already done it:
-     * `Locale::getDisplayName()` answers in whatever locale it is asked in, so
-     * the honest version costs nothing to maintain and nothing to translate.
-     *
-     * Both code shapes in the catalog work unchanged — WordPress's `en_US` and
-     * Craft's `en-US` normalise to the same thing.
+     * Names come from ICU (`Locale::getDisplayName()` answers in the viewer's locale), so
+     * nothing is translated by hand. Both `en_US` and `en-US` normalise to the same thing.
      *
      * @param  list<string>  $codes
      * @return list<array{value: string, label: string}>
@@ -114,9 +95,7 @@ class FieldOptions
      * ISO 3166-1 alpha-2 labelled with the country's name — `us` → "United
      * States", `de` → "Allemagne" for a viewer reading French.
      *
-     * The dash prefix is what tells ICU to read a bare `us` as a region rather
-     * than as a language: `Locale::getDisplayRegion('us')` is empty, while
-     * `'-US'` is a locale with a region and no language.
+     * The dash prefix makes ICU read a bare `us` as a region: `getDisplayRegion('us')` is empty.
      *
      * @param  list<string>  $codes
      * @return list<array{value: string, label: string}>
@@ -129,10 +108,8 @@ class FieldOptions
     /**
      * ISO 639-1 labelled with the language's name — `sw` → "Swahili".
      *
-     * Separate from {@see localeOptions()} because these carry no region:
-     * asking for a display *name* would give "Swahili" either way today, but
-     * the two lists mean different things and one of them growing a region
-     * should not silently change what the other shows.
+     * Separate from {@see localeOptions()}: these carry no region, and the two lists should not
+     * change each other's labels.
      *
      * @param  list<string>  $codes
      * @return list<array{value: string, label: string}>
@@ -143,11 +120,7 @@ class FieldOptions
     }
 
     /**
-     * Memoized per locale and per list.
-     *
-     * `GET /site-types` renders every site type's fields in one response, and
-     * the hyphenated locale list alone is asked for by two of them — around
-     * two hundred ICU lookups for bytes that are identical both times.
+     * Memoized per locale and per list: `GET /site-types` asks for the same lists repeatedly.
      *
      * @var array<string, list<array{value: string, label: string}>>
      */
@@ -160,9 +133,7 @@ class FieldOptions
      */
     private static function labelled(array $codes, callable $name): array
     {
-        // No intl, no names. Falling back to the codes keeps the catalog
-        // usable — the alternative is a dropdown of blank rows, which is worse
-        // than an unfriendly one and much harder to diagnose.
+        // Without intl, fall back to the codes rather than a dropdown of blank rows.
         if (! extension_loaded('intl')) {
             return self::asOptions($codes);
         }
@@ -179,11 +150,8 @@ class FieldOptions
             $codes,
         );
 
-        // Sorted by what the user actually reads, in their own language: these
-        // lists were hand-ordered by code, and once the label is a name that
-        // order looks arbitrary. `Collator` rather than `usort` with strcmp,
-        // because alphabetical is a per-language question — ä sorts beside a
-        // in German and after z in Swedish, and byte order gets both wrong.
+        // Sorted by the label in the user's language. `Collator`, not strcmp: ä sorts beside a
+        // in German and after z in Swedish.
         $collator = new \Collator($locale);
         usort($options, static fn (array $a, array $b): int => (int) $collator->compare($a['label'], $b['label']));
 
@@ -191,9 +159,8 @@ class FieldOptions
     }
 
     /**
-     * The memo is keyed by locale, so switching locale is already correct.
-     * This exists for tests that swap the *list* behind a key — and for a
-     * long-lived worker, where "process-wide" is longer than one request.
+     * The memo is keyed by locale; this is for tests that swap the list behind a key and for
+     * long-lived workers.
      */
     public static function flushLabelCache(): void
     {

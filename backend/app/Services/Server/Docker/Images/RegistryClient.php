@@ -17,27 +17,19 @@ use Illuminate\Support\Facades\Http;
 /**
  * Speaks the registry v2 API well enough to read an image without pulling it.
  *
- * Pulling would answer every question — and download gigabytes onto the box to
- * fill in a form field. The registry API gives the same config document
- * (`EXPOSE`, `VOLUME`, `ENV`, history) for two or three small requests.
+ * The registry API gives the image config (`EXPOSE`, `VOLUME`, `ENV`, history) in two or three
+ * small requests, without pulling gigabytes.
  *
- * **Auth is negotiated, not assumed.** Every registry answers an anonymous
- * request with a `WWW-Authenticate` challenge naming its own token endpoint;
- * that challenge is followed rather than a per-registry table of token URLs,
- * so a self-hosted registry works without the panel having heard of it. A
- * stored credential is sent to the token endpoint as basic auth, and only when
- * it was saved for this image's registry (see {@see ImageReference::matches()}).
+ * Auth is negotiated: the `WWW-Authenticate` challenge names the token endpoint, so a self-hosted
+ * registry works with no per-registry table. A stored credential is sent to the token endpoint
+ * as basic auth, only when saved for this image's registry (see {@see ImageReference::matches()}).
  *
- * **Outbound safety.** The registry host is typed by the user and the token
- * realm is named by the registry, so both are checked the way every other
- * outbound connection in the panel is: loopback and link-local refused, the
- * resolved address pinned so a second DNS answer cannot redirect the request,
- * and every redirect checked and pinned again. Blob downloads redirect to a
- * CDN, so the redirect check is not decoration.
+ * Outbound safety: the registry host is typed by the user and the token realm is named by the
+ * registry, so both get the usual checks: loopback and link-local refused, the resolved address
+ * pinned (no second DNS answer), and every redirect (blobs redirect to a CDN) checked and pinned.
  *
- * Measured on 2026-10-07 against Hub, GHCR and Quay: a missing tag is a `404`
- * with `MANIFEST_UNKNOWN` on all three, while a missing repository is a `401`
- * or `403` — indistinguishable, by design, from a private one.
+ * A missing tag is a `404` with `MANIFEST_UNKNOWN` on Hub, GHCR and Quay; a missing repository is
+ * a `401` or `403`, indistinguishable from a private one.
  */
 class RegistryClient
 {
@@ -84,10 +76,8 @@ class RegistryClient
     {
         $response = $this->get($image, '/blobs/'.$digest, ['Accept' => '*/*'], $credential);
 
-        // A blob IS its digest. One whose bytes hash to something else is not
-        // the blob that was asked for, whatever the registry says — and its
-        // answer is cached under that digest, so believing it would hand it to
-        // everyone who asks for the real one.
+        // A blob is its digest. Bytes that hash differently are rejected: the answer is cached
+        // under that digest and would be served to everyone asking for the real one.
         if (! hash_equals($digest, 'sha256:'.hash('sha256', $response->body()))) {
             throw new ImageLookupException(ImageLookupException::UNREACHABLE, 'config blob does not match its digest');
         }
@@ -102,9 +92,8 @@ class RegistryClient
     }
 
     /**
-     * Every tag the registry lists, following its pagination a bounded number
-     * of times. GHCR pages at a few hundred; an image with thousands of
-     * `sha-` tags is not worth ten requests to fill a version picker.
+     * Every tag the registry lists, following pagination a bounded number of times (an image with
+     * thousands of `sha-` tags is not worth ten requests).
      *
      * @return list<string>
      */
@@ -152,8 +141,7 @@ class RegistryClient
     }
 
     /**
-     * Turn a challenge into an Authorization header, or null when there is
-     * nothing to answer it with.
+     * Turn a challenge into an Authorization header, or null when there is nothing to answer it.
      */
     private function authorize(ImageReference $image, string $challenge, ?Registry $credential): ?string
     {
@@ -176,8 +164,8 @@ class RegistryClient
 
         $realm = $params['realm'] ?? '';
 
-        // The realm is chosen by the registry, so it is an address the panel
-        // connects to on somebody else's say-so. HTTPS only, and checked.
+        // The realm is chosen by the registry, so the panel connects on somebody else's say-so:
+        // HTTPS only, and checked.
         if (! str_starts_with(strtolower($realm), 'https://')) {
             return null;
         }
@@ -193,8 +181,7 @@ class RegistryClient
             $request = $request->withBasicAuth((string) $credential->username, (string) $credential->configValue('token', ''));
         }
 
-        // Not redirected: a token endpoint that sends the credential elsewhere
-        // is not one to follow.
+        // Not redirected: never forward the credential elsewhere.
         $response = $this->fetch($request, $realm, $query);
 
         if (in_array($response->status(), [401, 403], true)) {
@@ -248,9 +235,8 @@ class RegistryClient
     }
 
     /**
-     * A refusal means "no such image" when we sent nothing, and "your
-     * credential cannot read it" when we did. The registry cannot tell us
-     * which repository exists, so neither can we.
+     * A refusal means "no such image" when we sent no credential, "credential cannot read it" when
+     * we did; registries do not reveal which repositories exist.
      */
     private function denied(?Registry $credential): ImageLookupException
     {
@@ -264,11 +250,9 @@ class RegistryClient
     /**
      * A GET, following at most three redirects by hand.
      *
-     * By hand because each hop is a new host — blob downloads go to a CDN — and
-     * each host has to be checked AND pinned before it is connected to. Guzzle's
-     * own redirect hook can only check: the connection that follows resolves
-     * the name again, which is exactly the second answer pinning exists to
-     * stop. The registry's token never follows a redirect to another host.
+     * By hand because each hop (blobs go to a CDN) must be checked and pinned before connecting;
+     * Guzzle's redirect hook can only check, and the connection then resolves the name again. The
+     * registry's token is dropped on a redirect to another host.
      *
      * @param  array<string, string>  $headers
      */
@@ -309,8 +293,7 @@ class RegistryClient
     private function fetch(PendingRequest $request, string $url, array $query = []): Response
     {
         try {
-            // Only when there is one: an empty `query` option replaces the
-            // query string already in the URL — the next page of tags.
+            // Only pass a query when there is one: an empty one replaces the URL's own query string.
             $request = $request->withOptions($this->pinned($url));
             $response = $query === [] ? $request->get($url) : $request->get($url, $query);
         } catch (ConnectionException|RequestException|TransferException $e) {
@@ -318,8 +301,7 @@ class RegistryClient
             throw new ImageLookupException(ImageLookupException::UNREACHABLE, $e->getMessage());
         }
 
-        // The transfer is cut off at the cap already (see `client()`); this is
-        // the check that holds whatever delivered the body.
+        // `client()` already cuts the transfer at the cap; this holds whatever delivered the body.
         if (strlen($response->body()) > $this->maxBytes()) {
             throw new ImageLookupException(ImageLookupException::UNREACHABLE, 'response too large');
         }
@@ -328,8 +310,7 @@ class RegistryClient
     }
 
     /**
-     * Far past any registry document the panel reads — a config blob is tens of
-     * KB, a page of a thousand tags well under one MB.
+     * Far past any registry document the panel reads (a config blob is tens of KB).
      */
     private function maxBytes(): int
     {
@@ -337,10 +318,8 @@ class RegistryClient
     }
 
     /**
-     * Every request made here: short timeouts, and a transfer cut off once it
-     * passes the size cap. The registry is chosen by the user, and every answer
-     * is decoded whole, so one that streamed for the full timeout would fill the
-     * worker's memory.
+     * Every request made here: short timeouts, and a transfer cut off at the size cap. The registry
+     * is user-chosen and every answer is decoded whole, so a long stream would fill worker memory.
      */
     private function client(): PendingRequest
     {
@@ -348,13 +327,11 @@ class RegistryClient
 
         return Http::connectTimeout((int) config('server.docker.images.connect_timeout', 5))
             ->timeout((int) config('server.docker.images.timeout', 10))
-            // Not a product name: it is sent to third-party registries, and the
-            // panel is white-labelled.
+            // Not a product name: sent to third-party registries, and the panel is white-labelled.
             ->withUserAgent('control-panel')
             ->withOptions(['curl' => [
                 CURLOPT_NOPROGRESS => false,
-                // Non-zero aborts the transfer. Counted as it arrives, because a
-                // chunked body declares no length.
+                // Non-zero aborts the transfer; counted as it arrives (chunked bodies declare no length).
                 CURLOPT_XFERINFOFUNCTION => fn ($handle, int $total, int $received): int => ($total > $max || $received > $max) ? 1 : 0,
             ]]);
     }
@@ -362,12 +339,9 @@ class RegistryClient
     /**
      * Guzzle options pinning the host to an address that was just checked.
      *
-     * Fails closed. A host the panel will not interpret is refused, and so is a
-     * name it cannot resolve itself: curl reads some spellings PHP's resolver
-     * does not — `0x7f.0.0.1` is nothing to `gethostbynamel()` and 127.0.0.1 to
-     * curl — so an unpinned name is a name whose address nobody checked.
-     * Redirects are never followed here; `send()` follows them one pinned hop
-     * at a time.
+     * Fails closed: a host the panel will not interpret is refused, and so is a name it cannot
+     * resolve itself (`0x7f.0.0.1` is nothing to `gethostbynamel()` but 127.0.0.1 to curl), since an
+     * unpinned name is one whose address nobody checked. Redirects are followed only by `send()`.
      *
      * @return array<string, mixed>
      */

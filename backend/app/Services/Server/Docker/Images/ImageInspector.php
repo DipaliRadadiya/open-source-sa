@@ -9,23 +9,18 @@ use Illuminate\Support\Str;
 /**
  * What an image needs, read from the image itself.
  *
- * The answer to the port trap. "Container port" used to default to 80 and be
- * free text, so users typed a port of their own choosing and nginx proxied to
- * something nothing listened on — a 502 behind a panel that said "Running".
- * The image already says which port it listens on (`EXPOSE`), where it keeps
- * its data (`VOLUME`) and which settings it reads (`ENV`). This reads those
- * from the registry, without pulling, so the form can fill itself in.
+ * The image already says which port it listens on (`EXPOSE`), where it keeps data (`VOLUME`) and
+ * which settings it reads (`ENV`). This reads those from the registry, without pulling, so the
+ * form fills itself in instead of proxying to a port nothing listens on (a 502 behind "Running").
  *
- * Everything here is a suggestion with its provenance attached
- * (`port_confidence`), never a fact the panel enforces: an image that EXPOSEs
- * nothing still listens on something, and the user is the one who knows what.
+ * Everything here is a suggestion with its provenance (`port_confidence`), never enforced: an
+ * image that EXPOSEs nothing still listens on something.
  */
 class ImageInspector
 {
     /**
-     * Ports a web app is most likely to be served on, best first. Used only
-     * to choose between several EXPOSEd ports — Heimdall exposes 80 and 443,
-     * and the panel terminates TLS itself, so 80 is the one to proxy to.
+     * Ports a web app is most likely served on, best first. Used only to choose between several
+     * EXPOSEd ports; the panel terminates TLS itself, so 80 beats 443.
      */
     private const PREFERRED_PORTS = [80, 8080, 3000, 5000, 8000, 8081, 8888, 9000, 3001, 5230, 8096];
 
@@ -94,8 +89,7 @@ class ImageInspector
             $chosen = collect($platforms)->first(fn (array $entry): bool => $entry['platform']['architecture'] === $architecture);
 
             if ($chosen === null) {
-                // Still read something, so the user is told what the image is
-                // AND that it will not run here, rather than only the latter.
+                // Still read something, so the user learns what the image is and that it will not run here.
                 $hasBuild = false;
                 $chosen = $platforms[0] ?? null;
             }
@@ -110,24 +104,19 @@ class ImageInspector
         $configDigest = (string) ($manifest['config']['digest'] ?? '');
 
         if ($configDigest === '') {
-            // A schema-1 manifest. Hub stopped serving them years ago; anything
-            // still answering with one is too old to describe.
+            // A schema-1 manifest: too old to describe.
             throw new ImageLookupException(ImageLookupException::TAG_NOT_FOUND, 'manifest has no config');
         }
 
-        // The digest is the cache key, and it came from a manifest served by a
-        // host the user chose — so it is checked for shape here and the blob is
-        // checked against it in `blob()`. Without both, one user's registry
-        // could answer with another image's digest and a blob of its own, and
-        // everyone inspecting that image for the next hour would read it.
+        // The digest is the cache key and came from a user-chosen host, so its shape is checked
+        // here and the blob is checked against it in `blob()`. Otherwise one registry could answer
+        // with another image's digest and its own blob, and everyone would read it for an hour.
         if (preg_match('/^sha256:[a-f0-9]{64}$/D', $configDigest) !== 1) {
             throw new ImageLookupException(ImageLookupException::UNREACHABLE, 'manifest config digest is malformed');
         }
 
-        // A config blob is content-addressed, so it can be cached for as long
-        // as we like; an hour keeps the cache from growing without bound. Keyed
-        // by registry too: content addressing is only as good as the host
-        // vouching for it.
+        // Content-addressed, so cacheable; an hour bounds growth. Keyed by registry too, since
+        // content addressing is only as good as the host vouching for it.
         $config = Cache::remember(
             'docker-image-config:'.$image->apiHost().':'.$configDigest,
             now()->addMinutes((int) config('server.docker.images.config_cache_minutes', 60)),
@@ -168,9 +157,8 @@ class ImageInspector
         $env = $this->environment($image, (array) ($runtime['Env'] ?? []));
         $workdir = (string) ($runtime['WorkingDir'] ?? '');
 
-        // Keyed by code so the sentence and its code can never fall out of step:
-        // `warnings` is what the user reads, `warning_codes` is what a client
-        // switches on without parsing a translated sentence (RC-32).
+        // Keyed by code so sentence and code stay in step: `warnings` is read by the user,
+        // `warning_codes` is what a client switches on.
         $warnings = [];
         $required = array_column(array_filter($env, fn (array $item): bool => $item['required']), 'key');
         $empty = array_column(array_filter($env, fn (array $item): bool => ! $item['required'] && $item['default'] === ''), 'key');
@@ -218,8 +206,7 @@ class ImageInspector
     }
 
     /**
-     * TCP ports only: the panel proxies HTTP, and a UDP port is not something
-     * nginx can be pointed at.
+     * TCP ports only: the panel proxies HTTP, which cannot point at a UDP port.
      *
      * @param  array<string, mixed>  $exposed  keys like `5230/tcp`
      * @return list<int>
@@ -250,11 +237,9 @@ class ImageInspector
      */
     private function suggestedPort(ImageReference $image, array $ports): array
     {
-        // 443 is never the one to proxy plain HTTP to — and that holds for an
-        // image that declares nothing else (DS-09). Suggested, it was probed
-        // over HTTP, answered 400 (which counts as answering), and the site
-        // served "plain HTTP request sent to HTTPS port" to every visitor.
-        // With only TLS ports the image has said nothing usable: ask.
+        // 443 is never the port to proxy plain HTTP to, even when it is the only one declared: it
+        // answers 400 ("plain HTTP request sent to HTTPS port"), which a probe counts as alive.
+        // With only TLS ports the image said nothing usable: ask.
         $plain = array_values(array_diff($ports, [443, 8443]));
 
         if (count($plain) === 1) {
@@ -271,8 +256,7 @@ class ImageInspector
             return [$plain[0], 'declared'];
         }
 
-        // Images that listen on a port without declaring it. Keyed by the
-        // repository as users write it, without a tag.
+        // Images that listen on a port without declaring it, keyed by repository without a tag.
         $known = (array) config('server.docker.images.known_ports', []);
 
         if (isset($known[$image->name()])) {
@@ -285,18 +269,13 @@ class ImageInspector
     /**
      * `ENV` lines worth showing a user, with the image's defaults.
      *
-     * Build plumbing is hidden — `PATH`, `NGINX_VERSION`, checksums. Changing
-     * `NGINX_VERSION` does not change the nginx in the image, and changing
-     * `PATH` breaks it; neither belongs in a form.
+     * Build plumbing (`PATH`, `NGINX_VERSION`, checksums) is hidden: changing it does nothing or
+     * breaks the image.
      *
-     * **`required` is never inferred.** An image has no way to declare that a
-     * setting is mandatory, and an empty `ENV` is not one: measured on
-     * 2026-10-07, changedetection.io ships `LOGGER_LEVEL=` and Umami
-     * `NODE_OPTIONS=`, and both start fine without them. The create form blocks
-     * Deploy on an empty required value, so a guess here would refuse working
-     * images. Required comes only from the `required_env` table — settings an
-     * image's own documentation says it will not start without, most of which
-     * (`POSTGRES_PASSWORD`) are not in the image's `ENV` at all.
+     * `required` is never inferred: an image cannot declare a mandatory setting and an empty `ENV`
+     * is not one (`LOGGER_LEVEL=` starts fine empty), while the create form blocks Deploy on an
+     * empty required value. It comes only from the `required_env` table, mostly settings
+     * (`POSTGRES_PASSWORD`) that are not in the image's `ENV` at all.
      *
      * @param  array<int, mixed>  $lines
      * @return list<array{key: string, default: string, required: bool}>
@@ -367,10 +346,8 @@ class ImageInspector
     /**
      * Does the image keep its program in `/app`?
      *
-     * Read from the build history, the same way `appscan.py` measured that 28%
-     * of popular images do. Only what lands IN `/app` counts: a `COPY --from`
-     * whose SOURCE is a builder's `/app` (Vaultwarden, IT-Tools) leaves nothing
-     * there, and an empty `mkdir /app` (n8n) holds nothing to hide.
+     * Read from the build history. Only what lands in `/app` counts: a `COPY --from` whose source
+     * is a builder's `/app` leaves nothing there, and an empty `mkdir /app` holds nothing to hide.
      *
      * @param  array<string, mixed>  $config
      */
@@ -438,8 +415,7 @@ class ImageInspector
     }
 
     /**
-     * The architecture Docker on this box pulls — the panel runs on the server
-     * it manages, so its own machine type is the answer.
+     * The architecture Docker on this box pulls: the panel runs on the server it manages.
      */
     private function serverArchitecture(): string
     {

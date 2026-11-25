@@ -11,16 +11,10 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Makes the panel its own folder in a freshly connected Drive, and finds out
- * whose Drive it is.
+ * Makes the panel its own folder in a freshly connected Drive, and finds out whose Drive it is.
  *
- * Both jobs exist because of `drive.file`. That scope grants access only to
- * files this app created, which is what removes the folder-id field entirely:
- * there is nothing to browse, nothing to paste, and no way to point the panel
- * at somebody's existing folder even on purpose. So the panel creates one at
- * connect time and remembers the id.
- *
- * Runs once per connection, not per backup.
+ * The `drive.file` scope only reaches files this app created, so the panel creates the folder
+ * at connect time and remembers the id. Runs once per connection, not per backup.
  */
 class GoogleDriveWorkspace
 {
@@ -81,51 +75,24 @@ class GoogleDriveWorkspace
         return [
             'ok' => true,
             'folder_id' => $folderId,
-            // Deliberately not fatal. The address is a label — "backups are
-            // going into *this* account" — and losing it must not fail a
-            // connection whose folder already exists. A connect that rolled
-            // back here would leave an orphaned folder in someone's Drive and
-            // report failure for a grant that works perfectly.
+            // Not fatal: the address is only a label, and failing here would orphan the
+            // folder just created.
             'account_email' => $this->accountEmail($drive),
             'reason' => null,
         ];
     }
 
     /**
-     * What to call the folder, in one place.
+     * What to call the folder; the connect flow and the self-heal both use this.
      *
-     * Both the connect flow and the self-heal create this folder, and two
-     * copies of the naming would drift the first time one of them learned
-     * something — which is exactly how the name came to say "Laravel".
-     *
-     * **`branding.name`, not `app.name`.** `app.name` is the Laravel framework
-     * setting and ships as the literal string "Laravel", which is what a real
-     * install put on a folder in somebody's personal Google Drive.
-     *
-     * The panel's host goes in it too: one Drive can hold backups from several
-     * panels, and a folder sitting next to someone's photos has to say which
-     * machine it belongs to without being opened.
+     * Uses `branding.name`, not `app.name` (which ships as "Laravel"). The panel host is
+     * included because one Drive can hold backups from several panels.
      */
     public function folderName(StorageDestination $destination): string
     {
-        // The branding value, used directly and with no fallback of any kind.
-        //
-        // There is nothing to fall back *to*: `config/branding.php` resolves
-        // this once and is guaranteed to return a non-empty name, including
-        // when `BRANDING_NAME=` is set blank. Branding is fixed at deploy time
-        // and never changes at runtime, so a second opinion here could only
-        // ever disagree with the first.
-        //
-        // That disagreement is not hypothetical — it is what broke this. A
-        // `?:` fallback here put the vendor's product name inside `app/`,
-        // where WhiteLabelTest forbids it, and this string does not stay in
-        // the source: it becomes the name of a folder created in somebody's
-        // **personal** Google Drive. A reseller's customer would find the
-        // vendor's name sitting next to their photos.
-        //
-        // No literal in this comment either — the same test greps comments as
-        // readily as code, which is why the leak survived every functional
-        // test before it.
+        // No fallback: `config/branding.php` always returns a non-empty name. A literal fallback
+        // would put the vendor's product name into a customer's personal Drive (WhiteLabelTest
+        // forbids it in `app/`, comments included).
         $name = trim((string) config('branding.name')).' Backups';
         $host = trim((string) parse_url((string) config('server.storage.panel_url', ''), PHP_URL_HOST));
 
@@ -139,44 +106,19 @@ class GoogleDriveWorkspace
     /**
      * Is the folder this destination points at still there?
      *
-     * Asked at preflight, before a backup is scheduled, because the folder is
-     * in somebody's *personal* Drive and they are entitled to delete it without
-     * telling the panel. A stored id is not evidence the folder exists — it is
-     * an id that resolved once.
-     *
-     * **Trashed counts as gone, and that is the case worth paying an API call
-     * for.** Drive still resolves a trashed folder by id, so without this check
-     * uploads keep succeeding into the Trash and are purged about thirty days
-     * later. A destination reporting success while its archives quietly expire
-     * is worse than one that fails, because nothing ever asks for them until
-     * the day they are needed.
+     * Asked at preflight: the user may delete the folder without telling the panel. Trashed counts
+     * as gone, since Drive still resolves a trashed id and uploads would be purged after ~30 days.
      *
      * @return array{ok: bool, reason: string|null}
      */
     /**
      * A link the operator's own browser can download the archive from.
      *
-     * Drive's `webContentLink` authenticates **by browser cookie**, which is
-     * precisely why it fits here and nowhere else: these archives live in the
-     * operator's personal Drive, so the browser that is already signed into
-     * that Google account can fetch them, and nobody else can. Nothing is
-     * shared, no permission is widened, and the file's `shared` flag stays
-     * false — verified against the real 24 GB archive on 2026-09-21.
+     * `webContentLink` authenticates by browser cookie, so only the signed-in owner can use it and
+     * nothing gets shared. `?alt=media` needs an Authorization header and proxying would pin a PHP
+     * worker. Searched by name (it ends in the backup uid, unique under `drive.file`).
      *
-     * It is also the only option that does not make things worse.
-     * `?alt=media` needs an `Authorization` header a browser will not send on
-     * a plain link; Google no longer accepts an access token in the query
-     * string; and proxying the bytes through the panel would pin a PHP worker
-     * for the length of a multi-gigabyte transfer.
-     *
-     * Searched by name rather than resolved through the folder tree: the name
-     * ends in the backup's uid, so it is unique by construction, and under
-     * `drive.file` the panel can only see files it created itself — there is
-     * nothing else in the account for it to match against.
-     *
-     * Returns null on any failure. A missing link is "Download is not
-     * available", which the caller reports plainly; it is never a reason to
-     * turn a listing page into a 500.
+     * Returns null on any failure; the caller reports "Download is not available".
      */
     public function downloadLink(string $clientId, string $clientSecret, string $refreshToken, string $key): ?string
     {
@@ -203,18 +145,14 @@ class GoogleDriveWorkspace
             return null;
         }
 
-        // Exactly one, or none. Two files with this name would mean two backups
-        // share a uid, and guessing which archive the operator gets is worse
-        // than telling them Download is unavailable.
+        // Exactly one, or none: two matches would mean a shared uid, and guessing is worse.
         if (count($found) !== 1) {
             return null;
         }
 
         $file = $found[0];
 
-        // Drive says the account cannot download its own file — a Workspace
-        // policy can do this. Handing over the link anyway would send them to
-        // a Google error page with no explanation of why.
+        // A Workspace policy can forbid download; the link would only lead to a Google error page.
         if ($file->getCapabilities()?->getCanDownload() === false) {
             return null;
         }
@@ -250,10 +188,7 @@ class GoogleDriveWorkspace
     /**
      * Whose Drive this is.
      *
-     * Read through the Drive API's own `about` resource rather than the
-     * userinfo endpoint, because `drive.file` does not grant the profile
-     * scopes that endpoint needs — asking there would fail on every correctly
-     * configured connection.
+     * Read via the Drive `about` resource: `drive.file` lacks the profile scopes userinfo needs.
      */
     private function accountEmail(Drive $drive): ?string
     {
@@ -271,30 +206,20 @@ class GoogleDriveWorkspace
     /**
      * Why Drive refused to make the folder.
      *
-     * Previously this was one substring test for a full Drive and a catch-all
-     * that said "check you have space" — advice which is simply wrong for every
-     * cause but that one, and which sent the first real user to look at a Drive
-     * that had plenty of room.
-     *
-     * The cause that actually happens is the **Drive API not being enabled** in
-     * the Cloud project. It is invisible until this exact moment, because OAuth
-     * is a different service: consent succeeds, a refresh token is issued, and
-     * then the first Drive call 403s. The setup guide already calls it "the most
-     * common mistake" — so it deserves its own sentence rather than a shrug.
+     * The common cause is the Drive API not being enabled in the Cloud project: OAuth and consent
+     * succeed, and only the first Drive call returns 403.
      */
     private function classify(Throwable $e): string
     {
         $message = strtolower($e->getMessage());
 
-        // The user's own Drive is full. A real quota belonging to a real person
-        // who can go and clear it.
+        // The user's own Drive is full.
         if (str_contains($message, 'storagequotaexceeded')
             || str_contains($message, 'quota exceeded')) {
             return 'storage.oauth.user_quota';
         }
 
-        // Google words this several ways across surfaces; match the stable
-        // parts rather than a sentence it is free to rewrite.
+        // Google words this several ways; match the stable parts.
         if (str_contains($message, 'accessnotconfigured')
             || str_contains($message, 'service_disabled')
             || str_contains($message, 'has not been used in project')
@@ -302,17 +227,14 @@ class GoogleDriveWorkspace
             return 'storage.oauth.api_disabled';
         }
 
-        // The grant exists but does not carry `drive.file` — an OAuth client
-        // whose consent screen was configured with different scopes.
+        // The grant does not carry `drive.file` (consent screen set up with other scopes).
         if (str_contains($message, 'insufficient')
             && (str_contains($message, 'scope') || str_contains($message, 'permission'))) {
             return 'storage.oauth.insufficient_scope';
         }
 
-        // Deleted from the Drive itself. Under `drive.file` a file we did not
-        // create is indistinguishable from one that does not exist, so this is
-        // also what a folder created by a *different* install looks like —
-        // "reconnect and the panel will make a new one" is right for both.
+        // Under `drive.file` a folder another install made looks the same as a deleted one;
+        // "reconnect" fits both.
         if (str_contains($message, 'notfound')
             || str_contains($message, 'not found')
             || str_contains($message, 'file not found')) {
@@ -328,11 +250,8 @@ class GoogleDriveWorkspace
     private function failure(string $reason, ?Throwable $e = null): array
     {
         if ($e !== null) {
-            // The panel's sentence is for the operator; Google's is for whoever
-            // has to work out why. Losing the second is what made the first real
-            // failure of this feature a guess — the classifier above can only
-            // name causes somebody thought of, and this is how the next one gets
-            // added. Logged as its own field so a redactor can target it.
+            // Keep Google's own message: the classifier only names known causes.
+            // Its own field so a redactor can target it.
             Log::warning('Google Drive workspace preparation failed.', [
                 'feature' => 'storage',
                 'provider' => 'google_drive_oauth',

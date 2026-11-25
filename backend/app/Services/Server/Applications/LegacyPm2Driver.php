@@ -7,58 +7,29 @@ use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 
 /**
- * Drives an application that is still running under the old panel's PM2 daemon.
+ * Drives an application still running under the old panel's per-user PM2 daemon.
  *
- * This exists because adoption cannot restart anything. A server coming from
- * the old panel has its applications live under a per-user PM2 daemon, and the
- * customer's sites must not go down to be taken over — so the panel has to be
- * able to manage a process whose unit it does not own, for as long as the
- * customer leaves it there. That can be forever; this is a destination, not a
- * waiting room.
+ * Exists because adoption cannot restart anything: the panel must manage a process whose unit
+ * it does not own, for as long as the customer leaves it there.
  *
- * **The one rule this file exists to enforce: every state change is saved.**
- * There is no unit here, so `~/.pm2/dump.pm2` is what brings the application
- * back at boot. The old panel wrote it inconsistently and each gap was a
- * separate bug — a stopped application resurrecting on reboot, an environment
- * change reverting to the credentials it replaced, a deleted application
- * taking every *other* application's boot entry with it. Saving after each
- * change, deliberately, is most of that class fixed.
+ * **Every state change is saved.** There is no unit, so `~/.pm2/dump.pm2` is what brings the
+ * application back at boot. Saving after each change keeps stopped apps stopped and deleted
+ * apps from taking other apps' boot entries with them.
  *
- * Two more rules from the same post-mortem:
+ * - **`pm2 cleardump` is never called.** It empties the whole user's dump, removing boot
+ *   persistence for every other site that user owns.
+ * - **Status aggregates every instance.** `pm2 jlist` returns one entry per worker.
  *
- * - **`pm2 cleardump` is never called.** It empties the whole user's dump. The
- *   old panel ran it when deleting one application, so deleting one site
- *   removed boot persistence for every other site that user owned — visible
- *   only at the next reboot, months later.
- * - **Status aggregates every instance.** `pm2 jlist` returns one entry per
- *   worker and the old panel stopped at the first name match, so a four-worker
- *   cluster reported a quarter of its memory.
- *
- * What this mode gives up, and why converting to a unit is worth offering:
- * no `MemoryMax` and no per-application cgroup (so one runaway site can starve
- * the others, and the numbers here are PM2's rather than the kernel's), none
- * of the unit's hardening, and logs under `~/.pm2/logs` rather than beside the
- * application where the file manager looks.
+ * Gives up `MemoryMax` and per-application cgroups, the unit's hardening, and logs beside the
+ * application (they live under `~/.pm2/logs`).
  */
 class LegacyPm2Driver
 {
     /**
-     * The directory every one of these commands runs from.
+     * The directory every command runs from.
      *
-     * `runuser` keeps the caller's working directory, and the caller here is
-     * the panel — a directory the site user has no business being able to
-     * enter. When it cannot, PM2 fails to spawn its daemon with
-     * `spawn /usr/local/bin/node EACCES`, which names the binary and says
-     * nothing about the directory that actually caused it. The binary is fine;
-     * `posix_spawn` fails because the child cannot resolve its own cwd.
-     *
-     * Diagnosed on a live v7 server: the identical command failed from
-     * `/home/ubuntu` (mode 0750, another user's home) and succeeded from `/`.
-     *
-     * It happens to work today only because `/var/www/panel` is world-
-     * traversable. That is a hardening decision, not a guarantee, and nothing
-     * connects it to whether PM2 commands run — so the directory is named here
-     * rather than inherited.
+     * `runuser` keeps the caller's cwd, and PM2 fails to spawn its daemon (`spawn … EACCES`) when
+     * the site user cannot enter it. Named here rather than inherited from the panel's directory.
      */
     private const SAFE_CWD = '/';
 
@@ -67,9 +38,7 @@ class LegacyPm2Driver
     /**
      * The name the daemon knows this process by.
      *
-     * Recorded at adoption rather than derived: it is whatever the old panel
-     * passed to `pm2 start --name`, which was the application's name at the
-     * time and has no relationship to anything this panel would compute.
+     * Recorded at adoption: it is whatever the old panel passed to `pm2 start --name`.
      */
     public function processName(Application $application): string
     {
@@ -79,11 +48,8 @@ class LegacyPm2Driver
     /**
      * PM2 keeps its state per OS user, under `$HOME/.pm2`.
      *
-     * Passed explicitly on every call rather than relied upon. The old panel's
-     * single worst-behaved code path was the one that dropped `-H` from its
-     * `sudo`, leaving `HOME` as root's — so commands ran as the site user
-     * against root's daemon, found nothing, and reported success. Naming the
-     * directory removes the question.
+     * Passed explicitly on every call: a `sudo` without `-H` once left HOME as root's, so commands
+     * ran against root's daemon, found nothing and reported success.
      */
     public function pm2Home(Application $application): string
     {
@@ -93,11 +59,9 @@ class LegacyPm2Driver
     /**
      * Every process in one OS user's daemon — read-only, for discovery.
      *
-     * Takes a username and home rather than an `Application`, because the whole
-     * point of asking is that the panel does not yet know which applications
-     * these belong to. Null when the daemon cannot be read at all, which is a
-     * different answer from "this user runs nothing": on a server the old panel
-     * never touched there is simply no daemon, and that is not a failure.
+     * Takes a username and home, not an `Application`: the panel does not yet know which
+     * applications these belong to. Null when the daemon cannot be read, which differs from
+     * "this user runs nothing" (no daemon is not a failure).
      *
      * @return array<int, array<string, mixed>>|null
      */
@@ -144,9 +108,8 @@ class LegacyPm2Driver
     /**
      * Replace the workers one at a time, keeping the port served throughout.
      *
-     * The one thing this mode does that a plain `node` unit cannot. Only
-     * meaningful for a clustered process — PM2 reloads a single fork-mode
-     * process by restarting it, which is a short outage rather than none.
+     * Only meaningful for a clustered process: a single fork-mode process is restarted instead,
+     * with a short outage.
      */
     public function reload(Application $application): ServerOpsResult
     {
@@ -156,9 +119,7 @@ class LegacyPm2Driver
     /**
      * Stop the process and take it out of the daemon.
      *
-     * `delete`, then `save` — never `cleardump`. The save rewrites the dump
-     * without this application and leaves every other application the user
-     * owns exactly where it was.
+     * `delete`, then `save` — never `cleardump`, which would empty every other application's dump.
      */
     public function remove(Application $application): ServerOpsResult
     {
@@ -172,10 +133,8 @@ class LegacyPm2Driver
     /**
      * Persist the current process list so it survives a reboot.
      *
-     * Public because conversion needs it too, and because every caller that
-     * changes state has to be able to see whether it worked. A failed save is
-     * not cosmetic: the application keeps running and silently loses its boot
-     * entry, which nobody discovers until the machine restarts.
+     * Public because conversion needs it too. A failed save is not cosmetic: the application
+     * silently loses its boot entry until the next reboot.
      */
     public function save(Application $application): ServerOpsResult
     {
@@ -185,10 +144,7 @@ class LegacyPm2Driver
     /**
      * What the daemon says right now, aggregated across every instance.
      *
-     * Null when the daemon does not know this process — which is a different
-     * answer from "stopped", and the old panel could not tell them apart: it
-     * returned 200 with a null body whether the application was gone, the
-     * daemon was down, or the wrong user had been asked.
+     * Null when the daemon does not know this process, which differs from "stopped".
      *
      * @return array{state: string, instances: int, online: int, memory: int, cpu: float, restarts: int}|null
      */
@@ -208,8 +164,7 @@ class LegacyPm2Driver
 
         $name = $this->processName($application);
 
-        // Every entry with this name, not the first. In cluster mode `jlist`
-        // returns one per worker and they are all this application.
+        // Every entry with this name, not the first: cluster mode returns one per worker.
         $instances = array_values(array_filter(
             $processes,
             fn ($process) => is_array($process) && ($process['name'] ?? null) === $name,
@@ -225,8 +180,7 @@ class LegacyPm2Driver
         );
 
         return [
-            // Online if anything is: a cluster with three of four workers up
-            // is degraded, not down, and the counts below say which.
+            // Online if anything is: a partly-up cluster is degraded, not down; the counts say which.
             'state' => $online !== [] ? 'online' : (string) ($instances[0]['pm2_env']['status'] ?? 'unknown'),
             'instances' => count($instances),
             'online' => count($online),
@@ -246,10 +200,8 @@ class LegacyPm2Driver
     /**
      * A state change, followed by the save that makes it survive a reboot.
      *
-     * The save runs even when the change failed. A partial failure is exactly
-     * when the dump and reality are most likely to have diverged, and refusing
-     * to record the truth because the command that produced it errored leaves
-     * the worse of the two states persisted.
+     * The save runs even when the change failed: a partial failure is when the dump and reality
+     * are most likely to have diverged.
      */
     private function changeState(string $action, Application $application): ServerOpsResult
     {
@@ -263,15 +215,9 @@ class LegacyPm2Driver
     /**
      * Run one `pm2` command as the site user.
      *
-     * `runuser -u <user> -- env PM2_HOME=<dir> pm2 …`, as an argv array. The
-     * old panel built `sudo -H -u <user> bash -c "…"`, which parses the whole
-     * line in root's shell before `sudo` ever drops privilege — so a `$(…)` in
-     * any interpolated value ran as root. Nothing here is a string a shell
-     * ever sees.
-     *
-     * `env` rather than trusting `runuser` to set `HOME`: the variable that
-     * decides which daemon is addressed should be named at the call, not
-     * inherited from whatever the invocation happened to leave behind.
+     * Runs `runuser -u <user> -- env PM2_HOME=<dir> pm2 …` as an argv array. Never build a shell
+     * string: `sudo bash -c "…"` parses the line in root's shell, so a `$(…)` in any
+     * interpolated value ran as root. `PM2_HOME` is named at the call, not inherited.
      *
      * @param  array<int, string>  $arguments
      */

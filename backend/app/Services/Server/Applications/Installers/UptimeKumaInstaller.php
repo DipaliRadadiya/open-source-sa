@@ -11,22 +11,13 @@ use Illuminate\Support\Facades\Http;
 /**
  * Uptime Kuma — self-hosted uptime monitoring.
  *
- * Distributed as a git repository, not a release archive: upstream's own
- * non-Docker instructions are `git clone` then `npm run setup`, which installs
- * dependencies and builds the frontend in one step. There is no tarball to
- * fetch, so this does not use the shared download helper.
+ * Installed with `git clone` then `npm run setup` (upstream's own steps), not a release archive,
+ * so the shared download helper is not used. Data lives in SQLite under `data/`.
  *
- * It stores everything in SQLite under `data/` inside the application, so it
- * needs no database and no credentials written anywhere.
+ * The panel creates the admin account in `afterStart()`: Kuma has no setup command, so otherwise
+ * the first visitor to the public URL would pick the database and become administrator.
  *
- * **The admin account is created by the panel**, in `afterStart()`. Uptime
- * Kuma has no setup command: left alone, the first person to open the site
- * chooses its database and creates the administrator — on a public URL, from
- * the moment it starts.
- *
- * It reads `PORT`, which the unit already sets to the port the panel
- * allocated, so the process and the reverse proxy cannot disagree. Its `.env`
- * (loaded by the unit) sets the rest: see `environment()`.
+ * Reads `PORT` from the unit; the rest comes from `.env` (see `environment()`).
  */
 class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUpdater
 {
@@ -51,22 +42,16 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
 
         $this->cloneInto($application, $repository, $this->ref($application, $repository), $documentRoot);
 
-        // `npm run setup` is upstream's own script: install without dev
-        // dependencies, then build the frontend. Running `npm ci` here instead
-        // would leave the app with no built assets and a blank page.
+        // `npm run setup` also builds the frontend; `npm ci` alone would leave a blank page.
         $this->runWithNode('install_app', $application, ['npm', 'run', 'setup'], $documentRoot);
 
         $this->writeSecretFile($application, "{$documentRoot}/.env", $this->environment());
     }
 
     /**
-     * - `UPTIME_KUMA_HOST`: Kuma listens on every interface by default, unlike
-     *   every other Node app here. With the firewall off it answered on its
-     *   port directly, past the vhost and whatever Basic Auth or WAF the site
-     *   has. The reverse proxy reaches it on 127.0.0.1, so nothing else needs
-     *   it.
-     * - `UPTIME_KUMA_DB_TYPE`: SQLite, chosen here rather than on Kuma's public
-     *   first-run "set up the database" page, which anyone could answer.
+     * - `UPTIME_KUMA_HOST`: Kuma listens on every interface by default, which would bypass the
+     *   vhost, Basic Auth and WAF. The reverse proxy only needs 127.0.0.1.
+     * - `UPTIME_KUMA_DB_TYPE`: SQLite, so nobody can choose it on the public first-run page.
      */
     private function environment(): string
     {
@@ -74,14 +59,11 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
     }
 
     /**
-     * Create the administrator through Kuma's own `setup` event, from the
-     * server, before the site is reported ready.
+     * Create the administrator through Kuma's own `setup` event (socket.io) before the site is
+     * reported ready.
      *
-     * The event the first-run page sends, over socket.io with the client Kuma
-     * ships, run as the site user. Once an administrator exists Kuma refuses
-     * the event, which is what closes the page to a stranger. Credentials
-     * travel on stdin. "Already initialized" counts as done, so Retry Setup
-     * does not fail on an instance a previous attempt already set up.
+     * Once an administrator exists Kuma refuses the event, which closes the first-run page.
+     * Credentials travel on stdin. "Already initialized" counts as done, so a retry succeeds.
      */
     public function afterStart(Application $application, string $documentRoot): void
     {
@@ -97,19 +79,12 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
     /**
      * Fixed text: every value it uses arrives on stdin.
      *
-     * Sends `setup` only once Kuma has emitted `loginRequired`. Kuma attaches
-     * its `setup` handler inside the connection handler, after an `await`,
-     * and emits `loginRequired` last — so a `setup` sent on connect can arrive
-     * before the handler exists and is dropped without a reply. That is what
-     * happened on a real server: the panel gets here seconds after Kuma's
-     * first start, and the install failed after 30 s with no answer, while the
-     * same request to a warmed-up Kuma succeeded at once.
+     * Sends `setup` only after Kuma emits `loginRequired`: its `setup` handler is attached late in
+     * the connection handler, so an earlier `setup` is dropped without a reply.
      *
-     * Kuma's own "needs setup" signal is not trusted to mean "no admin": it is
-     * computed during startup, so an early connection is told nothing. The
-     * `setup` handler counts users in the database itself, so its answer —
-     * created, or "has been initialized" — is the real one. Anything else is
-     * retried until the deadline, except a password Kuma calls too weak.
+     * Kuma's "needs setup" signal is computed at startup and unreliable early; the `setup` answer
+     * (created, or "has been initialized") is the real one. Anything else is retried until the
+     * deadline, except a password Kuma calls too weak.
      */
     private const SETUP_SCRIPT = <<<'JS'
         const { io } = require("socket.io-client");
@@ -137,14 +112,8 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
     /**
      * The git ref to clone: an operator's pin, or the newest stable release.
      *
-     * The config used to name a tag outright, and that tag was `2.0.0` — while
-     * upstream had reached 2.5.3. A hardcoded version in a one-click installer
-     * does not stay current; it just stops being noticed, and every site
-     * created from it is however far behind the pin has drifted.
-     *
-     * So the pin becomes an override rather than the policy. Set
-     * `SERVER_UPTIME_KUMA_BRANCH` to hold a specific tag or branch; leave it
-     * empty and the installer asks the repository what the newest release is.
+     * `SERVER_UPTIME_KUMA_BRANCH` pins a specific tag or branch; empty means ask the repository
+     * for the newest release (a hardcoded version silently goes stale).
      */
     private function ref(Application $application, string $repository): string
     {
@@ -154,19 +123,10 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
     }
 
     /**
-     * The newest stable release, asked of the releases API and then of the
-     * repository's tags.
+     * The newest stable release, from the releases API, falling back to the repository's tags.
      *
-     * Two sources because they fail in opposite ways. The API knows what a
-     * *release* is — it marks drafts and pre-releases with flags rather than
-     * leaving them to be guessed from a tag name — but it allows only 60
-     * requests an hour per IP unauthenticated, and a panel that has spent them
-     * cannot install anything for the rest of the hour. `ls-remote` has no
-     * limit and answers the same host the clone comes from, but it sees tags,
-     * and a tag is not a release.
-     *
-     * So: ask the precise source, fall back to the always-available one. Both
-     * answer the same question, and today they agree on 2.5.3.
+     * The API knows drafts and pre-releases but is limited to 60 unauthenticated requests an hour
+     * per IP; `ls-remote` has no limit but only sees tags.
      */
     private function latestStableTag(Application $application, string $repository): string
     {
@@ -174,21 +134,11 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
     }
 
     /**
-     * The newest stable release from GitHub's releases API, or null if it
-     * could not be asked.
+     * The newest stable release from GitHub's releases API, or null if it could not be asked.
      *
-     * **The full list, sorted by version — deliberately not `/releases/latest`.**
-     * GitHub defines "latest" as the most recent non-draft, non-pre-release by
-     * *date*, and this project back-patches its old line: 1.23.17 was published
-     * on 2025-10-20, long after 2.x existed. One more such patch and
-     * `/releases/latest` would name a 1.x release as current, and every new
-     * site would be built from it. Sorting the list by version cannot make that
-     * mistake.
-     *
-     * `draft` and `prerelease` come from the flags rather than from the shape
-     * of the tag, which is the one thing the API does better than the tag list.
-     * The `x.y.z` pattern still applies on top, because a release can be named
-     * anything at all.
+     * Deliberately the full list sorted by version, not `/releases/latest`: that is the newest by
+     * date, and upstream back-patches its 1.x line, so it could name a 1.x release as current.
+     * Drafts and pre-releases are dropped by flag; the `x.y.z` pattern still applies on top.
      */
     private function fromReleasesApi(): ?string
     {
@@ -204,8 +154,7 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
                 ->withHeaders(['Accept' => 'application/vnd.github+json', 'User-Agent' => 'control-panel'])
                 ->get($endpoint, ['per_page' => 100]);
         } catch (\Throwable) {
-            // A DNS failure or a timeout is not a reason to refuse the install
-            // while a second source is still standing.
+            // Fall back to the tag list.
             return null;
         }
 
@@ -230,24 +179,11 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
     }
 
     /**
-     * The highest `x.y.z` tag the repository publishes.
+     * The highest `x.y.z` tag the repository publishes (the fallback: no token, no rate limit).
      *
-     * The fallback, and the reason there is one: `ls-remote` needs no token and
-     * has no rate limit, so a panel that has exhausted GitHub's hourly API
-     * allowance can still install.
-     *
-     * **Pre-releases are excluded by the anchored pattern**, not by a flag —
-     * there are no flags here. `2.0.0-beta.3` does not match `x.y.z$`, which
-     * matters more than it looks: this project spent well over a year
-     * publishing 2.x betas, and "newest tag" without the anchor would have put
-     * one on every site.
-     *
-     * Failing here is fatal rather than falling back to a pinned version.
-     * Installing something a year old while the user asked for the latest is
-     * the failure this whole change removes, and doing it quietly after a
-     * lookup fails would put it back where nobody looks. The next step clones
-     * from the same host anyway, so the refusal costs nothing the clone would
-     * not have cost a second later.
+     * Pre-releases are excluded by the anchored pattern (`2.0.0-beta.3` does not match), since
+     * tags carry no flags. Failing here is fatal rather than quietly installing an old pinned
+     * version; the clone that follows uses the same host anyway.
      */
     private function fromRepositoryTags(Application $application, string $repository): string
     {
@@ -260,9 +196,7 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
         $tags = [];
 
         foreach (preg_split('/\R/', trim($result->output())) ?: [] as $line) {
-            // `--refs` drops the `^{}` peeled duplicates, so each tag appears
-            // once. The `v` is optional because upstream has used both forms
-            // across its history and a tag list is not the place to be strict.
+            // `--refs` drops the `^{}` peeled duplicates. The `v` is optional: upstream used both.
             if (preg_match('#refs/tags/(v?\d+\.\d+\.\d+)$#', trim($line), $matches) === 1) {
                 $tags[] = $matches[1];
             }
@@ -280,9 +214,7 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
      */
     private function highest(array $tags): string
     {
-        // `version_compare`, never a string sort: '2.10.0' is below '2.9.0' as
-        // text and above it as a version, so sorting as text installs the wrong
-        // release the first time a minor reaches double digits.
+        // `version_compare`, never a string sort: '2.10.0' sorts below '2.9.0' as text.
         usort($tags, fn (string $a, string $b): int => version_compare(ltrim($b, 'v'), ltrim($a, 'v')));
 
         return $tags[0];
@@ -310,10 +242,8 @@ class UptimeKumaInstaller extends AbstractNodeInstaller implements ApplicationUp
     }
 
     /**
-     * The release tag checked out over the install's own clone, then the same
-     * `npm run setup` the install ran, then the site's service restarted —
-     * systemd here, not v7's pm2. `data/` and `.env` are untracked, so the
-     * checkout leaves them alone.
+     * Check out the release tag over the install's clone, rerun `npm run setup`, restart the
+     * service. `data/` and `.env` are untracked, so the checkout leaves them alone.
      */
     public function update(Application $application, string $from, string $to): void
     {

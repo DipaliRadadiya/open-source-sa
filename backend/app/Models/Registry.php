@@ -10,16 +10,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * A container registry the panel can authenticate to.
  *
- * Server-level, like a storage destination and for the same reason: a
- * credential is set up once, before any site needs it, and then chosen by as
- * many sites as want it. A per-application field would mean re-typing a token
- * for every site and rotating it in N places.
+ * Server-level, like a storage destination: a credential is set up once and chosen by as many
+ * sites as want it, instead of re-typing and rotating a token per site.
  *
- * **The credential never leaves this class as a value anybody asks for.** It is
- * read in exactly one place — `RegistryAuth`, which writes it into a root-owned
- * `config.json` for the length of one pull. `RegistryResource` reports only
- * whether it is populated. That is the whole security design: encrypted at
- * rest, one reader, scoped to one command.
+ * **The credential never leaves this class as a value anybody asks for.** It is read in one
+ * place only — `RegistryAuth`, which writes it into a root-owned `config.json` for the length
+ * of one pull. `RegistryResource` reports only whether it is populated.
  */
 #[Fillable(['name', 'registry', 'username', 'config'])]
 class Registry extends Model
@@ -27,10 +23,8 @@ class Registry extends Model
     /**
      * Docker's own name for the Hub, and what `config.json` must be keyed on.
      *
-     * Not a cosmetic detail: a `config.json` keyed `docker.io` is ignored for a
-     * Hub pull, because the daemon looks up the legacy v1 index URL. Measured,
-     * not assumed — a hand-written file under this exact key authenticates a
-     * private Hub repository, and the same file under `docker.io` does not.
+     * A `config.json` keyed `docker.io` is ignored for a Hub pull: the daemon looks up the legacy
+     * v1 index URL.
      */
     public const HUB_KEY = 'https://index.docker.io/v1/';
 
@@ -53,9 +47,7 @@ class Registry extends Model
     /**
      * The sites pulling with this credential.
      *
-     * Read to answer "what breaks if I delete this", which is the question the
-     * UI has to answer before offering the button — the same shape the Docker
-     * page's volume and network rows already use.
+     * Read to answer "what breaks if I delete this" before the UI offers the delete button.
      */
     public function applications(): HasMany
     {
@@ -65,10 +57,8 @@ class Registry extends Model
     /**
      * One value out of the credential set.
      *
-     * Exists for the same two reasons `StorageDestination::configValue()` does:
-     * callers do not repeat `$config['x'] ?? null`, and a row whose config
-     * failed to decrypt — a database restored under a different `APP_KEY` —
-     * answers null instead of throwing a TypeError inside a queue worker.
+     * Callers do not repeat `$config['x'] ?? null`, and a row whose config failed to decrypt (a
+     * database restored under a different `APP_KEY`) answers null instead of throwing in a worker.
      */
     public function configValue(string $key, mixed $default = null): mixed
     {
@@ -84,12 +74,9 @@ class Registry extends Model
     /**
      * The decrypted credential set, or null when it cannot be decrypted.
      *
-     * The `try` is the point, and it was written after a test proved the comment
-     * above it was a lie: reading an `encrypted:array` attribute whose ciphertext
-     * does not belong to this `APP_KEY` throws `DecryptException` from the cast,
-     * it does not return null. Without catching it, a database restored under a
-     * different key turns every registry read — including the site list, which
-     * only wanted a name — into a 500.
+     * The `try` is the point: reading an `encrypted:array` attribute whose ciphertext does not
+     * belong to this `APP_KEY` throws `DecryptException` rather than returning null, and a database
+     * restored under a different key would turn every registry read into a 500.
      *
      * Null rather than an empty array, so `hasCredentials()` reports false and a
      * caller cannot mistake "we cannot read it" for "there is nothing here".
@@ -110,11 +97,8 @@ class Registry extends Model
     /**
      * Merge new values in, keeping what was not supplied.
      *
-     * This is what makes a PATCH mean "rotate the token I sent, leave the rest"
-     * rather than "replace the document and clear everything absent from this
-     * request". Null counts as absent, because the API's contract is that
-     * omission preserves — a form that renders an empty password box must not
-     * wipe a working credential on save.
+     * A PATCH means "rotate the token I sent, leave the rest". Null counts as absent: a form with
+     * an empty password box must not wipe a working credential on save.
      *
      * @param  array<string, mixed>  $values
      */
@@ -129,9 +113,8 @@ class Registry extends Model
     /**
      * Is there a token stored at all?
      *
-     * Only emptiness is reported, never the value — this is what lets the UI
-     * show "credentials set" and a rotation prompt without the secret going
-     * anywhere near a response.
+     * Only emptiness is reported, never the value, so the UI can show "credentials set" without
+     * the secret going near a response.
      */
     public function hasCredentials(): bool
     {
@@ -141,9 +124,8 @@ class Registry extends Model
     /**
      * What the panel currently knows about this registry.
      *
-     * `never_tested` is deliberately distinct from `failed`: "we have not
-     * asked" and "we asked and it refused" are different situations, and only
-     * one of them is the user's problem to fix.
+     * `never_tested` is distinct from `failed`: "we have not asked" and "we asked and it refused"
+     * are different situations, and only one is the user's problem to fix.
      */
     public function testStatus(): string
     {
@@ -157,10 +139,8 @@ class Registry extends Model
     /**
      * Forget what the last probe found.
      *
-     * Called whenever the credential or the address changes. A stored
-     * "connected" describes the token that was tested, not the one now stored,
-     * and a green tick beside a credential rotated ten seconds ago lies about
-     * the one thing this field exists to answer.
+     * Called whenever the credential or the address changes: a stored "connected" describes the
+     * token that was tested, not the one now stored.
      */
     public function forgetTestResult(): void
     {
@@ -186,9 +166,8 @@ class Registry extends Model
     /**
      * Is this registry Docker Hub, however the user spelled it?
      *
-     * Needed by the login probe, which must be given no argument at all for Hub
-     * — `docker login docker.io` is accepted but `docker login` is what the
-     * daemon's own default path uses.
+     * Needed by the login probe, which must be given no argument at all for Hub (`docker login
+     * docker.io` is accepted, but plain `docker login` is the daemon's own default path).
      */
     public function isDockerHub(): bool
     {
@@ -198,12 +177,9 @@ class Registry extends Model
     /**
      * The host, with the scheme and any path a user pasted taken back off.
      *
-     * People paste `https://ghcr.io` and `ghcr.io/myorg` because both look like
-     * the thing they are configuring. Neither is a config.json key, and a
-     * mismatched key is silently ignored rather than rejected — the pull simply
-     * behaves as if no credential were stored, which is the hardest possible
-     * failure to diagnose. So this is normalisation, not validation: the form
-     * still refuses what it cannot interpret.
+     * People paste `https://ghcr.io` and `ghcr.io/myorg`. Neither is a config.json key, and a
+     * mismatched key is silently ignored (the pull behaves as if no credential were stored). This
+     * is normalisation, not validation: the form still refuses what it cannot interpret.
      */
     private function normalisedHost(): string
     {

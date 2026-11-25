@@ -18,44 +18,30 @@ use Illuminate\Container\Container;
  *       releases/20260822-093000/
  *       current -> releases/20260822-093000
  *
- * Both are supported at once, deliberately and for a long time: every server
- * already running is legacy, and the migration between them is the riskiest
- * part of this work — it runs on machines that are currently fine. Nothing
- * else in the update may assume a layout; it asks this class.
+ * Both are supported at once: every running server is legacy, and migrating is the riskiest
+ * part of the update. Nothing else may assume a layout; it asks this class.
  *
- * Paths only. Reading and writing the disk belongs to the callers, which run
- * through ServerOps and can be faked; keeping this pure is what makes the
- * layout rules testable without a filesystem.
+ * Paths only. Disk access belongs to the callers (through ServerOps), which keeps the layout
+ * rules testable without a filesystem.
  */
 class PanelLayout
 {
     /**
-     * @param  string|null  $basePath  the Laravel app directory; defaults to
-     *                                 this installation's own. Injectable so
-     *                                 the layout rules can be exercised for
-     *                                 both shapes without a filesystem.
+     * @param  string|null  $basePath  the Laravel app directory; defaults to this installation's
+     *                                 own. Injectable so tests can exercise both shapes.
      */
     public function __construct(private ?string $basePath = null) {}
 
     /**
      * The directory holding `releases/`, `shared/` and `current`.
      *
-     * Derived from where this code is running rather than from config: the
-     * panel is the one application that always knows where it is, and a config
-     * value could disagree with reality after a migration.
+     * Taken from config when set (install.sh and the migration record it); otherwise inferred
+     * from where this code runs, for installs that predate the setting and for tests.
      */
     public function root(): string
     {
-        // Config first, because on a migrated install the panel cannot work
-        // this out from where its code is. install.sh and the migration both
-        // record it; everything below is inference for installs that predate
-        // that, and for tests.
-        // Asked of the container rather than through config(), which resolves
-        // it and throws when nothing is bound. This class answers questions
-        // about paths and is used from places that have no application booted
-        // — including, by design, code that runs while the layout is being
-        // built. Inference is the fallback there, exactly as for an install
-        // that predates the setting.
+        // Asked of the container, not config(): this runs where no application is booted,
+        // including while the layout is being built, and config() throws when nothing is bound.
         $container = Container::getInstance();
 
         $configured = $container->bound('config')
@@ -68,27 +54,15 @@ class PanelLayout
 
         $repository = dirname($this->basePath ?? base_path());
 
-        // `<root>/releases/<timestamp>/backend` — the shape that actually
-        // reaches this in production.
-        //
-        // NOT detected via `current`, even though that is the path the service
-        // is started with. `base_path()` comes from `dirname(__DIR__)` in
-        // bootstrap/app.php, and PHP resolves symlinks in `__DIR__` — so by the
-        // time this runs, `<root>/current/backend` has already become
-        // `<root>/releases/20260822-093000/backend` and the word `current`
-        // is gone. An earlier version matched on it and therefore never fired:
-        // root() answered `<root>/releases/<timestamp>`, isReleased() looked
-        // for a releases/ directory inside a release, found none, and every
-        // migrated server quietly ran the legacy update — a `git checkout` in
-        // a directory built by `git archive`, which has no .git at all.
+        // `<root>/releases/<timestamp>/backend` — the shape that reaches this in production.
+        // NOT detected via `current`: PHP resolves symlinks in `__DIR__`, so `current` is already
+        // gone from base_path(). Matching on it would make a migrated server run the legacy
+        // update (a `git checkout` in a directory with no .git).
         if (basename(dirname($repository)) === 'releases') {
             return dirname(dirname($repository));
         }
 
-        // The literal `current` spelling, for a path handed in rather than
-        // resolved off disk. It cannot occur in production for the reason
-        // above, but a caller that constructs the path itself is entitled to
-        // a correct answer.
+        // The literal `current` spelling, for a path handed in rather than resolved off disk.
         if (basename($repository) === self::CURRENT) {
             return dirname($repository);
         }
@@ -118,10 +92,8 @@ class PanelLayout
     /**
      * Whether this install has been migrated.
      *
-     * `is_dir` on the releases directory, not on `current`: a half-finished
-     * migration can leave the directory without the symlink, and treating that
-     * as legacy would make the next update build a second layout beside the
-     * first.
+     * Checks the releases directory, not `current`: a half-finished migration can leave the
+     * directory without the symlink, and calling that legacy would build a second layout.
      */
     public function isReleased(): bool
     {
@@ -131,9 +103,7 @@ class PanelLayout
     /**
      * The release directory a new version would be built into.
      *
-     * Sortable, second-resolution, and never reused: the timestamp is the
-     * release's identity everywhere else, and two releases a second apart are
-     * a retry, not a collision worth handling.
+     * Sortable, second-resolution, and never reused: the timestamp is the release's identity.
      */
     public function newReleasePath(string $at): string
     {
@@ -143,10 +113,8 @@ class PanelLayout
     /**
      * Files that live in `shared/` and are symlinked into each release.
      *
-     * The map is the contract: getting it wrong is the one way this design
-     * destroys data. `.env` carries `APP_KEY`, and a release that generated its
-     * own would make every encrypted column — storage secrets, git tokens,
-     * database passwords — unreadable.
+     * The map is the contract: a mistake here destroys data. `.env` carries `APP_KEY`, and a
+     * release with its own key would make every encrypted column unreadable.
      *
      * @return array<string, string> path inside a release => path inside shared/
      */
@@ -158,26 +126,12 @@ class PanelLayout
             'frontend/.env.production' => 'frontend.env',
         ];
 
-        // The panel's own database, when it is a file.
+        // The panel's own database, when it is a file. `git archive` never carries the SQLite
+        // file into a release (it is gitignored), and SQLite silently creates a missing database:
+        // without this the update would "succeed" onto an empty panel.
         //
-        // install.sh installs on SQLite by default (install.sh:925), and
-        // backend/database/.gitignore excludes `*.sqlite*` — so `git archive`
-        // never carries the database into a release, and without this the
-        // panel would come up pointed at a path that does not exist.
-        //
-        // That failure would not have announced itself. SQLite creates a
-        // missing database rather than refusing, so `migrate --force` would
-        // have built a complete fresh schema, the swap would have happened,
-        // /api/health would have answered with the new version, `verify` would
-        // have passed, and the update would have reported success onto a panel
-        // with no users, no servers and no applications. The database backup
-        // from step two would be the only way back, and nothing would have
-        // told anyone to reach for it.
-        //
-        // Added only for SQLite, not unconditionally: on a MySQL panel there
-        // is no file to share, and `linkShared()` removes the target before
-        // linking — leaving a dangling symlink exactly where something opening
-        // it would create an empty database.
+        // SQLite only: on MySQL there is no file, and `linkShared()` removes the target before
+        // linking, leaving a dangling symlink.
         if ($this->usesSqlite()) {
             $map['backend/database/database.sqlite'] = 'database/database.sqlite';
         }
@@ -188,8 +142,7 @@ class PanelLayout
     /**
      * Whether this panel keeps its own data in a SQLite file.
      *
-     * Container-guarded like {@see root()}: the map is read while the layout is
-     * being built, which is before there is reliably an application.
+     * Container-guarded like {@see root()}: there may be no application yet.
      */
     public function usesSqlite(): bool
     {

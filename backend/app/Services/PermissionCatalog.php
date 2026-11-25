@@ -8,15 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * The permission catalog — the single definition of what can be granted.
  *
- * It lives in code rather than the database because it is a menu of features
- * this build ships, not data an operator authors. `sync()` is idempotent
- * (`updateOrCreate` on name+level, never a delete), which is what lets it run
- * on every deploy, from the admin sync button, and at first-admin
- * registration without anyone having to think about ordering.
- *
- * Unguarding happens here rather than at each call site: the artisan seed
- * command unguards automatically and the HTTP path used to have to remember
- * to, which is the kind of thing that works until the third caller.
+ * It lives in code, not the database: it is the menu of features this build ships.
+ * `sync()` is idempotent (`updateOrCreate` on name+level, never a delete), so it can run on
+ * every deploy, from the admin sync button, and at first-admin registration. Unguarding
+ * happens here, not at each call site.
  */
 class PermissionCatalog
 {
@@ -37,75 +32,44 @@ class PermissionCatalog
             ['name' => 'fail2ban', 'title' => 'Fail2ban', 'icon' => 'ban', 'url' => '/fail2ban', 'order' => 7],
             ['name' => 'logs', 'title' => 'System Logs', 'icon' => 'file-text', 'url' => '/logs', 'order' => 8],
             ['name' => 'service', 'title' => 'Services', 'icon' => 'settings-2', 'url' => '/services', 'order' => 9],
-            // PHP is its own feature, not a corner of Settings. Sharing the
-            // `setting` permission meant "can change the PHP version" also
-            // meant "can reboot the server and move the SSH port".
+            // PHP has its own permission: sharing `setting` would let "change the PHP version"
+            // also mean "reboot the server and move the SSH port".
             ['name' => 'php', 'title' => 'PHP', 'icon' => 'file-code', 'url' => '/php', 'order' => 10],
             ['name' => 'node', 'title' => 'Node.js', 'icon' => 'hexagon', 'url' => '/node', 'order' => 11],
-            // Networks and volumes: one permission, because they are the same
-            // job — the shared Docker objects an application's containers sit
-            // on and write to. Splitting them would give somebody the ability
-            // to delete the volume holding a database while being unable to
-            // see the network it talks over.
-            //
-            // Registry credentials are NOT here, and that is the cut: those live
-            // somewhere else and are filed with the integrations below.
+            // Networks and volumes share one permission (the shared Docker objects containers
+            // use). Registry credentials are NOT here; they are an integration below.
             ['name' => 'docker', 'title' => 'Docker', 'icon' => 'container', 'url' => '/docker', 'order' => 11.5],
             ['name' => 'setting', 'title' => 'Settings', 'icon' => 'settings', 'url' => '/settings', 'order' => 12],
             ['name' => 'disk_cleaner', 'title' => 'Disk Cleaner', 'icon' => 'trash-2', 'url' => '/disk-cleaner', 'order' => 13],
-            // The backups dashboard: history and restore across every app and
-            // database. Scheduling a backup happens inside an application
-            // (`app_backup`), but the list you restore from is one place —
-            // restore overwrites live data, and one screen means one set of
-            // guardrails rather than two.
+            // Backups dashboard: history and restore across every app and database. Scheduling
+            // is per application (`app_backup`); restore overwrites live data, so one screen.
             ['name' => 'backup', 'title' => 'Backups', 'icon' => 'archive', 'url' => '/backups', 'order' => 14],
             ['name' => 'activity_log', 'title' => 'Activity Log', 'icon' => 'history', 'url' => '/activity-log', 'order' => 15],
-            // Reading a migrated server into the panel. Its own permission
-            // rather than riding on `setting`: a sync writes rows for users,
-            // sites and databases at once, which is a wider blast radius than
-            // anything else on the Settings screen.
+            // Own permission, not `setting`: a sync writes users, sites and databases at once.
             ['name' => 'sync', 'title' => 'Server Sync', 'icon' => 'refresh-cw', 'url' => '/sync', 'order' => 16],
 
-            // Integrations — externally-connected accounts/credentials the
-            // features consume (git accounts for app deploys, storage
-            // destinations for backups). Same `server` level, grouped under
-            // their own sub-level so the sidebar renders them as a section.
+            // Integrations — external accounts/credentials the features consume. Same `server`
+            // level; the sub-level makes the sidebar render them as a section.
             ['name' => 'git', 'title' => 'Git', 'icon' => 'git-branch', 'url' => '/integrations/git', 'order' => 16, 'sub_level' => 'integration'],
             ['name' => 'storage', 'title' => 'Storage', 'icon' => 'hard-drive', 'url' => '/integrations/storage', 'order' => 17, 'sub_level' => 'integration'],
-            // Registry credentials. An integration rather than a corner of the
-            // Docker screen, and for the reason that section exists: it is an
-            // externally-held credential the features consume, exactly like a git
-            // account or a storage destination. It was at the bottom of the Docker
-            // page, which made the panel's only private-image support something
-            // you had to already know about to find.
-            //
-            // Its own permission, not `docker`, because the sidebar row IS the
-            // permission row — and because the two grants mean different things:
-            // `docker` manages networks and volumes on this box, while this stores
-            // a credential that can pull private code onto it.
+            // Registry credentials: an external credential like a git account, so an integration.
+            // Its own permission, not `docker`: `docker` manages networks and volumes, this
+            // stores a credential that can pull private code onto the box.
             ['name' => 'registry', 'title' => 'Docker Registries', 'icon' => 'key-round', 'url' => '/integrations/registries', 'order' => 18, 'sub_level' => 'integration'],
 
             // ── Application level ────────────────────────────────────────
             //
-            // The sidebar *inside* an application. `GET /permissions?level=
-            // application` renders it exactly as `?level=server` renders the
-            // one above — so every item needs its own row here, because the
+            // The sidebar *inside* an application; every item needs its own row because the
             // permission row IS the nav entry.
             //
-            // ⚠️ The `app_` prefix is load-bearing, not decoration.
-            // `User::hasAbility()` matches on name and ignores `level`, so a
-            // row named `logs` here would collide with the server-level
-            // `logs` and quietly grant one through the other. Keeping names
-            // globally unique is what lets hasAbility and the `permission:`
-            // middleware stay untouched. Do not "tidy" this away.
+            // ⚠️ The `app_` prefix is load-bearing: `User::hasAbility()` matches on name and
+            // ignores `level`, so a row named `logs` here would grant the server-level `logs`
+            // through the application one. Keep names globally unique.
             //
-            // And never gate an app screen with a server permission: server
-            // `logs` is auth.log and syslog for the whole box, `app_log` is
-            // one site's access log. Same word, different blast radius.
+            // Never gate an app screen with a server permission: server `logs` is the whole
+            // box's auth.log/syslog, `app_log` is one site's access log.
             //
-            // `url` is a segment, not a path — the real route is
-            // /applications/{id}{url} — because these only exist within an
-            // application.
+            // `url` is a segment, not a path: the route is /applications/{id}{url}.
             ...$this->applicationItems(),
         ];
     }
@@ -113,78 +77,44 @@ class PermissionCatalog
     /**
      * The application sidebar.
      *
-     * Seeded in full rather than feature-by-feature: an operator sets up roles
-     * once, and the screens light up as they ship without anyone having to
-     * revisit the role editor.
-     *
      * @return array<int, array<string, mixed>>
      */
     private function applicationItems(): array
     {
         $items = [
             ['name' => 'app_dashboard', 'title' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => ''],
-            // SSL lives with domains, not beside it: a certificate covers a
-            // *set* of names, so the two are one decision.
+            // SSL lives with domains: a certificate covers a set of names, so it is one decision.
             ['name' => 'app_domain', 'title' => 'Domains & SSL', 'icon' => 'globe', 'url' => '/domains'],
             ['name' => 'app_deployment', 'title' => 'Deployments', 'icon' => 'git-branch', 'url' => '/deployment'],
             ['name' => 'app_environment', 'title' => 'Environment', 'icon' => 'file-key', 'url' => '/environment'],
-            // The compose file, for container sites only — the site-type filter in
-            // `VisiblePermissions` drops it everywhere else, the same way it drops
-            // `app_environment` from a WordPress install.
-            //
-            // Its own screen rather than a dialog on the Dashboard, because this
-            // file IS the site: its image, its ports, its volumes and its
-            // environment variables are all in here. A container has no Environment
-            // screen precisely because its variables live in this file instead, so
-            // this sits where that one would.
-            // What the container runs as: its network, the port inside it, its
-            // memory ceiling, the volumes it mounts, the registry it pulls with,
-            // and the credentials the panel generated for it.
-            //
-            // Its own screen for the reason Compose got one — these controls were a
-            // full-width card at the bottom of the Dashboard, under the domains and
-            // the backups, which is a long way from where somebody goes looking for
-            // "what is this container doing". Structured settings here, the raw file
-            // next door; two questions, two screens.
+            // Container settings (network, port, memory, volumes, registry, generated
+            // credentials). Structured settings here, the raw compose file next door.
             ['name' => 'app_container', 'title' => 'Container', 'icon' => 'box', 'url' => '/container'],
+            // Container sites only: the site-type filter in `VisiblePermissions` drops it
+            // elsewhere. A container has no Environment screen; its variables live in this file.
             ['name' => 'app_compose', 'title' => 'Compose File', 'icon' => 'file-code-2', 'url' => '/compose'],
-            // Supervisor workers and a Node process are the same question —
-            // "what is running in the background?" — so they are one screen
-            // with different tooling underneath, not two menu items.
+            // Supervisor workers and a Node process are one screen: "what runs in the background?".
             ['name' => 'app_worker', 'title' => 'Workers', 'icon' => 'cpu', 'url' => '/workers'],
             ['name' => 'app_file', 'title' => 'Files', 'icon' => 'folder', 'url' => '/files'],
             ['name' => 'app_log', 'title' => 'Logs', 'icon' => 'file-text', 'url' => '/logs'],
             ['name' => 'app_backup', 'title' => 'Backups', 'icon' => 'archive', 'url' => '/backups'],
-            // No `app_setting` — there is no dedicated Settings screen.
-            // Enable/disable lives directly on the Dashboard, gated by the
-            // same `application` permission every other write on this
-            // resource already uses, not a per-app permission of its own.
+            // No `app_setting`: enable/disable is on the Dashboard, gated by `application`.
             ['name' => 'app_php', 'title' => 'PHP Settings', 'icon' => 'file-code', 'url' => '/php'],
             ['name' => 'app_security', 'title' => 'Password Protection', 'icon' => 'lock', 'url' => '/security'],
-            // "Web Firewall", not "Firewall": this is the 8G rule set, which
-            // inspects requests, and the server-level `firewall` permission
-            // right next to it is ufw, which opens and closes ports. Two
-            // unrelated things sharing one label in one product is how a user
-            // ends up believing they have closed a port by enabling a WAF.
-            // Title only — the `app_firewall` NAME is what roles are granted
-            // against and what hasAbility() matches, so renaming it would
-            // revoke this screen from every existing role.
+            // "Web Firewall", not "Firewall": this is the 8G request rule set, while the
+            // server-level `firewall` is ufw (ports). Title only: renaming the `app_firewall`
+            // NAME would revoke this screen from every existing role.
             ['name' => 'app_firewall', 'title' => 'Web Firewall', 'icon' => 'shield', 'url' => '/firewall'],
             ['name' => 'app_bot_blocker', 'title' => 'AI Bot Blocker', 'icon' => 'bot', 'url' => '/bot-blocker'],
             ['name' => 'app_fail2ban', 'title' => 'Fail2ban', 'icon' => 'ban', 'url' => '/fail2ban'],
             ['name' => 'app_staging', 'title' => 'Staging Area', 'icon' => 'flask-conical', 'url' => '/staging'],
             ['name' => 'app_clone', 'title' => 'Application Clone', 'icon' => 'copy', 'url' => '/clone'],
-            // The first permission that is NOT a nav entry: `url` is null
-            // because Magic Login is a button on the Dashboard, not a screen.
-            // The sidebar skips null-url rows; the role editor still lists it,
-            // which is the whole point of separating the two.
+            // Not a nav entry: `url` is null because Magic Login is a Dashboard button. The
+            // sidebar skips null-url rows; the role editor still lists it.
             //
-            // It gets its own permission rather than riding on an existing one
-            // because of what it grants: a full WordPress administrator session
-            // on the customer's site. Folding that into `app_dashboard` would
-            // silently upgrade every role that can currently only *look* at an
-            // application. Held by WordPressSiteType alone, so every other site
-            // type 404s the routes without naming them.
+            // Own permission because it grants a full WordPress administrator session; folding
+            // it into `app_dashboard` would upgrade every read-only role. Held by
+            // WordPressSiteType alone, so other site types 404 the routes.
             ['name' => 'app_magic_login', 'title' => 'Magic Login', 'icon' => 'log-in', 'url' => null],
         ];
 
@@ -198,18 +128,15 @@ class PermissionCatalog
     /**
      * Write the catalog to the database and re-sync the Administrator role.
      *
-     * Both halves, always, because they are one fact: a permission that
-     * exists but is not on the protected role means the next admin silently
-     * cannot use the feature it gates.
+     * Both halves, always: a permission missing from the protected role leaves admins
+     * unable to use the feature it gates.
      */
     public function sync(): int
     {
         Model::unguarded(function (): void {
             foreach ($this->items() as $item) {
                 Permission::updateOrCreate(
-                    // Name AND level identify a row, but names are kept unique
-                    // across levels anyway — see the note above the
-                    // application items for why that matters.
+                    // Name AND level identify a row; names stay unique across levels anyway.
                     ['name' => $item['name'], 'level' => $item['level'] ?? 'server'],
                     [
                         'sub_level' => $item['sub_level'] ?? ($item['level'] ?? 'server'),

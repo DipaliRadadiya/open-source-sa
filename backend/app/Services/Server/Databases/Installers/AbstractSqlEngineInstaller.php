@@ -11,44 +11,30 @@ use App\Services\Server\ServerOps;
 use Illuminate\Support\Str;
 
 /**
- * Shared install path for MySQL and MariaDB. They differ only in package names
- * and client binary — everything below is identical, which is the whole reason
- * the panel's own account is created over the unix socket rather than by setting
- * a root password: `ALTER USER root` syntax differs between the two, and
- * `CREATE USER` does not.
+ * Shared install path for MySQL and MariaDB, which differ only in package names and client binary.
+ * The panel's own account is created over the unix socket, not by setting a root password, because
+ * `ALTER USER root` syntax differs between the two and `CREATE USER` does not.
  *
- * The sequence, and why it is this order:
+ * The sequence:
  *
- *  1. Refuse if the *other* SQL engine already owns the port. They are mutually
- *     exclusive on 3306; installing the second leaves it dead and the panel
- *     pointing at whichever won.
- *  2. apt-install the server package (skipped when already present, so a
- *     migrated server goes straight to step 3).
- *  3. Enable and start the service, then prove it answers. A package that
- *     unpacked is not an engine that runs.
+ *  1. Refuse if the other SQL engine is installed: they are mutually exclusive on 3306.
+ *  2. apt-install the server package (skipped when present, so a migrated server goes to step 3).
+ *  3. Enable and start the service, then prove it answers.
  *  4. Create the panel's own account and store the credential.
  *
- * Nothing here touches root. See memory/database-engine-install-design.md for
- * why that is deliberate rather than lazy. (Root's password is the user's to
- * set, since 2026-10-17 — see ChangeDatabaseRootPassword — never the
- * installer's.)
+ * Nothing here touches root: its password is the user's to set (see ChangeDatabaseRootPassword).
  */
 abstract class AbstractSqlEngineInstaller implements EngineInstaller
 {
     /**
      * `panel_` plus ten random characters — sixteen in total.
      *
-     * Random so a fixed, guessable account name is not sitting behind port 3306
-     * on every install of this panel. Prefixed anyway, because an admin reading
-     * `SELECT user FROM mysql.user` has to be able to tell this is the panel's
-     * account: an opaque name holding ALL PRIVILEGES looks exactly like a
-     * backdoor, and someone would eventually delete it. The prefix is also the
-     * only way to identify an orphan if the stored row is ever lost.
+     * Random, so no guessable account name sits behind port 3306 on every install. Prefixed so an
+     * admin reading `mysql.user` can tell it is the panel's (an opaque ALL PRIVILEGES account looks
+     * like a backdoor) and can find an orphan if the stored row is lost.
      *
-     * Sixteen characters because **MySQL 5.7 capped usernames at 16** (8.0 raised
-     * it to 32, MariaDB allows 80). An over-long name is silently truncated and
-     * then fails authentication, which is a miserable thing to debug. The
-     * username is not the secret, so there is nothing to buy with more length.
+     * Sixteen characters because MySQL 5.7 capped usernames at 16: longer ones are silently
+     * truncated and then fail authentication. The username is not the secret.
      */
     private const USERNAME_PREFIX = 'panel_';
 
@@ -73,21 +59,13 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
 
     public function installed(): bool
     {
-        // dpkg-query rather than "does the binary exist": the client packages are
-        // installed on plenty of boxes that do not run a server, and the panel
-        // would then report an engine it cannot use.
-        //
-        // Matched with str_contains on trimmed output rather than compared for
-        // equality. dpkg's status field is three words, but whether anything
-        // surrounds them is not something to stake detection on — and a
-        // mis-detection here either skips a needed install or reinstalls over a
-        // live engine.
+        // dpkg-query, not "does the binary exist": client packages are installed on boxes that run
+        // no server. `str_contains` rather than equality, since a mis-detection either skips a
+        // needed install or reinstalls over a live engine.
         $status = trim($this->serverOps->run(
             ['dpkg-query', '-W', '-f=${Status}', $this->packages()[0]],
             ['feature' => 'database', 'engine' => $this->engine(), 'op' => 'detect'],
-            // Exit 1: not installed — an answer, not a failure (FS-C34; the
-            // same as MongoDB's bug #48). Logged as an error it filled the
-            // Error Log with hundreds of lines a day.
+            // Exit 1: not installed, an answer rather than a failure (else it floods the Error Log).
             expectedExitCodes: [1],
         )->output());
 
@@ -110,8 +88,7 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
                 timeout: (int) config('server.databases.install_timeout', 900),
                 env: ['DEBIAN_FRONTEND' => 'noninteractive'],
                 onOutput: $onOutput,
-                // A fresh box's unattended-upgrades holds the lock for
-                // minutes; the screen should say so rather than "Preparing".
+                // A fresh box's unattended-upgrades holds the lock for minutes; say so.
                 onWait: fn () => $this->report($onStep, 'waiting_for_package_manager'),
             );
 
@@ -131,10 +108,8 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
     /**
      * Refuse when the other SQL engine is already installed.
      *
-     * Checked before apt rather than after: on Debian-family systems installing
-     * mysql-server over mariadb-server (or the reverse) removes the first as a
-     * conflicting package, which would take the existing databases' server with
-     * it. That is not a thing to discover halfway through.
+     * Checked before apt: on Debian-family systems installing mysql-server over mariadb-server
+     * (or the reverse) removes the first as a conflicting package, taking existing databases with it.
      *
      * @throws EngineInstallException
      */
@@ -162,8 +137,7 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
             );
         }
 
-        // Proven, not assumed. A package that unpacked is not an engine that
-        // answers, and every step after this one needs it to.
+        // A package that unpacked is not an engine that answers; later steps need it to.
         $this->report($onStep, 'verifying_connection');
         $ping = $this->socketQuery('SELECT 1;');
 
@@ -181,16 +155,13 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
     {
         $connection = DatabaseConnection::firstOrNew(['engine' => $this->engine()]);
 
-        // The stored username wins. A random name plus CREATE USER IF NOT EXISTS
-        // would mint a *new* full-privilege account on every run, and both the
-        // installer and this endpoint are re-runnable — so a re-run has to reuse
-        // the name and rotate only the password.
+        // The stored username wins: a random name plus CREATE USER IF NOT EXISTS would mint a new
+        // full-privilege account on every re-run, so a re-run reuses the name and rotates the password.
         $username = $this->existingPanelUsername($connection) ?? $this->generateUsername();
         $password = DatabasePassword::generate();
 
-        // Piped over stdin, never argv: anything on a command line is readable
-        // in /proc for the lifetime of the process, and this is a credential with
-        // GRANT OPTION.
+        // Piped over stdin, never argv: a command line is readable in /proc, and this credential
+        // has GRANT OPTION.
         $sql = <<<SQL
             CREATE USER IF NOT EXISTS '{$username}'@'localhost' IDENTIFIED BY '{$this->escape($password)}';
             ALTER USER '{$username}'@'localhost' IDENTIFIED BY '{$this->escape($password)}';
@@ -210,9 +181,7 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
             'port' => (int) config("server.databases.engines.{$this->engine()}.default_port"),
             'socket' => config("server.databases.engines.{$this->engine()}.default_socket"),
             'username' => $username,
-            // `encrypted` cast — a copy of the panel's database on its own is
-            // useless without APP_KEY, which is the realistic leak (backups,
-            // snapshots, a file sent to support).
+            // `encrypted` cast: a copy of the database alone is useless without APP_KEY.
             'password' => $password,
         ])->save();
     }
@@ -220,10 +189,8 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
     /**
      * The username already provisioned for this engine, if any.
      *
-     * `root` is explicitly not ours: that is the seeded default from
-     * `DatabaseManager::connection()`, and reusing it would mean granting and
-     * re-crededentialing the root account — the exact thing this class exists to
-     * avoid.
+     * `root` is explicitly not ours: it is the seeded default from `DatabaseManager::connection()`,
+     * and reusing it would re-credential the root account, which this class exists to avoid.
      */
     private function existingPanelUsername(DatabaseConnection $connection): ?string
     {
@@ -240,11 +207,9 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
     /**
      * Runs SQL as the engine's root over the unix socket.
      *
-     * No password first: on MariaDB 10.4+ and MySQL 8 on Ubuntu, root@localhost
-     * authenticates by *being OS root*, which ServerOps already is. That is what
-     * makes one code path serve both engines. Then the root password the user
-     * set or saved, if any — MySQL loses socket login once root has a password,
-     * and a server moved from v7 never had it (see SqlRootAccess).
+     * No password first: on MariaDB 10.4+ and MySQL 8 on Ubuntu, root@localhost authenticates by
+     * being OS root, which ServerOps already is. Then the root password the user set or saved, if
+     * any: MySQL loses socket login once root has a password (see SqlRootAccess).
      */
     private function socketQuery(string $sql)
     {
@@ -254,9 +219,8 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
     /**
      * Escapes a value for a single-quoted SQL literal.
      *
-     * Generated passwords come from a fixed alphabet and contain none of these,
-     * so this is belt-and-braces — but the cost of being wrong here is an
-     * injected GRANT, so it is not left to the alphabet's good behaviour.
+     * Generated passwords contain none of these characters; this is belt-and-braces, since the
+     * cost of being wrong is an injected GRANT.
      */
     private function escape(string $value): string
     {
@@ -264,8 +228,7 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
     }
 
     /**
-     * Maps apt's output to a stable code. Unmatched output is `unknown` rather
-     * than a guess — a wrong reason sends the user somewhere useless.
+     * Maps apt's output to a stable code; unmatched output is `unknown`, not a guess.
      */
     private function classify(string $stderr): string
     {

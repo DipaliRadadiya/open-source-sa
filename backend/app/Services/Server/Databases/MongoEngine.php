@@ -36,10 +36,8 @@ class MongoEngine implements DatabaseEngine
     }
 
     /**
-     * A question, so "no" is an answer (bug #48). Without mongosh on the box
-     * the run is refused by sudo — its allowlist names a binary that is not
-     * there — and that refusal is rightly an error; so the client is looked
-     * for first, and a server without MongoDB answers no quietly.
+     * A question, so "no" is an answer. Without mongosh, sudo refuses the run (a real error),
+     * so the client is looked for first and a server without MongoDB answers no quietly.
      */
     public function available(): bool
     {
@@ -74,9 +72,7 @@ class MongoEngine implements DatabaseEngine
 
     public function listUsers(): array
     {
-        // Mongo keeps users per database rather than server-wide, so the
-        // database a user belongs to is not a grant to parse — it is where
-        // the account lives.
+        // Mongo keeps users per database: the database is where the account lives, not a grant.
         $result = $this->run(
             'db.adminCommand({ usersInfo: { forAllDBs: true } }).users'
             .'.forEach(u => print(u.user + "\t" + u.db));'
@@ -99,9 +95,7 @@ class MongoEngine implements DatabaseEngine
 
             $users[] = [
                 'username' => $username,
-                // Mongo authenticates against a database, not a host, so the
-                // panel's `host` column has no counterpart. localhost is the
-                // honest default rather than a value read from nowhere.
+                // Mongo authenticates against a database, not a host: default to localhost.
                 'host' => 'localhost',
                 'databases' => array_filter([trim((string) $database)]),
             ];
@@ -130,8 +124,7 @@ class MongoEngine implements DatabaseEngine
 
     public function userExists(string $username, string $host, string $database): bool
     {
-        // A MongoDB user belongs to one database, so the same name may exist
-        // in another without conflict.
+        // A user belongs to one database; the same name may exist in another.
         $result = $this->run('print(db.getSiblingDB('.$this->js($database).').getUser('.$this->js($username).') !== null ? "user_exists" : "user_free");');
 
         if ($result->failed()) {
@@ -143,12 +136,9 @@ class MongoEngine implements DatabaseEngine
 
     public function createDatabase(string $name, ?string $charset, ?string $collation): void
     {
-        // Refused when the name is already on the server. SQL's CREATE DATABASE
-        // does that by itself; Mongo's createCollection does not, it quietly
-        // adds to the existing database. CreateDatabase then treated that
-        // database as its own and dropped it, data and all, when a later step
-        // failed. Asked in the same script as the create, so a failed check is
-        // a failed create rather than a "no".
+        // Refused when the name already exists: Mongo's createCollection would quietly join the
+        // existing database, which a later failed step would then drop with its data. Checked in
+        // the same script as the create, so a failed check is a failed create.
         //
         // Mongo creates a DB lazily; make a placeholder collection so it lists.
         $result = $this->run(
@@ -175,15 +165,9 @@ class MongoEngine implements DatabaseEngine
     }
 
     /**
-     * Database first, then its users — matching the SQL engines.
-     *
-     * Unchanged from the loop this replaced, deliberately: the reported bug is
-     * PostgreSQL's, and nothing here was observed to be wrong. Mongo is
-     * understood to keep accounts outside the database they authenticate
-     * against, so `dropDatabase()` above would not remove them and each still
-     * has to be dropped by name — but that is read, not measured, and there is
-     * no MongoDB on the machine this was written on. Treat it as the reason
-     * the loop was kept rather than as a fact to build on.
+     * Database first, then its users, matching the SQL engines. Mongo is believed to keep
+     * accounts outside the database they authenticate against, so each is dropped by name
+     * (documented behaviour, not verified here).
      *
      * @param  array<int, array{username: string, host: string}>  $users
      */
@@ -206,14 +190,9 @@ class MongoEngine implements DatabaseEngine
     }
 
     /**
-     * Nothing to describe: MongoDB has no database-level character set or
-     * collation. Encoding is UTF-8 by definition of BSON, and a collation is a
-     * property of an index or a query, not of a database.
-     *
-     * Null rather than inventing "UTF8" to fill the column — the field means
-     * "what this database was created with", and for Mongo that question has
-     * no answer. `createDatabase()` above ignores both arguments for the same
-     * reason.
+     * Nothing to describe: MongoDB has no database-level character set or collation (BSON is
+     * UTF-8; a collation belongs to an index or query). Null, not an invented "UTF8";
+     * `createDatabase()` ignores both arguments for the same reason.
      *
      * @return array{charset: ?string, collation: ?string}
      */
@@ -253,16 +232,11 @@ class MongoEngine implements DatabaseEngine
     /**
      * Everything running except this connection's own operations.
      *
-     * `currentOp` reports the operation asking for it, so the panel appeared in
-     * its own process list on every poll — see {@see SqlEngine::processes()}
-     * for the same problem and why it matters. `$ownOps` names our connection
-     * from the server's side; filtering on that rather than on the command text
-     * keeps a genuine `currentOp` from an operator visible.
+     * `currentOp` reports the operation asking for it (see {@see SqlEngine::processes()}).
+     * `$ownOps` names our connection server-side, so an operator's own `currentOp` stays visible.
      *
-     * The connection id is compared as a string. It arrives as a BSON `Long`,
-     * and two `Long`s holding the same number are different objects — `!==`
-     * between them is always true, so an identity comparison would filter
-     * nothing while looking like it worked.
+     * The connection id is compared as a string: BSON `Long`s with the same number are
+     * different objects, so `!==` on them is always true and would filter nothing.
      */
     public function processes(): array
     {
@@ -304,29 +278,10 @@ class MongoEngine implements DatabaseEngine
     }
 
     /**
-     * The opcounters are summed in PHP, not in the shell.
-     *
-     * mongosh freezes `promoteLongs: false` into the options of every driver
-     * call it makes, so a BSON int64 stays a `Long` object rather than becoming
-     * a JavaScript number. `Long` defines no `Symbol.toPrimitive` and its
-     * `valueOf()` returns another object, so `+` cannot reach a numeric
-     * primitive and falls back to `toString()` — which makes the operator
-     * concatenate. Summing five counters that way returned their digits glued
-     * end to end: 0, 1, 0, 0 and 50000 produced "010050000" instead of 50001.
-     * `(o.insert||0)` does not guard against it either, because `Long(0)` is a
-     * truthy object.
-     *
-     * That value is a cumulative counter, and the Query Monitor divides the
-     * difference between consecutive samples by the elapsed seconds. A quiet
-     * server doing 3 operations a second was charted at 133 million, spiking
-     * into the billions each time any one counter gained a digit and shifted
-     * the concatenation.
-     *
-     * `Number()` around each term would also work today, but it would keep the
-     * arithmetic dependent on a BSON option mongosh is free to change. Printing
-     * each counter as its own line and adding them here leaves nothing for a
-     * shell to get wrong, and matches how {@see SqlEngine::status()} has always
-     * read `SHOW GLOBAL STATUS`.
+     * The opcounters are summed in PHP, not in the shell: mongosh keeps int64 values as BSON
+     * `Long` objects (`promoteLongs: false`), and `+` on them concatenates digits ("010050000"
+     * instead of 50001). `(o.insert||0)` does not help, as `Long(0)` is truthy. Printing each
+     * counter on its own line leaves the arithmetic to PHP, as {@see SqlEngine::status()} does.
      */
     public function status(): array
     {
@@ -378,8 +333,7 @@ class MongoEngine implements DatabaseEngine
     public function dump(string $database, string $path): void
     {
         $client = (string) config('server.databases.engines.mongodb.dump_client', 'mongodump');
-        // mongodump can't read a defaults-file — put the password in a 0600
-        // YAML config (`--config`), everything else on argv is non-secret.
+        // mongodump can't read a defaults-file: the password goes in a 0600 YAML `--config`.
         $dir = rtrim((string) config('server.databases.auth_file_dir', sys_get_temp_dir()), '/');
         $configFile = $dir.'/db-'.bin2hex(random_bytes(8)).'.yaml';
         file_put_contents($configFile, 'password: '.json_encode((string) $this->connection->password)."\n");
@@ -403,16 +357,9 @@ class MongoEngine implements DatabaseEngine
     }
 
     /**
-     * Users are created against the database but stored outside it, so a drop
-     * and create should leave them as they were — read in MongoDB's
-     * documentation, not measured: no test server runs MongoDB.
-     */
-    /**
-     * As the database's own user, authenticated against this database (where
-     * the panel creates Mongo users, with `readWrite` on it alone). Whatever
-     * the archive was dumped from is renamed into this database
-     * (`$db$.$coll$` → `{database}.$coll$`); the server's own databases are
-     * skipped, never renamed into it.
+     * Runs as the database's own user (`readWrite` on it alone). The archive's source database
+     * is renamed into this one (`$db$.$coll$` → `{database}.$coll$`); the server's own
+     * databases are skipped.
      */
     public function importAs(string $database, string $path, string $username, string $password, bool $gzip = false): void
     {
@@ -445,13 +392,13 @@ class MongoEngine implements DatabaseEngine
         }
     }
 
+    /** Users are stored outside the database, so a drop and create leaves them in place. */
     public function reattachUsers(string $database, array $usernames): void {}
 
     public function restore(string $database, string $path): void
     {
         $client = (string) config('server.databases.engines.mongodb.restore_client', 'mongorestore');
-        // Same 0600 YAML config as dump() — mongorestore cannot read a
-        // defaults-file either, and the password must not reach argv.
+        // Same 0600 YAML config as dump(): the password must not reach argv.
         $dir = rtrim((string) config('server.databases.auth_file_dir', sys_get_temp_dir()), '/');
         $configFile = $dir.'/db-'.bin2hex(random_bytes(8)).'.yaml';
         file_put_contents($configFile, 'password: '.json_encode((string) $this->connection->password)."\n");
@@ -464,9 +411,7 @@ class MongoEngine implements DatabaseEngine
                 '--port='.(int) ($this->connection->port ?: 27017),
                 '--username='.(string) $this->connection->username,
                 '--authenticationDatabase='.(string) (($this->connection->options['authSource'] ?? null) ?: 'admin'),
-                // `--drop` per collection as well as the caller's drop of the
-                // database: a collection present now but absent from the
-                // archive would otherwise survive a "restore".
+                // `--drop` per collection too: one absent from the archive would survive.
                 '--nsInclude='.$database.'.*', '--drop', '--gzip', '--archive='.$path,
             ], ['feature' => 'database', 'engine' => 'mongodb', 'op' => 'restore'], 3600);
 

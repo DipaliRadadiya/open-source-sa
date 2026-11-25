@@ -7,20 +7,15 @@ use App\Models\PanelUpdate;
 /**
  * Renders the shell script that performs an in-place update.
  *
- * Why a shell script and not PHP: the update replaces the PHP source of the
- * process performing it. A long-lived PHP runner would be executing code that
- * no longer matches what is on disk, and any class it had not yet autoloaded
- * would resolve against the *new* tree — the worst kind of half-and-half. A
- * shell script is read into memory by bash and every `artisan` call inside it
- * is a fresh process against whichever code is current at that moment.
+ * A shell script, not PHP: the update replaces the PHP source of the process performing it, so a
+ * long-lived PHP runner would run code that no longer matches the disk and autoload classes from
+ * the new tree. bash reads the script into memory, and each `artisan` call is a fresh process.
  *
- * The script is written OUTSIDE the repository. A copy that lived in the tree
- * would be swapped out from under bash by the checkout it just performed.
+ * The script is written OUTSIDE the repository: a copy in the tree would be swapped out from
+ * under bash by its own checkout.
  *
- * Nothing from the request reaches this. The version is validated against a
- * strict pattern before it is ever interpolated, and every path comes from
- * server-side config — there is no arrangement of user input that changes
- * which commands run.
+ * Nothing from the request reaches this: the version is validated against a strict pattern and
+ * every path comes from server-side config.
  */
 class UpdateScript
 {
@@ -79,37 +74,13 @@ class UpdateScript
         $state = $this->statePath($update);
         $rollbackTo = (string) $update->from_commit;
 
-        // Every git call carries the safe.directory exception itself rather
-        // than relying on one being configured somewhere.
-        //
-        // The repository is owned by the panel's own account and this script
-        // runs as root, which git refuses since CVE-2022-24765 — "detected
-        // dubious ownership", exit 128. install.sh knows this and writes the
-        // exception into root's ~/.gitconfig, but the update is launched
-        // through `systemd-run`, which starts the unit with its own
-        // environment: HOME is not root's shell home, git never reads that
-        // file, and the exception may as well not exist.
-        //
-        // It went unnoticed because a dry run echoes every step, so the only
-        // git command that actually ran was the `rev-parse` inside finish() —
-        // whose failure was swallowed by `|| echo unknown` and recorded as
-        // `"commit":"unknown"` beside a cheerful `"status":"succeeded"`. A
-        // real update would have failed at fetch_release and then failed to
-        // roll back, because rollback is a git checkout too.
-        // ...and it runs as the account that owns the repository, not as root.
-        //
-        // Running it as root left 1331 files under /var/www/panel owned by
-        // root on a real server — `git checkout --force` writes every file it
-        // touches as the calling user, and install.sh had chowned the tree to
-        // `panel`. The damage compounds: the panel account can then no longer
-        // check out or clean its own repository, so `clean_working_tree` fails
-        // for good and *every subsequent update is refused by preflight*. One
-        // update attempt was enough to wedge the box permanently.
-        //
-        // As the owning account there is no ownership mismatch left for
-        // safe.directory to forgive, but it is kept: the exception costs
-        // nothing and the fetch still has to work if an operator has been
-        // root in this tree by hand.
+        // Every git call carries the safe.directory exception itself: this script runs under
+        // `systemd-run`, whose HOME is not root's, so install.sh's ~/.gitconfig entry is never read
+        // and git refuses with "dubious ownership" (exit 128). A dry run hid it by echoing every step.
+        // Git runs as the account that owns the repository, not root: `git checkout --force` as root
+        // left root-owned files the panel account could no longer check out or clean, and every
+        // later update was then refused by preflight. safe.directory stays in case an operator has
+        // been root in this tree by hand.
         $git = sprintf(
             'sudo -u %s -H git -c %s -C %s',
             escapeshellarg((string) config('panel_update.app_user')),
@@ -117,51 +88,24 @@ class UpdateScript
             escapeshellarg($repo),
         );
 
-        // Health check goes through the panel's own URL, not 127.0.0.1: the
-        // web server routes by hostname and a bare-IP request 404s, which
-        // would fail every check and roll back successful updates.
+        // Health check goes through the panel's own URL, not 127.0.0.1: the web server routes by
+        // hostname and a bare-IP request 404s, which would fail every check and roll back.
         $healthUrl = rtrim((string) config('app.url'), '/').'/api/health';
 
         $run = $dryRun ? 'echo DRY-RUN: ' : '';
         $forwardOnly = ForwardOnlyGuard::script($git, $tag, $rollbackTo);
 
-        // Build steps run as the panel's own account, never as root.
-        //
-        // Two separate failures, one cause: `systemd-run` starts the update in
-        // a transient unit with a minimal environment, and HOME is not in it.
-        // Composer refuses outright -- "The HOME or COMPOSER_HOME environment
-        // variable must be set for composer to run correctly" -- so every
-        // update failed at composer_install and rolled back. Verified on a
-        // real box: `systemd-run --pipe sh -c 'echo $HOME'` prints nothing.
-        //
-        // The same emptiness sends npm's cache to /root/.npm and leaves
-        // vendor/, node_modules/ and .next/ owned by root under services that
-        // run as `panel` -- which Next.js cannot write its cache into. That
-        // one would only have surfaced *after* fixing composer, on the first
-        // update that got far enough to build.
-        //
-        // `sudo -u <user> -H` fixes both: -H sets HOME to that account's home.
-        // Exactly what ReleaseUpdateScript and install.sh already do; this is
-        // the same lesson as the `safe.directory` fix in 92b20be, which is
-        // also about systemd-run not carrying root's environment.
+        // Build steps run as the panel's own account, never as root. `systemd-run` starts a
+        // transient unit without HOME, so composer refuses to run and npm's cache lands in /root/.npm,
+        // leaving vendor/, node_modules/ and .next/ root-owned under services that run as `panel`.
+        // `sudo -u <user> -H` sets HOME to that account's home (as ReleaseUpdateScript and install.sh do).
         $user = (string) config('panel_update.app_user');
         $asUser = $dryRun ? 'echo DRY-RUN: ' : "sudo -u {$user} -H ";
 
-        // artisan too, and for a reason the first fix did not cover. After a
-        // successful update on a real box, 50 files under backend/storage were
-        // still owned by root: the compiled Blade views written by `optimize`,
-        // and the database dump from `panel:backup-database`. php-fpm runs as
-        // `panel` and cannot overwrite a root-owned view cache, and a 0640
-        // root-owned backup is one the panel cannot read back.
-        //
-        // The migration step is the sharper one: SQLite writes `-wal` and
-        // `-shm` beside the database, and root-owned ones make the panel's own
-        // database unwritable -- "attempt to write a readonly database" on a
-        // panel that just reported a successful update.
-        //
-        // `panel:sudoers` is the deliberate exception: it writes
-        // /etc/sudoers.d and is the one command here that genuinely needs
-        // root.
+        // artisan runs as the panel account too: as root it left root-owned compiled Blade views and
+        // database backups that php-fpm (`panel`) cannot overwrite or read, and root-owned SQLite
+        // `-wal`/`-shm` files that made the database read-only ("attempt to write a readonly database").
+        // `panel:sudoers` is the deliberate exception: it writes /etc/sudoers.d and needs root.
 
         $restoreDatabase = $this->restoreDatabase($update, $dryRun);
         $writeRestoreHelper = $this->writeRestoreHelper($update);
@@ -578,8 +522,7 @@ class UpdateScript
     }
 
     /**
-     * Outside the repository on purpose — a state file inside the tree is
-     * destroyed by the checkout whose progress it is recording.
+     * Outside the repository on purpose: the checkout would destroy a state file inside the tree.
      */
     public function statePath(PanelUpdate $update): string
     {
@@ -592,8 +535,7 @@ class UpdateScript
     }
 
     /**
-     * Beside the script, for the same reason: the checkout replaces the tree,
-     * and the rollback must not depend on which version of it is present.
+     * Beside the script, for the same reason: rollback must not depend on the tree's version.
      */
     public function restoreHelperPath(PanelUpdate $update): string
     {
@@ -616,10 +558,9 @@ class UpdateScript
     /**
      * The rollback's database step, rendered for this install.
      *
-     * SQLite only: it is the one database install.sh sets up, and restoring it
-     * is a file copy. A panel pointed at another database by hand is told the
-     * database was not restored and where the backup is, rather than having a
-     * dump replayed into it unattended.
+     * SQLite only (the one database install.sh sets up; restoring is a file copy). Any other
+     * database is told it was not restored and where the backup is, rather than having a dump
+     * replayed into it unattended.
      *
      * Sets DB_SUFFIX, which ends up on the failure reason: `:db_restored`,
      * `:db_not_restored`, or nothing when the database was not changed.
@@ -659,18 +600,12 @@ class UpdateScript
     }
 
     /**
-     * The health check cannot be prefixed with `echo` like the other steps:
-     * it is a pipeline, and echoing the left-hand side just feeds the printed
-     * command text into grep, which never matches. A dry run would then always
-     * fail here and roll back — reporting a failure that says nothing about
-     * whether the real update would have worked.
+     * The health check cannot be prefixed with `echo` like the other steps: it is a pipeline,
+     * and echoing the left side feeds the printed text into grep, so a dry run would always fail.
      */
     private function healthCheck(string $url, string $version, bool $dryRun): string
     {
         if ($dryRun) {
-            // Not `echo <the pipeline>`: the shell would split that at the
-            // pipe and feed the printed text straight into grep, which is the
-            // same failure by another route.
             return "echo 'DRY-RUN: health check skipped'";
         }
 

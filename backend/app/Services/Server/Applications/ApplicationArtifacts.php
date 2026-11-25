@@ -22,53 +22,29 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Everything the panel wrote for an application that is *not* its vhost and not
- * its files: the PHP-FPM pool, worker units, its own background cron job, the
- * fail2ban jail, and the certificate's renewal.
+ * Everything the panel wrote for an application that is not its vhost or its files: the PHP-FPM
+ * pool, worker units, its own background cron job, the fail2ban jail, and the certificate renewal.
  *
- * Collected here because they share one failure mode and it is not obvious.
- * Each of these lives outside the application's own directory, so removing the
- * site leaves them behind — and each then points at something that no longer
- * exists. The endings differ in severity but not in kind:
+ * These live outside the application's directory, so deleting the site leaves them pointing at
+ * something gone:
  *
- *  - a pool naming a deleted Linux user stops php-fpm initialising **for the
- *    whole server**, so every later site creation fails and gets blamed for it;
- *  - a worker unit stays enabled and restarts on boot, holding a deleted site's
- *    files open;
- *  - a fail2ban jail points at a log path that is gone, and complains on every
- *    reload;
- *  - a certbot renewal keeps running forever, spending rate limit and
- *    eventually emailing the user about a site they removed.
+ *  - a pool naming a deleted Linux user stops php-fpm initialising for the whole server;
+ *  - a worker unit stays enabled and restarts on boot, holding the deleted files open;
+ *  - a fail2ban jail points at a missing log path and complains on every reload;
+ *  - a certbot renewal keeps running forever (see {@see RemoveCertificate}).
  *
- * That last one is quoted almost verbatim from {@see RemoveCertificate},
- * which has always known about the problem — it was simply never called from
- * the path where sites actually go away.
+ * Backups are removed only on `$removeData`: they are the copy that makes a mistaken deletion
+ * survivable, so a plain delete leaves the archives recoverable.
  *
- * Backups are the exception, and are handled on `$removeData` rather than
- * unconditionally. They are not leftovers to tidy: they are the copy that
- * exists so a mistaken deletion is survivable, and deleting the site is the
- * mistake somebody would most want to undo. Left alone they are still an
- * orphan — the rows cascade away while multi-gigabyte archives stay in
- * somebody's bucket — so the choice is which cost to take, and the panel takes
- * the one that can be reversed.
- *
- * **Every removal is independent.** They run in sequence but a failure in one
- * must not skip the rest: a fail2ban reload that fails is a nuisance, and
- * letting it prevent the certificate revoke would trade a small problem for a
- * long-lived one. Failures are logged with the artefact they belong to, so a
- * server that ends up with a leftover can be found rather than guessed at.
+ * Every removal is independent: a failure in one must not skip the rest. Failures are logged with
+ * the artefact they belong to.
  */
 class ApplicationArtifacts
 {
     /**
-     * `WorkerSupervisor` is deliberately absent, and resolved at call time
-     * below instead.
-     *
-     * It depends on {@see ApplicationProvisioner}, which depends on this class
-     * — so injecting it here closes a cycle the container resolves by
-     * recursing until the process dies, with no error to say why. Taking it
-     * lazily breaks the loop: the second `ApplicationArtifacts` the container
-     * builds on the way round needs nothing further.
+     * `WorkerSupervisor` is deliberately resolved at call time: it depends on
+     * {@see ApplicationProvisioner}, which depends on this class, and injecting it here makes the
+     * container recurse until the process dies.
      */
     public function __construct(
         private PoolManager $pools,
@@ -83,21 +59,9 @@ class ApplicationArtifacts
      */
     public function remove(Application $application, bool $removeData = false): void
     {
-        // Backups are the one artefact whose removal is a decision rather than
-        // tidying up. `backups.application_id` cascades, so deleting a site
-        // drops every row while the archives stay in the bucket — unfindable,
-        // undeletable through the panel, and billed every month. The same
-        // orphan `DeleteBackup` exists to prevent, arriving by a different
-        // door.
-        //
-        // But they exist precisely so that a mistaken deletion is survivable,
-        // and deleting the site is the mistake somebody would most want to
-        // undo. So they follow `remove_files`: a plain delete takes the site
-        // off the panel and leaves the archives recoverable, and only a caller
-        // who already said "destroy this site's data" destroys them.
-        //
-        // First, while the rows still exist — the controller deprovisions
-        // before it deletes the record.
+        // Backups follow `remove_files`: `backups.application_id` cascades, so a plain delete would
+        // orphan the archives in the bucket, but they are also the way to undo a mistaken delete.
+        // First, while the rows still exist (the controller deprovisions before deleting the record).
         if ($removeData) {
             $this->removeBackups($application);
         }
@@ -109,26 +73,16 @@ class ApplicationArtifacts
         });
 
         $this->attempt($application, 'workers', function () use ($application) {
-            // `workers.application_id` is cascadeOnDelete, so the rows go with
-            // the application and take the only record of these units with
-            // them. WorkerController::destroy has always removed the unit
-            // before the row for exactly this reason; deleting the application
-            // skipped it.
+            // `workers.application_id` cascades, so remove each unit before its row goes: the row
+            // is the only record of the unit.
             $workers = app(WorkerSupervisor::class);
             $adopted = app(AdoptedSiteConfig::class);
 
-            // Queried rather than read off a relation: `Application` has none,
-            // and adding one here would be a second way to reach the same rows
-            // for the sake of one loop.
-            //
-            // One attempt per worker. A single `attempt()` around the loop let
-            // the first worker that would not stop end it, and every worker
-            // after it was left running with its row about to cascade away.
+            // One attempt per worker, so one that will not stop does not leave the rest running.
             foreach (Worker::where('application_id', $application->id)->get() as $worker) {
                 $this->attempt($application, 'workers', function () use ($application, $worker, $workers, $adopted) {
-                    // The program Sync adopted this from, when it was a shared
-                    // file or a systemd unit: never the panel's to stop, so it
-                    // is named instead (FS-C22 #14).
+                    // A program adopted from a shared file or systemd unit is never the panel's
+                    // to stop, so it is named instead.
                     $adopted->reportWorkerSource($application, $worker);
 
                     try {
@@ -140,26 +94,16 @@ class ApplicationArtifacts
             }
         });
 
-        // The vhost Server Sync adopted the site from, when it is not the
-        // `{slug}.conf` the driver removes below — removed only once it is
-        // proven to be this site's alone ({@see AdoptedSiteConfig}). Before
-        // the driver's removal and any `rm -rf`, so a site never keeps being
-        // served from a config pointing at deleted files.
+        // The vhost Server Sync adopted the site from, removed only once proven to be this site's
+        // alone ({@see AdoptedSiteConfig}). Before the driver's removal and any `rm -rf`.
         $this->attempt($application, 'adopted_vhost', function () use ($application) {
             app(AdoptedSiteConfig::class)->remove($application);
         });
 
         $this->attempt($application, 'cronjobs', function () use ($application) {
-            // Only the jobs the panel created for this site — an installer's
-            // background job, which runs the site's own `cron.php` and fails
-            // every tick once the site is gone. A job the user added is kept:
-            // it may be something they still want running
-            // (`cronjobs.application_id` is nullOnDelete for that reason).
-            //
-            // Through the Cronjobs screen's own delete, so the file, the log
-            // and the row go in the order that keeps disk and panel agreeing,
-            // and the activity log shows it. Resolved lazily for the same
-            // container-cycle reason as WorkerSupervisor.
+            // Only panel-created jobs (an installer's background job); a user-added job is kept
+            // (`cronjobs.application_id` is nullOnDelete). Uses the Cronjobs screen's own delete so
+            // file, log and row go in order. Resolved lazily like WorkerSupervisor.
             $delete = app(DeleteCronjob::class);
 
             foreach (Cronjob::where('application_id', $application->id)->where('application_owned', true)->get() as $cronjob) {
@@ -177,9 +121,7 @@ class ApplicationArtifacts
         });
 
         $this->attempt($application, 'log_monitoring_suite', function () use ($application) {
-            // Registered only through Central; a site Log Monitoring Suite
-            // never heard of has nothing to remove. Resolved lazily like the
-            // others here.
+            // Registered only through Central; a site it never heard of has nothing to remove.
             $logMonitoring = app(LogMonitoringSuite::class);
 
             if ($application->log_monitoring_suite_id !== null && $logMonitoring->installed()) {
@@ -188,8 +130,7 @@ class ApplicationArtifacts
         });
 
         $this->attempt($application, 'log_rotation', function () use ($application) {
-            // Left behind, it names files that are gone, and logrotate warns
-            // about it on every nightly run.
+            // Left behind, logrotate warns about the missing files on every nightly run.
             app(ApplicationLogRotation::class)->remove($application);
         });
 
@@ -222,25 +163,18 @@ class ApplicationArtifacts
     }
 
     /**
-     * The site's rules directory, which its vhost includes — the WordPress
-     * toolkit's xmlrpc and uploads-PHP blocks live there.
+     * The site's rules directory, which its vhost includes (the WordPress toolkit's blocks).
      *
-     * `find -delete`, not `rm -rf`: deleting a site runs no `rm -rf` at all
-     * unless its files were asked to go too, and tests hold that line. It
-     * removes the contents and then the directory, never follows a link, and
-     * needs no grant beyond the `find` already allowed. Still a recursive
-     * delete on a path built from a record — a blank slug would make it the
-     * root itself, and with it every site's rules — so that is refused
-     * outright rather than trusted to upstream validation.
+     * `find -delete`, not `rm -rf`: it never follows a link and needs no extra sudo grant. It is
+     * still a recursive delete on a path built from a record, so a blank slug (which would make it
+     * the rules root, i.e. every site's rules) is refused outright.
      */
     private function removeSiteRules(Application $application): void
     {
         $root = rtrim((string) config('server.site_rules_root'), '/');
         $name = basename($application->siteRulesPath());
 
-        // Exactly one level under the root. With no slug and no domain the
-        // path is the root plus a slash, whose basename is the root's own name,
-        // so this comparison is what refuses it.
+        // Exactly one level under the root; with no slug the basename is the root's own name.
         abort_unless($root !== '' && $application->siteRulesPath() === $root.'/'.$name && ! in_array($name, ['.', '..'], true), 500);
 
         $this->serverOps->run(
@@ -252,23 +186,12 @@ class ApplicationArtifacts
     /**
      * Delete every archive this site has, one at a time.
      *
-     * **Per backup, not per site.** This was one `foreach` inside one
-     * `try`/`catch`, so the first archive that would not delete aborted the
-     * loop — and the rows the loop never reached then cascaded away with the
-     * application, leaving their objects in the bucket with nothing pointing
-     * at them. One unreachable object orphaned every archive for the site;
-     * with a retention of seven that is six multi-gigabyte objects lost to a
-     * failure that had nothing to do with them.
+     * Each backup is tried separately: one that will not delete must not abort the loop, or the
+     * rows never reached cascade away and orphan their objects in the bucket.
      *
-     * A failure still never stops the deletion — that part was deliberate and
-     * stays. A bucket that will not answer is a cost problem, and letting it
-     * block the certificate revoke below would trade that for a renewal
-     * running forever.
-     *
-     * The keys that survive are logged **by name**, because this is the last
-     * moment anything knows them: the rows are about to cascade, and a warning
-     * saying only "backups could not be removed" leaves nobody able to find
-     * the objects it is warning about.
+     * A failure never stops the deletion (an unreachable bucket must not block the certificate
+     * revoke). Surviving keys are logged by name, since the rows are about to cascade and this is
+     * the last moment anything knows them.
      */
     private function removeBackups(Application $application): void
     {

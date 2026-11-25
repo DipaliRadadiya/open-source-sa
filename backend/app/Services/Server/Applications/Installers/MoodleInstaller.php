@@ -11,37 +11,28 @@ use Illuminate\Support\Str;
 /**
  * Moodle — learning management system.
  *
- * Moodle's command-line installers are the least accommodating of the set:
- * `install.php` asks about fourteen things in interactive mode, with the admin
- * password inside a retry loop, and `install_database.php` refuses to run
- * without `--adminpass` — it has no prompt at all. Neither is a way to get a
- * secret in without putting it on the command line, where `ps` shows it to
- * every user on the machine.
+ * Moodle's CLI installers offer no way to pass a secret without putting it on the command
+ * line, where `ps` shows it to every user: `install.php` asks fourteen interactive questions,
+ * and `install_database.php` requires `--adminpass` with no prompt.
  *
  * So the install is split so that no secret of the user's is ever an argument:
  *
- *  1. `config.php` is written here, carrying the database credentials. Moodle
- *     reads it, so they never reach a command line.
- *  2. `install_database.php` runs with a **throwaway** admin password. It is
- *     random, it is never shown to anyone, and it stops being valid moments
- *     later — so its brief appearance in `ps` discloses nothing.
- *  3. `reset_password.php` sets the password the user actually chose. That one
- *     prompts, and a single prompt can be answered on stdin reliably.
+ *  1. `config.php` is written here, carrying the database credentials.
+ *  2. `install_database.php` runs with a **throwaway** random admin password, replaced moments
+ *     later, so its brief appearance in `ps` discloses nothing.
+ *  3. `reset_password.php` sets the password the user chose; its single prompt is answered
+ *     reliably on stdin.
  *
- * Moodle's own password policy is enforced at validation rather than waived
- * here: waiving it would let a weak password through, and letting the reset
- * fail would leave the account on a random password nobody knows.
+ * Moodle's password policy is enforced at validation, not waived: a failed reset would leave
+ * the account on a random password nobody knows.
  */
 class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
 {
     use ResolvesUpdates;
 
     /**
-     * What Moodle's installer demands, and the CLI default is 1000.
-     *
-     * Its environment check reports this one as "this test must pass", so it
-     * is a hard stop rather than the advisory the database-version line beside
-     * it turns out to be.
+     * What Moodle's installer demands (the CLI default is 1000). A hard stop: its environment
+     * check reports it as "this test must pass".
      */
     private const MIN_INPUT_VARS = 5000;
 
@@ -51,13 +42,9 @@ class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
     }
 
     /**
-     * PostgreSQL last, so MySQL remains the first available engine and every
-     * existing server keeps making the Moodle it already made.
-     *
-     * Moodle names all three in `config-dist.php`, and unlike most of the
-     * marketplace it distinguishes MySQL from MariaDB — see {@see dbType()}.
-     * Naming PostgreSQL here also commits to dropping `dbcollation`, which is
-     * a MySQL-only option; the config template does that.
+     * PostgreSQL last, so MySQL stays the first available engine. Moodle distinguishes MySQL
+     * from MariaDB (see {@see dbType()}); PostgreSQL needs `dbcollation` dropped, which the
+     * config template does.
      *
      * @return array<int, string>
      */
@@ -67,16 +54,11 @@ class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
     }
 
     /**
-     * Moodle 5.0's floors, from the `<MOODLE version="5.0">` block of
-     * `admin/environment.xml` on `MOODLE_500_STABLE` — the line
-     * `server.installers.moodle.download_url` pins: MariaDB 10.11.0, MySQL
-     * 8.4, PostgreSQL 14.
+     * Moodle 5.0's floors, from `admin/environment.xml` on `MOODLE_500_STABLE` (the line
+     * `server.installers.moodle.download_url` pins).
      *
-     * 🔴 MySQL used to carry no entry, on the argument that its minimum was too
-     * old for any server to fall below. 5.0 raised it to 8.4, and Ubuntu 24.04
-     * ships 8.0: every Moodle on a stock 24.04 box was offered, created, and
-     * then refused by Moodle's own installer ("version 8.4 is required and you
-     * are running 8.0.46"). Found by the CF-06 create matrix, 2026-10-21.
+     * 🔴 MySQL needs an entry: 5.0 raised its minimum to 8.4 and Ubuntu 24.04 ships 8.0, so
+     * Moodle would be offered and then refused by its own installer.
      *
      * @return array<string, string>
      */
@@ -94,9 +76,7 @@ class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
 
         $this->downloadAndExtract($application, null, $documentRoot);
 
-        // Moodle keeps uploaded files, caches and session data here. Upstream
-        // is emphatic that it belongs outside the web root; inside it, every
-        // student submission is a URL.
+        // Uploads, caches and sessions: must stay outside the web root, or every submission is a URL.
         $dataDir = dirname($documentRoot).'/moodledata';
         $this->run('configure', ['mkdir', '-p', $dataDir], $application);
         $this->run('configure', [
@@ -108,13 +88,9 @@ class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
 
         $this->writeSecretFile($application, "{$documentRoot}/config.php", View::make('server.apps.moodle.config', [
             'dbType' => $this->dbType($context),
-            // `dbcollation` is MySQL's; config-dist.php says in as many words
-            // that it "should be removed for all other databases". Handing a
-            // PostgreSQL connection `utf8mb4_unicode_ci` names a collation
-            // that does not exist there.
+            // `dbcollation` is MySQL-only (config-dist.php: remove it for other databases).
             'collation' => $isPostgres ? null : 'utf8mb4_unicode_ci',
-            // Empty unless the port differs from the one Moodle's driver
-            // assumes, which is what every Moodle the panel has made carries.
+            // Empty unless the port differs from the one Moodle's driver assumes.
             'port' => (string) ($this->enginePort($context) ?? ''),
             'host' => $context['db_host'] ?? '127.0.0.1',
             'database' => $context['database'],
@@ -128,15 +104,10 @@ class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
         $php = $this->phpCommand($application);
         $adminUser = (string) ($settings['admin_user'] ?? 'admin');
 
-        // The password here is deliberately disposable — see the class note.
-        // `-d max_input_vars` on the interpreter, not in the site's php.ini:
-        // Moodle's installer refuses to run below 5000 — "this test must
-        // pass", unlike the database version note beside it, which is only a
-        // warning — and the CLI default is 1000. Setting it here fixes the
-        // install without editing a php.ini the user may later want to own.
-        //
-        // The site's own pool still needs it for Moodle to run in a browser;
-        // this flag does nothing for that. See the note in install().
+        // The password here is deliberately disposable (see the class note).
+        // `-d max_input_vars` on the interpreter, not the site's php.ini: the installer refuses
+        // to run below 5000 (CLI default 1000), and this avoids editing a php.ini the user may
+        // own. The site's own pool needs the setting separately for the browser.
         $this->runAsSiteUser('install_app', $application, [
             ...$php, '-d', 'max_input_vars='.self::MIN_INPUT_VARS,
             'admin/cli/install_database.php',
@@ -148,16 +119,13 @@ class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
             '--adminpass='.$this->throwawayPassword(),
         ], null, $documentRoot);
 
-        // Now the real one, on stdin. reset_password.php asks for exactly one
-        // thing when given a username, which is what makes this reliable
-        // where feeding install.php's fourteen prompts would not be.
+        // The real password, on stdin: with a username, reset_password.php asks for one thing only.
         $this->runAsSiteUser('set_password', $application, [
             ...$php, '-d', 'max_input_vars='.self::MIN_INPUT_VARS,
             'admin/cli/reset_password.php', '--username='.$adminUser,
         ], ($settings['admin_password'] ?? '')."\n", $documentRoot);
 
-        // Moodle wants its cron every minute: without it, no mail, no
-        // backups, no cleanup, and a notice on every admin page.
+        // Every minute: without it Moodle sends no mail and runs no backups or cleanup.
         $this->scheduleCron($application, $documentRoot, 'admin/cli/cron.php', '* * * * *');
     }
 
@@ -184,10 +152,8 @@ class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
     }
 
     /**
-     * A password that satisfies Moodle's policy and belongs to nobody.
-     *
-     * It exists only to get past a required argument and is replaced before
-     * the site is usable.
+     * A password that satisfies Moodle's policy and belongs to nobody; replaced before the
+     * site is usable.
      */
     private function throwawayPassword(): string
     {
@@ -199,9 +165,7 @@ class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
      */
     private function dbType(array $context): string
     {
-        // Moodle distinguishes MySQL from MariaDB where most applications
-        // don't, and picks a different driver for each. `pgsql` is its
-        // PostgreSQL driver, per config-dist.php's own list.
+        // Moodle uses a different driver for MySQL and MariaDB.
         return match ($context['engine'] ?? '') {
             'mariadb' => 'mariadb',
             'postgresql' => 'pgsql',
@@ -221,12 +185,9 @@ class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
     }
 
     /**
-     * Moodle's line is the branch (5.0, 4.5), not the major: 5.0 → 5.1 moved
-     * the code under `public/`. The newest release of the branch is its
-     * highest release tag — not the branch's `version.php` and not the
-     * `moodle-latest-500` package: measured live (2026-10-13), the branch
-     * already said 5.0.11 while `latest` still served 5.0.10, so an update
-     * "to 5.0.11" installed 5.0.10.
+     * Moodle's line is the branch (5.0, 4.5), not the major: 5.0 → 5.1 moved the code under
+     * `public/`. The newest release of a branch is its highest release tag, not the branch's
+     * `version.php` or the `moodle-latest-500` package, which can lag behind.
      */
     public function availableVersions(Application $application, string $installed): array
     {
@@ -243,10 +204,9 @@ class MoodleInstaller extends AbstractPhpInstaller implements ApplicationUpdater
     /**
      * New code over the old, then Moodle's own upgrade, under maintenance mode.
      *
-     * v7 ran only `admin/cli/upgrade.php`, which upgrades the database to the
-     * code already on disk — with no new code downloaded it never changed a
-     * version. `config.php` survives the copy: the package ships only
-     * `config-dist.php`. moodledata lives beside the code, not in it.
+     * `admin/cli/upgrade.php` alone only upgrades the database to the code on disk, so new
+     * code is downloaded first. `config.php` survives the copy (the package ships only
+     * `config-dist.php`); moodledata lives beside the code.
      */
     public function update(Application $application, string $from, string $to): void
     {

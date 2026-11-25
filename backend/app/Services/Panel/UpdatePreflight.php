@@ -8,12 +8,11 @@ use Illuminate\Support\Facades\Process;
 /**
  * Can an in-place update run on this box right now?
  *
- * Every check is read-only and cheap. The point is to fail *before* anything
- * is touched: once the panel is in maintenance mode with half its dependencies
- * reinstalled, "not enough disk" is an outage rather than a message.
+ * Every check is read-only and cheap, and fails *before* anything is touched: once the panel is in
+ * maintenance mode with half its dependencies reinstalled, "not enough disk" is an outage.
  *
- * Each check returns a stable machine-readable `key` plus `passed`, so the UI
- * branches on the key and the copy stays translatable.
+ * Each check returns a stable `key` plus `passed`, so the UI branches on the key and the copy
+ * stays translatable.
  */
 class UpdatePreflight
 {
@@ -44,19 +43,13 @@ class UpdatePreflight
     /**
      * `ready` is the single thing the update button binds to.
      *
-     * Advisory checks are reported but never gate it. The distinction is
-     * whether the check can be *wrong* in a way the admin cannot act on: a
-     * dirty working tree is a fact that stays true until someone fixes it, but
-     * free memory is a sample of a number that moves on its own — a backup
-     * running at the wrong moment would disable the button with no failure to
-     * point at and no way to proceed. Blocking on the volatile ones turns a
-     * helpful warning into a lockout.
+     * Advisory checks are reported but never gate it: a dirty working tree stays true until fixed,
+     * but free memory is a sample of a number that moves on its own, and blocking on it would
+     * disable the button with no failure to point at.
      *
-     * Missing `advisory` means blocking, so a check added later has to opt out
-     * deliberately rather than by forgetting a key.
+     * Missing `advisory` means blocking, so a later check must opt out deliberately.
      *
-     * Public and pure, so the rule is tested without a machine in a
-     * particular state.
+     * Public and pure, so the rule is tested without a machine in a particular state.
      *
      * @param  list<array{key: string, passed: bool, detail: string|null, advisory?: bool}>  $checks
      */
@@ -82,9 +75,8 @@ class UpdatePreflight
     }
 
     /**
-     * The check that will actually stop people. `git checkout --force` throws
-     * away uncommitted work silently, and editing a file on your own server is
-     * a normal thing to do — so an update must refuse, not overwrite.
+     * `git checkout --force` silently throws away uncommitted work, and editing a file on your own
+     * server is normal, so an update must refuse rather than overwrite.
      *
      * @return array{key: string, passed: bool, detail: string|null}
      */
@@ -94,8 +86,7 @@ class UpdatePreflight
 
         return [
             'key' => 'clean_working_tree',
-            // Unknown (null) fails closed: if we cannot prove the tree is
-            // clean, we do not get to destroy what might be in it.
+            // Unknown (null) fails closed: if the tree cannot be proven clean, do not destroy what is in it.
             'passed' => $changes === [],
             'detail' => $this->changesDetail($changes),
         ];
@@ -104,14 +95,9 @@ class UpdatePreflight
     /**
      * Say which files are in the way.
      *
-     * This check is the one that actually stops people, and it used to report
-     * nothing at all — a blocked update, no reason, and no way to act on it
-     * short of an SSH session. Naming the paths turns it into something the
-     * reader can fix.
-     *
-     * Capped, because the answer to "why is my update blocked" is not a
-     * thousand-line diff: a stale checkout can have hundreds of entries, and
-     * the point is to identify the problem, not to reproduce `git status`.
+     * Without naming the paths, a blocked update had no reason and no way to act on it short of
+     * SSH. Capped, because a stale checkout can have hundreds of entries and the point is to
+     * identify the problem, not to reproduce `git status`.
      *
      * @param  array<int, string>|null  $changes
      */
@@ -155,8 +141,7 @@ class UpdatePreflight
             'key' => 'free_disk',
             'passed' => $freeMb >= $required,
             'detail' => $freeMb.'MB free, '.$required.'MB required',
-            // OLD-19: the numbers, and a sentence in the viewer's language —
-            // `detail` above stays for the screen that parses it today.
+            // The numbers and a localized sentence; `detail` stays for the screen that parses it.
             'values' => ['free_mb' => $freeMb, 'required_mb' => $required],
             'message' => __('panel_update.preflight_detail.free_disk', [
                 'free' => Bytes::human($freeMb * 1048576),
@@ -166,22 +151,15 @@ class UpdatePreflight
     }
 
     /**
-     * `npm run build` is the step that OOMs on small VPSes. Available memory
-     * (not "free") is the number that matters — page cache is reclaimable.
+     * `npm run build` is the step that OOMs on small VPSes. Available memory (not "free") is the
+     * number that matters: page cache is reclaimable.
      *
-     * Swap counts. That is not a concession: it is the whole reason a 1 GB box
-     * can build the panel at all, and install.sh adds a swapfile at install
-     * time for exactly this step. Judging the box on MemAvailable alone would
-     * refuse an update on the very servers the installer prepared to survive
-     * one — a build that finishes slowly is still a build that finishes.
+     * Swap counts: it is why a 1 GB box can build the panel at all (install.sh adds a swapfile for
+     * this step), so judging on MemAvailable alone would refuse the servers the installer prepared.
      *
-     * Advisory, never blocking. Unlike every other check here this one samples
-     * a number that moves by itself: MemAvailable dips whenever a backup, a
-     * customer's own build or a burst of php-fpm children happens to be
-     * running, and gating on it meant the update button could be dark for
-     * reasons that had nothing to do with the update and would be gone a
-     * minute later. The figure is still worth showing — it is the first thing
-     * to look at when a build is killed — but it is a reading, not a verdict.
+     * Advisory, never blocking: unlike the other checks it samples a number that moves by itself
+     * (a backup or a burst of php-fpm children), so gating on it could darken the update button for
+     * reasons that vanish a minute later. A reading, not a verdict.
      *
      * @return array{key: string, passed: bool, detail: string|null, advisory: bool}
      */
@@ -209,13 +187,10 @@ class UpdatePreflight
         return [
             'key' => 'free_memory',
             'passed' => $availableMb + $swapMb >= $requiredMb,
-            // Broken out rather than summed into one number: an admin who is
-            // 400 MB short needs to know whether the answer is "close a
-            // process" or "add a swapfile", and those are different fixes.
+            // Broken out, not summed: closing a process and adding a swapfile are different fixes.
             //
-            // The shape is load-bearing: lib/admin/preflight-detail.js parses
-            // this sentence to render a localized figure, and anything it
-            // cannot parse falls back to raw English megabytes.
+            // The shape is load-bearing: lib/admin/preflight-detail.js parses this sentence to render
+            // a localized figure, and anything it cannot parse falls back to raw English megabytes.
             'detail' => $availableMb.'MB available + '.$swapMb.'MB swap, '.$requiredMb.'MB required',
             'advisory' => true,
             'values' => ['available_mb' => $availableMb, 'swap_mb' => $swapMb, 'required_mb' => $requiredMb],
@@ -258,9 +233,8 @@ class UpdatePreflight
     }
 
     /**
-     * The panel user must be able to write the checkout it is about to move.
-     * Running as root during install and unprivileged afterwards is exactly
-     * how this ends up false in the wild.
+     * The panel user must be able to write the checkout it is about to move (it ends up false when
+     * install ran as root and the panel runs unprivileged).
      *
      * @return array{key: string, passed: bool, detail: string|null}
      */

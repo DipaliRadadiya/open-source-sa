@@ -34,29 +34,20 @@ use Illuminate\Support\Number;
 class SettingController extends Controller
 {
     /**
-     * All available setting groups with their current values, plus who last
-     * changed each one.
+     * All available setting groups with their current values, plus who last changed each one.
      *
-     * `last_changed` is a sibling of `settings` rather than a field inside each
-     * group: the group maps are live OS state and are echoed verbatim by every
-     * `PUT`, and an actor is neither of those things.
+     * `last_changed` sits beside `settings`, not inside each group: the group maps are live OS
+     * state echoed verbatim by every `PUT`.
      */
     public function index(SettingsManager $settings, SettingChangeLog $changes): JsonResponse
     {
-        // FS-C46: every group asks the server (sshd, apt, swap, timedatectl);
-        // 1.4–1.9 s a load. Forgotten by every change made here.
-        // Per language (RC-9): the payload carries diffForHumans() sentences,
-        // so one cache for all of them handed a Russian page "há 6 horas" right
-        // after a Portuguese request.
+        // Every group asks the server (sshd, apt, swap, timedatectl), which is slow; forgotten on
+        // every change made here. Keyed per language: the payload carries diffForHumans() text.
         $values = ProbeCache::remember('settings:'.app()->getLocale(), fn (): array => $settings->all());
 
         return response()->json([
             'settings' => $values,
-            // Cast, not left as an array: json_encode() cannot tell an empty
-            // associative array from an empty list and emits `[]` either way,
-            // which a client expecting an object (a map keyed by group) then
-            // rejects. A box where nothing has been changed yet — every fresh
-            // install — hits this on the very first request.
+            // Cast to object: an empty array would encode as `[]`, not the `{}` map clients expect.
             'last_changed' => (object) $changes->forGroups(array_keys($values)),
         ]);
     }
@@ -82,10 +73,8 @@ class SettingController extends Controller
     }
 
     /**
-     * Memory settings apply immediately; a password change is applied after
-     * this response is sent, because the credential the panel is currently
-     * using is the one being replaced. `202` says so rather than returning a
-     * body that claims a password is set before it is.
+     * Memory settings apply immediately; a password change is applied after the response, because
+     * it replaces the credential the panel is using, hence `202`.
      */
     public function updateRedis(RedisSettingsRequest $request, SettingsManager $settings, ActivityLogger $log): JsonResponse
     {
@@ -105,9 +94,7 @@ class SettingController extends Controller
     /**
      * The frequencies the reboot schedule accepts, with localized labels.
      *
-     * Served rather than hardcoded in the frontend, same as the cronjob
-     * schedule presets — and it is a closed list on purpose: this restarts
-     * the machine, so there is no free-form cron expression to get wrong.
+     * A closed list on purpose: this restarts the machine, so no free-form cron expression.
      */
     public function rebootSchedulePresets(): JsonResponse
     {
@@ -137,9 +124,7 @@ class SettingController extends Controller
 
         $values = $group->read();
 
-        // Its own verb rather than a generic "settings updated": this arranges
-        // for the server to restart on its own, which is not what saving a
-        // form usually means.
+        // Its own verb: this arranges for the server to restart on its own.
         $log->log('setting.reboot_schedule_updated', null, [
             'enabled' => $values['enabled'] ? 'yes' : 'no',
             'frequency' => $values['frequency'],
@@ -153,10 +138,8 @@ class SettingController extends Controller
     /**
      * Install the waiting security updates now. `202 Accepted`.
      *
-     * The row is written **before** the job is dispatched, deliberately — the
-     * same order `InstallTracker` uses. Started inside the job instead, there is
-     * a window between the 202 and the worker picking it up where the run exists
-     * and nothing can see it, which is the exact blindness the table removes.
+     * The row is written before the job is dispatched (as `InstallTracker` does), so the run is
+     * visible between the 202 and the worker picking it up.
      */
     public function runSecurityUpdates(
         SecurityUpdateRunner $updates,
@@ -165,18 +148,14 @@ class SettingController extends Controller
     ): JsonResponse {
         ProbeCache::flush();
 
-        // Asked before queueing: a job that fails a minute later because the
-        // package is absent gives an operator a red card and no way to connect
-        // it to a missing package.
+        // Checked before queueing, so a missing package is reported now, not as a failed job later.
         if (! $updates->available()) {
             return response()->json(['message' => __('errors/setting.security_updates_unavailable')], 422);
         }
 
         $run = $runs->start(Auth::id());
 
-        // Null means one is already open. 409 rather than 422: nothing about the
-        // request is wrong, it is the server's state that refuses it — and apt's
-        // lock means a second run could only wait and then repeat the first.
+        // Null means one is already open. 409, not 422: the request is fine, the server state refuses it.
         if ($run === null) {
             return response()->json([
                 'message' => __('errors/setting.security_updates_in_progress'),
@@ -194,10 +173,8 @@ class SettingController extends Controller
     /**
      * How the current or last security update is going.
      *
-     * Readable with `setting` view, because watching is not changing — but the
-     * captured output follows `manage`, as the failed-automatic-run excerpt in
-     * the same card does. apt's output can carry conffile diffs, debconf answers
-     * and mirror URLs.
+     * Readable with `setting` view, but the captured output needs `manage`: apt output can carry
+     * conffile diffs, debconf answers and mirror URLs.
      */
     public function securityUpdateStatus(SecurityUpdateTracker $runs): JsonResponse
     {
@@ -232,24 +209,11 @@ class SettingController extends Controller
             'reboot' => [
                 'scheduled' => true,
                 'when' => $when,
-                // The absolute moment, computed from the server's own clock.
-                // `when` is `+60`, and a client turning that into a time with
-                // its own clock is wrong by however far the two have drifted —
-                // on the one number where being wrong means someone schedules
-                // a restart for the wrong hour. `shutdown` obeys this clock,
-                // so this clock is the one that answers.
-                //
-                // In the server's timezone (FS-C7), the clock the reboot
-                // schedule beside it already uses — it was UTC, so the two
-                // read an hour apart on a server set to Europe/Berlin.
-                // `at_iso` carries the offset for a client that converts.
+                // The absolute moment from the server's own clock (`shutdown` obeys it; a client
+                // clock may have drifted), in the server's timezone like the reboot schedule.
+                // `at_iso` carries the offset.
                 ...$this->rebootMoment(now()->addMinutes($delay)),
-                // How long is left, measured here rather than derived there.
-                // A client counting down from `at` has to parse a string with
-                // no offset in it and subtract its own clock — the same drift
-                // the field above exists to avoid, reintroduced one line later.
-                // Sending the remaining seconds leaves the browser only the
-                // ticking, where drift costs microseconds instead of minutes.
+                // Remaining seconds computed here, so the client only ticks and does not subtract clocks.
                 'seconds_remaining' => $delay * 60,
                 'delay_minutes' => $delay,
             ],
@@ -259,24 +223,15 @@ class SettingController extends Controller
     /**
      * Whether a restart is already scheduled, and for when.
      *
-     * systemd writes `/run/systemd/shutdown/scheduled` when one is pending —
-     * an ini file whose USEC key is the wall-clock microsecond it fires. Read
-     * rather than remembered: a reboot can be scheduled from a shell without
-     * the panel, and a panel that only knows about its own would confidently
-     * report "none" while the machine counts down.
+     * Read from systemd's `/run/systemd/shutdown/scheduled` (USEC = wall-clock microsecond it
+     * fires) rather than remembered, since a reboot can be scheduled from a shell.
      */
     public function rebootStatus(): JsonResponse
     {
         $path = (string) config('server.reboot.scheduled_file', '/run/systemd/shutdown/scheduled');
 
-        // Read directly, not through ServerOps.
-        //
-        // systemd writes this into `/run/systemd/shutdown`, which is 0755
-        // root: world readable, no elevation required. Routing it through sudo
-        // — as the first version of this did, out of habit — made a page-load
-        // endpoint depend on a privilege it never needed, and returned 500 on
-        // any server whose grant was out of date. The cheapest way to not
-        // mishandle a permission is not to need one.
+        // Read directly, not through ServerOps: the directory is world readable, and sudo would
+        // make a page-load endpoint fail on servers with an outdated grant.
         if (! is_file($path)) {
             return response()->json(['reboot' => ['scheduled' => false, 'at' => null, 'at_iso' => null, 'timezone' => ServerTimezone::get(), 'seconds_remaining' => null]]);
         }
@@ -292,28 +247,17 @@ class SettingController extends Controller
             'reboot' => [
                 'scheduled' => true,
                 ...($at === null ? ['at' => null, 'at_iso' => null, 'timezone' => ServerTimezone::get()] : $this->rebootMoment($at)),
-                // Rounded up, not truncated. systemd's USEC is a whole second
-                // and this request lands a fraction after it, so a 15-minute
-                // restart is 899.4 seconds away by the time it is measured --
-                // which truncates to a countdown opening at 14:59 for a delay
-                // the user just asked to be 15 minutes.
-                //
-                // Floored at zero: systemd leaves this file in place for the
-                // moments between the deadline passing and the machine going
-                // down, and a negative number would render as a countdown
-                // running backwards through the last thing anyone sees.
+                // Rounded up (a 15-minute delay measures 899.4 s and would open at 14:59); floored at
+                // zero because the file lingers briefly after the deadline.
                 'seconds_remaining' => $at ? (int) max(0, ceil(now()->diffInSeconds($at, false))) : null,
             ],
         ]);
     }
 
     /**
-     * Call off a scheduled restart.
+     * Call off a scheduled restart (`shutdown -c`).
      *
-     * `shutdown -c` is the counterpart of the `-r +N` above, and there was no
-     * way to reach it: a restart scheduled an hour out could be watched but
-     * not stopped. Cancelling one that is not scheduled is not an error --
-     * the user wanted no pending restart and there is none.
+     * Cancelling when none is scheduled is not an error.
      */
     public function cancelReboot(ServerOps $ops, ActivityLogger $log): JsonResponse
     {
@@ -331,9 +275,8 @@ class SettingController extends Controller
     }
 
     /**
-     * Per settings group, the values its activity entry compares before and
-     * after a save — as `read()` names them. Display values where `read()`
-     * has one (swap size in words, not bytes).
+     * Per settings group, the values its activity entry compares before and after a save, as
+     * `read()` names them (display values where `read()` has one).
      */
     private const LOGGED_FIELDS = [
         'general' => ['hostname', 'timezone', 'ntp'],
@@ -344,9 +287,7 @@ class SettingController extends Controller
     ];
 
     /**
-     * A group's values as a person reads them in the activity log: Redis
-     * reports its memory limit in bytes ("268435456"), shown as "256 MB",
-     * and 0 — no limit — as none.
+     * A group's values as the activity log shows them (Redis bytes as "256 MB", 0 as none).
      *
      * @param  array<string, mixed>  $values
      * @return array<string, mixed>
@@ -377,9 +318,7 @@ class SettingController extends Controller
 
         $after = $group->read();
 
-        // What really changed, old → new (support list, 2026-10-28) — read
-        // back from the server on both sides, so a field resent with its own
-        // value is not a change.
+        // Read back from the server on both sides, so a resent unchanged value is not a change.
         $changes = ActivityChanges::between($this->readable($key, $before), $this->readable($key, $after), self::LOGGED_FIELDS[$key] ?? []);
 
         // A password is never logged, only that it changed or went.
@@ -395,7 +334,7 @@ class SettingController extends Controller
     }
 
     /**
-     * A reboot time in the server's own timezone, with the offset (FS-C7).
+     * A reboot time in the server's own timezone, with the offset.
      *
      * @return array{at: string, at_iso: string, timezone: string}
      */

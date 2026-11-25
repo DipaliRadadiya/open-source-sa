@@ -20,8 +20,7 @@ use App\Services\Server\ServerOpsResult;
  *           (application files)
  *     current -> releases/<timestamp>   ← symlink, atomically swapped
  *
- * Slug-based paths (not domain-based) — the slug is unique and stable, whereas
- * a domain can be changed and must not break the filesystem path.
+ * Paths use the slug, not the domain: the slug is unique and stable, a domain can change.
  */
 class ReleaseManager
 {
@@ -29,26 +28,20 @@ class ReleaseManager
         private ServerOps $serverOps,
     ) {}
 
-    /**
-     * The absolute path to the application root (parent of `releases/`).
-     */
+    /** The application root (parent of `releases/`). */
     public function appRoot(Application $application): string
     {
         return $application->rootPath();
     }
 
-    /**
-     * The absolute path to the `current` symlink target.
-     */
+    /** The path of the `current` symlink itself. */
     public function currentSymlinkPath(Application $application): string
     {
         return $this->appRoot($application).'/current';
     }
 
     /**
-     * The absolute path nginx and PHP-FPM actually serve from — the
-     * `current` symlink resolved to its real target. Null when `current`
-     * does not exist yet (brand new provisioning).
+     * The `current` symlink resolved to its real target. Null when it does not exist yet.
      */
     public function currentPath(Application $application): ?string
     {
@@ -60,8 +53,6 @@ class ReleaseManager
 
         $target = readlink($symlink);
 
-        // readlink returns the raw symlink value. Resolve it relative to the
-        // symlink's parent directory so a relative target works correctly.
         if ($target === false || ! file_exists($symlink)) {
             return null;
         }
@@ -69,10 +60,7 @@ class ReleaseManager
         return realpath($symlink) ?: null;
     }
 
-    /**
-     * The absolute path served by nginx/PHP right now — `current/public`.
-     * Null when no `current` symlink exists.
-     */
+    /** The path served right now (`current/public`); null without a `current` symlink. */
     public function servedPath(Application $application): ?string
     {
         $current = $this->currentPath($application);
@@ -80,32 +68,23 @@ class ReleaseManager
         return $current !== null ? "{$current}/public" : null;
     }
 
-    /**
-     * The web root inside a release — `releases/<timestamp>/public`.
-     */
+    /** The web root inside a release: `releases/<timestamp>/public`. */
     public function releasePublicPath(string $releasePath): string
     {
         return rtrim($releasePath, '/').'/public';
     }
 
     /**
-     * Create the app root and releases directory structure, creating the
-     * initial release from an existing directory (migration case).
-     *
-     * Called when provisioning a brand-new app, or when the first release-based
-     * deploy hits an app that has files but no releases/ directory.
-     *
-     * Returns the path to the newly created release.
+     * Create the app root and releases/ tree, seeding the first release from an existing
+     * directory when migrating. Returns the new release path.
      */
     public function createAppStructure(Application $application, ?string $existingFilesPath = null): string
     {
         $root = $this->appRoot($application);
         $timestamp = now()->format('YmdHis');
 
-        // Create the directory tree.
         $this->run(['mkdir', '-p', "{$root}/releases/{$timestamp}/public"]);
 
-        // Migrate existing files if this is an existing app with files.
         if ($existingFilesPath !== null && is_dir($existingFilesPath)) {
             $this->run([
                 'cp', '-a',
@@ -114,7 +93,7 @@ class ReleaseManager
             ]);
         }
 
-        // Create the .env file (empty for now; the Environment screen manages it).
+        // Empty for now; the Environment screen manages it.
         $this->run(['touch', "{$root}/.env"]);
 
         return "{$root}/releases/{$timestamp}";
@@ -127,19 +106,13 @@ class ReleaseManager
     {
         $symlink = $this->currentSymlinkPath($application);
 
-        // `ln -sf` (not -sTf): initialise case creates a new symlink with force.
-        // `T` is not needed here since the target does not exist yet.
+        // `-sf`, not `-sTf`: `T` is not needed while the symlink does not exist yet.
         $this->run(['ln', '-sf', "{$releasePath}", $symlink]);
     }
 
     /**
-     * Create a new release directory and populate it via git.
-     *
-     * The directory is created empty; the caller (GitDeployer) populates it
-     * with git clone/reset-hard and the build script.
-     *
-     * Returns the release path. The caller records it on the Release model
-     * once the deploy is complete.
+     * Create an empty release directory; the caller (GitDeployer) populates it. Returns the
+     * release path, which the caller records on the Release model once the deploy completes.
      */
     public function prepareRelease(Application $application): string
     {
@@ -154,8 +127,7 @@ class ReleaseManager
     /**
      * Atomically activate a release by swapping the `current` symlink.
      *
-     * Called after a successful deploy. The previous symlink target is stored
-     * in the application record so rollback can repoint to it.
+     * The previous target is stored on the application so rollback can repoint to it.
      *
      * @param  string  $releasePath  Absolute path to the release (e.g. /home/user/app/releases/20260807100000)
      */
@@ -163,12 +135,9 @@ class ReleaseManager
     {
         $symlink = $this->currentSymlinkPath($application);
 
-        // Record the current symlink target as the previous release path,
-        // so rollback can return to it.
         $previousTarget = is_link($symlink) ? realpath($symlink) : null;
 
-        // `ln -sTf`: -s (symbolic), -T (treat target as file, no dir loop),
-        // -f (force: remove existing current). Atomic on Linux filesystems.
+        // `-T` treats the link as a file (no link inside the old target dir), `-f` replaces it.
         $this->run(['ln', '-sTf', $releasePath, $symlink]);
 
         $application->updateQuietly([
@@ -197,23 +166,13 @@ class ReleaseManager
             throw new \RuntimeException('No previous release to roll back to.');
         }
 
-        // Capture the current target before overwriting it.
         $currentTarget = realpath($symlink);
 
-        // Atomic swap.
         $this->run(['ln', '-sTf', $previousPath, $symlink]);
 
-        // The release we just left is the one that was rolled back.
-        //
-        // `markRolledBack()` existed with no callers, so this never happened:
-        // a release the operator rolled away from kept `status = deployed`
-        // forever, and the releases list could not tell it apart from the one
-        // actually serving traffic. Which is the whole question that list is
-        // there to answer after a bad deploy.
-        //
-        // Marked here rather than in the controller so it holds for every
-        // caller of rollback(), and by path because that is the only handle
-        // this method has on the release it is leaving.
+        // Mark the release we just left as rolled back, so the releases list can tell it from
+        // the one serving traffic. Done here (not in a controller) so every caller gets it,
+        // and matched by path: the only handle this method has on that release.
         if (is_string($currentTarget) && $currentTarget !== '') {
             $left = Release::query()
                 ->where('application_id', $application->id)
@@ -236,20 +195,13 @@ class ReleaseManager
         return $previousPath;
     }
 
-    /**
-     * Returns true when the app has a releases directory.
-     * False means this is an existing app that needs migration on first deploy.
-     */
+    /** False means an existing app that needs migrating on first deploy. */
     public function hasReleasesDirectory(Application $application): bool
     {
         return is_dir($this->appRoot($application).'/releases');
     }
 
-    /**
-     * Whether the current symlink exists and points to a directory that still
-     * exists on disk. An orphan symlink (target deleted) means something went
-     * wrong and needs investigation.
-     */
+    /** False for an orphan symlink (target deleted), which needs investigation. */
     public function currentSymlinkIsValid(Application $application): bool
     {
         $symlink = $this->currentSymlinkPath($application);
@@ -257,9 +209,7 @@ class ReleaseManager
         return is_link($symlink) && is_dir($symlink);
     }
 
-    /**
-     * Record a release in the database after a successful deploy.
-     */
+    /** Record a release in the database after a successful deploy. */
     public function recordRelease(
         Application $application,
         string $path,
@@ -277,17 +227,13 @@ class ReleaseManager
         ]);
     }
 
-    /**
-     * Mark the currently-active release as rolled_back.
-     */
+    /** Mark a release as rolled_back. */
     public function markRolledBack(Release $release): void
     {
         $release->update(['status' => 'rolled_back']);
     }
 
-    /**
-     * Delete old releases beyond the keep limit, keeping the most recent N.
-     */
+    /** Delete old releases beyond the keep limit, keeping the most recent N. */
     public function prune(Application $application, int $keep = 10): int
     {
         $keep = max(1, $keep);
@@ -319,18 +265,8 @@ class ReleaseManager
      * @param  array<int, string>  $args
      */
     /**
-     * Every command here must succeed.
-     *
-     * The result used to be returned and every caller dropped it. That mattered
-     * most in `createAppStructure()`, which provisioning calls for a git site:
-     * a failed `mkdir` — a full disk, a permission problem — went unnoticed, the
-     * provisioner recorded `create_directory` as done, the vhost was written
-     * pointing at a directory that was never made, and the site came out
-     * **active**. The first deploy then failed at `git clone` and blamed git for
-     * a problem that had a clear cause two steps earlier.
-     *
-     * Throwing rather than returning, because there is no caller here for which
-     * carrying on after a failed filesystem command is correct.
+     * Every command here must succeed: it throws on failure. A swallowed `mkdir` failure
+     * left a vhost pointing at a directory that was never made and the site marked active.
      */
     private function run(array $args): ServerOpsResult
     {

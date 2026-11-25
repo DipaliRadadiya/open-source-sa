@@ -10,72 +10,44 @@ use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 
 /**
- * After `compose up`, wait for the site to actually answer (DS-03).
+ * After `compose up`, wait for the site to actually answer.
  *
- * `compose up -d` exits 0 for a container that dies a second later, and for one
- * that runs perfectly while listening on a port nginx is not proxying to. The
- * second is the trap the old "Container port" field set: Memos given 8082 ran
- * happily on 5230, the panel said Running, and every request was a 502.
+ * `compose up -d` exits 0 for a container that dies a second later, and for one listening on a
+ * port nginx is not proxying to (every request is then a 502). So this asks: does the container
+ * stay up, and does anything answer on its port?
  *
- * So the check asks the two questions a user would: is the container staying
- * up, and does anything answer on its port? Any HTTP status counts as an
- * answer — a login redirect, a 401 or a 404 at `/` are all a working app. The
- * {@see HttpReadinessCheck} for systemd apps fails on 5xx; this one does not,
- * because a container app that answers 500 on its first boot is usually still
- * migrating, and the user can see that in its log, which is now kept.
+ * Any HTTP status counts as an answer (a 500 on first boot is usually a migration still running),
+ * unlike {@see HttpReadinessCheck} for systemd apps, which fails on 5xx.
  *
- * An image with its own HEALTHCHECK is asked that instead (DS-14): its
- * author's idea of ready beats a GET of `/`, and the panel had said Running
- * over a Kanboard that served a 200 error page while Docker called it
- * unhealthy. Those sites can also read `starting` and `unhealthy`.
+ * An image with its own HEALTHCHECK is asked that instead, and can read `starting` and `unhealthy`.
+ * A container on a non-HTTP port (PostgreSQL, Redis) is never asked for `/`; its own state
+ * decides: HEALTHCHECK if it has one, otherwise running at two consecutive looks.
  *
- * A container whose port speaks something other than HTTP — PostgreSQL on
- * 5432, Redis on 6379 — is never asked for `/` (S-09). It cannot answer, and
- * the CF-07 matrix's `postgres:16-alpine` ran perfectly for the whole 90 s
- * and failed as `container_not_answering` on every release. For those the
- * container's own state decides: its HEALTHCHECK when it has one, otherwise
- * running, and still running at the next look.
- *
- * On failure the reason is stored on the application in words a person can act
- * on — "Nothing answers on container port 8082 — the image listens on 5230" —
- * with the last lines of the container's own log beside it.
+ * On failure the reason is stored on the application in words a person can act on, with the
+ * last lines of the container's log.
  */
 class ContainerReadinessCheck
 {
     /**
-     * The longest wait, whatever is configured: `PUT /container` and `pull`
-     * run this inside a request the panel's vhost cuts off at 300 s, after a
-     * pull and a `compose up` that take their own share of it.
+     * The longest wait, whatever is configured: `PUT /container` and `pull` run this inside a
+     * request the vhost cuts off at 300 s.
      *
-     * It bounds this check, not the request (DS-12). The check's own docker
-     * questions are capped at `ContainerSupervisor::QUERY_TIMEOUT`, so the
-     * wait and the diagnostics after it stay under the 300 s even at their
-     * worst for a single-container site (a pasted stack adds a 20 s `docker
-     * inspect` per container to the last try, normally milliseconds). The
-     * `compose up`/`pull` before it run under `server.docker.command_timeout`
-     * (600 s), because an image may be gigabytes, and a slow pull can still
-     * take the request past the FastCGI timeout on its own.
+     * It bounds this check, not the request: the `compose up`/`pull` before it run under
+     * `server.docker.command_timeout` (600 s) and a slow pull can exceed the FastCGI timeout alone.
      */
     public const MAX_TIMEOUT = 150;
 
     public function __construct(private ServerOps $serverOps) {}
 
     /**
-     * Wait — against the clock, not a count of tries — for the site to answer.
+     * Wait, against a deadline rather than a count of tries, for the site to answer.
      *
-     * A deadline, because the tries were never free (DS-09): each one is a
-     * `compose ps`, a `docker inspect` per container and a curl that can sit
-     * on a hung port for its full timeout, so "90 seconds" waited up to ~258.
-     * `PUT /container` and `pull` wait for this synchronously, behind the
-     * panel's own 300 s FastCGI timeout, and past it the user got a 504
-     * instead of the reason. The configured value is capped well under it —
-     * see MAX_TIMEOUT for what that does and does not bound.
+     * Each try costs a `compose ps`, a `docker inspect` per container and a curl, so a count could
+     * run far past the 300 s FastCGI timeout; see MAX_TIMEOUT.
      *
-     * An answer always wins. A restart is only a failure once it has gone on
-     * for `restart_grace` seconds with nothing answering — and in a pasted
-     * file, never before the deadline: there, one service exiting once while
-     * its database starts is how a healthy stack boots, and a single sighting
-     * failed it (DS-09). The restart is still what the failure names.
+     * An answer always wins. A restart only fails after `restart_grace` seconds with nothing
+     * answering, and in a pasted file never before the deadline (a service may exit once while its
+     * database starts). The restart is still what the failure names.
      *
      * @throws ProvisioningFailedException
      */
@@ -90,8 +62,7 @@ class ContainerReadinessCheck
         $timeout = min(self::MAX_TIMEOUT, max(1, (int) config('server.docker.readiness.timeout', 90)));
         $interval = max(0, (int) config('server.docker.readiness.interval', 3));
         $grace = max(0, (int) config('server.docker.readiness.restart_grace', 30));
-        // With no interval between tries (the test suite) nothing guarantees
-        // the clock moves, so there the tries are counted instead.
+        // With no interval (the test suite) the clock may not move, so tries are counted instead.
         $attempts = $interval > 0 ? PHP_INT_MAX : $timeout;
         $pasted = trim((string) $application->compose) !== '';
         $nonHttp = ! $pasted && $this->speaksOtherProtocol($application);
@@ -107,11 +78,9 @@ class ContainerReadinessCheck
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
             $remaining = (int) ceil(now()->diffInSeconds($deadline, false));
 
-            // The image's own HEALTHCHECK, when it has one, decides (DS-14):
-            // healthy passes, unhealthy fails with the check's own output.
-            // While it is starting, `/` is not asked at all — Docker is already
-            // asking, and a second requester during a first boot is what left
-            // Kanboard's lazy migration half applied.
+            // The image's own HEALTHCHECK decides: healthy passes, unhealthy fails with its output.
+            // While starting, `/` is not asked: a second requester during first boot can leave a
+            // lazy migration half applied.
             $health = $containers->health($application, $documentRoot);
 
             if ($health === 'healthy') {
@@ -149,20 +118,15 @@ class ContainerReadinessCheck
                     $this->fail($application, $documentRoot, $containers, 'exited', 'container_exited');
                 }
 
-                // Twice, not once: `compose up` returns before a container
-                // with a bad setting has had time to exit, and one sighting
-                // would call that running. A HEALTHCHECK, when there is one,
-                // still decides above.
+                // Twice: `compose up` returns before a badly configured container has exited.
                 if ($nonHttp && $health === null && ++$seenRunning >= 2) {
                     $this->passed($application);
 
                     return;
                 }
 
-                // curl wrote nothing: the probe did not happen, so nothing was
-                // measured. With the container up and not bouncing, calling the
-                // site broken on that would be a guess — the same rule as
-                // HttpReadinessCheck.
+                // curl wrote nothing, so nothing was measured; with the container up that is not
+                // a failure (same rule as HttpReadinessCheck).
                 if ($status === null) {
                     $this->passed($application);
 
@@ -183,10 +147,8 @@ class ContainerReadinessCheck
             $this->fail($application, $documentRoot, $containers, 'restarting', 'container_restarting');
         }
 
-        // Still starting at the deadline. Some images give their check minutes
-        // of start period, and holding a deploy that long is worse than saying
-        // so: one request to `/` now, and an answer passes as `starting` —
-        // the live status turns it into running or unhealthy once Docker has.
+        // Still starting at the deadline: some images have minutes of start period. One request to
+        // `/` now; an answer passes as `starting` and the live status settles it later.
         if ($health === 'starting' && $nonHttp) {
             $this->passed($application, 'starting');
 
@@ -214,9 +176,7 @@ class ContainerReadinessCheck
             ]);
         }
 
-        // No container port to name — a pasted file publishes its own — and
-        // `app_port` is the panel's loopback port on the HOST, which the
-        // sentence would have sent the user off to set as the container's.
+        // A pasted file has no container port to name, and `app_port` is the host's loopback port.
         $this->fail($application, $documentRoot, $containers, 'not_answering', 'container_not_answering', [
             ...($containerPort > 0 && ! $pasted ? ['port' => $containerPort] : []),
             'seconds' => $waited,
@@ -226,11 +186,8 @@ class ContainerReadinessCheck
     /**
      * Whether the container port is one a non-HTTP service owns.
      *
-     * By the port, because nothing else tells them apart in time. Create
-     * requires a port and nginx proxies the domain to it, so "no web port"
-     * never happens literally; and through docker-proxy a database that drops
-     * the request looks exactly like a web app still booting — both are an
-     * accepted connection and an empty reply.
+     * By port, because through docker-proxy a database that drops the request looks exactly like a
+     * web app still booting (accepted connection, empty reply).
      */
     private function speaksOtherProtocol(Application $application): bool
     {
@@ -276,20 +233,15 @@ class ContainerReadinessCheck
             ],
         ])->save();
 
-        // The step names the restart-loop and exit cases have always had, so a
-        // client keyed on them reads these the same as before.
+        // Keep the established step names so clients keyed on them still work.
         $step = match ($reason) {
             'container_restarting' => 'container_restarting',
             'container_exited' => 'container_exited',
             default => 'verify_serving',
         };
 
-        // A reference that leads somewhere. This verdict comes from probing, not
-        // from one failed command, so there was no server-ops line to point at and
-        // the reference was '' — a refused resume then showed its reason with no
-        // reference (integrated QA on .115, 2026-10-30). The verdict is logged under
-        // its own reference: what was decided, not the container's log, which is
-        // already stored on the application above.
+        // The verdict comes from probing, not one failed command, so there is no server-ops line to
+        // point at; log it under its own reference (the container log is stored above).
         $reference = (string) Str::uuid();
 
         Log::channel('server-ops')->warning('container readiness failed', [
@@ -306,8 +258,7 @@ class ContainerReadinessCheck
     }
 
     /**
-     * The container's last log lines. Empty when they could not be read — a
-     * diagnostic must never be the thing that fails.
+     * The container's last log lines; empty when unreadable (a diagnostic must never fail).
      */
     private function tail(Application $application, string $documentRoot, ContainerSupervisor $containers): string
     {
@@ -338,9 +289,7 @@ class ContainerReadinessCheck
     }
 
     /**
-     * Ports the image declares (EXPOSE), read from the copy on this server —
-     * it was just pulled, so nothing goes to a registry. Pasted compose files
-     * have no single image, so they get none.
+     * Ports the image declares (EXPOSE), read from the local copy; pasted compose files get none.
      *
      * @return list<int>
      */

@@ -8,34 +8,26 @@ use App\Services\Server\ServerOps;
 use InvalidArgumentException;
 
 /**
- * Resolves the right DatabaseEngine for a given engine name, auto-seeding a
- * sensible default admin connection (detect-don't-trust — the user then edits
- * + tests it). Also the single source of truth for the capability list and
- * the system-object guardrails.
+ * Resolves the DatabaseEngine for an engine name, seeding a default admin connection.
+ * Also the source of truth for the capability list and the system-object guardrails.
  */
 class DatabaseManager
 {
     /**
      * Detected versions for the lifetime of THIS instance, keyed by engine.
      *
-     * Not a cache, and deliberately not one. The detect-don't-trust rule says a
-     * stored answer about the server goes stale — so this is scoped to a single
-     * object rather than to a key with a TTL. Nothing binds this class as a
-     * singleton (see the test that pins that), so each injection point holds
-     * its own and re-detects: a request, a controller, a queue job. Inside one
-     * of those the engine cannot meaningfully change, and asking four times is
-     * only four subprocesses saying the same thing.
+     * Deliberately not a shared cache (a stored answer about the server goes stale): the class is
+     * not a singleton, so each request/job re-detects once and repeat asks cost nothing.
      *
      * @var array<string, ?string>|null
      */
     private ?array $detectedVersions = null;
 
     /**
-     * The full capability list for this instance, on the same terms.
+     * The full capability list for this instance, memoised on the same terms.
      *
-     * Separate from {@see $detectedVersions} because it is the more expensive
-     * half: `installed()` asks the package manager about every engine that did
-     * not answer, and that question does not short-circuit on repeat.
+     * Separate from {@see $detectedVersions}: `installed()` asks the package manager about
+     * every engine that did not answer.
      *
      * @var array<int, array<string, mixed>>|null
      */
@@ -80,10 +72,7 @@ class DatabaseManager
     {
         $connection = $this->connection($engine);
 
-        // Matched on the driver rather than falling through to SqlEngine,
-        // which is the shape the rest of this class was corrected to in
-        // 3ceb3452: an unmatched driver must be a loud failure, not a MySQL
-        // client pointed at an engine that does not speak MySQL.
+        // An unmatched driver must fail loudly, not fall through to a MySQL client.
         return match ($this->driver($engine)) {
             'mongo' => new MongoEngine($connection, $this->serverOps),
             'pgsql' => new PgsqlEngine($connection, $this->serverOps),
@@ -97,14 +86,8 @@ class DatabaseManager
     /**
      * The live version of every engine, or null where it did not answer.
      *
-     * The cheap half of {@see capabilities()}: one probe per engine and no
-     * package-manager questions. Split out because the setup page reads only
-     * `running` and `version` — it never looks at `installed`, and `installed`
-     * is the `dpkg-query` half. Rendering that page used to cost 24 commands,
-     * 12 of which were answering a question nobody asked.
-     *
-     * Memoised per instance, so the three calls the setup component makes
-     * become one. See {@see $detectedVersions} for why that is not a cache.
+     * The cheap half of {@see capabilities()}: one probe per engine, no package-manager calls.
+     * Memoised per instance; see {@see $detectedVersions}.
      *
      * @return array<string, ?string>
      */
@@ -144,16 +127,7 @@ class DatabaseManager
                 'version' => $version,
                 'installed' => $this->installed($engine, $version !== null),
                 'charsets' => $this->charsets($engine),
-                // Whether an account on this engine can be reached from
-                // another host. False where the host is not part of the
-                // account — a PostgreSQL role is cluster-wide, and which
-                // addresses may reach it lives in `pg_hba.conf`, which the
-                // panel does not manage.
-                //
-                // Published because the alternative is the client naming the
-                // engine in its own code, which is exactly what 3ceb3452 took
-                // out of this class: a fact the API already holds is not the
-                // client's to re-derive.
+                // Published so clients need not name engines in their own code.
                 'supports_remote_users' => $this->supportsRemoteUsers($engine),
             ];
         }, $this->engineNames());
@@ -162,19 +136,11 @@ class DatabaseManager
     /**
      * Is the engine present on this server, whether or not it is up?
      *
-     * `running` is a live `SELECT VERSION()`, so a **stopped** engine and one
-     * that was **never installed** both answer `running: false, version: null`
-     * and are indistinguishable — while needing opposite advice: "start the
-     * service" against "install it first". This separates them.
+     * A stopped engine and a never-installed one both answer `running: false`; this tells them
+     * apart ("start the service" vs "install it first"). Only silent engines are asked about.
      *
-     * An engine that answered is installed by definition, and that costs
-     * nothing extra since the probe has already happened. Only silence is worth
-     * asking the package manager about.
-     *
-     * MongoDB has no installer — it needs its own apt repository — so there is
-     * no package name to query and it falls back to the client binary. That is
-     * weaker evidence (a client can exist without a server), which is why it is
-     * the fallback rather than the method.
+     * MongoDB has no installer, so it falls back to the client binary: weaker evidence, since
+     * a client can exist without a server.
      */
     private function installed(string $engine, bool $running): bool
     {
@@ -194,26 +160,21 @@ class DatabaseManager
             return false;
         }
 
-        // Array args through ServerOps, never a shell string — same rule as
-        // every other command the panel runs.
         return $this->serverOps->run(
             ['which', $client],
             ['feature' => 'database', 'engine' => $engine, 'op' => 'detect_client'],
-            expectedExitCodes: [1], // not on PATH: an answer (bug #48)
+            expectedExitCodes: [1], // not on PATH: an answer
         )->ok;
     }
 
     /**
      * Is this engine's server package installed, asked of dpkg alone?
      *
-     * For callers that must not probe an engine to find out. Bug #22: the
-     * 5-minute metrics task ran `SELECT 1` against every engine, and on a
-     * MariaDB server "MySQL" is MariaDB's port reached with the default
-     * `root` and no password: about 12 "Access denied for user 'root'"
-     * warnings an hour in MariaDB's log, from the panel itself.
+     * For callers that must not probe an engine: probing "MySQL" on a MariaDB server logs an
+     * "Access denied for user 'root'" warning each time.
      *
-     * Not {@see installed()}: that falls back to the client binary when the
-     * engine cannot be installed, and MariaDB's client answers to `mysql`.
+     * Not {@see installed()}: that falls back to the client binary, and MariaDB's client
+     * answers to `mysql`.
      */
     public function serverInstalled(string $engine): bool
     {
@@ -238,8 +199,7 @@ class DatabaseManager
     /**
      * Does `renameUser()` carry the password across?
      *
-     * False means the driver recreates the account, so the new password is
-     * already applied and a second `setPassword()` would be redundant.
+     * False means the driver recreates the account, so the new password is already applied.
      */
     public function renameKeepsPassword(string $engine): bool
     {
@@ -249,10 +209,8 @@ class DatabaseManager
     /**
      * Can an account on this engine be reached from a named host?
      *
-     * False where the host is not part of the account — a PostgreSQL role is
-     * cluster-wide and access from an address is decided by `pg_hba.conf`,
-     * which the panel does not manage. The request refuses rather than storing
-     * a preference nothing applies.
+     * False where the host is not part of the account: a PostgreSQL role is cluster-wide and
+     * access is decided by `pg_hba.conf`, which the panel does not manage.
      */
     public function supportsRemoteUsers(string $engine): bool
     {
@@ -272,11 +230,8 @@ class DatabaseManager
     /**
      * Every driver's system databases at once.
      *
-     * For validation, which refuses a reserved name before the engine is
-     * necessarily known — and must keep refusing it if the request later
-     * names a different engine. Wider than one driver's list on purpose: the
-     * cost is refusing `admin` as a MySQL database name, and the cost of the
-     * other mistake is a dropped `template1`.
+     * For validation before the engine is known. Wider than one driver's list on purpose:
+     * refusing `admin` as a MySQL name is cheaper than dropping `template1`.
      *
      * @return array<int, string>
      */
@@ -298,11 +253,8 @@ class DatabaseManager
     /**
      * Users the panel refuses to touch.
      *
-     * The config list covers the engines' own accounts. The stored connection
-     * usernames are added because the panel's *own* account — `panel_xxxxxxxxxx`,
-     * created by the engine installer — is otherwise an ordinary-looking user in
-     * the Database Users list, and deleting it silently breaks every database
-     * operation with no way back through the UI.
+     * Includes the stored connection usernames: the panel's own `panel_xxxxxxxxxx` account would
+     * otherwise look ordinary, and deleting it breaks every database operation.
      */
     public function isSystemUser(string $username): bool
     {

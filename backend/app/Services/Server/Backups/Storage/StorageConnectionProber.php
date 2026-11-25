@@ -14,23 +14,16 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Probes a storage destination by writing a random key, reading it back and
- * deleting it. The disk is built on demand and never registered globally, so
- * the runtime credentials never leak into the framework's shared
- * `filesystems.disks` map and bleed across queue workers, Octane tasks, or any
- * other code that resolves a named disk.
+ * Probes a storage destination by writing a random key, reading it back and deleting it. The
+ * disk is built on demand and never registered globally, so runtime credentials never leak
+ * into the shared `filesystems.disks` map.
  *
- * Failure categories are translated into user-friendly messages; raw exception
- * text (which can carry URLs, bucket names, hostnames, partial access keys) is
- * held inside the result for the operator log only — never surfaced to the
- * response body.
+ * Failure categories become user-friendly messages; raw exception text (which can carry URLs,
+ * bucket names, hostnames, partial access keys) stays in the result for the operator log only,
+ * never in the response body.
  *
- * **Categorisation is the driver's job, not this class's.** It used to live
- * here and fingerprinted AWS SDK exception names, which was correct while S3
- * was the only provider and quietly wrong the moment another existed: an SFTP
- * authentication failure matches none of those strings and was reported as
- * "unreachable", sending someone to check their hostname when their password
- * was what was wrong.
+ * **Categorisation is the driver's job, not this class's:** provider-specific exception
+ * fingerprints cannot be shared (an SFTP auth failure matches no AWS SDK string).
  */
 class StorageConnectionProber
 {
@@ -47,8 +40,6 @@ class StorageConnectionProber
         private SftpHostKey $hostKeys,
         ?callable $diskBuilder = null,
     ) {
-        // Wrap callable into a Closure so the typed property is satisfied
-        // whether or not the caller passed one.
         $this->diskBuilder = $diskBuilder !== null
             ? Closure::fromCallable($diskBuilder)
             : static fn (array $config): Filesystem => Storage::build($config);
@@ -67,32 +58,18 @@ class StorageConnectionProber
     {
         $start = microtime(true);
         $payload = Str::random(64);
-        // Flat, not `.probe/<uuid>.bin`. A key with a directory in it makes the
-        // provider create that directory, and deleting the object afterwards
-        // does not remove it — so every Test connection left a `.probe` folder
-        // behind for good. On S3 a prefix is not a real object and nobody
-        // noticed; on Google Drive, FTP and SFTP it is a real
-        // directory, and on Drive it sits in somebody's *personal* account
-        // beside their photos, where a dot does not even make it hidden.
-        //
-        // One object, created and removed. Nothing to clean up because nothing
-        // else is made.
+        // Flat, not `.probe/<uuid>.bin`: a key with a directory makes Drive, FTP and SFTP create a
+        // real directory that deleting the object does not remove.
         $key = '.probe-'.Str::uuid()->toString().'.bin';
 
         $driver = $this->drivers->for($destination);
 
-        // Learn the host key *before* connecting, not after, so the probe
-        // itself runs pinned. Capturing it afterwards would mean the probe
-        // trusted one host and the pin recorded another — two trust decisions
-        // where there should be one.
+        // Learn the host key *before* connecting, so the probe itself runs pinned (one trust
+        // decision, not two).
         $this->rememberHostKeyOnFirstUse($destination);
 
-        // A precondition the round trip cannot answer. Google Drive is the
-        // reason: a service account has no storage quota, so a small sentinel
-        // can be accepted into a folder that will refuse a real archive — the
-        // probe would go green and the first backup would fail at 3am. Asked
-        // before the write rather than after, so a destination that cannot
-        // work is never reported as working.
+        // A precondition the round trip cannot answer: a Google Drive service account has no
+        // quota, so a small sentinel can succeed where a real archive would be refused.
         $precondition = $driver->preflight($destination);
 
         if ($precondition !== null) {
@@ -107,13 +84,10 @@ class StorageConnectionProber
         try {
             $disk = ($this->diskBuilder)($driver->config($destination));
 
-            // The destination's own folder first, as a real backup has it. A
-            // backup writes into `<domain>/…`, and SFTP creates every parent of
-            // that; the sentinel sits directly in the folder, and SFTP creates
-            // parents only — so a prefix that did not exist yet failed the test
-            // as `unreachable` while backups to it worked. A no-op when it
-            // exists. FTP cannot do this: it must enter its root to connect at
-            // all, which is `root_missing` and is classified as such.
+            // Create the destination's own folder first, as a real backup does: SFTP creates
+            // parents only, so a missing prefix would fail the test as `unreachable` while
+            // backups worked. No-op when it exists. FTP cannot (it enters its root to connect;
+            // a missing one is `root_missing`).
             if ($destination->provider === StorageProvider::Sftp) {
                 $disk->makeDirectory('');
             }
@@ -122,21 +96,16 @@ class StorageConnectionProber
             $read = $disk->get($key);
             $disk->delete($key);
 
-            // Sweep up the folder older versions left behind. Best-effort and
-            // swallowed: it is litter, not a credential check, and a provider
-            // that refuses must not turn a working destination's test red.
-            // Only ever held sentinels, so there is nothing of anyone's in it.
+            // Sweep up the `.probe` folder older versions left behind (it held only sentinels).
+            // Best effort: a provider that refuses must not turn a working destination red.
             try {
                 $disk->deleteDirectory('.probe');
             } catch (Throwable) {
-                // Nothing to report — the probe's verdict is about the
-                // round-trip above, not about tidying.
+                // The verdict is about the round trip above, not tidying.
             }
 
-            // A round-trip with a wrong read can mean a CDN cache, a
-            // transparent proxy, or a real corruption — all of which
-            // present as "succeeded, but you'll never get your backups
-            // back". Treat it as a failure.
+            // A wrong read (CDN cache, transparent proxy, corruption) means backups could not
+            // be recovered: a failure.
             if (! is_string($read) || ! hash_equals($payload, $read)) {
                 return $this->failure(
                     destination: $destination,
@@ -156,8 +125,8 @@ class StorageConnectionProber
         } catch (Throwable $e) {
             $key = $driver->classify($e);
 
-            // An encrypted FTP login refused by a server that has no TLS at
-            // all reads as a wrong password (bug #39): ask the server which.
+            // An encrypted FTP login refused by a server without TLS reads as a wrong password:
+            // ask the server which.
             if ($key === 'storage.test.invalid_credentials'
                 && $driver instanceof FtpDriver
                 && (bool) ($destination->configValue('ssl') ?? true)
@@ -177,9 +146,8 @@ class StorageConnectionProber
     /**
      * Record an SFTP host's fingerprint the first time the panel meets it.
      *
-     * Only ever *writes* — it never replaces a stored fingerprint. That is the
-     * whole security property: if this overwrote on mismatch, the pin would
-     * re-pin itself to the impostor and the check would be decorative.
+     * Only ever *writes*, never replaces a stored fingerprint: overwriting on mismatch would
+     * re-pin to an impostor.
      */
     private function rememberHostKeyOnFirstUse(StorageDestination $destination): void
     {
@@ -212,9 +180,7 @@ class StorageConnectionProber
         Log::info('Recorded SFTP host fingerprint on first use.', [
             'feature' => 'storage',
             'destination_id' => $destination->getKey(),
-            // A public host key fingerprint is public by definition — this is
-            // the one piece of connection detail that is safe to log, and
-            // having it in the log is how a later mismatch gets investigated.
+            // A host key fingerprint is public: the one connection detail safe to log.
             'host_fingerprint' => $fingerprint,
         ]);
     }
@@ -234,10 +200,9 @@ class StorageConnectionProber
         string $i18nKey,
         ?Throwable $exception,
     ): array {
-        // Identify the destination by id/name/provider only. The credentials
-        // are the one thing that must never reach a log file, and the raw
-        // SDK message can carry a partial access key — so it is logged as
-        // its own field a redactor can target, not folded into the summary.
+        // Identify the destination by id/name/provider only: credentials must never reach a log,
+        // and the raw SDK message can carry a partial access key, so it gets its own field a
+        // redactor can target.
         Log::warning('Storage destination probe failed.', [
             'feature' => 'storage',
             'destination_id' => $destination->getKey(),
@@ -252,22 +217,17 @@ class StorageConnectionProber
             'success' => false,
             'latency_ms' => $durationMs,
             'message' => __($i18nKey),
-            // Stable machine-readable category. Derived from the i18n key
-            // rather than mapped by hand, so a driver adding a category
-            // cannot forget to register it here and silently report the
-            // wrong one.
+            // Stable machine-readable category, derived from the i18n key so a driver's new
+            // category cannot be left unregistered here.
             'error_class' => Str::after($i18nKey, 'storage.test.'),
-            // Raw error string. Never echoed in the API body — the client
-            // only ever sees `error_class` and the translated `message`. It
-            // is logged so a support ticket has something concrete behind the
-            // generic user-facing wording.
+            // Raw error string. Never echoed in the API body; logged for support.
             'detail' => $exception?->getMessage(),
         ];
     }
 
     /**
-     * "Connection succeeded", except for a folder on this server (#14), where
-     * the useful news is how much room is left on its disk.
+     * "Connection succeeded", except for a folder on this server, where the useful news is how
+     * much room is left on its disk.
      */
     private function successMessage(StorageDestination $destination): string
     {

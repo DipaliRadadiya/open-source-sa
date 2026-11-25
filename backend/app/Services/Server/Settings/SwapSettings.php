@@ -13,11 +13,9 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Swap file management — create, resize, or disable ONE managed swap file.
- * Non-destructive: only our own file (`server.swap_file`) and its single
- * `/etc/fstab` line are ever touched, so a migrated server keeps whatever swap
- * it already had. Size is a validated integer → the ServerOps array-args carry
- * no shell-injection surface.
+ * Swap file management: create, resize, or disable ONE managed swap file.
+ * Only our own file (`server.swap_file`) and its `/etc/fstab` line are touched, so a migrated
+ * server keeps its existing swap. Size is a validated integer, so there is no shell injection.
  */
 class SwapSettings implements SettingGroup
 {
@@ -46,12 +44,8 @@ class SwapSettings implements SettingGroup
         $managed = $this->isActive();
 
         return [
-            // Whether *the panel's* swap file is on, not whether the machine
-            // has swap. Reporting the system total against the managed path
-            // meant a server with its own swap partition — the normal case on
-            // a migrated box — showed that partition's size as though this
-            // screen had made it, and then "disable" appeared to do nothing,
-            // because only our own file was ever removed.
+            // Whether *the panel's* swap file is on, not whether the machine has swap; otherwise
+            // a server's own swap partition would show as managed and "disable" would do nothing.
             'enabled' => $managed,
             'path' => $this->path(),
             'size' => $managed ? $total : 0,
@@ -60,10 +54,8 @@ class SwapSettings implements SettingGroup
             'used_human' => Bytes::human($managed ? $used : 0),
             'free' => $managed ? $free : 0,
             'free_human' => Bytes::human($managed ? $free : 0),
-            // What the machine has in total, whoever set it up. Reported
-            // separately rather than folded in, so the screen can say "this
-            // server has 4 GB of swap, none of it managed here" instead of
-            // implying the panel is responsible for it — or hiding it.
+            // The machine's total swap, whoever set it up; kept separate so the screen can say
+            // none of it is managed here.
             'system_total' => $total,
             'system_total_human' => Bytes::human($total),
             'unmanaged' => $total > 0 && ! $managed,
@@ -85,23 +77,11 @@ class SwapSettings implements SettingGroup
         $file = $this->path();
         $staging = $file.'.new';
 
-        // Before anything is written. Asked for more than the disk could
-        // hold, `fallocate` filled it — 54 GB of a 60 GB request on a server
-        // with 51 GB free — and the file was left there: a full root
-        // filesystem, which stops the database, the logs and every site
-        // writing at all (reproduced 2026-09-23).
+        // Before anything is written: an oversized `fallocate` can fill the root filesystem.
         $this->assertRoom($file, $sizeMb);
 
-        // Built beside the old one, WHILE THE OLD ONE IS STILL ON, and moved
-        // into place.
-        //
-        // Resizing cannot be done in place — `fallocate` only ever allocates,
-        // so asking 2 GB down to 1.5 GB succeeded and changed nothing. And the
-        // old file used to be taken offline first: when building the new one
-        // then failed, the server was left with no swap and a half-built file,
-        // the opposite of "the replacement exists before the original stops"
-        // that the firewall and cron writers follow. Building a separate file
-        // needs nothing from the old one, so nothing about it has to stop yet.
+        // Built beside the old file WHILE IT IS STILL ON, then moved into place: `fallocate`
+        // cannot shrink in place, and a failed build must not leave the server with no swap.
         try {
             $this->run(['rm', '-f', $staging]);
             $this->run(['fallocate', '-l', "{$sizeMb}M", $staging]);
@@ -114,23 +94,14 @@ class SwapSettings implements SettingGroup
             throw $e;
         }
 
-        // Only now does the old file have to come offline.
-        //
-        // A failure here used to be ignored. It cannot be: `swapoff` reads
-        // every swapped-out page back into RAM first, and refuses when there
-        // is not enough free memory to hold them — which is exactly the state
-        // a server is in when someone decides to change its swap.
-        //
-        // 422 with a reason of its own, not the generic "settings change
-        // failed": this one is not a fault, it is the server saying it needs
-        // that swap right now, and the answer is to free memory first. The
-        // replacement is thrown away and the old swap stays exactly as it was.
+        // Only now does the old file come offline. Never ignore a `swapoff` failure: it reads
+        // every page back into RAM and refuses when memory is short. That is a 422 (free
+        // memory first), not a fault; the replacement is discarded and the old swap kept.
         if ($this->isActive()) {
             $off = $this->serverOps->run(
                 ['swapoff', $file],
                 ['feature' => 'setting', 'group' => 'swap', 'op' => 'swapoff'],
-                // Reading gigabytes back off disk is slow, and being cut off
-                // partway is how a half-disabled swap happens.
+                // Slow; being cut off partway leaves a half-disabled swap.
                 timeout: 300,
             );
 
@@ -140,8 +111,6 @@ class SwapSettings implements SettingGroup
             }
         }
 
-        // `mv` within a directory is a rename, so there is no moment where
-        // neither file is there.
         $this->run(['rm', '-f', $file]);
         $this->run(['mv', $staging, $file]);
 
@@ -153,15 +122,10 @@ class SwapSettings implements SettingGroup
     /**
      * Refuse a size the disk cannot hold, with room left over.
      *
-     * The new file is built while the old one still exists, so the old one's
-     * space does not count as free. The margin is what the rest of the server
-     * needs to go on working — a database, logs, a site's uploads — and a swap
-     * file that leaves none is worse than no swap.
+     * The old file still exists while the new one is built, so its space does not count as
+     * free. The reserve keeps room for the database, logs and uploads.
      *
-     * When `df` cannot answer, the request goes ahead: the allocation itself is
-     * still cleaned up on failure, and refusing every resize because the
-     * question could not be asked would be a worse failure than the one this
-     * guards against.
+     * When `df` cannot answer, the request goes ahead (the allocation is cleaned up on failure).
      */
     private function assertRoom(string $file, int $sizeMb): void
     {
@@ -204,10 +168,7 @@ class SwapSettings implements SettingGroup
     {
         $file = $this->path();
 
-        // Same rule as resizing, and for the same reason: deleting the file
-        // out from under an active swap is worse than refusing to. Turning
-        // swap off entirely is the case most likely to be refused, since it
-        // has to take back every page at once.
+        // As when resizing: never delete the file out from under an active swap.
         if ($this->isActive()) {
             $off = $this->serverOps->run(
                 ['swapoff', $file],
@@ -255,13 +216,8 @@ class SwapSettings implements SettingGroup
     /**
      * Is *our* swap file the one the kernel is using?
      *
-     * Compared line by line and exactly. `str_contains` over the whole output
-     * was wrong in the one case this class exists to handle: a server that
-     * arrived with its own swap. `/mnt/data/swapfile` contains `/swapfile`, so
-     * the panel decided its own file was active, attributed somebody else's
-     * swap to itself in `read()`, and then tried to `swapoff` a file that does
-     * not exist — failing, and reporting "swap is in use", which is the
-     * opposite of what happened.
+     * Compared line by line and exactly: `/mnt/data/swapfile` contains `/swapfile`, so a
+     * substring match would claim another swap file as ours.
      */
     private function isActive(): bool
     {
@@ -284,10 +240,8 @@ class SwapSettings implements SettingGroup
         $path = (string) config('server.fstab', '/etc/fstab');
         $contents = $this->readFstab($path);
 
-        // Compared against the device field of each line, not searched for in
-        // the whole file. Searching matched a *different* swap file whose path
-        // ended the same way, and then skipped writing our line — so swap
-        // worked until the next reboot and then silently did not.
+        // Match the device field, not the whole file: a different swap file with a similar path
+        // would skip our line and swap would vanish at the next reboot.
         foreach ($this->fstabLines($contents) as [$line, $device]) {
             if ($device === $file) {
                 return; // already mounted at boot — leave it be
@@ -309,10 +263,7 @@ class SwapSettings implements SettingGroup
 
         $kept = [];
 
-        // Blank lines and comments are kept. The previous version dropped
-        // every empty line in the file, reflowing something the user may have
-        // formatted, and would have removed a commented-out entry that merely
-        // mentioned the path.
+        // Blank lines and comments are kept, so the user's formatting survives.
         foreach ($this->fstabLines($contents) as [$line, $device]) {
             if ($device !== $file) {
                 $kept[] = $line;
@@ -325,11 +276,8 @@ class SwapSettings implements SettingGroup
     /**
      * Read /etc/fstab, distinguishing "not there" from "could not read it".
      *
-     * `is_file()` is true for a file this process cannot read, and the callers
-     * above *rewrite* what they read. Treating an unreadable fstab as an empty
-     * one would replace every mount on the machine with a single swap line —
-     * the same "unreadable is not empty" mistake that would have left a
-     * mongod.conf with no dbPath in it.
+     * Callers rewrite what they read, so an unreadable fstab must not be treated as empty: that
+     * would replace every mount on the machine with a single swap line.
      *
      * @throws SettingOperationException
      */
@@ -342,9 +290,7 @@ class SwapSettings implements SettingGroup
         $contents = @file_get_contents($path);
 
         if ($contents === false) {
-            // A reference of its own: nothing shelled out, so there is no
-            // ServerOps result to borrow one from, and the user still needs
-            // something to quote.
+            // Nothing shelled out, so mint a reference for the user to quote.
             $reference = (string) Str::uuid();
 
             Log::channel('server-ops')->error('could not read fstab', [
@@ -362,9 +308,7 @@ class SwapSettings implements SettingGroup
     }
 
     /**
-     * Each line paired with its device field — the first whitespace-separated
-     * token, which is what identifies the entry. Comments and blank lines come
-     * back with a null device so callers can keep them without matching them.
+     * Each line paired with its device field (first token); comments and blanks get null.
      *
      * @return array<int, array{0: string, 1: ?string}>
      */
@@ -389,12 +333,7 @@ class SwapSettings implements SettingGroup
      * @param  array<int, string>  $command
      */
     /**
-     * Every command here must succeed.
-     *
-     * There was an `allowFailure` flag, used only to ignore a failing
-     * `swapoff` — which is the one failure in this class that must never be
-     * ignored. Both callers now check that themselves and report why, so the
-     * flag has no remaining use and is gone rather than left as an invitation.
+     * Every command here must succeed. `swapoff` is checked by its callers, never ignored.
      */
     private function run(array $command): void
     {

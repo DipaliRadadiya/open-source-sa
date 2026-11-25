@@ -8,50 +8,28 @@ use Closure;
 /**
  * Whether a host the panel was asked to connect to is one it may connect to.
  *
- * One definition, shared by `SafeProviderHost` (https endpoint URLs — storage
- * and self-hosted git) and `SafeRemoteHost` (bare FTP/SFTP hosts). They had
- * their own copies of the loopback and metadata checks, and both copies had
- * the same hole.
+ * Shared by `SafeProviderHost` (https endpoint URLs) and `SafeRemoteHost` (bare FTP/SFTP hosts) to
+ * stop SSRF into loopback or the cloud metadata address.
  *
- * ## The hole, found 2026-09-14
+ * ## Why numeric spellings are refused
  *
- * Both rules asked `filter_var($host, FILTER_VALIDATE_IP)` and applied the
- * range checks *only if that succeeded*. `filter_var` accepts exactly one
- * spelling of an address — the dotted quad — so every other spelling failed
- * the IP test, fell through to the hostname branch, and was accepted:
- *
- *   127.1 · 2130706433 · 0x7f000001 · 0177.0.0.1
- *
- * all reach 127.0.0.1, because `inet_aton` (which the resolver, libcurl and
- * the SSH and FTP clients all use) accepts short, decimal, hex and octal
- * forms. And `0251.0376.0251.0376` is octal for **169.254.169.254** — the
- * cloud metadata address, the single target these rules exist to deny.
- *
- * Prompted by CVE-2026-69246 (Guzzle, "noncanonical host can bypass
- * host-based checks"). That advisory is about Guzzle handing libcurl a URI it
- * re-parses differently — patched in 7.15.2 — but it also states that the
- * noncanonical *numeric* spellings "remain accepted after the patch and reach
- * whatever the transport reads them as". Upgrading does not fix this; only
- * refusing the spellings does. And FTP/SFTP never went through Guzzle at all,
- * so for those the panel's own check was the only thing standing there.
+ * `filter_var(FILTER_VALIDATE_IP)` accepts only the dotted quad, so `127.1`, `2130706433`,
+ * `0x7f000001` and `0177.0.0.1` all failed the IP test, fell through to the hostname branch and
+ * were accepted, yet `inet_aton` (resolver, libcurl, SSH and FTP clients) reaches 127.0.0.1 with
+ * every one. `0251.0376.0251.0376` is octal for 169.254.169.254, the cloud metadata address.
+ * Upgrading Guzzle does not fix this (CVE-2026-69246), and FTP/SFTP never used it.
  *
  * ## The rule
  *
- * A host is either a canonical IP literal — in which case the ranges decide —
- * or a DNS name. **A DNS name's last label always contains a letter.** No
- * registry has ever delegated an all-numeric TLD, and it is forbidden by
- * RFC 1123 §2.1 precisely so that a name can never be confused with an
- * address. So anything whose final label has no letter is a numeric form
- * wearing a hostname's clothes, and is refused rather than resolved — this
- * fails *closed* on spellings nobody has thought of yet, which the enumerate-
- * the-bad-forms approach cannot.
+ * A host is a canonical IP literal (the ranges decide) or a DNS name. A DNS name's last label
+ * always contains a letter (RFC 1123 §2.1), so a final label without one is a numeric form in
+ * disguise and is refused rather than resolved. This fails closed on spellings nobody has thought of.
  */
 class RemoteHost
 {
     /**
-     * Normalise for inspection: lowercase, no surrounding IPv6 brackets, no
-     * trailing root dot (`example.com.` and `example.com` are the same name,
-     * and only one of them would match a suffix check).
+     * Normalise for inspection: lowercase, no IPv6 brackets, no trailing root dot (so suffix
+     * checks see `example.com.` and `example.com` alike).
      */
     public static function canonical(string $host): string
     {
@@ -61,12 +39,8 @@ class RemoteHost
     /**
      * A host written in a way the panel refuses to interpret.
      *
-     * Percent-encoding is in here because of the advisory's own example:
-     * `http://127.0.0.%31/` is rejected by `filter_var` as an IP literal, and
-     * libcurl decodes it to 127.0.0.1 and connects to loopback. A host field
-     * has no legitimate use for percent-encoding, so it is refused outright
-     * rather than decoded and re-checked — decoding invites a second round of
-     * the same divergence.
+     * Percent-encoding is refused outright, not decoded: `http://127.0.0.%31/` fails `filter_var`
+     * as an IP, but libcurl decodes it to 127.0.0.1 and connects to loopback.
      */
     public static function isUninterpretable(string $host): bool
     {
@@ -80,9 +54,7 @@ class RemoteHost
             return true;
         }
 
-        // Whitespace is never part of a host. Refused here rather than left to
-        // each caller's own field regex, so the helper is safe to use on its
-        // own.
+        // Whitespace is never part of a host; refused here so the helper is safe on its own.
         if (preg_match('/\s/', $host) === 1) {
             return true;
         }
@@ -92,11 +64,9 @@ class RemoteHost
             return false;
         }
 
-        // A colon that survived to here means an IPv6 address that did not
-        // validate — usually because `parse_url` already ate part of it as a
-        // port. `https://fe80::1` yields the host `fe80:`, which is neither a
-        // valid address nor a name, and reading it as a name would let
-        // link-local through. A real IPv6 URL brackets its host.
+        // A surviving colon is an IPv6 address that did not validate, usually because `parse_url`
+        // ate part of it as a port (`https://fe80::1` gives `fe80:`). Reading it as a name would
+        // let link-local through. A real IPv6 URL brackets its host.
         if (str_contains($host, ':')) {
             return true;
         }
@@ -108,16 +78,13 @@ class RemoteHost
             return true;
         }
 
-        // A hex literal is the exception that "must contain a letter" does not
-        // catch — `0x7f000001` contains an x and an f and is still 127.0.0.1.
-        // Caught before the letter test rather than after, because the letter
-        // test says yes to it.
+        // A hex literal (`0x7f000001`, still 127.0.0.1) contains letters, so it must be caught
+        // before the letter test.
         if (preg_match('/^0x[0-9a-f]+$/', $last) === 1) {
             return true;
         }
 
-        // No letter in the final label means this is not a DNS name.
-        // `127.1`, `2130706433` and `0177.0.0.1` all land here.
+        // No letter in the final label: not a DNS name (`127.1`, `2130706433`, `0177.0.0.1`).
         return preg_match('/[a-z]/', $last) !== 1;
     }
 
@@ -135,12 +102,10 @@ class RemoteHost
     }
 
     /**
-     * The addresses a name resolves to; an IP literal is its own answer and
-     * a name that does not resolve has none.
+     * The addresses a name resolves to; an IP literal is its own answer, an unresolvable name has
+     * none.
      *
-     * IPv4 through gethostbynamel(), which reads /etc/hosts as curl does —
-     * `dns_get_record()` alone would not see a name pointed at 127.0.0.1
-     * there. IPv6 from DNS.
+     * IPv4 via gethostbynamel(), which reads /etc/hosts as curl does; IPv6 from DNS.
      *
      * @return array<int, string>
      */
@@ -168,12 +133,10 @@ class RemoteHost
     }
 
     /**
-     * Blocked by what was typed, or by any address it resolves to (bug #34).
+     * Blocked by what was typed, or by any address it resolves to.
      *
-     * `isBlocked()` judges the text only, so `127.0.0.1.nip.io` — a public
-     * wildcard DNS name for 127.0.0.1 — passed and the panel connected to
-     * itself. Any one blocked address is enough: a name with two records is
-     * a coin toss between them.
+     * `isBlocked()` judges the text only, so `127.0.0.1.nip.io` (public wildcard DNS) passed.
+     * Any one blocked address is enough: a name with two records is a coin toss between them.
      */
     public static function resolvesToBlocked(string $host): bool
     {
@@ -191,12 +154,10 @@ class RemoteHost
     }
 
     /**
-     * curl's `RESOLVE` entry for this URL: its host pinned to an address that
-     * was just checked, so the connection cannot be sent somewhere else by a
-     * second lookup that answers differently (DNS rebinding).
+     * curl's `RESOLVE` entry for this URL: the host pinned to the address just checked, so a
+     * second lookup cannot send the connection elsewhere (DNS rebinding).
      *
-     * Null when there is nothing to pin: an IP literal, or a name that does
-     * not resolve (curl then fails on its own).
+     * Null when there is nothing to pin: an IP literal, or a name that does not resolve.
      *
      * @throws BlockedHostException
      */
@@ -231,13 +192,9 @@ class RemoteHost
     /**
      * An address the panel must never connect to, whatever asked it to.
      *
-     * Private LAN ranges are deliberately NOT blocked: a NAS or a self-hosted
-     * git server on the same network is a normal, intended destination for
-     * this panel, and refusing them would break a legitimate setup to defend
-     * against someone who already holds the permission to configure it.
-     * Loopback and link-local are different — neither is ever a real remote
-     * destination, and both turn an outbound connection into a local-privilege
-     * problem.
+     * Private LAN ranges are deliberately not blocked: a NAS or self-hosted git server on the
+     * same network is a normal destination. Loopback and link-local are never a real remote
+     * destination and turn an outbound connection into a local-privilege problem.
      */
     public static function isBlocked(string $host): bool
     {
@@ -254,8 +211,7 @@ class RemoteHost
         }
 
         if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
-            // Compared against the expanded form so `::1`, `0:0:…:1` and
-            // `0000:…:0001` are one answer rather than three string cases.
+            // Compare the packed form so every spelling of `::1` is one answer.
             $packed = @inet_pton($host);
 
             if ($packed === false) {
@@ -266,8 +222,7 @@ class RemoteHost
                 return true;
             }
 
-            // fe80::/10 link-local, which is where 169.254.0.0/16 lives in
-            // IPv6 — and the ::ffff: forms that map an IPv4 address into v6.
+            // fe80::/10 link-local (the IPv6 counterpart of 169.254.0.0/16), then ::ffff: mappings.
             if (str_starts_with($host, 'fe80:')) {
                 return true;
             }
@@ -283,8 +238,7 @@ class RemoteHost
     /**
      * The IPv4 address inside an `::ffff:a.b.c.d` mapping, if this is one.
      *
-     * Checked because `::ffff:127.0.0.1` is loopback written as IPv6, and a
-     * string comparison against `127.` would never see it.
+     * `::ffff:127.0.0.1` is loopback written as IPv6; a `127.` string check would miss it.
      */
     private static function mappedIpv4(string $packed): ?string
     {

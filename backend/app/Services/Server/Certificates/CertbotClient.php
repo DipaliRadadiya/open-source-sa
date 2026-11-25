@@ -9,10 +9,8 @@ use App\Services\Server\ServerOpsResult;
 /**
  * Drives certbot in `certonly --webroot` mode.
  *
- * Not the `--nginx` / `--apache` plugins. They work by rewriting the vhost,
- * which the panel regenerates on every domain change — their edits would be
- * wiped and HTTPS would disappear with nothing to explain it. It is also the
- * only mode OpenLiteSpeed can use, since no certbot plugin exists for it.
+ * Not the `--nginx` / `--apache` plugins: they rewrite the vhost, which the panel regenerates on
+ * every domain change, so HTTPS would vanish. Also the only mode OpenLiteSpeed can use.
  */
 class CertbotClient
 {
@@ -33,10 +31,8 @@ class CertbotClient
     {
         return $this->serverOps->run(
             $this->certonly($domains, $email, $certName, [
-                // Renew rather than reissue when there is still time. Reissuing
-                // spends the weekly duplicate-certificate limit for no gain — five
-                // per identical name set per week, and a user clicking a button
-                // that looks like it did nothing will click it again.
+                // Renew rather than reissue when there is still time: reissuing spends the weekly
+                // duplicate-certificate limit (five per identical name set).
                 '--keep-until-expiring',
             ]),
             ['feature' => 'certificate', 'op' => 'issue', 'application' => $applicationId],
@@ -48,25 +44,14 @@ class CertbotClient
      * Perform the same request against Let's Encrypt's staging server and keep
      * nothing — certbot's own `--dry-run`.
      *
-     * This is the part the panel's reachability check cannot do. That check
-     * proves *this server* serves the token; only ACME itself can tell you
-     * whether Let's Encrypt will accept the name — a CAA record forbidding the
-     * CA, an account problem, or a rate limit already in force all pass the
-     * local check and fail the real thing.
+     * The panel's reachability check only proves *this server* serves the token; only ACME can
+     * tell whether Let's Encrypt will accept the name (CAA record, account problem, rate limit).
      *
-     * Verified against certbot 2.9: `--dry-run` pins the staging endpoint, and
-     * every save path is short-circuited — `renew_cert` skips updating the
-     * lineage and `obtain_and_enroll_certificate` skips creating one — so an
-     * existing live certificate cannot be replaced by a test one. Deploy hooks
-     * do not run either, which is where the panel's web-server reload lives, so
-     * nothing on the running site moves.
+     * `--dry-run` pins the staging endpoint and skips every save path, so it cannot replace a live
+     * certificate, and deploy hooks (where the web-server reload lives) do not run.
      *
-     * `--force-renewal` rather than `--keep-until-expiring`: with a lineage
-     * already in place and nothing due, certonly prints "Certificate not yet
-     * due for renewal; no action taken" and exits **0** without validating
-     * anything. A dry run that does not validate is worse than no dry run — it
-     * is a green tick for work that never happened. See `confirmedDryRun()`,
-     * which refuses to read that as a pass even if this flag is ever dropped.
+     * `--force-renewal` rather than `--keep-until-expiring`: with nothing due, certonly exits **0**
+     * without validating anything. See `confirmedDryRun()`, which refuses to read that as a pass.
      *
      * @param  array<int, string>  $domains
      */
@@ -82,10 +67,9 @@ class CertbotClient
     /**
      * Did the simulation actually simulate?
      *
-     * Read off the output, never off the exit code. certonly exits 0 both when
-     * it completed a staging authorisation and when it decided there was
-     * nothing to do, and those two must not land the user in the same place.
-     * certbot prints this exact line, and only this line, on the path that ran.
+     * Read off the output, never the exit code: certonly exits 0 both when it completed a staging
+     * authorisation and when it decided there was nothing to do. certbot prints this exact line
+     * only on the path that ran.
      */
     public function confirmedDryRun(string $output): bool
     {
@@ -93,10 +77,8 @@ class CertbotClient
     }
 
     /**
-     * The shared `certonly --webroot` invocation, plus whatever distinguishes
-     * the caller. Kept in one place so a dry run exercises the command that
-     * will actually be issued — a simulation that drifts from the real thing
-     * is a simulation of nothing.
+     * The shared `certonly --webroot` invocation, plus whatever distinguishes the caller. One place,
+     * so a dry run exercises the command that will actually be issued.
      *
      * @param  array<int, string>  $domains
      * @param  array<int, string>  $extra
@@ -111,13 +93,10 @@ class CertbotClient
             '--webroot-path', (string) config('server.certificates.challenge_root'),
             '--non-interactive',
             '--agree-tos',
-            // The certificate is named after the first domain, which is the
-            // primary. Pinned rather than left to certbot, which otherwise
-            // appends -0001 to a name it has seen before and puts the files
-            // somewhere the vhost is not looking.
+            // Named after the primary domain. Pinned because certbot otherwise appends -0001 to a
+            // name it has seen before and puts the files where the vhost is not looking.
             '--cert-name', $certName,
-            // Adding a name to an existing certificate has to replace it, not
-            // create a second one beside it.
+            // Adding a name must replace the existing certificate, not create a second one.
             '--expand',
             ...$extra,
         ];
@@ -154,19 +133,16 @@ class CertbotClient
     /**
      * Turn certbot's output into a code the panel can translate.
      *
-     * Deliberately not stored verbatim: certbot's messages contain paths, order
-     * URLs and occasionally the account key location, and a raw stderr line
-     * shown to a user is both a leak and unreadable. What matters is which of a
-     * handful of things went wrong, because each has a different fix.
+     * Deliberately not stored verbatim: certbot's messages contain paths, order URLs and
+     * occasionally the account key location. Each of the few outcomes has a different fix.
      */
     public function classify(string $output): string
     {
         $text = strtolower($output);
 
         return match (true) {
-            // The important one to get right. Hitting a rate limit is not
-            // "something went wrong, try again" — trying again is exactly what
-            // must not happen, and the wait is measured in hours or a week.
+            // Hitting a rate limit is not "try again": retrying is what must not happen, and the
+            // wait is measured in hours or a week.
             str_contains($text, 'too many certificates') => 'rate_limited',
             str_contains($text, 'too many failed authorizations') => 'rate_limited_failures',
 
@@ -178,13 +154,9 @@ class CertbotClient
             str_contains($text, 'dns problem'),
             str_contains($text, 'nxdomain') => 'dns_not_pointing',
 
-            // The token was served but came back wrong — usually the site's own
-            // rewrite rules swallowing /.well-known.
-            //
-            // The 404 is matched in context, not as a bare substring. `404`
-            // alone appears in ACME order URLs, byte counts and timestamps, so
-            // it matched unrelated failures and sent the user to inspect
-            // rewrite rules that were fine.
+            // The token was served but came back wrong, usually the site's own rewrite rules
+            // swallowing /.well-known. The 404 is matched in context: a bare `404` appears in ACME
+            // order URLs, byte counts and timestamps.
             str_contains($text, 'unauthorized'),
             str_contains($text, 'status 404'),
             str_contains($text, '"404"'),
@@ -193,11 +165,8 @@ class CertbotClient
             str_contains($text, 'command not found'),
             str_contains($text, 'certbot: not found') => 'certbot_missing',
 
-            // certonly decided there was nothing to do and exited 0. Never
-            // reached from `issue()`, where `--keep-until-expiring` makes it
-            // the intended outcome; reached from `dryRun()` only if the forced
-            // renewal ever stops applying, and then it must read as "this
-            // proved nothing" rather than as a pass.
+            // certonly decided there was nothing to do and exited 0. Never reached from `issue()`
+            // (`--keep-until-expiring`); from `dryRun()` it must read as "proved nothing", not a pass.
             str_contains($text, 'not yet due for renewal') => 'dry_run_skipped',
 
             default => 'unknown',
@@ -207,9 +176,8 @@ class CertbotClient
     /**
      * Make sure the shared challenge directory exists and is world-readable.
      *
-     * The web server reads the token as its own unprivileged user, so a
-     * directory only root can enter produces a 403 and an authorisation failure
-     * that looks exactly like DNS pointing at the wrong host.
+     * The web server reads the token as its unprivileged user: a directory only root can enter
+     * gives a 403 that looks exactly like DNS pointing at the wrong host.
      */
     public function ensureChallengeRoot(): ServerOpsResult
     {
@@ -224,10 +192,8 @@ class CertbotClient
     /**
      * Install the post-renewal hook.
      *
-     * Without it renewal quietly half-works: certbot's timer writes a new
-     * certificate to disk and the web server carries on serving the old one
-     * from memory until something unrelated reloads it. The failure surfaces
-     * weeks later as an expired certificate on a site whose files are fine.
+     * Without it, certbot's timer writes the new certificate to disk while the web server keeps
+     * serving the old one from memory, until it expires on a site whose files are fine.
      */
     public function ensureRenewalHook(string $reloadCommand): ServerOpsResult
     {

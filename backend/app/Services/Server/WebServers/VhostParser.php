@@ -5,22 +5,15 @@ namespace App\Services\Server\WebServers;
 /**
  * Reads the names a vhost answers to and the directory it serves.
  *
- * Moved out of `ApplicationDiscoverer` so that Server Sync, which adopts a site
- * from its config, and deleting that site, which has to decide whether the
- * same config still belongs to it, read the file identically. Two readers
- * that drift apart would let the delete accept a file discovery would never
- * have adopted.
- *
- * `domains`, `root` and `port` are exactly what discovery always returned.
- * `roots` and `unowned_names` are for the delete: a file serving two
- * directories, or a catch-all/wildcard name, is not provably one site's.
+ * Shared by Server Sync (adopting a site) and site deletion (deciding the config still belongs to
+ * it), so both read the file identically. `roots` and `unowned_names` serve the delete: a file
+ * serving two directories, or a catch-all/wildcard name, is not provably one site's.
  */
 class VhostParser
 {
     /**
-     * Both syntaxes in one pass — nginx `server_name`/`root`, Apache
-     * `ServerName`/`ServerAlias`/`DocumentRoot` — because which one is in
-     * front is a per-server fact and the file itself says which it is.
+     * Both syntaxes in one pass (nginx `server_name`/`root`, Apache
+     * `ServerName`/`ServerAlias`/`DocumentRoot`); the file itself says which it is.
      *
      * @return array{domains: array<int, string>, root: string|null, port: int|null, roots: array<int, string>, unowned_names: array<int, string>}
      */
@@ -28,11 +21,9 @@ class VhostParser
     {
         $names = [];
 
-        // nginx directives end at `;`, not at a newline, so a whole server
-        // block can sit on one line — `server { listen 80; server_name x;
-        // root /y; }` — and Sync skipped it (bug #41). A directive starts
-        // after a newline, `{` or `;`. Comments are dropped first so that
-        // widening cannot pick a commented-out `root` out of one.
+        // nginx directives end at `;`, so a whole server block can sit on one line: a directive
+        // starts after a newline, `{` or `;`. Comments are dropped first so a commented-out `root`
+        // is not picked up.
         $nginx = (string) preg_replace('/#[^\n]*/', '', $contents);
         $start = '(?:^|[;{])\s*';
 
@@ -50,9 +41,7 @@ class VhostParser
             }
         }
 
-        // OpenLiteSpeed: vhDomain and vhAliases, both comma-separated lists
-        // rather than space-separated — split on either, since a config
-        // written by hand may use spaces after the commas or instead of them.
+        // OpenLiteSpeed: vhDomain and vhAliases are comma-separated; split on commas or spaces.
         if (preg_match_all('/^\s*vh(?:Domain|Aliases)\s+(.+)$/mi', $contents, $matches)) {
             foreach ($matches[1] as $group) {
                 $names = array_merge($names, preg_split('/[,\s]+/', trim($group)) ?: []);
@@ -64,8 +53,7 @@ class VhostParser
             fn (string $d): bool => $d !== '',
         )));
 
-        // `_` is nginx's catch-all and names nothing; a wildcard is not a
-        // domain the panel can own.
+        // `_` is nginx's catch-all and a wildcard is not a domain the panel can own.
         $owned = fn (string $d): bool => $d !== '_' && ! str_contains($d, '*');
         $domains = array_values(array_filter($names, $owned));
         $unowned = array_values(array_filter($names, fn (string $d): bool => ! $owned($d)));
@@ -77,15 +65,12 @@ class VhostParser
         } elseif (preg_match('/^\s*DocumentRoot\s+"?([^"\s]+)"?/mi', $contents, $m)) {
             $root = trim($m[1]);
         } elseif (preg_match('/^\s*docRoot\s+"?([^"\s]+)"?/mi', $contents, $m)) {
-            // OpenLiteSpeed. Matched last because `docRoot` is also a legal
-            // Apache-ish spelling nobody uses, and nginx/Apache should keep
-            // answering for their own files.
+            // OpenLiteSpeed; matched last so nginx/Apache keep answering for their own files.
             $root = trim($m[1]);
         }
 
-        // Every directory the file serves, not just the first. A `location`
-        // with its own `root`, or a second server block for another folder,
-        // makes the file something other than one site's config.
+        // Every directory the file serves: a `location` with its own `root`, or a second server
+        // block, makes it more than one site's config.
         $roots = [];
 
         foreach ([
@@ -100,20 +85,9 @@ class VhostParser
             }
         }
 
-        // The port a Node application is proxied to. Nothing else in discovery
-        // needs one — a PHP or static site is served from its root — but a Node
-        // site's port is the only thing tying the vhost to the process, and it
-        // lives nowhere else the panel can read.
-        //
-        // Without it an adopted Node application arrives with a null
-        // `app_port`, the allocator hands out a fresh one on the first deploy,
-        // and nginx goes on proxying to the old number: a site that was
-        // working answers 502 the first time the panel touches it. Seen on a
-        // real v7 box, where n8n is proxied to 50241.
-        //
-        // Loopback only. A `proxy_pass` to another host is a reverse proxy to
-        // something this server does not run, and claiming its port would be
-        // wrong.
+        // The port a Node application is proxied to: the only link between the vhost and the
+        // process. Without it an adopted app gets a fresh port on first deploy while nginx keeps
+        // proxying to the old one (502). Loopback only; another host is not ours to claim.
         $port = null;
 
         if (preg_match('#'.$start.'proxy_pass\s+https?://(?:127\.0\.0\.1|localhost|\[::1\]):(\d+)#mi', $nginx, $m)) {
@@ -130,20 +104,13 @@ class VhostParser
     }
 
     /**
-     * What else a file does besides naming domains and a root — for the
-     * delete, which may only remove a file that is provably one site's.
+     * What else a file does besides naming domains and a root, for the delete, which may only
+     * remove a file that is provably one site's.
      *
-     * `parse()` answers "which names, which folder" with patterns, which is
-     * right for discovery and not enough for a removal: a second `server`
-     * block with no name is the catch-all for its port, an `include` brings
-     * in whatever another file says, an `alias` serves another folder, and
-     * an `upstream` at the top may be used by every other site. None of that
-     * changes the domains or the root, so all of it has to be read.
-     *
-     * Read as the web server reads it — nginx's tokens (quotes, escapes, `#`
-     * only at the start of a word, `${var}`), Apache's sections and line
-     * continuations. Anything that does not read cleanly lands in `stray`,
-     * and a caller treats a non-empty `stray` as "not provable".
+     * A nameless second `server` block is the port's catch-all, an `include` or `alias` reaches
+     * other files, and a top-level `upstream` may be shared; none changes the domains or root.
+     * Read as the web server reads it; anything unclear lands in `stray`, and a non-empty `stray`
+     * means "not provable".
      *
      * @param  'nginx'|'apache'  $syntax
      * @return array{blocks: array<int, array{names: array<int, string>, default: bool}>, includes: array<int, string>, aliases: array<int, string>, roots: array<int, string>, stray: array<int, string>}
@@ -171,8 +138,7 @@ class VhostParser
             return $shape;
         }
 
-        // At the top only `server` blocks: an upstream, a map, an include or
-        // any other http-level directive is shared with every other file.
+        // At the top only `server` blocks; any other http-level directive is shared with other files.
         foreach ($tree as $directive) {
             if ($directive['name'] !== 'server' || $directive['children'] === null || $directive['args'] !== []) {
                 $shape['stray'][] = 'top:'.$directive['name'];
@@ -346,9 +312,8 @@ class VhostParser
     }
 
     /**
-     * Apache, section by section. At the top only `<VirtualHost>` and the
-     * `<IfModule>` certbot wraps it in; a directive or any other section at
-     * the top is server-wide.
+     * Apache, section by section. At the top only `<VirtualHost>` and certbot's `<IfModule>`;
+     * anything else there is server-wide.
      *
      * @param  array{blocks: array<int, array{names: array<int, string>, default: bool}>, includes: array<int, string>, aliases: array<int, string>, roots: array<int, string>, stray: array<int, string>}  $shape
      * @return array{blocks: array<int, array{names: array<int, string>, default: bool}>, includes: array<int, string>, aliases: array<int, string>, roots: array<int, string>, stray: array<int, string>}

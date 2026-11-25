@@ -10,31 +10,23 @@ use Illuminate\Support\Facades\Http;
 /**
  * The versions of an image worth offering, and the one to preselect.
  *
- * `latest` is the default everybody lands on and the worst one to deploy: the
- * site silently changes major version on the next restart after a pull. So a
- * real version number is recommended whenever the image publishes one, and
- * the moving tags (`latest`, `edge`, `nightly`, `sha-…`) are listed after the
- * numbered ones rather than hidden — somebody who wants `latest` may have it.
+ * `latest` is the worst default to deploy (the site silently changes major version after a pull),
+ * so a real version number is recommended whenever the image publishes one. Moving tags are
+ * listed after the numbered ones, not hidden.
  *
- * Hub images are listed from Hub's own API, which carries an update date and
- * is ordered by it; everything else from the registry's `tags/list`, which
- * carries only names.
+ * Hub images come from Hub's API (with update dates); everything else from `tags/list` (names only).
  */
 class ImageTags
 {
     /**
      * Words that make a tag a pre-release or a moving target.
      *
-     * A tag is read as words, never as substrings (DS-09): unanchored,
-     * `3.2.1-nextcloud` read as "next" and `-devuan` as "dev", and real stable
-     * variants were listed as pre-releases. Words end at `- . _ +` and at a
-     * digit/letter boundary, so `rc1`, `beta2`, `1.2.0-rc.1`, `1.2.0rc1` and
-     * `28-ea+5` all carry their marker, while `header`, `release` and
-     * `bookworm` stay one word each (DS-12: `pre` and `test` must not reach
-     * `-prerelease` / `-testing` as prefixes, so those are words of their own).
+     * A tag is read as words, never substrings: `3.2.1-nextcloud` must not read as "next" nor
+     * `-devuan` as "dev". Words end at `- . _ +` and at a digit/letter boundary, so `rc1`,
+     * `1.2.0-rc.1` and `28-ea+5` carry their marker while `header`, `release` and `bookworm` stay
+     * one word. `pre` and `test` are words of their own so they do not match `-prerelease` / `-testing`.
      *
-     * `ea` is Java's early-access build (`28-ea-oraclelinux9`, RC-33).
-     * `devel` is kept: it names the development branch, not a release.
+     * `ea` is Java's early-access build. `devel` is kept: it names the development branch.
      * `latest`, `stable`, `lts` and OS or variant names are not markers.
      */
     private const PRERELEASE_WORDS = [
@@ -71,24 +63,19 @@ class ImageTags
                 throw $e;
             }
 
-            // Nothing to offer is still an answer the picker understands: it
-            // falls back to a typed tag. Only "we could not ask" says so.
+            // Nothing to offer: the picker falls back to a typed tag. Only "could not ask" sets `offline`.
             return ['image' => $image->name(), 'recommended' => null, 'tags' => []]
                 + ($e->isAboutTheImage() ? [] : ['offline' => true]);
         }
 
-        // `$demoted` is handed from one to the other rather than kept on the
-        // instance (DS-12): as a property it was state a second caller of
-        // `recommended()`, or this class bound as a singleton, would read
-        // from somebody else's image.
+        // `$demoted` is passed along, not kept on the instance: a singleton would share it
+        // between images.
         [$tags, $demoted] = $this->rank($raw);
         $recommended = $this->recommended($tags, $demoted);
         $shown = array_slice($tags, 0, $limit);
 
-        // The preselected version has to be one the picker can show. It can
-        // rank past the limit — bare-number aliases sort above dotted
-        // releases, and `recommended()` skips them — so it takes the last
-        // place rather than going missing (DS-09).
+        // The preselected version must be shown; it can rank past the limit (bare-number aliases
+        // sort above dotted releases and `recommended()` skips them), so it takes the last place.
         if ($recommended !== null && ! in_array($recommended, array_column($shown, 'name'), true)) {
             $match = array_values(array_filter($tags, fn (array $tag): bool => $tag['name'] === $recommended));
 
@@ -107,13 +94,12 @@ class ImageTags
     /**
      * The Docker Hub repository to list tags from, when there is one.
      *
-     * Hub's own API carries an update date; a registry's `tags/list` carries
-     * names only, so on GHCR a five-year-old CalVer tag (`2021.11.28`) looks
-     * newer than `2.8.3`. LinuxServer publishes every `lscr.io/linuxserver/*`
-     * image to Hub as `linuxserver/*` too, so those are read from Hub.
+     * Hub's API carries update dates; `tags/list` has names only, so an old CalVer tag
+     * (`2021.11.28`) would look newer than `2.8.3`. `lscr.io/linuxserver/*` is also on Hub, so it
+     * is read from there.
      *
-     * A private Hub image is read from the registry instead: Hub's API wants a
-     * session login, not the pull token the panel stores.
+     * A private Hub image is read from the registry: Hub's API wants a session login, not the
+     * pull token the panel stores.
      */
     private function hubRepository(ImageReference $image, ?Registry $credential): ?string
     {
@@ -174,12 +160,10 @@ class ImageTags
     }
 
     /**
-     * Plain version numbers first, newest first; then variants (`-alpine`),
-     * newest first; then everything else in the order it came (Hub: most
-     * recently updated first).
+     * Plain version numbers first, newest first; then variants (`-alpine`); then everything else
+     * in the order it came (Hub: most recently updated first).
      *
-     * Returned beside the list: the versions read as dates (`2021.11.28`)
-     * that lost to a plain version on the same image, so `recommended()` can
+     * Also returns the date-like versions that lost to a plain version, so `recommended()` can
      * try them last without them leaking into the response.
      *
      * @param  list<array{name: string, updated_at: string|null}>  $raw
@@ -206,8 +190,7 @@ class ImageTags
             $length = max(count($a['parts']), count($b['parts']));
 
             for ($i = 0; $i < $length; $i++) {
-                // A missing part sorts AFTER a present one, so `0.31.0` comes
-                // before `0.31` — the exact version first, its floating alias next.
+                // A missing part sorts after a present one: `0.31.0` before its alias `0.31`.
                 $x = $a['parts'][$i] ?? -1;
                 $y = $b['parts'][$i] ?? -1;
 
@@ -225,9 +208,8 @@ class ImageTags
             $demoted[$name] = true;
         }
 
-        // Plain numbers before variants: `1.31.6-trixie-perl` is a real
-        // version, but eight variants of one release would fill the picker.
-        // And a date that lost to a version after both.
+        // Plain numbers before variants (eight variants of one release would fill the picker),
+        // and a date that lost to a version after both.
         $current = fn (array $entry): bool => ! isset($demoted[$entry['tag']['name']]);
 
         usort($versioned, fn (array $a, array $b): int => [$b['pure'], $current($b)] <=> [$a['pure'], $current($a)]);
@@ -236,15 +218,12 @@ class ImageTags
     }
 
     /**
-     * Tags that look like a date rather than a release, on an image that
-     * also publishes releases — when the dates are not the newer of the two.
+     * Tags that look like a date rather than a release, on an image that also publishes
+     * releases, when the dates are not the newer of the two.
      *
-     * Numerically `2021.11.28` beats `2.8.3`, and on an image that once used
-     * CalVer that preselected a five-year-old build (DS-09). Which scheme is
-     * current is answered by when each was last pushed, where the registry
-     * says (Hub does); without dates the plain version wins, because a date
-     * tag beside real versions is far more often a leftover than the future.
-     * An image that only publishes dates — Home Assistant — is left alone.
+     * Numerically `2021.11.28` beats `2.8.3`. The scheme pushed most recently wins where the
+     * registry gives dates (Hub); without dates the plain version wins. An image that only
+     * publishes dates is left alone.
      *
      * @param  list<array{tag: array{name: string, updated_at: string|null, stable: bool, prerelease: bool}, parts: list<int>, pure: bool, index: int}>  $versioned
      * @return list<string>
@@ -288,10 +267,9 @@ class ImageTags
     /**
      * The numeric parts of a version-looking tag, or null when it is not one.
      *
-     * `1.27.3`, `v2.1`, `1.27-alpine` and `2.7.6-ls312` are versions; the last
-     * two are "variants" — still stable, never preferred over the plain number.
-     * `5.0.0-rc1` is a pre-release, and a bare number longer than four digits
-     * (`20260101`, a build counter) is not a version anybody chose.
+     * `1.27.3`, `v2.1`, `1.27-alpine` and `2.7.6-ls312` are versions; the last two are variants
+     * (stable, never preferred over the plain number). `5.0.0-rc1` is a pre-release, and a bare
+     * number over four digits (`20260101`, a build counter) is not a version.
      *
      * @return array{parts: list<int>, pure: bool}|null
      */
@@ -321,20 +299,16 @@ class ImageTags
     }
 
     /**
-     * The newest exact version — `0.31.0` over `0.31` over `0`, so a user
-     * pinned to it gets the release they saw, not whatever the alias points
-     * at next month. Falls back to `latest`/`stable`, then to Hub's most
-     * recently pushed tag, then to nothing.
+     * The newest exact version (`0.31.0` over `0.31` over `0`, so a pin does not drift with an
+     * alias). Falls back to `latest`/`stable`, then Hub's most recently pushed tag, then nothing.
      *
      * @param  list<array{name: string, updated_at: string|null, stable: bool, prerelease: bool}>  $tags
      * @param  array<string, true>  $demoted  from `rank()`
      */
     private function recommended(array $tags, array $demoted): ?string
     {
-        // `rank()` already put the newest, most specific version first. A bare
-        // number is tried last: it is usually an alias, not a release, and
-        // ranked numerically it beats every dotted one — code-server's `39`
-        // (its Fedora 39 build) sorted above `4.140.0`.
+        // `rank()` put the newest, most specific version first. A bare number is tried last:
+        // it is usually an alias, and numerically it beats every dotted version.
         foreach ([false, true] as $last) {
             foreach ([2, 1] as $minParts) {
                 foreach ($tags as $tag) {
@@ -351,12 +325,8 @@ class ImageTags
             }
         }
 
-        // A release whose tag carries the commit it was built from —
-        // it-tools publishes only `2024.10.22-7ca5933` — is still a release,
-        // and a better pick than the `latest` the picker then warns about
-        // (DS-14). `rank()` has the newest first. Any other variant
-        // (`-alpine`) is a different build, not this one pinned, so it is
-        // still not chosen for the user.
+        // A tag carrying its build commit (`2024.10.22-7ca5933`) is still a release, and better
+        // than `latest`. Any other variant (`-alpine`) is a different build, so it is not chosen.
         foreach ([false, true] as $last) {
             foreach ($tags as $tag) {
                 if (isset($demoted[$tag['name']]) === $last && $tag['stable'] && $this->commitPinned($tag['name'])) {
@@ -373,13 +343,9 @@ class ImageTags
             }
         }
 
-        // Nothing is a version and nothing says it is the stable one. Hub
-        // lists the most recently pushed first, which is a reasonable guess
-        // once pre-releases are skipped (RC-33: `28-ea-oraclelinux9` was
-        // "the newest stable"); a registry's `tags/list` is sorted by NAME,
-        // and the alphabetically first tag is no recommendation at all — it
-        // put `alpha` above `stable` (DS-09). A list of nothing but
-        // pre-releases recommends nothing. The picker then asks.
+        // No version and no stable name. Hub's most recently pushed non-pre-release is a fair
+        // guess; a registry's `tags/list` is sorted by name, so its first tag is no recommendation.
+        // A list of only pre-releases recommends nothing and the picker asks.
         foreach ($tags as $tag) {
             if ($tag['updated_at'] === null) {
                 return null;

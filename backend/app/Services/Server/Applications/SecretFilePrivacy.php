@@ -11,37 +11,23 @@ use Throwable;
 /**
  * Keep a site's secret files away from every account that does not run it.
  *
- * Two gaps, both measured on the test servers on 2026-09-29:
+ * A `.env` is often created 0644 (installers, `create-project`, git deploys), and on
+ * OpenLiteSpeed the web server account (`nobody`) is in every site user's group, so even 0640
+ * config files are readable by it.
  *
- *  - Several ways a `.env` comes into being leave it 0644: Statamic's own
- *    `create-project` script copies `.env.example`, Akaunting's, Mautic's and
- *    PrestaShop's installers write theirs, and a git deploy seeds one from the
- *    repository's example. The web server account could read the database
- *    password and APP_KEY until somebody saved the file.
- *  - The installers wrote `wp-config.php` and the other config files 0640,
- *    and on OpenLiteSpeed the web server account (`nobody`) is a member of
- *    every site user's group so it can write the site's logs. Group-readable
- *    was readable by it.
+ * The mode follows RuntimeOwnership::secretFileMode(): a site running as its own user loses
+ * the group too (`go-rwx`); where PHP runs as the web server's account the group is handed to it
+ * (`chown -h`) and only "other" is stripped, or the site would lose its own configuration.
  *
- * The mode follows RuntimeOwnership::secretFileMode(): where the site runs as
- * its own user the group is stripped too (`go-rwx`); where PHP runs as the web
- * server's account the group is handed to that account (`chown -h`) and only
- * "other" is stripped, or the site would lose its own configuration.
- *
- * narrow() only ever narrows — the chmod removes access and adds none — so a
- * file the user tightened stays as they left it. Best-effort by design: it
- * runs at the end of a provision, inside a deploy and from `sites:resync`, and
- * a site that is up must not be failed over a file mode. reset() is the
+ * narrow() only removes access, so a file the user tightened stays as they left it.
+ * Best-effort: a running site must not be failed over a file mode. reset() is the
  * "Fix permissions" version: absolute modes, and it reports a failure.
  */
 class SecretFilePrivacy
 {
     /**
-     * Each type's secret files, relative to its code path (the project root:
-     * the document root for every type but Craft and Statamic, which serve a
-     * subfolder of it). Those written by our installers, and those the
-     * application writes itself — Joomla, PrestaShop and Nextcloud save their
-     * database password on their own, 0644 or 0640.
+     * Each type's secret files, relative to its code path (the project root). Includes files
+     * the application writes itself (Joomla, PrestaShop, Nextcloud), at 0644 or 0640.
      *
      * @var array<string, array<int, string>>
      */
@@ -58,17 +44,12 @@ class SecretFilePrivacy
     ];
 
     /**
-     * Types whose application rewrites its secret file on its own, loosening
-     * it again, so a pass at install and deploy time is not enough. Swept
-     * every five minutes by `sites:narrow-app-secrets`.
+     * Types whose application rewrites its secret file and loosens it again, so install and
+     * deploy time is not enough. Swept every five minutes by `sites:narrow-app-secrets`.
      *
-     *  - Joomla sets `configuration.php` to 0444 on **every** save of Global
-     *    Configuration, unconditionally (`ApplicationModel::writeConfigFile()`,
-     *    read in 6.1). Not an option, and no hook the panel can reach.
-     *  - Nextcloud writes `config.php` at its `configfilemode`, default 0640 —
-     *    readable on OpenLiteSpeed, where the web server account is in every
-     *    site user's group. New installs set that option (NextcloudInstaller);
-     *    this covers the ones installed before.
+     *  - Joomla sets `configuration.php` to 0444 on every save of Global Configuration.
+     *  - Nextcloud writes `config.php` at its `configfilemode` (default 0640, readable on
+     *    OpenLiteSpeed); NextcloudInstaller sets the option, this covers older installs.
      *
      * Not PrestaShop: Symfony's dumpFile() keeps the existing file's mode.
      *
@@ -77,9 +58,8 @@ class SecretFilePrivacy
     public const REWRITTEN_BY_APP = ['joomla', 'nextcloud'];
 
     /**
-     * Directories of secret files, with the name pattern inside them. A
-     * Statamic user is a YAML file holding their password hash, one per
-     * account, created with the default umask.
+     * Directories of secret files, with the name pattern inside them (a Statamic user is a
+     * YAML file with a password hash, created with the default umask).
      *
      * @var array<string, array<string, string>>
      */
@@ -101,25 +81,19 @@ class SecretFilePrivacy
         try {
             $this->apply($application, reset: false);
         } catch (Throwable $e) {
-            // Resolving the `.env` path throws when it cannot get an answer at
-            // all; that is a reason to leave the files alone, not to fail the
-            // site.
+            // Resolving the `.env` path can throw: leave the files alone, don't fail the site.
             report($e);
         }
     }
 
     /**
-     * "Fix permissions": set each secret file to exactly the mode and group
-     * the site needs, rather than only taking access away.
+     * "Fix permissions": set each secret file to exactly the mode and group the site needs.
      *
-     * narrow() cannot do this job. Fix permissions runs straight after a bulk
-     * 0644, and it is also the button for a site whose PHP cannot read its own
-     * configuration — a `.env` at 0600 on a site whose PHP runs as the web
-     * server account (the flat 0600 this replaced did exactly that to such a
-     * site). Only an absolute mode, with the group handed back, repairs that.
+     * narrow() cannot do this: a site whose PHP runs as the web server account breaks with a
+     * `.env` at 0600, and only an absolute mode with the group handed back repairs that.
      *
-     * Returns the first command that failed, or null. Not best-effort: the
-     * user pressed a button and should hear that it did not work.
+     * Returns the first command that failed, or null. Not best-effort: the user pressed a
+     * button and should hear that it did not work.
      */
     public function reset(Application $application): ?ServerOpsResult
     {
@@ -152,30 +126,20 @@ class SecretFilePrivacy
         };
 
         foreach ($this->directories($application) as $directory => $pattern) {
-            // Own-user sites only: the other kind would need each file's
-            // group handed to the web server first, and Statamic — the one
-            // type with such a directory — always runs as its own user.
-            //
-            // Absent is ordinary (Statamic can keep its users in the
-            // database), and `find` on a missing directory exits non-zero —
-            // which reset() would report as Fix permissions failing.
+            // Own-user sites only (Statamic always is). Absent is ordinary, and `find` on a
+            // missing directory exits non-zero, which reset() would report as a failure.
             if (! $ownUser || ! $this->serverOps->probe(['runuser', '-u', $user, '--', 'test', '-d', $directory], $this->context($application))->ok) {
                 continue;
             }
 
-            // The directory itself first. The application creates each file
-            // with the default umask — a new Statamic user is 0644 until the
-            // next pass — so closing the directory is what keeps a file
-            // private from the moment it exists, whatever its own mode.
-            // `-maxdepth 0 -type d`: a link planted in its place is not a
-            // directory to `find -P`, so it is skipped rather than followed.
+            // The directory first: new files get the default umask, so closing it keeps them
+            // private from creation. `-maxdepth 0 -type d` skips a planted link.
             $record($this->serverOps->run(
                 ['runuser', '-u', $user, '--', 'find', $directory, '-maxdepth', '0', '-type', 'd', '-exec', 'chmod', $reset ? '0700' : 'go-rwx', '{}', '+'],
                 $this->context($application),
             ));
 
-            // `find` as the user never follows a link (-P is its default), so
-            // one planted in the directory is skipped rather than chmodded.
+            // `find` never follows links (-P default): a planted one is skipped, not chmodded.
             $record($this->serverOps->run(
                 ['runuser', '-u', $user, '--', 'find', $directory, '-maxdepth', '1', '-type', 'f', '-name', $pattern, '-exec', 'chmod', $mode, '{}', '+'],
                 $this->context($application),
@@ -183,22 +147,18 @@ class SecretFilePrivacy
         }
 
         foreach ($this->paths($application) as $path) {
-            // A plain test as the user: absent is the common case (most types
-            // have no `.env`), and nothing here should run against a path that
-            // is not there.
+            // Absent is the common case (most types have no `.env`).
             if (! $this->serverOps->probe(['runuser', '-u', $user, '--', 'test', '-f', $path], $this->context($application))->ok) {
                 continue;
             }
 
-            // reset() hands the group back in both directions: a site moved
-            // back to its own user otherwise kept `www-data` as the group.
+            // reset() hands the group back both ways (else `www-data` lingers after a move).
             if (! $ownUser || $reset) {
                 // `-h`: a link at the path is changed itself, never followed.
                 $record($this->serverOps->run(['chown', '-h', "{$user}:{$group}", $path], $this->context($application)));
             }
 
-            // As the site user, so a link planted at the path reaches only
-            // what they could already change.
+            // As the site user, so a planted link reaches only what they could already change.
             $record($this->serverOps->run(['runuser', '-u', $user, '--', 'chmod', $mode, $path], $this->context($application)));
         }
 
@@ -210,11 +170,8 @@ class SecretFilePrivacy
      */
     private function paths(Application $application): array
     {
-        // Resolved here, not injected: ApplicationEnvironment depends on the
-        // provisioner, which runs this — injecting it is a container cycle.
-        // path() rather than exists(): exists() also moves a legacy `.env`,
-        // which is the environment screen's business and not something a
-        // resync over every site should do on the way past.
+        // Resolved here, not injected (container cycle via the provisioner). path() not exists():
+        // exists() also moves a legacy `.env`, which a resync must not do.
         $paths = [app(ApplicationEnvironment::class)->path($application)];
 
         $root = rtrim($application->codePath(), '/');

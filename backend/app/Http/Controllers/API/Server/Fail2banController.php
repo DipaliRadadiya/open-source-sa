@@ -29,10 +29,7 @@ class Fail2banController extends Controller
     {
         $installed = $fail2ban->installed();
 
-        // `installed` alone cannot tell "installing" from "failed" from "never
-        // asked" — it is derived from the package being on disk, so all three
-        // read as false. apt is allowed ten minutes here, which is a long time
-        // to show someone a boolean that has not moved.
+        // `installed` cannot tell "installing" from "failed" from "never asked" (all false).
         $install = $installs->versions(InstallFail2ban::RUNTIME)->get(InstallFail2ban::VERSION);
 
         return response()->json([
@@ -40,14 +37,11 @@ class Fail2banController extends Controller
                 'installed' => $installed,
                 'running' => $installed && $fail2ban->running(),
                 'version' => $fail2ban->version(),
-                // Null once it is on disk: the row is deleted on success, and
-                // `installed` is then the honest answer.
+                // Null once installed: the row is deleted on success.
                 'install' => $install === null ? null : [
                     'status' => $install->status->value,
                     'queued' => $install->isQueued(),
-                    // A classified code, never raw apt output — it names paths
-                    // and cannot be translated. Rendered in the viewer's
-                    // locale by the same keys the PHP screen uses.
+                    // A classified code, never raw apt output (it names paths and cannot be translated).
                     'reason' => $install->reason,
                     'reason_title' => $install->reason === null
                         ? null
@@ -56,16 +50,12 @@ class Fail2banController extends Controller
                     'started_at' => $install->started_at?->format('d-m-Y H:i:s'),
                     'finished_at' => $install->finished_at?->format('d-m-Y H:i:s'),
                 ],
-                // The caller's own address, so the UI can offer to add it to
-                // the ignore list before they enable the SSH jail. Knowing it
-                // is the difference between an informed click and a lockout.
+                // The caller's address, so the UI can offer to ignore it before enabling the SSH jail.
                 'your_ip' => $request->ip(),
                 'settings' => $installed ? $fail2ban->settings() : null,
                 'jails' => $installed ? $fail2ban->jails() : [],
                 'banned' => $installed ? $fail2ban->banned() : [],
-                // Offered by the API so the form can present "1 hour" instead
-                // of 3600, without the frontend maintaining its own copy of a
-                // list that has to agree with what this endpoint accepts.
+                // Served so the frontend need not keep its own copy of the accepted list.
                 'bantime_presets' => array_map(fn (array $preset) => [
                     ...$preset,
                     'label' => __("fail2ban.bantime.{$preset['key']}"),
@@ -75,8 +65,7 @@ class Fail2banController extends Controller
     }
 
     /**
-     * Install fail2ban (manage). Queued — apt is far too slow to hold a
-     * request open for.
+     * Install fail2ban (manage). Queued: apt is too slow to hold a request open.
      */
     public function install(Fail2banManager $fail2ban, ActivityLogger $log, InstallTracker $installs): JsonResponse
     {
@@ -84,15 +73,12 @@ class Fail2banController extends Controller
             return response()->json(['message' => __('errors/fail2ban.already_installed')], 422);
         }
 
-        // One at a time. A reload mid-install brought the Install button back
-        // and a second apt run could be queued behind the first (FS-A5).
+        // One at a time: a reload mid-install shows the Install button again.
         if ($installs->versions(InstallFail2ban::RUNTIME)->get(InstallFail2ban::VERSION)?->status === InstallStatus::Installing) {
             return response()->json(['message' => __('errors/fail2ban.already_installing')], 409);
         }
 
-        // Before dispatch, not inside the job: otherwise there is a window
-        // between this 202 and a worker picking the job up where the install
-        // exists and nothing can see it — the exact blindness the row removes.
+        // Before dispatch, so the install is visible between this 202 and the worker starting.
         $installs->start(InstallFail2ban::RUNTIME, InstallFail2ban::VERSION);
 
         InstallFail2ban::dispatch(Auth::id());
@@ -104,9 +90,7 @@ class Fail2banController extends Controller
     /**
      * Replace the managed settings, ignore list and jail toggles (manage).
      *
-     * One endpoint rather than three: the values live in a single file that is
-     * rewritten as a whole, and splitting them would invite two requests to
-     * race over the same file.
+     * One endpoint because the values live in a single file rewritten as a whole.
      */
     public function update(UpdateFail2banRequest $request, Fail2banManager $fail2ban, ActivityLogger $log): JsonResponse
     {
@@ -135,10 +119,8 @@ class Fail2banController extends Controller
     /**
      * Add one address or range to the ignore list (manage).
      *
-     * `PUT /fail2ban` replaces the whole list, so two people editing it at
-     * once lose whichever change was saved first. This changes one entry
-     * against the list as it is on disk now, under the same lock as every
-     * other write of the file, so nothing in between is lost.
+     * `PUT /fail2ban` replaces the whole list, so concurrent edits lose one. This changes one entry
+     * against the list on disk, under the same lock as every other write.
      */
     public function addIgnoreIp(IgnoreIpRequest $request, Fail2banManager $fail2ban, ActivityLogger $log): JsonResponse
     {
@@ -168,10 +150,8 @@ class Fail2banController extends Controller
     /**
      * Remove one entry from the ignore list (manage).
      *
-     * Taking your own address off while a jail that watches SSH is running is
-     * the reverse of the lockout `guardLockout` exists for: from then on a few
-     * mistyped passwords ban you. Allowed, but only once acknowledged — unless
-     * another entry still covers you.
+     * Removing your own address while an SSH jail runs risks a lockout (see `guardLockout`), so it
+     * needs acknowledgement unless another entry still covers you.
      */
     public function removeIgnoreIp(IgnoreIpRequest $request, Fail2banManager $fail2ban, ActivityLogger $log): JsonResponse
     {
@@ -205,45 +185,27 @@ class Fail2banController extends Controller
     }
 
     /**
-     * Ban an address by hand (manage) — for a nuisance the operator has
-     * spotted before fail2ban has.
+     * Ban an address by hand (manage).
      */
     public function ban(BanIpRequest $request, Fail2banManager $fail2ban, ActivityLogger $log): JsonResponse
     {
         $ip = (string) $request->validated('ip');
         $jail = (string) $request->validated('jail');
 
-        // The machine's own address, which the panel never lets you ban.
-        //
-        // Checked separately from the list below because the two are different
-        // questions with different answers. `ignoreIps()` is the *user's*
-        // entries — it subtracts the always-ignored ones on purpose, so the UI
-        // does not offer to delete something it will re-add. Using it as the
-        // safety check meant loopback was never covered: banning 127.0.0.1
-        // returned 200 and fail2ban carried it out.
-        //
-        // Worst on `recidive`, which bans every TCP port: the server would
-        // reject its own traffic to MariaDB and Redis, the panel would go down,
-        // and unbanning runs through the API that just became unreachable.
+        // Never ban the machine's own address. Separate from the list below: `ignoreIps()` holds
+        // only the user's entries (always-ignored ones are subtracted), so it would not cover
+        // loopback. On `recidive` (every port) it would cut the server off from MariaDB and Redis.
         if ($fail2ban->isOwnAddress($ip)) {
             return response()->json(['message' => __('errors/fail2ban.ip_own_address')], 422);
         }
 
-        // The address this request came from. Banned on `recidive` (every
-        // port), the person pressing the button loses the panel along with
-        // SSH, and the unban they would need runs through the panel. The
-        // lockout guard on the settings form already reasons about the
-        // caller's IP; a manual ban did not.
+        // The caller's own address: banning it loses the panel too, and the unban runs through it.
         if ($ip === IpAddress::canonical((string) $request->ip())) {
             return response()->json(['message' => __('errors/fail2ban.ip_your_address')], 422);
         }
 
-        // An address the user listed as trusted. Refused because they said so,
-        // not because it would fail — a manual ban on an ignored address does
-        // hold, verified on a live box across a fail2ban reload. The message
-        // used to claim otherwise.
-        // Matched as addresses and ranges, not strings: the list may hold a
-        // CIDR, and `in_array` let any address inside one through (F2B-01).
+        // An address the user listed as trusted is refused by policy (a ban would hold). Matched as
+        // addresses and ranges, not strings: the list may hold a CIDR.
         $ignored = array_map(IpAddress::canonical(...), $fail2ban->ignoreIps());
 
         if ($ignored !== [] && IpUtils::checkIp($ip, $ignored)) {
@@ -257,9 +219,7 @@ class Fail2banController extends Controller
     }
 
     /**
-     * Release an address (manage). Without `?jail=`, from every jail holding
-     * it — "unban" means the address can connect again, not that it stays
-     * banned by a jail the user wasn't looking at.
+     * Release an address (manage). Without `?jail=`, from every jail holding it.
      */
     public function unban(Request $request, string $ip, Fail2banManager $fail2ban, ActivityLogger $log): JsonResponse
     {
@@ -275,11 +235,7 @@ class Fail2banController extends Controller
     }
 
     /**
-     * Release every banned address (manage).
-     *
-     * The case this exists for is an office or VPN range banned by mistake,
-     * where the operator is locked out and clicking eleven rows individually
-     * is not what the moment calls for.
+     * Release every banned address (manage), e.g. an office or VPN range banned by mistake.
      */
     public function unbanAll(Fail2banManager $fail2ban, ActivityLogger $log): JsonResponse
     {
@@ -295,8 +251,7 @@ class Fail2banController extends Controller
     }
 
     /**
-     * Every write of jail.local, one at a time. The file is read, changed and
-     * written back whole, so two writes overlapping would lose one of them.
+     * Every write of jail.local, one at a time: the file is read and rewritten whole.
      *
      * @template T
      *
@@ -334,8 +289,7 @@ class Fail2banController extends Controller
     }
 
     /**
-     * The full enabled/disabled map, so a partial request doesn't silently
-     * turn off the jails it failed to mention — the file is rewritten whole.
+     * The full enabled/disabled map, so a partial request does not turn off unmentioned jails.
      *
      * @param  array<string, mixed>  $submitted
      * @return array<string, bool>
@@ -355,10 +309,8 @@ class Fail2banController extends Controller
     }
 
     /**
-     * Turning on a jail that watches SSH is the one action here that can lock
-     * the operator out of their own server. It is allowed — that is the point
-     * of the feature — but not by accident: either their address is on the
-     * ignore list, or they have said explicitly that they accept the risk.
+     * Turning on an SSH-watching jail can lock the operator out. Allowed only if their address is
+     * on the ignore list or they explicitly accept the risk.
      *
      * @param  array<string, bool>  $jails
      * @param  array<int, string>  $ignoreIps
