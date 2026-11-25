@@ -10,16 +10,12 @@ use App\Services\Server\WebServers\WebServerManager;
 /**
  * One application's own logs.
  *
- * Deliberately separate from the server-wide LogManager, and not a filter over
- * it. That one answers "what is happening on this machine" from a fixed
- * registry of paths under /var/log, read with native filesystem calls. This
- * one answers "what is happening to my site", from paths derived per
- * application, some of which live inside the site's own directory and are
- * owned by its system user — which the panel account cannot open. Every read
- * here therefore goes through ServerOps.
+ * Separate from the server-wide LogManager (a fixed registry of /var/log paths read natively):
+ * these paths are derived per application, some inside the site's own directory and owned by
+ * its system user, which the panel account cannot open. Every read goes through ServerOps.
  *
- * Sources are resolved server-side from a key. A client-supplied path is never
- * read, so there is no traversal surface.
+ * Sources are resolved server-side from a key. A client-supplied path is never read, so
+ * there is no traversal surface.
  */
 class ApplicationLogManager
 {
@@ -44,9 +40,7 @@ class ApplicationLogManager
     {
         return array_values(array_map(
             function (array $source) use ($application): array {
-                // A container's log is a command, not a file — there is
-                // nothing on disk to stat, and the compose file being present
-                // is what makes the source real.
+                // A container's log is a command, not a file: nothing on disk to stat.
                 $file = ! in_array($source['kind'], ['journal', 'container'], true);
                 $exists = ! $file || $this->fileExists($application, $source['path']);
 
@@ -57,8 +51,7 @@ class ApplicationLogManager
                     'exists' => $exists,
                 ] + ($file && $exists
                     ? $this->stat($application, $source['path'])
-                    // Null, not 0: a journal or a container has no single file
-                    // to measure, and 0 would read as an empty log.
+                    // Null, not 0: 0 would read as an empty log.
                     : ['size' => null, 'modified' => null]);
             },
             $this->catalog($application),
@@ -66,9 +59,7 @@ class ApplicationLogManager
     }
 
     /**
-     * Size and last write, as the server-wide log screen reports them
-     * (LogManager::remoteStat), so both screens can share one way of showing
-     * "access.log · 12.4 MB". A failed stat is unknown, not zero.
+     * Size and last write, as LogManager::remoteStat reports them. A failed stat is unknown, not zero.
      *
      * @return array{size: int|null, modified: string|null}
      */
@@ -91,9 +82,8 @@ class ApplicationLogManager
     }
 
     /**
-     * Read one source: the last N lines, or N lines from line `from` on,
-     * optionally filtered — by text, and on an access log by IP, status,
-     * method and URL (v7's advanced logs).
+     * Read one source: the last N lines, or N lines from line `from` on, optionally filtered by
+     * text, and on an access log by IP, status, method and URL.
      *
      * @param  array<string, string|null>  $fields  ip, status, method, url
      * @return array{lines: array<int, string>, first_line: int|null, truncated: bool, search_window_capped: bool}|null
@@ -111,20 +101,16 @@ class ApplicationLogManager
         $fields = array_filter($fields, fn ($value) => $value !== null && $value !== '');
         $filtering = ($filter !== null && $filter !== '') || $marker !== null || $fields !== [];
 
-        // Read more than asked for when filtering, or a filter over the last
-        // 200 lines finds nothing on a busy site and the screen looks broken
-        // rather than merely empty.
+        // Read more than asked for when filtering, or a filter over the last 200 lines finds
+        // nothing on a busy site.
         $window = $filtering ? self::MAX_LINES : $lines;
 
         if ($from !== null) {
             return $this->readFrom($application, $source, $from, $lines, $window, $filter, $marker, $fields);
         }
 
-        // One line beyond the window, purely to find out whether there is
-        // anything above it. `tail -n 200` can never return more than 200
-        // lines, so comparing its count against 200 answered the same question
-        // every time — `truncated` was structurally false, and the last 200
-        // lines of a million-line access log were reported as the whole log.
+        // One line beyond the window, to find out whether there is anything above it (without
+        // it `truncated` would always be false).
         $raw = match ($source['kind']) {
             'journal' => $this->readJournal($application, $window + 1),
             'container' => $this->containers->logs(
@@ -141,9 +127,7 @@ class ApplicationLogManager
 
         $all = $this->split($raw);
 
-        // Whether the source holds more than we looked at. Established before
-        // filtering, because it is a fact about the file rather than about the
-        // search.
+        // Whether the source holds more than we looked at; a fact about the file, so set before filtering.
         $hasMore = count($all) > $window;
 
         if ($hasMore) {
@@ -160,32 +144,23 @@ class ApplicationLogManager
             // Line numbers are known only for a read that started at one.
             'first_line' => null,
 
-            // "There is more log than you are seeing" — either because the
-            // source runs on above the window, or because more lines matched
-            // than were asked for.
+            // More log exists than is shown: above the window, or more lines matched than asked for.
             'truncated' => $hasMore || $trimmed,
 
-            // The distinction that matters when a search comes back empty.
-            // Filtering only ever covers the last MAX_LINES, so a match that
-            // happened earlier is not found — and "no results" then reads as
-            // "this is not in your log" when the truthful answer is "I only
-            // looked at the last 5,000 lines". Two facts, two fields: one
-            // boolean cannot say which of them happened.
+            // Filtering only covers the last MAX_LINES, so an empty result may just mean the match
+            // is older. Separate from `truncated`: one boolean cannot say which happened.
             'search_window_capped' => $filtering && $hasMore,
         ];
     }
 
     /**
-     * From line N onwards (v7's "specific lines"), the same window as a tail
-     * read: `lines` lines, or the first MAX_LINES when filtering.
+     * From line N onwards, the same window as a tail read: `lines` lines, or the first
+     * MAX_LINES when filtering.
      *
-     * Streamed with `tail -n +N` and abandoned as soon as the window is full:
-     * a range near the top of a gigabyte access log must not read — or hold —
-     * the rest of it. `tail` because it is already on the panel's privilege
-     * list; a range has no reason to need `sed` there too.
+     * Streamed with `tail -n +N` and abandoned once the window is full, so a range near the top
+     * of a gigabyte log does not read or hold the rest. `tail` is already on the privilege list.
      *
-     * Files only. The journal and Docker have no stable line numbers to start
-     * from — the caller refuses those before this is reached.
+     * Files only: the journal and Docker have no stable line numbers (the caller refuses those).
      *
      * @param  array<string, string>  $fields
      * @param  array{key: string, kind: string, path: string}  $source
@@ -212,8 +187,7 @@ class ApplicationLogManager
             }
         }
 
-        // Dropping the generator closes its pipe, and `tail` stops on its next
-        // write (StreamDownloadTest proves it).
+        // Dropping the generator closes its pipe, and `tail` stops on its next write.
         unset($chunks);
 
         if ($buffer !== '' && count($read) <= $window) {
@@ -231,8 +205,7 @@ class ApplicationLogManager
         $trimmed = count($all) > $lines;
 
         return [
-            // The first lines from `from` on — reading forwards, the start of
-            // the range is what was asked for.
+            // Reading forwards: the start of the range is what was asked for.
             'lines' => $trimmed ? array_slice($all, 0, $lines) : $all,
             'first_line' => $from,
             'truncated' => $hasMore || $trimmed,
@@ -252,9 +225,7 @@ class ApplicationLogManager
         }
 
         if ($filter !== null && $filter !== '') {
-            // Literal, case-insensitive. Not a regex: a user-supplied pattern
-            // over a large file is a denial of service waiting to happen, and
-            // nobody searching a log wants regex semantics by surprise.
+            // Literal, case-insensitive. Never a regex: a user-supplied pattern over a large file is a DoS.
             $lines = array_values(array_filter($lines, fn (string $line): bool => stripos($line, $filter) !== false));
         }
 
@@ -266,13 +237,11 @@ class ApplicationLogManager
     }
 
     /**
-     * One access-log line against v7's field filters: client IP, status,
-     * method, URL.
+     * One access-log line against the field filters: client IP, status, method, URL.
      *
-     * Parsed, not substring-matched as v7 did: "404" as a substring also
-     * matches a URL with 404 in it or a 404-byte response, and an IP matches
-     * any longer IP it is the start of. A line that is not in the combined
-     * format nginx, Apache and OpenLiteSpeed all write does not match at all.
+     * Parsed, not substring-matched ("404" would match a URL or byte count; an IP would match
+     * longer IPs). A line not in the combined format nginx, Apache and OpenLiteSpeed write
+     * does not match at all.
      *
      * @param  array<string, string>  $fields
      */
@@ -311,10 +280,9 @@ class ApplicationLogManager
     }
 
     /**
-     * Whether a source is an access log in the combined format, which the
-     * field filters need. OpenLiteSpeed's firewall log is its access log with
-     * a marker, so it qualifies; nginx and Apache's are ModSecurity's own
-     * format, and an error log has no status or method at all.
+     * Whether a source is an access log in the combined format, which the field filters need.
+     * OpenLiteSpeed's firewall log is its access log with a marker, so it qualifies; nginx and
+     * Apache's are ModSecurity's own format.
      */
     public function supportsFieldFilters(Application $application, string $key): bool
     {
@@ -328,12 +296,10 @@ class ApplicationLogManager
      * @return array{key: string, kind: string, path: string}|null
      */
     /**
-     * The whole log, streamed (LOG-dl). Null when the source has nothing on
-     * disk yet; `false` for a source with no file to hand over (a container's
-     * output lives in Docker, not in a file).
+     * The whole log, streamed. Null when the source has nothing on disk yet; `false` for a
+     * source with no file to hand over (a container's output lives in Docker).
      *
-     * Through ServerOps' stream, as the file manager's download is: a log can
-     * be gigabytes, and reading it into memory to send it is the outage.
+     * Streamed through ServerOps: a log can be gigabytes, so it is never read into memory.
      *
      * @return array{filename: string, chunks: \Generator<int, string>}|false|null
      */
@@ -397,67 +363,35 @@ class ApplicationLogManager
             }
         }
 
-        // For a Node application the web-server logs describe the *proxy* —
-        // they will happily show a healthy 502 while the actual error is in
-        // the journal. Without this source the screen would be confidently
-        // useless at exactly the moment it is needed.
+        // For a Node application the web-server logs only describe the *proxy* (a healthy 502
+        // hides the real error).
         if ($this->processes->runs($application)) {
-            // Files in the site's own directory, not the journal: the unit
-            // writes stdout and stderr there so the logs belong to the
-            // application rather than to the host, and stderr is kept apart
-            // because "what did it print" and "what went wrong" are different
-            // questions and mixing them buries the second in the first.
+            // Files in the site's own directory, not the journal; stderr is kept apart from stdout.
             foreach (ProcessSupervisor::logFiles($application) as $key => $path) {
                 $catalog[] = ['key' => $key, 'kind' => 'file', 'path' => $path];
             }
         }
 
-        // A container writes to Docker's logging driver, not to a file in the
-        // site directory. Same reasoning as the Node source above and more
-        // acute: for a container the web-server logs describe *only* the
-        // proxy, so without this the screen shows a tidy 502 and no trace of
-        // the container that exited on startup and caused it.
+        // A container writes to Docker's logging driver, not to a site file. Same reasoning as Node:
+        // web-server logs only show the proxy's 502, not the container that exited on startup.
         if ($application->serving_profile === 'docker') {
             $catalog[] = ['key' => 'container', 'kind' => 'container', 'path' => ''];
         }
 
-        // The firewall's detect-mode log: the requests that *would* have been
-        // blocked. Offering "just watch and see what happens" while giving the
-        // user no way to see what happened made detect mode close to
-        // pointless.
-        //
-        // Listed in BOTH modes, not just detect.
-        //
-        // It used to appear only while the mode was `detect`, on the reasoning
-        // that an enforcing site writes nothing here so an empty file would
-        // read as broken. That reasoning had it backwards: the intended flow is
-        // detect → read this → add exceptions → enforce, so the log vanished
-        // from the UI at the exact moment someone acted on it, and
-        // `GET /logs/{key}` 404'd with it. Checking your work afterwards is not
-        // an edge case, it is the point.
-        //
-        // The empty-file worry is already handled: `list()` reports `exists`
-        // per source, so "enforcing, nothing recorded" and "detect, nothing
-        // matched yet" are both visible as an existing key with no content —
-        // which is a different statement from the key not being offered.
+        // The firewall's detect-mode log: the requests that *would* have been blocked.
+        // Listed in BOTH modes, not just detect: the flow is detect → read this → add
+        // exceptions → enforce, and the log must not vanish when someone acts on it.
         if ($application->waf_enabled) {
             $catalog[] = [
                 'key' => 'waf_detect',
                 'kind' => 'file',
-                // `panelPath()`, which is where the vhost is told to write it
-                // (AbstractWebServerDriver::wafContext). This read the old
-                // pre-relocation location under the document root, so the file
-                // the panel opened was never the file nginx wrote — detect mode
-                // showed an empty log no matter how much it had matched, which
-                // reads as "nothing would be blocked" and invites someone to
-                // enforce a ruleset they have not actually checked.
+                // Where the vhost is told to write it (AbstractWebServerDriver::wafContext).
+                // A wrong path shows an empty log, which reads as "nothing would be blocked".
                 'path' => $application->wafDetectLogPath(),
             ];
 
-            // OpenLiteSpeed allows one access log per site, so detect mode
-            // marks its lines there (`waf=1`, see the OLS vhost templates)
-            // instead of writing a file of its own. Same key, same screen:
-            // the access log, only the marked lines.
+            // OpenLiteSpeed allows one access log per site, so detect mode marks its lines there
+            // (`waf=1`, see the OLS vhost templates). Same key: the access log, marked lines only.
             if ($this->webServers->driver()->name() === 'openlitespeed') {
                 $catalog[array_key_last($catalog)] = [
                     'key' => 'waf_detect',
@@ -472,14 +406,8 @@ class ApplicationLogManager
     }
 
     /**
-     * Null here means "this log has not been written yet", and nothing else.
-     *
-     * It used to mean that *and* every way the read could fail — `tail` denied,
-     * the path unreadable, the command timing out — because the caller turned
-     * any null into `exists: false`. The screen then said the site had no logs
-     * at the moment someone opened it to find out why the site was down, which
-     * sends them to look somewhere else. `fileExists` already knows which of
-     * the two it is; this asks it.
+     * Null here means "this log has not been written yet", and nothing else. Any other failure
+     * (denied, unreadable, timeout) throws, so the screen never claims a site has no logs.
      */
     private function readFile(Application $application, string $path, int $lines): ?string
     {
@@ -502,10 +430,8 @@ class ApplicationLogManager
     }
 
     /**
-     * The journal has no equivalent of "not written yet" — a unit with no
-     * output answers with an empty result, not a failure. So anything that
-     * fails here really did fail: journalctl missing, the unit name wrong, the
-     * panel not permitted to read it.
+     * The journal has no "not written yet": a unit with no output answers empty, so any failure
+     * here is real (journalctl missing, wrong unit name, not permitted).
      */
     private function readJournal(Application $application, int $lines): ?string
     {
@@ -530,10 +456,7 @@ class ApplicationLogManager
             timeout: 15,
         );
 
-        // "There is no log file" and "I was not allowed to look" are different
-        // answers, and this screen exists for people whose site is misbehaving
-        // — the worst possible audience for a confident wrong one. The class
-        // already has an exception carrying a reference for exactly this.
+        // "No log file" and "not allowed to look" are different answers; never report the second as the first.
         if (! $result->answered) {
             throw new LogOperationException($result->reference);
         }
@@ -542,9 +465,8 @@ class ApplicationLogManager
     }
 
     /**
-     * Lines, without terminal colour codes (bug #63): Node apps colour their
-     * output, and the screen showed `[32m` and the like around every word.
-     * Stripped before filtering, so a search matches what the user sees.
+     * Lines, without terminal colour codes (Node apps colour their output). Stripped before
+     * filtering, so a search matches what the user sees.
      *
      * @return array<int, string>
      */
@@ -567,20 +489,14 @@ class ApplicationLogManager
     /**
      * Empty one of this application's logs.
      *
-     * **Truncated, never deleted, and the distinction is the whole method.** An
-     * open log file that is unlinked keeps its disk space until the writer
-     * restarts and breaks its own file handle — so `rm` would free nothing and
-     * leave nginx or the Node unit appending to a file no screen can read until
-     * the next reload. `truncate -s 0` reclaims the space with the writer still
-     * attached, and keeps the inode, its owner and its mode, which matters
-     * because these files belong to the site's system user and the web server
-     * will not recreate them with the right ownership on its own.
+     * **Truncated, never deleted.** An unlinked open log keeps its disk space until the writer
+     * restarts, and the writer keeps appending to a file no screen can read. `truncate -s 0`
+     * frees the space with the writer attached and keeps the inode, owner and mode (the site
+     * user's; the web server will not recreate them correctly).
      *
-     * Only this application's own logs, resolved from a key through the same
-     * catalog every read uses. The server-wide logs deliberately have no
-     * equivalent: `auth.log`, `ufw.log` and `fail2ban.log` are the record of
-     * what happened to the machine, and a one-click wipe of those is an
-     * anti-forensics button rather than a maintenance one.
+     * Only this application's own logs, resolved through the same catalog every read uses. The
+     * server-wide logs (`auth.log`, `ufw.log`, `fail2ban.log`) deliberately have no
+     * equivalent: a one-click wipe of those is an anti-forensics button.
      *
      * @throws LogOperationException
      */
@@ -588,13 +504,11 @@ class ApplicationLogManager
     {
         $source = $this->find($application, $key);
 
-        // A marked source is a view onto another log: clearing it would wipe
-        // the whole access log. The controller refuses it with a message.
+        // A marked source is a view onto another log: clearing it would wipe the whole access log.
+        // The controller refuses it with a message.
         if ($source === null || ($source['kind'] ?? 'file') !== 'file' || isset($source['marker'])) {
-            // The caller 404s on an unknown key; reaching here with a non-file
-            // source would mean the catalog grew a journal entry and this was
-            // not revisited. `journalctl --vacuum` is a different operation
-            // against the host's journal, not this site's log.
+            // The caller 404s on an unknown key. A non-file source is not clearable here
+            // (`journalctl --vacuum` would act on the host's journal).
             throw new LogOperationException('');
         }
 

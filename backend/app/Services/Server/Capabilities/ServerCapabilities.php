@@ -11,11 +11,8 @@ use Illuminate\Support\Facades\Log;
 /**
  * The single source of truth for "what is this server, and what can it run".
  *
- * Normally the installation script writes the row, so reads are just a
- * database lookup — no probing on the request path. When the row is missing
- * (a server migrated in from another panel) the first caller detects once and
- * saves it, so no feature ever sees an empty answer and nothing has to
- * remember to populate it.
+ * The installer normally writes the row, so reads are a database lookup. When the row is
+ * missing (a server migrated in from another panel) the first caller detects once and saves it.
  */
 class ServerCapabilities
 {
@@ -32,26 +29,18 @@ class ServerCapabilities
         'lamp' => ['web_server' => 'apache', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['php', 'node', 'static']]],
         'ols' => ['web_server' => 'openlitespeed', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['php', 'node', 'static']]],
         'mern' => ['web_server' => 'nginx', 'capabilities' => ['php' => false, 'node' => true, 'serving_profiles' => ['node', 'static']]],
-        // lemp/lamp/ols serve Node sites as well as PHP ones: n8n, Node-RED,
-        // Uptime Kuma and NodeBB were installed and tested on them, and the
-        // docker merge left `node` out of this list by accident, which hid
-        // all four from every non-MERN server.
-        // docker hosts containers and nothing else. `php => true` is still
-        // honest and deliberate — PHP *is* installed, because the panel itself
-        // is a Laravel application — but `serving_profiles` says the box will
-        // not serve PHP *sites*, and that is the distinction the rest of the
-        // panel reads.
+        // lemp/lamp/ols also serve Node sites (n8n, Node-RED, Uptime Kuma, NodeBB), so `node` stays
+        // in their profiles.
+        // docker hosts containers only. `php => true` is still correct (the panel itself is PHP),
+        // but `serving_profiles` says it will not serve PHP *sites*; the rest of the panel reads that.
         'docker' => ['web_server' => 'nginx', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['docker']]],
     ];
 
     /**
      * What a server offers when nothing recorded it.
      *
-     * A box migrated in from another panel has `stack = null`, and it is
-     * certainly hosting something. Defaulting it to "hosts nothing" would
-     * empty the site-type catalog on a working server, so the unknown case is
-     * the permissive one — the same reasoning `detect()` already uses for the
-     * runtimes.
+     * A box migrated in from another panel has `stack = null` and hosts something, so the
+     * unknown case is permissive: "hosts nothing" would empty its site-type catalog.
      *
      * @var list<string>
      */
@@ -65,10 +54,8 @@ class ServerCapabilities
     /**
      * Whether this server will serve applications of a given kind.
      *
-     * Distinct from `can('php')`, which answers whether PHP is *installed* —
-     * true on every box, because the panel is a Laravel application. This
-     * answers whether the box will host PHP *sites*, which is a decision the
-     * stack made.
+     * Distinct from `can('php')` (PHP is *installed*, true on every box): this is whether the
+     * stack will host PHP *sites*.
      */
     public function hosts(string $profile): bool
     {
@@ -78,14 +65,7 @@ class ServerCapabilities
     /**
      * Whether this server manages database engines of its own.
      *
-     * The question is not "is MariaDB installed" but "does anything here want a
-     * panel-managed database". A Docker box says no: an application that needs one
-     * brings it as a container, and the panel's own data is SQLite regardless.
-     *
-     * Here rather than in the middleware that first needed it, because a second
-     * caller arrived — the sidebar — and a two-line rule copied into two files is
-     * a rule that gets fixed in one of them. Adding a stack should change this
-     * method and nothing else.
+     * A Docker box says no: an application that needs a database brings it as a container.
      */
     public function managesDatabases(): bool
     {
@@ -93,24 +73,13 @@ class ServerCapabilities
     }
 
     /**
-     * Whether this server runs applications on the host at all, as opposed to
-     * only inside containers.
+     * Whether this server runs applications on the host at all, as opposed to only inside containers.
      *
-     * The line every "does this stack do X" question above the container boundary
-     * turns out to want. A Docker box answers false: nothing runs on the host but
-     * the panel, so host runtimes and host database engines are all screens about
-     * nothing. Every other stack answers true.
+     * A Docker box answers false, so host runtimes and host database engines are hidden. Every
+     * other stack, and a server with no recorded stack, answers true.
      *
-     * Deliberately NOT `hosts('node')` for the Node question, and the difference
-     * is not pedantry. A LEMP box hosts no Node *sites*, but Node is a build tool
-     * for PHP ones — the panel's own `build_command` placeholder is
-     * `npm ci && npm run build`, offered on any git-deployed site. Hiding the Node
-     * screen wherever `hosts('node')` is false would take it away from every
-     * Laravel site that builds its assets.
-     *
-     * A server with no recorded stack answers true, like everything else here: the
-     * permissive default is the only safe one for a box migrated in from another
-     * panel.
+     * Deliberately NOT `hosts('node')` for the Node question: a LEMP box hosts no Node *sites*,
+     * but Node is still a build tool for PHP ones (`npm ci && npm run build`).
      */
     public function runsHostApplications(): bool
     {
@@ -128,20 +97,11 @@ class ServerCapabilities
      */
     public function servingProfiles(): array
     {
-        // The recorded row only, and deliberately not `current()`: that detects
-        // and stores when no row exists, which shells out. This is read by a
-        // middleware on every database request, and a gate has no business
-        // being the thing that triggers server detection — it adds a probe, a
-        // latency and a failure mode to twenty-nine routes that did not have
-        // one.
-        //
-        // No row means nobody has recorded anything yet, which lands on the
-        // permissive default below, same as a row without the key.
+        // Reads the recorded row only, not `current()`: that detects and stores when no row
+        // exists, which shells out. A middleware reads this on every database request.
         $recorded = ServerCapability::query()->value('capabilities')['serving_profiles'] ?? null;
 
-        // A row written before this key existed, on a server that is plainly
-        // working. Treated as unknown rather than empty for the same reason
-        // detection is: an absent answer must not read as "nothing".
+        // A row written before this key existed is unknown, not empty.
         return is_array($recorded) && $recorded !== []
             ? array_values($recorded)
             : self::DEFAULT_PROFILES;
@@ -160,10 +120,7 @@ class ServerCapabilities
      */
     public function current(): ServerCapability
     {
-        // Memoised for the life of the request. This is read by nearly every
-        // server feature — and on a box with no record yet it triggers
-        // detection, which shells out. Re-detecting per caller turned a
-        // single systemctl call into one per consumer.
+        // Memoised per request: detection shells out, and nearly every server feature reads this.
         return $this->current ??= ServerCapability::query()->first() ?? $this->detectAndStore();
     }
 
@@ -180,10 +137,7 @@ class ServerCapabilities
     /**
      * The recorded web server, or null if nothing has been recorded yet.
      *
-     * The difference from `webServer()` is that this never detects. Callers
-     * that only need to pick a driver should not cause a box-wide probe as a
-     * side effect of a read — and they have a sane default when the answer is
-     * unknown, which is what makes not detecting acceptable here.
+     * Unlike `webServer()` this never detects, so a read does not trigger a box-wide probe.
      */
     public function recordedWebServer(): ?string
     {
@@ -194,15 +148,8 @@ class ServerCapabilities
     /**
      * The stack the installer recorded, or null if nothing has been recorded.
      *
-     * Never detects, for the same reason as `recordedWebServer()`: the caller is
-     * asking "what was this box built as?" in order to decide whether a missing
-     * optional component matters, and a read like that must not trigger a
-     * box-wide probe as a side effect.
-     *
-     * Null is a usable answer. It means nobody told us — which is not the same
-     * as "not Docker", and callers must treat it as the benign case rather than
-     * guessing, since an un-recorded box is far more likely to be one this
-     * panel did not build than a Docker host.
+     * Never detects, like `recordedWebServer()`. Null means "nobody told us", not "not Docker":
+     * callers must treat it as the benign case.
      */
     public function recordedStack(): ?string
     {
@@ -211,10 +158,8 @@ class ServerCapabilities
     }
 
     /**
-     * Record what the installer built. Called by `server:record-stack`, which
-     * the install script runs; derives the web server and starting capabilities
-     * from the stack so only one value is ever authored and they cannot
-     * contradict.
+     * Record what the installer built. Called by `server:record-stack` (run by the install script);
+     * the web server and starting capabilities derive from the stack so they cannot contradict.
      */
     public function recordStack(string $stack): ServerCapability
     {
@@ -225,19 +170,9 @@ class ServerCapabilities
         return $this->store([
             'stack' => $stack,
             'web_server' => $preset['web_server'],
-            // Detection still wins for the RUNTIMES: the installer may have
-            // added more than the preset implies. It must not win for
-            // `serving_profiles`, and the order here is what guarantees that —
-            // `detectRuntimes()` carries no such key, so the preset's value
-            // survives the merge.
-            //
-            // That separation is the whole point. `php` answers "is PHP
-            // installed", which is true on every box because the panel is
-            // PHP; `serving_profiles` answers "will this box serve PHP
-            // sites", which is a decision, not an observation. They were the
-            // same question until the docker stack existed, and reading one
-            // as the other is what had the setup page recommending MySQL on a
-            // server that will never host a PHP site.
+            // Detection wins for the runtimes, but must not win for `serving_profiles`: the merge
+            // order keeps the preset's value because `detectRuntimes()` has no such key.
+            // `php` is an observation (installed); `serving_profiles` is a decision (will serve PHP sites).
             'capabilities' => array_merge($preset['capabilities'], $this->detectRuntimes()),
             'source' => 'installer',
         ]);
@@ -257,11 +192,7 @@ class ServerCapabilities
         return $this->store([
             'stack' => $record->stack,
             'web_server' => $this->detectWebServer() ?? $record->web_server,
-            // Merged over what is recorded, not written in place of it.
-            // Replacing the array wiped `serving_profiles` on every runtime
-            // install or removal, so a Docker box that installed anything
-            // silently started offering WordPress again — the recorded
-            // decision erased by an unrelated observation.
+            // Merged over the recorded value, not replacing it: replacing wiped `serving_profiles`.
             'capabilities' => array_merge(
                 (array) $record->capabilities,
                 $this->detectRuntimes(),
@@ -273,30 +204,15 @@ class ServerCapabilities
     /**
      * Correct a recorded web server that the box contradicts.
      *
-     * The record is normally right and beats detection — the installer knows
-     * what it built. But it can be wrong in one specific, checkable way: a
-     * server recorded as Apache, running OpenLiteSpeed, because detection ran
-     * before the installer's record and picked a leftover /etc/apache2. Every
-     * vhost the panel writes then goes to a directory that is not there, and
-     * the only way out was an operator running `server:record-stack` by hand.
-     * A panel that can see it is wrong should not need to be told.
-     *
-     * Deliberately narrow. It corrects only when the recorded web server is
-     * **not running and not even installed**, and exactly one supported web
-     * server *is* running. That is not a judgement call between two plausible
-     * answers; it is one answer and one thing that is not there. Anything less
-     * certain is left alone and reported by `panel:doctor` instead — silently
-     * overwriting the installer's own record on a weaker signal would be a
-     * worse bug than the one this fixes.
+     * Deliberately narrow: it corrects only when the recorded web server is **not running and not
+     * even installed**, and exactly one supported web server *is* running. Anything less certain is
+     * left alone and reported by `panel:doctor`.
      *
      * Returns the corrected name, or null when nothing needed correcting.
      */
     public function reconcileWebServer(): ?string
     {
-        // Once per request. `WebServerManager::driver()` calls this on every
-        // resolution and several features resolve the driver more than once,
-        // so without this the cheap directory check becomes a needless repeat
-        // and the systemd probe on a broken box becomes many.
+        // Once per request: `WebServerManager::driver()` calls this on every resolution.
         if ($this->reconciled) {
             return null;
         }
@@ -310,24 +226,15 @@ class ServerCapabilities
             return null;
         }
 
-        // Never overrule the installer. `source: installer` is a statement of
-        // what was actually built, and a filesystem check is a weaker signal
-        // than that — quietly overriding it would write vhosts for a web server
-        // nobody chose, which is a worse version of the bug this repairs. When
-        // those two disagree the honest move is to say so, and `panel:doctor`
-        // does, with the command that settles it.
-        //
-        // What is left is exactly the case that produces a wrong value in the
-        // first place: a record that came from detection guessing.
+        // Never overrule the installer: `source: installer` is what was actually built, and a
+        // filesystem check is a weaker signal. `panel:doctor` reports a disagreement.
         if ($record->source === 'installer') {
             return null;
         }
 
         $configured = (array) config('server.web_servers', []);
 
-        // Installed at all? A recorded server whose config directory is still
-        // there might merely be stopped, and stopping a web server is not the
-        // panel's cue to decide the box runs something else.
+        // Still installed? A recorded server whose config directory exists may merely be stopped.
         foreach ((array) ($configured[$recorded] ?? []) as $path) {
             if (File::isDirectory($path)) {
                 return null;
@@ -364,9 +271,7 @@ class ServerCapabilities
         return $this->store([
             'stack' => null, // unknown: we did not build this box
             'web_server' => $this->detectWebServer(),
-            // Permissive by default. A box migrated in from another panel is
-            // certainly already hosting something, and answering "hosts
-            // nothing" would empty its site-type catalog on a working server.
+            // Permissive by default, see DEFAULT_PROFILES.
             'capabilities' => $this->detectRuntimes() + ['serving_profiles' => self::DEFAULT_PROFILES],
             'source' => 'detected',
         ]);
@@ -389,26 +294,11 @@ class ServerCapabilities
     /**
      * Whoever owns port 80.
      *
-     * **A running unit beats a leftover directory.** This used to be a single
-     * pass over `server.web_servers` returning the first name whose config
-     * directory existed — and a directory is not a web server. `apt remove
-     * apache2` leaves /etc/apache2 behind, and apache is listed before
-     * openlitespeed, so a box running OpenLiteSpeed with a purged Apache
-     * answered "apache". Everything downstream follows this one value, so the
-     * panel then wrote Apache vhosts into a directory that no longer existed
-     * and site creation failed with `tee: /etc/apache2/sites-available/...:
-     * No such file or directory`.
+     * **A running unit beats a leftover directory:** `apt remove apache2` leaves /etc/apache2
+     * behind, so a directory check alone reports "apache" on a box running OpenLiteSpeed. systemd
+     * is asked first; the directory pass is the fallback for a web server that is installed but stopped.
      *
-     * So: ask systemd first, which knows what is actually running. The
-     * directory pass stays as the fallback — a web server that is installed but
-     * stopped is still the one this box uses, and detection has to answer
-     * something for the setup screen to be able to say what it found.
-     *
-     * Public because `WebServerCheck` had grown its own copy of this — a plain
-     * directory walk with no systemd tiebreak, which is how doctor came to
-     * report "configured for openlitespeed but this server runs apache" on
-     * every healthy OLS box. A check that answers the question differently from
-     * the code it is checking is not checking that code.
+     * Public so `WebServerCheck` uses this same logic instead of its own copy.
      */
     public function detectWebServer(): ?string
     {
@@ -424,37 +314,27 @@ class ServerCapabilities
             }
         }
 
-        // One candidate is not ambiguous, and asking systemd would cost a
-        // subprocess to confirm what is already the only answer. That matters
-        // beyond speed: this runs on a cold read from anywhere in the panel,
-        // and the file browser guarantees it validates a path before touching
-        // the server at all. Probing here unconditionally broke that promise.
+        // One candidate is not ambiguous; skip the systemd subprocess (this runs on cold reads,
+        // and the file browser must validate a path before touching the server).
         if (count($candidates) < 2) {
             return $candidates[0] ?? null;
         }
 
-        // Two config directories, so one of them is a leftover. `apt remove`
-        // does not delete /etc/apache2, and apache is listed before
-        // openlitespeed — which is how a box running OpenLiteSpeed answered
-        // "apache", and every vhost the panel then wrote went to a directory
-        // that no longer existed.
+        // Two config directories, so one is a leftover: prefer the running unit.
         foreach ($candidates as $name) {
             if ($this->unitIsActive($name)) {
                 return $name;
             }
         }
 
-        // None of them running: nothing to go on but the order, which is where
-        // this started. Returning the first is no worse than before, and the
-        // installer's own record beats detection on any box it built.
+        // None running: fall back to config order. The installer's own record beats detection anyway.
         return $candidates[0];
     }
 
     /**
      * Is this web server's systemd unit running right now?
      *
-     * The unit name comes from the `services` catalog, which already maps
-     * openlitespeed to `lshttpd` — one list, so a rename cannot desync the two.
+     * The unit name comes from the `services` catalog (openlitespeed maps to `lshttpd`).
      */
     private function unitIsActive(string $name): bool
     {
@@ -486,12 +366,8 @@ class ServerCapabilities
 
     private function hasPhp(): bool
     {
-        // Asked of *every* stack rather than the resolved one. On an
-        // OpenLiteSpeed box PHP lives outside /etc/php entirely, so globbing
-        // for FPM would report a server that has PHP as having none — but the
-        // resolved stack is derived from the web server this very method is
-        // helping to record, and asking for it here is a cycle. Detection
-        // cannot depend on the thing being detected.
+        // Asks *every* stack, not the resolved one: the resolved stack derives from the web server
+        // this detection is helping to record (a cycle), and OLS keeps PHP outside /etc/php.
         foreach ((array) config('server.php_stacks', []) as $stack) {
             $driver = $stack['driver'] ?? null;
 
@@ -505,10 +381,8 @@ class ServerCapabilities
 
     private function hasBinary(string $binary): bool
     {
-        // Looked up directly first. `which` is on the privileged list, and
-        // install.sh records the stack before it writes the sudoers grant, so
-        // `sudo -n which node` was refused and a MERN box was recorded as
-        // having no Node until something else re-checked (bug #1).
+        // Looked up directly first: install.sh records the stack before the sudoers grant exists,
+        // so `sudo -n which` would be refused.
         $candidates = str_contains($binary, '/')
             ? [$binary]
             : array_map(fn (string $dir) => "{$dir}/{$binary}", (array) config('server.binary_search_path'));

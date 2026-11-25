@@ -9,14 +9,11 @@ use App\Rules\SupportedPhpVersion;
  * One installable thing in the application catalog — WordPress, a git repo, a
  * blank PHP site.
  *
- * A site type describes *itself*, including the fields its create form needs.
- * The frontend renders one generic form from that description, so adding a
- * type is one class here and nothing in the UI.
+ * A site type describes *itself*, including the fields its create form needs; the frontend
+ * renders one generic form from that, so adding a type is one class and nothing in the UI.
  *
- * Note what a site type deliberately does NOT decide: the web server. That
- * belongs to the server (only one process can own port 80), and a site type
- * only declares the *serving profile* it needs — the web-server driver knows
- * how to serve each profile.
+ * A site type does NOT decide the web server (that belongs to the server: only one process can
+ * own port 80). It only declares the *serving profile* it needs.
  */
 interface SiteType
 {
@@ -29,16 +26,10 @@ interface SiteType
     /**
      * The app-sidebar items this type supports, by permission name.
      *
-     * The second of the two filters that decide an application's sidebar: the
-     * first is what the user has been granted, this is what the site can
-     * actually do. A WordPress site has no git repository, so a Deployment
-     * screen for it is not a disabled button — it is a screen about nothing.
-     *
-     * Declared here rather than inferred by the frontend so a new site type
-     * costs one class and no frontend change, the same trade the create form
-     * already makes. `AbstractSiteType` derives a sensible set from the
-     * serving profile and the build method; a type overrides only where it
-     * genuinely differs.
+     * The second of two sidebar filters: the first is what the user has been granted, this is
+     * what the site can actually do (a WordPress site has no git repository, so no Deployment
+     * screen). `AbstractSiteType` derives a set from the serving profile and build method; a
+     * type overrides only where it differs.
      *
      * @return array<int, string>
      */
@@ -50,13 +41,9 @@ interface SiteType
     /**
      * Every profile this type can end up served by.
      *
-     * `servingProfile()` is one value because an application row holds one, but
-     * for some types it is only the *default* — a git repository becomes php,
-     * node or static depending on the rendering type the user picks, and
-     * `ServingProfile::resolve()` is what decides. A stack that hosts any
-     * member of this set can offer the type; gating on the single default hid
-     * the git card from every MERN server, which is the one stack whose whole
-     * purpose is deploying Node code.
+     * `servingProfile()` is only the *default* for some types: a git repository becomes php, node
+     * or static depending on the rendering type the user picks (`ServingProfile::resolve()`). A
+     * stack that hosts any member of this set can offer the type.
      *
      * @return array<int, string>
      */
@@ -77,7 +64,7 @@ interface SiteType
     /**
      * Does this application's own process listen on a second loopback port,
      * besides `app_port`? Allocated at create time into `internal_port`
-     * (FS-C22 #8: n8n's task broker).
+     * (e.g. n8n's task broker).
      */
     public function needsInternalPort(): bool;
 
@@ -85,17 +72,10 @@ interface SiteType
      * Does this application's own browser client authenticate using the HTTP
      * `Authorization` header?
      *
-     * HTTP allows exactly one `Authorization` header per request. nginx Basic
-     * Auth consumes it, so an application whose editor or dashboard sends
-     * `Authorization: Bearer <token>` on its API calls cannot also satisfy
-     * Basic Auth -- the token replaces the credentials and nginx answers 401,
-     * or the credentials replace the token and the application answers 401.
-     * There is no third header to put the other one in.
-     *
-     * Types returning true therefore cannot be combined with the panel's
-     * password protection. Confirmed against a live Node-RED site: with
-     * protection enabled, /settings, /flows and /nodes are unreachable in
-     * every combination.
+     * A request carries one `Authorization` header and nginx Basic Auth consumes it, so an
+     * application sending `Authorization: Bearer <token>` cannot also satisfy Basic Auth (one
+     * credential replaces the other and a 401 follows). Types returning true cannot be combined
+     * with the panel's password protection.
      */
     public function authorizationHeaderAuth(): bool;
 
@@ -103,9 +83,8 @@ interface SiteType
      * The unit's `MemoryMax` for this application, or null for the server
      * default.
      *
-     * A systemd cap is a kill, not a warning — a process over it is killed and,
-     * with `Restart=always` and the unit's start limit, ends up in `failed`
-     * with the site returning 502.
+     * A systemd cap is a kill, not a warning: a process over it ends up in `failed` and the
+     * site returns 502.
      */
     public function defaultMemoryMax(): ?string;
 
@@ -123,23 +102,19 @@ interface SiteType
     /**
      * The npm package this type installs, when it installs one.
      *
-     * Exists so the Node range can be read off the release instead of
-     * transcribed into a site type and left to age. Null for a type that
-     * installs from anywhere else — a tarball, a git clone — or installs
-     * nothing at all.
+     * Lets the Node range be read off the release instead of transcribed and left to age. Null
+     * for a type that installs from anywhere else (tarball, git clone) or installs nothing.
      */
     public function npmPackage(): ?string;
 
     /**
      * The PHP versions this application will actually run on.
      *
-     * `['min' => '8.3', 'max' => null]` — either end may be null for open, and
-     * null means the type has no opinion. Most do not: a blank PHP site or a
-     * git deployment runs whatever the user's own code runs, and asserting a
-     * range there would refuse a version that works.
+     * `['min' => '8.3', 'max' => null]` — either end may be null for open, and null means the
+     * type has no opinion (a blank PHP site or git deployment runs whatever the user's code
+     * runs, and a range there would refuse a working version).
      *
-     * Stated as major.minor, because that is how PHP projects state support
-     * and how {@see SupportedPhpVersion} compares it.
+     * Stated as major.minor, as PHP projects state support and as {@see SupportedPhpVersion} compares it.
      *
      * @return array{min: ?string, max: ?string}|null
      */
@@ -148,11 +123,9 @@ interface SiteType
     /**
      * The range for a site that already exists — which may not be the type's.
      *
-     * The same for almost every type. Not for one whose installer picks a
-     * release by PHP: a PrestaShop shop installed as 8.x stops at PHP 8.1 for
-     * good, even though the type now reaches 8.5 by installing 9.x. The PHP
-     * screen asks this, so an existing site is never moved onto a version its
-     * own release cannot run.
+     * The same for almost every type, except where the installer picks a release by PHP: a
+     * PrestaShop installed as 8.x stops at PHP 8.1 for good. The PHP screen asks this, so an
+     * existing site is never moved onto a version its own release cannot run.
      *
      * @return array{min: ?string, max: ?string}|null
      */
@@ -179,11 +152,8 @@ interface SiteType
     public function rules(): array;
 
     /**
-     * How to clone/push a staging site of this type, or null when this type
-     * has no staging recipe. Null is the honest default — most site types
-     * (marketplace PHP apps other than WordPress, admin tools like
-     * phpMyAdmin) have no recipe defined yet, and offering the feature
-     * without one would fail at the first click rather than never appearing.
+     * How to clone/push a staging site of this type, or null when it has no staging recipe
+     * (the feature is then not offered, rather than failing at the first click).
      */
     public function stagingStrategy(): ?StagingStrategy;
 
@@ -200,12 +170,9 @@ interface SiteType
      * URL paths this type's web root holds that must never be served,
      * as PCRE patterns matched against the request path (leading `/`).
      *
-     * For an application that ships its protection as Apache `.htaccess`
-     * files. Apache reads them; nginx never does, and OpenLiteSpeed only
-     * where the vhost turns it on — so on those two the logs, sessions and
-     * source those files deny were downloadable by anyone. Written without
-     * lookaheads: OpenLiteSpeed's regex contexts are not documented as
-     * supporting them.
+     * For an application that ships its protection as Apache `.htaccess` files, which nginx never
+     * reads and OpenLiteSpeed reads only where the vhost enables it. Without lookaheads:
+     * OpenLiteSpeed's regex contexts are not documented as supporting them.
      *
      * @return array<int, string>
      */
@@ -249,25 +216,21 @@ interface SiteType
     public function mimeTypes(): array;
 
     /**
-     * `.env` keys the Environment editor may not change or remove once they
-     * hold a value (bug #17): the key the application encrypts its stored
-     * data with. A different one does not fail loudly — it makes that data
-     * unreadable, and nothing says so until the application next reads it.
+     * `.env` keys the Environment editor may not change or remove once they hold a value: the
+     * key the application encrypts its stored data with. A different one makes that data
+     * unreadable, with nothing saying so until the application next reads it.
      *
      * @return array<int, string>
      */
     public function lockedEnvironmentKeys(): array;
 
     /**
-     * `.env` keys the panel itself relies on, refused in the Environment editor
-     * the same way (bug #7, re-test 2026-10-05): the port the vhost proxies to,
-     * the folder the service keeps its data in, the address it listens on.
-     * A different value does not fail on save — it fails at the next restart,
-     * as a site that answers 502 or an application published past its vhost.
+     * `.env` keys the panel itself relies on, refused in the Environment editor the same way:
+     * the port the vhost proxies to, the folder the service keeps its data in, the address it
+     * listens on. A different value fails at the next restart (502, or an application published
+     * past its vhost).
      *
-     * Kept apart from {@see lockedEnvironmentKeys()} only for the message: the
-     * reason is different, and telling someone their port is an encryption key
-     * would be wrong.
+     * Kept apart from {@see lockedEnvironmentKeys()} only for the message: the reason differs.
      *
      * @return array<int, string>
      */

@@ -11,65 +11,38 @@ use App\Services\Server\ServerOpsResult;
 /**
  * A site's PHP settings as its own `.ini`, for the stack that has no pools.
  *
- * On PHP-FPM every one of these directives is carried by the pool file as a
- * `php_admin_value`. OpenLiteSpeed has no pool — `lshttpd` spawns LSPHP itself
- * — so until now the settings screen on an OLS server stored `memory_limit`,
- * `upload_max_filesize` and the rest and applied **none** of them: a 200, a
- * saved row, and a server that had not moved. The guard written to prevent
- * exactly that asked "does this stack have pools", which is false here, so it
- * never fired on the one stack it was needed for.
+ * On PHP-FPM these directives are carried by the pool file as `php_admin_value`. OpenLiteSpeed
+ * has no pool (`lshttpd` spawns LSPHP itself), so without this the settings screen would store
+ * the values and apply none of them.
  *
  * ## Why an .ini file rather than `phpIniOverride`
  *
- * OpenLiteSpeed's vhost config has a `phpIniOverride` block that takes
- * `php_admin_value` lines, and it is the obvious answer. It is also the wrong
- * one: `disable_functions` cannot be set that way at all — PHP only honours it
- * from a php.ini, which the LiteSpeed maintainers say plainly ("it must be set
- * in php.ini … we cannot override via the php_admin_value") — and there are
- * repeated reports of `memory_limit` not taking either. Using it would have
- * shipped a fix that silently ignores part of what the user typed, which is
- * the bug this class exists to remove, moved somewhere harder to see.
- *
- * A real `.ini` honours every directive we write, `open_basedir` and
- * `disable_functions` included, so the OLS site ends up with the same
- * enforcement the FPM pool gives.
+ * OpenLiteSpeed's `phpIniOverride` block cannot set `disable_functions` (PHP honours it only
+ * from a php.ini) and is unreliable for `memory_limit`. A real `.ini` honours every directive,
+ * `open_basedir` and `disable_functions` included, so the site gets the enforcement the FPM
+ * pool gives.
  *
  * ## How LSPHP is told to read it
  *
- * Each OLS site already has its own `extprocessor` block — its own socket, its
- * own `extUser`. The block gets `env PHP_INI_SCAN_DIR`, which is the mechanism
- * LiteSpeed's own documentation points panels at.
+ * Each OLS site's own `extprocessor` block gets `env PHP_INI_SCAN_DIR`.
  *
- * **The leading colon in that value is load-bearing.** Per php.net, a blank
- * entry means "also scan the directory compiled in with
- * `--with-config-file-scan-dir`". Without it the value *replaces* the default
- * scan directory instead of adding to it — and that directory is where every
- * extension's `.ini` lives, so a bare path would take mysqli, curl and opcache
- * away from the site. It would not look like a settings bug; it would look
- * like PHP had been reinstalled wrong.
- *
- * Our directory is scanned last, so our values win over the defaults, which is
- * the same precedence `php_admin_value` has in a pool.
+ * **The leading colon in that value is load-bearing.** A blank entry means "also scan the
+ * compiled-in `--with-config-file-scan-dir`"; without it the value replaces the default scan
+ * directory, which holds every extension's `.ini`, and the site loses mysqli, curl and
+ * opcache. Our directory is scanned last, so our values win (like `php_admin_value`).
  *
  * ## Where the file lives
  *
- * `{app root}/.panel/php/` — inside the panel's own directory, which is above
- * the document root and therefore not a URL. `.panel` is root-owned and
- * deliberately never handed to the site user, so a site cannot rewrite the
- * limits imposed on it; it is 0755 and the file 0644, so the LSPHP process
- * running as that user can still read it.
- *
- * Its own subdirectory rather than `.panel` itself because PHP scans a
- * directory for **every** `.ini` in it. `.panel` also holds the Basic Auth
- * credential and the WAF detect log, and a scan directory has to contain
- * exactly what we mean it to contain, now and after somebody adds the next
- * file to `.panel`.
+ * `{app root}/.panel/php/`: above the document root, so not a URL. `.panel` is root-owned and
+ * never handed to the site user, so a site cannot rewrite its own limits (0755 directory, 0644
+ * file, so LSPHP running as the site user can read it). A subdirectory of its own because PHP
+ * scans a directory for every `.ini`, and `.panel` also holds the Basic Auth credential and
+ * the WAF detect log.
  */
 class SitePhpIni
 {
     /**
-     * `zz-` so that alphabetical order puts it last if this directory ever
-     * holds more than one file. Ours is the override; it goes on top.
+     * `zz-` so alphabetical order puts it last: ours is the override.
      */
     private const FILE = 'zz-panel.ini';
 
@@ -102,10 +75,8 @@ class SitePhpIni
     /**
      * Write the site's `.ini`, creating its directory.
      *
-     * Called from the OpenLiteSpeed driver's `apply()`, in the same pass that
-     * renders the vhost naming it — the same arrangement as the log directory
-     * and `.panel` itself. One writer means the file and the `env` line that
-     * points at it cannot drift apart.
+     * Called from the OpenLiteSpeed driver's `apply()`, in the same pass that renders the vhost
+     * naming it, so the file and the `env` line cannot drift apart.
      */
     public function apply(Application $application, ?ApplicationPhpSettings $settings = null): ServerOpsResult
     {
@@ -141,51 +112,18 @@ class SitePhpIni
     }
 
     /**
-     * The session directory this file's `session.save_path` names.
-     *
-     * On FPM the pool builder creates it, because FPM refuses to start a pool
-     * whose session path is missing — so the mistake is loud. There is no pool
-     * on this stack and nothing refuses anything: the ini was written naming a
-     * directory that did not exist, LSPHP started happily, and every site died
-     * at `session_start()` with "No such file or directory". phpMyAdmin and
-     * WordPress are both unusable in that state, and nothing in the panel says
-     * why. Whoever writes the path owns creating it.
-     *
-     * ONLY THE SESSION DIRECTORY IS HANDED TO THE SITE, not `.panel` around
-     * it. The pool builder chowns `-R` from `.panel` down, which is harmless
-     * on FPM because the limits live in a pool file under /etc. Here they live
-     * in `.panel/php/zz-panel.ini`, so the same `-R` would give a site write
-     * access to its own `disable_functions` and `open_basedir` -- it could
-     * lift every restriction placed on it by editing one file it owns.
-     */
-    /**
      * The PHP error log this file names, created so LSPHP can write to it.
      *
-     * `logs/` is root-owned, group the site user, 0750 -- read and traverse
-     * for the site, write for nobody but root. ApplicationLogDirectory explains
-     * why at length, and the reasoning is sound: write permission on a
-     * directory is permission to unlink what is inside it, so a user-owned log
-     * directory lets a compromised site replace access.log with a symlink to
-     * /etc/cron.d and have a root process append attacker-chosen text into it.
+     * `logs/` is root-owned, group the site user, 0750 (see ApplicationLogDirectory): write
+     * permission on a directory allows unlinking what is inside, so a user-owned log directory
+     * would let a compromised site swap access.log for a symlink to /etc/cron.d. That model
+     * assumes a root master opens the log (nginx, Apache, php-fpm); `lshttpd` spawns LSPHP as
+     * the site user and hands it no descriptor, so PHP cannot open the log and falls back to
+     * stderr (the error log viewer stays empty).
      *
-     * Its corollary is the part LSAPI breaks. It says "every writer here is a
-     * root master process handing a descriptor down... nothing running as the
-     * site user ever needs to create a file in here" -- true of nginx, Apache
-     * and php-fpm, which opens a pool's error_log before dropping privileges.
-     * lshttpd spawns LSPHP *as* extUser and hands it no such descriptor, so
-     * PHP opened the path itself, was refused, and fell back to stderr. The
-     * panel's PHP error log viewer was empty on every OpenLiteSpeed site, and
-     * looked like a site that had never errored.
-     *
-     * Creating the FILE rather than loosening the DIRECTORY is what keeps both
-     * properties. The site can write to a file it owns; it still cannot create,
-     * delete or replace anything in `logs/`, so the symlink swap that ownership
-     * model exists to prevent stays impossible. It is the same arrangement
-     * php-fpm produces -- a site-writable log inside a root-owned directory --
-     * reached by the panel opening the file instead of a master process.
-     *
-     * Only on this stack: SitePhpIni exists because OpenLiteSpeed has no pools.
-     * On FPM the master still opens the descriptor and nothing here runs.
+     * Creating the FILE rather than loosening the DIRECTORY keeps both properties: the site can
+     * write to a file it owns but cannot create, delete or replace anything in `logs/`.
+     * Only on this stack: on FPM the master still opens the descriptor.
      */
     private function ensureErrorLog(Application $application): ?ServerOpsResult
     {
@@ -211,11 +149,22 @@ class SitePhpIni
             return $owned;
         }
 
-        // 0644, not 0600: an error log is the one file a site owner most needs
-        // to read, and the directory above already decides who gets that far.
+        // 0644, not 0600: the site owner must read it; the directory above decides who gets there.
         return $this->serverOps->run(['chmod', '0644', $path], $context, timeout: 15);
     }
 
+    /**
+     * The session directory this file's `session.save_path` names.
+     *
+     * On FPM the pool builder creates it (FPM refuses a pool whose session path is missing).
+     * Here nothing refuses, so a missing directory kills every site at `session_start()`:
+     * whoever writes the path creates it.
+     *
+     * ONLY THE SESSION DIRECTORY IS HANDED TO THE SITE, not `.panel` around it: the pool
+     * builder's `chown -R` from `.panel` is harmless on FPM (limits live in /etc), but here the
+     * limits live in `.panel/php/zz-panel.ini`, and a site that owned it could lift its own
+     * `disable_functions` and `open_basedir`.
+     */
     private function ensureSessionDirectory(Application $application): ?ServerOpsResult
     {
         $user = $application->systemUser?->username;
@@ -233,9 +182,8 @@ class SitePhpIni
             return $made;
         }
 
-        // `-h`, and the chmod as the user: neither may follow a `sessions`
-        // that has been replaced by a link. Same reasoning as
-        // PoolManager::ensureSiteDirectories().
+        // `-h`, and the chmod as the user: neither may follow a `sessions` replaced by a link
+        // (as in PoolManager::ensureSiteDirectories()).
         $owned = $this->serverOps->run(['chown', '-h', $user.':'.$user, $path], $context, timeout: 30);
 
         if ($owned->failed()) {
@@ -247,9 +195,8 @@ class SitePhpIni
     }
 
     /**
-     * Remove it again, for a site moving onto a stack that carries these in a
-     * pool instead. Left behind it would be a second, invisible source of
-     * truth for the same values.
+     * Remove it, for a site moving onto a stack that carries these in a pool (left behind it
+     * would be a second, invisible source of truth).
      */
     public function remove(Application $application): ServerOpsResult
     {
@@ -276,18 +223,16 @@ class SitePhpIni
             'max_input_vars = '.(int) $effective['max_input_vars'],
             'allow_url_fopen = '.($effective['allow_url_fopen'] ? 'On' : 'Off'),
             '',
-            // Both outside the document root, both the same paths the pool
-            // uses, so a server migrated between web servers keeps its
-            // sessions and keeps logging to the file the log viewer reads.
+            // Both outside the document root and the same paths the pool uses, so a migrated
+            // site keeps its sessions and log.
             'session.save_path = '.$this->pools->sessionPath($application),
             'session.gc_maxlifetime = '.(int) $effective['session_gc_maxlifetime'],
             'error_log = '.$this->pools->errorLogPath($application),
             'log_errors = On',
         ];
 
-        // Only when set. `date.timezone =` with nothing after it is not "leave
-        // it alone", it is an empty timezone, and PHP warns on every date call
-        // for the rest of the request.
+        // Only when set: an empty `date.timezone =` is an empty timezone, and PHP warns on
+        // every date call.
         if (filled($effective['php_timezone'])) {
             $lines[] = 'date.timezone = '.$effective['php_timezone'];
         }
@@ -296,13 +241,10 @@ class SitePhpIni
             $lines[] = 'auto_prepend_file = '.$effective['auto_prepend_file'];
         }
 
-        // Asked of the pool builder rather than recomputed. The base paths a
-        // site cannot do without — its own root, its own session directory,
-        // /tmp — are the panel's answer, not FPM's, and a second copy here is
-        // how the two web servers would come to enforce different things.
+        // Asked of the pool builder, not recomputed, so both web servers enforce the same
+        // base paths (site root, session directory, /tmp).
         if (($openBasedir = $this->pools->openBasedirFor($application, $settings)) !== null) {
-            // Quoted: the value is colon-separated paths, and an unquoted ini
-            // value ends at a comment character. A path is user input.
+            // Quoted: an unquoted ini value ends at a comment character, and a path is user input.
             $lines[] = 'open_basedir = "'.$openBasedir.'"';
         }
 
@@ -321,15 +263,9 @@ class SitePhpIni
     }
 
     /**
-     * Read from the database, never from an already-loaded relation.
-     *
-     * This is written from inside `apply()`, which the settings endpoint calls
-     * *after* saving — through `PoolIsolator::republish()`, several layers
-     * down, on an `Application` whose `phpSettings` relation was loaded before
-     * the save. Trusting that relation wrote the file from the values the site
-     * had a moment ago: the request returned 200, the row held 512M, and the
-     * ini on the server said 256M. Exactly the class of bug this whole file
-     * exists to remove, so it does not get to reappear one layer lower.
+     * Read from the database, never from an already-loaded relation: `apply()` runs after the
+     * settings endpoint saves (via `PoolIsolator::republish()`), on an `Application` whose
+     * `phpSettings` was loaded before the save, and would write the previous values.
      */
     private function settingsFor(Application $application): ApplicationPhpSettings
     {

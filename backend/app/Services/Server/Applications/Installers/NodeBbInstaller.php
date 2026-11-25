@@ -11,28 +11,16 @@ use Illuminate\Support\Str;
 /**
  * NodeBB — forum software.
  *
- * The only one of the Node applications that needs a database, and the only
- * one in the whole catalog that **cannot use MySQL**. NodeBB speaks MongoDB,
- * Redis or PostgreSQL; handing it a MySQL database would fail inside its own
- * setup with a message about a missing driver, which tells the user nothing
- * about what went wrong. `acceptedEngines()` is what stops that: without a
- * MongoDB on the server the install fails up front, naming the reason.
+ * The only Node application that needs a database, and it **cannot use MySQL**: it speaks
+ * MongoDB, Redis or PostgreSQL. `acceptedEngines()` makes the install fail up front, naming
+ * the reason, instead of failing inside NodeBB's own setup.
  *
- * Setup is the fragile part, and it is worth being honest about why.
- * `./nodebb setup` is interactive, and upstream has an open issue asking for a
- * config-file path (NodeBB/NodeBB#12958) — there isn't one. What does work,
- * and is what their own cloud tooling uses, is passing the answers as
- * environment variables. Two consequences follow:
+ * `./nodebb setup` is interactive and has no config-file path upstream (NodeBB/NodeBB#12958),
+ * so the answers go in as environment variables. Two consequences:
  *
- *  - the variables carry the database and admin passwords, so they go through
- *    a 0600 file rather than the command line;
- *  - `nodebb setup` rewrites `config.json`, so the file is written **after**
- *    setup as well as before — writing it only once loses whatever the panel
- *    put there.
- *
- * This is the least-verified installer in the catalog. It follows upstream's
- * documented environment-variable path, but that path has no test upstream
- * either, and it is the first thing to check on real hardware.
+ *  - the variables carry the database and admin passwords, so they go through a 0600 file,
+ *    not the command line;
+ *  - `nodebb setup` rewrites `config.json`, so the file is written **after** setup as well as before.
  */
 class NodeBbInstaller extends AbstractNodeInstaller
 {
@@ -47,20 +35,12 @@ class NodeBbInstaller extends AbstractNodeInstaller
     }
 
     /**
-     * MongoDB and PostgreSQL, in that order — the first available engine wins,
-     * so MongoDB stays the default on a server that has both and nothing
-     * changes for existing forums.
+     * MongoDB and PostgreSQL, in that order — the first available engine wins, so MongoDB stays
+     * the default on a server that has both.
      *
-     * This list is not a label. `config()` writes the driver name *and* its
-     * settings block, so an engine named here without a matching block would
-     * produce a forum configured for the other database with these
-     * credentials written nowhere — created, reported Active, and broken at
-     * first load. Both blocks exist; see `postgresConfig()` for where its
-     * keys come from.
-     *
-     * Redis would also work for NodeBB and is deliberately still absent: the
-     * panel does not create Redis databases or users, so there would be
-     * nothing to hand it.
+     * Not a label: `config()` writes the driver name *and* its settings block, so an engine
+     * listed here needs a matching block (see `postgresConfig()`). Redis would also work but is
+     * absent: the panel does not create Redis databases or users.
      */
     public function acceptedEngines(): array
     {
@@ -68,10 +48,8 @@ class NodeBbInstaller extends AbstractNodeInstaller
     }
 
     /**
-     * `--no-daemon` because the unit is `Type=simple`: without it the loader
-     * forks and exits, systemd sees the parent die and kills the children it
-     * has left in the cgroup. `--no-silent` sends the logs to the journal
-     * instead of a file nobody looks at.
+     * `--no-daemon` because the unit is `Type=simple`: otherwise the loader forks and exits and
+     * systemd kills the children it left behind. `--no-silent` sends logs to the journal.
      */
     public function startCommand(Application $application, string $documentRoot): ?string
     {
@@ -96,53 +74,26 @@ class NodeBbInstaller extends AbstractNodeInstaller
 
         $this->writeSecretFile($application, "{$documentRoot}/config.json", $config);
 
-        // `nodebb setup` installs the dependencies itself before running, so
-        // there is no separate npm step. The answers travel in a 0600 file —
-        // the admin password and the database password are both in here.
+        // `nodebb setup` installs the dependencies itself. The answers travel in a 0600 file (they
+        // include the admin and database passwords).
         //
-        // **The names matter, and getting them wrong installed nothing.** The
-        // previous set — `admin__username`, `admin__password`, `admin__email` —
-        // was a guess at a double-underscore-to-colon convention NodeBB does not
-        // apply here. `checkSetupFlagEnv()` in `src/install.js` does not walk
-        // `process.env` looking for a separator; it tests a **hardcoded map**
-        // (`NODEBB_ADMIN_USERNAME` → `admin:username`, and so on) and ignores
-        // every name outside it. So all four answers were invisible, the
-        // required-values check failed, and NodeBB called a bare
-        // `process.exit()` — which is **exit code 0**. The panel read success
-        // and carried on, leaving a forum with no `config` document, therefore
-        // no `theme:id`, therefore no theme templates, therefore
-        // "Failed to lookup view!" on every request.
+        // **The names matter:** `checkSetupFlagEnv()` in NodeBB's `src/install.js` tests a hardcoded
+        // map (`NODEBB_ADMIN_USERNAME` → `admin:username`, ...) and ignores every other name. With
+        // wrong names setup fails its required-values check but exits 0, leaving a forum with no
+        // `config` document ("Failed to lookup view!" on every request).
+        // `admin:password:confirm` is not passed: NodeBB derives it, and no env name maps to it.
         //
-        // These names are read. `admin:password:confirm` is not passed because
-        // NodeBB derives it itself (`setupVal['admin:password:confirm'] =
-        // setupVal['admin:password']`), and there is no env name mapped to it —
-        // an unmapped `NODEBB_*` var lands on `setupVal[undefined]`.
-        //
-        // Upstream also accepts the whole answer set as positional JSON, which
-        // is the other documented path. It is deliberately not used: the
-        // argument holds the admin password, and anything on a command line is
-        // readable in `/proc/<pid>/cmdline` for as long as the command runs.
-        // That is the exact exposure `runWithSecretEnv` exists to avoid.
+        // Upstream also accepts the answers as positional JSON, deliberately not used: a command
+        // line is readable in `/proc/<pid>/cmdline` (the exposure `runWithSecretEnv` avoids).
         $this->runWithSecretEnv('install_app', $application, ['./nodebb', 'setup'], $documentRoot, [
             'NODEBB_ADMIN_USERNAME' => (string) ($settings['admin_username'] ?? 'admin'),
             'NODEBB_ADMIN_EMAIL' => (string) ($settings['admin_email'] ?? ''),
             'NODEBB_ADMIN_PASSWORD' => (string) ($settings['admin_password'] ?? ''),
         ]);
 
-        // Setup rewrote config.json, and the panel's URL and port have to
-        // survive that or the site answers on 4567. **Patched, not replaced.**
-        //
-        // Overwriting it wholesale put back exactly the six keys this class
-        // knows about and silently discarded anything `setup` had added for
-        // itself. The next command to run is `./nodebb build`, which reads
-        // this file to reach the database and find the active theme — and a
-        // build that cannot do that compiles no templates *and still exits 0*,
-        // which is the failure this installer has now produced twice.
-        //
-        // Whether that discarded key is the cause is unproven. Writing over a
-        // file the application just wrote, to restore values that could be
-        // edited in place, is indefensible either way — and the mutator that
-        // does it correctly was already here, used by syncUrl() below.
+        // Setup rewrote config.json; the panel's URL and port must survive it or the site answers on
+        // 4567. **Patched, not replaced:** overwriting it discards whatever `setup` added, and the
+        // next step (`./nodebb build`) reads this file to reach the database and find the theme.
         $this->configMutator->transform(
             $application,
             "{$documentRoot}/config.json",
@@ -157,41 +108,15 @@ class NodeBbInstaller extends AbstractNodeInstaller
                 $current['port'] = (int) ($application->app_port ?: 4567);
                 // Reached through the reverse proxy only.
                 $current['bind_address'] = '127.0.0.1';
-                // Every app this panel provisions sits behind its nginx, and
-                // without this nobody can log in. `webserver.js` reads
-                // `trust_proxy` and **defaults it to `false`**, so Express sees
-                // `req.secure === false` on an https request that arrived over
-                // the proxy; express-session then refuses to set a `secure`
-                // session cookie, no session is established, and the login POST
-                // comes back `?error=csrf-invalid`. The forum renders fine,
-                // which is what makes it look like a login bug rather than a
-                // proxy one.
+                // Without `trust_proxy` nobody can log in behind the panel's nginx: it defaults to
+                // `false`, so Express sees `req.secure === false` on https requests, no `secure`
+                // session cookie is set, and login fails with `?error=csrf-invalid`.
+                // Written here, not in `config()`, because `setup` rewrites config.json.
                 //
-                // Upstream ships `src/upgrades/4.14.3/trust_proxy.js` to
-                // backfill exactly this value, but an upgrade run against a
-                // database setup never populated marks every migration skipped,
-                // so the backfill did not happen either.
-                //
-                // Written here rather than in `config()` because `setup`
-                // rewrites `config.json` from its own answers; this patch runs
-                // after it and is the only place the value survives.
-                //
-                // `1`, not `true`, and the difference is a spoofable client IP.
-                // Upstream's own backfill writes `true`, and its startup warning
-                // says to enable this "only when NodeBB is behind a reverse
-                // proxy that **strips or overwrites** X-Forwarded-For" — this
-                // panel's nginx does neither. `node.blade.php` sends
-                // `X-Forwarded-For $proxy_add_x_forwarded_for`, which *appends*
-                // the real peer to whatever the client already sent. Under
-                // `true` Express trusts every hop and takes the **leftmost**
-                // entry, so a request carrying its own `X-Forwarded-For: 1.2.3.4`
-                // decides its own `req.ip` — and NodeBB rate limiting, IP bans
-                // and moderation logs all read that.
-                //
-                // `1` trusts exactly one hop, so Express takes the entry nginx
-                // itself appended: the real client, and not forgeable from
-                // outside. `req.secure` is satisfied either way — it reads
-                // `X-Forwarded-Proto`, which the vhost sets rather than appends.
+                // `1`, not `true`: the panel's nginx *appends* to `X-Forwarded-For`, and `true` makes
+                // Express take the leftmost (client-supplied) entry, so a client could forge `req.ip`
+                // (rate limits, IP bans, moderation logs). `1` trusts exactly one hop, the entry nginx
+                // appended.
                 $current['trust_proxy'] = 1;
 
                 return json_encode(
@@ -201,36 +126,14 @@ class NodeBbInstaller extends AbstractNodeInstaller
             },
         );
 
-        // `setup` builds the assets itself, so this looks redundant — and that
-        // reasoning is exactly what left it out. `setup`'s build can fail
-        // **without failing setup**: the reported symptom was a forum that
-        // installed cleanly, reported active, and answered every request with
-        // "Internal server error. Failed to lookup view! Did you run
-        // `./nodebb build`?" — Express finding no `.tpl` files under
-        // build/public/templates because nothing had compiled them.
+        // `setup` builds assets itself, but that build can fail **without failing setup**, leaving a
+        // forum that answers "Failed to lookup view!" everywhere. As its own step, `runWithNode`
+        // throws on a non-zero exit, so a failed build fails provisioning with its output attached.
         //
-        // Running it as its own step is therefore not a second build, it is
-        // the only one whose result is checked: `runWithNode` throws on a
-        // non-zero exit, so a failed build now fails provisioning with its
-        // output attached instead of producing a site that 500s on every page.
-        //
-        // The usual reason it dies is memory — the build runs its targets in
-        // parallel and will exhaust a small VPS — which is precisely the kind
-        // of failure that must be reported rather than swallowed.
-        //
-        // Reporting it was not enough, and this is the third pass. On a 2 GB
-        // box the build was still failing, and the report said nothing,
-        // because the process was not failing — it was being **killed**. V8
-        // sizes its heap from a compiled-in default rather than from the
-        // machine, grows past what the box has, and the OOM killer takes it:
-        // SIGKILL, no stderr, exit 137, a reference pointing at an empty log.
-        //
-        // `BuildMemoryBudget` caps the heap to a share of what is actually
-        // available, which is upstream's own advice for small hosts. Under a
-        // cap V8 collects rather than allocates, so the build usually now
-        // finishes; and when it truly does not fit it says
-        // `JavaScript heap out of memory` and exits non-zero *with output*,
-        // instead of disappearing.
+        // A common cause is memory: V8 sizes its heap from a compiled-in default, grows past a small
+        // box, and the OOM killer sends SIGKILL (exit 137, no stderr). `BuildMemoryBudget` caps the
+        // heap to what is available, so a build that does not fit reports
+        // `JavaScript heap out of memory` with output instead of vanishing.
         $build = $this->runWithNode(
             'build',
             $application,
@@ -239,51 +142,24 @@ class NodeBbInstaller extends AbstractNodeInstaller
             app(BuildMemoryBudget::class)->nodeOptions(),
         );
 
-        // A non-zero exit has already thrown by this point — `run()` does it
-        // for every step, and classifies an OOM kill while it is there.
+        // A non-zero exit has already thrown by this point (`run()` does it for every step).
         $this->assertAssetsBuilt($application, $documentRoot, $build);
     }
 
     /**
      * Prove the build produced templates, rather than believing its exit code.
      *
-     * Checking the exit status was not enough, and this is the second pass at
-     * the same bug: a forum created *after* the build step was added still
-     * answered "Failed to lookup view! Did you run `./nodebb build`?" on every
-     * request, with no error anywhere in provisioning. So `./nodebb build`
-     * exited 0 having compiled nothing — which the NodeBB community reports
-     * too ("it seems build is failing silently", a webpack run logging
-     * `Module not found` and finishing anyway).
-     *
-     * `build/public/templates` is the directory Express is looking in when it
-     * raises that error, so it is the thing worth asserting: no `.tpl` file
-     * there means the forum is broken, whatever the build said about itself.
-     *
-     * The same detect-don't-trust rule the rest of the panel already follows —
-     * `php-fpm -t` before a reload, `systemctl is-active` after a start. A
-     * command's return value is a claim; the artifact is the evidence.
-     *
-     * **Counting `.tpl` files was not enough, and this is the third pass.** A
-     * forum whose `setup` never ran still passed this check: the core templates
-     * ship with the clone and compile without a database, so 266 `.tpl` files
-     * existed and "is there one?" answered yes. What was missing was everything
-     * the *theme* provides — with no `config` document there is no `theme:id`,
-     * so the theme's templates are never merged into the build.
-     *
-     * `header.tpl` and `footer.tpl` come from the theme and every single page
-     * render needs both, which makes them the honest test: their absence is
-     * precisely the state that produces "Failed to lookup view!". Asserting
-     * them also covers the setup failure upstream of it, because a database
-     * that setup never populated cannot yield a theme.
+     * `./nodebb build` can exit 0 having compiled nothing. `build/public/templates` is where
+     * Express looks, so `header.tpl` and `footer.tpl` must be there: both come from the *theme*
+     * (every page render needs them), and a database that `setup` never populated yields no
+     * theme. Counting any `.tpl` file is not enough: the core templates ship with the clone.
      *
      * @throws ProvisioningFailedException
      */
     private function assertAssetsBuilt(Application $application, string $documentRoot, ServerOpsResult $build): void
     {
-        // Both names in one pass. No `-quit` here — unlike the old check this
-        // is not asking "is there any file?" but "are these two present?", and
-        // stopping at the first hit would accept a build that produced only one
-        // of them.
+        // Both names in one pass, no `-quit`: stopping at the first hit would accept a build that
+        // produced only one of them.
         $probe = $this->serverOps->run(
             [
                 'runuser', '-u', $application->systemUser->username, '--',
@@ -305,11 +181,7 @@ class NodeBbInstaller extends AbstractNodeInstaller
             return;
         }
 
-        // The *build's* reference, not the probe's. The probe found the
-        // problem; the build caused it, and the build's log entry is the one
-        // holding the output that says why — which the error log now surfaces.
-        // Reporting the probe here would hand the user a reference whose
-        // recorded output is an empty `find`.
+        // The *build's* reference, not the probe's: the build's log entry holds the output that says why.
         throw new ProvisioningFailedException('build', $build->reference);
     }
 
@@ -318,17 +190,13 @@ class NodeBbInstaller extends AbstractNodeInstaller
      */
     private function config(Application $application, string $documentRoot, array $context): string
     {
-        // NodeBB loads its driver as `require('./' + nconf.get('database'))`
-        // against `src/database/`, so this string is a filename, not a label:
-        // `postgres`, never `postgresql`. Read from NodeBB v4.x's own
-        // `src/database/index.js` (2026-09-10), which is the branch the panel
-        // clones.
+        // NodeBB loads its driver as `require('./' + nconf.get('database'))` from `src/database/`,
+        // so this is a filename, not a label: `postgres`, never `postgresql`.
         $engine = (string) ($context['engine'] ?? 'mongodb');
         $driver = $engine === 'postgresql' ? 'postgres' : 'mongo';
 
         return json_encode([
-            // NodeBB builds every absolute link from this, so a wrong value is
-            // a forum whose links all point somewhere else.
+            // NodeBB builds every absolute link from this.
             'url' => $application->url(),
             'secret' => Str::random(40),
             'database' => $driver,
@@ -358,20 +226,11 @@ class NodeBbInstaller extends AbstractNodeInstaller
     }
 
     /**
-     * The keys NodeBB actually reads, taken from its own source rather than
-     * from its docs: `postgresModule.questions` in `src/database/postgres.js`
-     * names `postgres:host|port|username|password|database|ssl`, and
-     * `src/database/postgres/connection.js` maps `postgres.username` onto
-     * node-postgres's `user`. Getting that one wrong would connect as nobody.
+     * The keys NodeBB reads, taken from its source (`src/database/postgres.js`, `postgres/connection.js`):
+     * `postgres:host|port|username|password|database|ssl`, with `username` mapped onto node-postgres's `user`.
      *
-     * `port` as an int, unlike the mongo block's string: that is NodeBB's own
-     * default type for this field, and `connection.js` passes it straight to
-     * node-postgres.
-     *
-     * `ssl` false and explicit. The panel's PostgreSQL only listens on the
-     * loopback, so there is nothing to encrypt between two processes on one
-     * box — and connection.js reads it as `String(postgres.ssl) === 'true'`,
-     * so an absent value would work by accident rather than by decision.
+     * `port` is an int, unlike the mongo block's string (NodeBB's own type for this field). `ssl` is
+     * an explicit false: the panel's PostgreSQL listens on loopback only.
      *
      * @param  array<string, mixed>  $context
      * @return array<string, mixed>

@@ -10,83 +10,56 @@ use App\Services\Server\ServerOpsResult;
 /**
  * Resumable, arbitrarily large uploads for the file manager.
  *
- * `FileBrowser::upload()` buffers a whole file through PHP memory, which is
- * why it is capped at UPLOAD_MAX_BYTES — its own docblock points at SFTP for
- * anything bigger. This is that "anything bigger", without the SFTP.
+ * `FileBrowser::upload()` buffers a whole file through PHP memory and is capped at
+ * UPLOAD_MAX_BYTES; this is the "anything bigger", without SFTP.
  *
- * The panel shares a server with the sites it hosts, so the cost that matters
- * is not the upload's duration, it is how much it disturbs everything else on
- * the box. Two things dominate that, and the design is shaped entirely around
- * them:
+ * The panel shares a server with the sites it hosts, so the design minimises disturbance to them:
  *
- * **Write amplification.** A naive upload writes every byte three times —
- * nginx spools the body to `client_body_temp`, PHP's multipart parser spools
- * it again to `upload_tmp_dir`, then the target write makes a third copy. A
- * 1 GB upload becomes 3 GB of disk traffic, and the damage is not the writes
- * themselves: streaming 3 GB through the page cache evicts the *hosted sites'*
- * hot files, so their next requests hit disk. Here each chunk arrives as a raw
- * body (no multipart parser, no PHP temp file), nginx buffers it in RAM rather
- * than on disk (`client_body_buffer_size` >= chunk size), and it is appended
- * straight to the part file. One write, not three.
+ * **Write amplification.** A naive upload writes every byte three times (nginx
+ * `client_body_temp`, PHP's `upload_tmp_dir`, the target), and streaming that through the page
+ * cache evicts the hosted sites' hot files. Here each chunk arrives as a raw body (no multipart
+ * parser, no PHP temp file), nginx buffers it in RAM (`client_body_buffer_size` >= chunk size),
+ * and it is appended straight to the part file: one write, not three.
  *
- * **Memory.** Chunks are piped to `tee` as a *stream*, never as a string, so
- * a 50 GB upload costs the same resident memory as a 50 KB one. This is why
- * ServerOps::run() accepts a resource.
+ * **Memory.** Chunks are piped to `tee` as a *stream*, never a string, so memory use does not
+ * grow with the upload (hence ServerOps::run() accepts a resource).
  *
- * Assembly is free: the part file lives inside the site's own tree, so
- * finalising is `mv` — a same-filesystem rename, which moves no data and is
- * atomic. A half-finished upload is therefore never visible at the target
- * path, and never partially served.
+ * Assembly is free: the part file lives in the site's own tree, so finalising is an atomic
+ * same-filesystem `mv`, and a half-finished upload is never visible at the target path.
  *
- * State is the part file itself. Its size *is* the resume offset, so there is
- * no session table to keep in sync, nothing to reconcile if the panel restarts
- * mid-upload, and — deliberately — no database write per chunk.
+ * State is the part file itself: its size *is* the resume offset, so there is no session table
+ * and no database write per chunk.
  *
- * Everything runs as the site's own Linux user, for the reasons in
- * FileBrowser's docblock; the part file is owned by the site from the first
- * byte, so finalising never has to juggle ownership.
+ * Everything runs as the site's own Linux user (see FileBrowser), so the part file is owned by
+ * the site from the first byte.
  */
 class ChunkedUpload
 {
     /**
-     * Where part files live, under the application's `.panel` directory —
-     * which sits ABOVE the document root.
+     * Where part files live, under the application's `.panel` directory, which sits ABOVE the
+     * document root.
      *
-     * This used to be relative to the document root, defended as "inside the
-     * site's own tree so that finalising is a rename rather than a copy across
-     * filesystems". The requirement is *same filesystem*, not *inside the
-     * served directory*, and `{home}/{slug}/.panel/uploads` and
-     * `{home}/{slug}/public_html/…` are both under `{home}/{slug}` — so `mv`
-     * is still a rename. The old comment reached the served directory from a
-     * premise that never required it.
-     *
-     * Being dotted was the only thing keeping a part file off the public
-     * internet, and that is one deny rule per web server — the same rule
-     * OpenLiteSpeed did not apply to `.panel`, which is why the credential
-     * file, the file backups and the session directory all moved above the
-     * webroot already. A part file holds whatever is being uploaded, so it
-     * belongs on the same side of that line.
+     * `mv` is a rename only on the *same filesystem*, and `.panel/uploads` and `public_html` are
+     * both under `{home}/{slug}`. Never put it in the webroot: a dotted name is the only thing
+     * keeping a part file off the public internet (one deny rule per web server, which
+     * OpenLiteSpeed did not apply to `.panel`).
      */
     public const TEMP_DIR = 'uploads';
 
     /**
-     * Free space that must remain after a chunk is written, whichever is
-     * larger: a fixed floor or a share of the disk.
+     * Free space that must remain after a chunk is written, whichever is larger: a fixed floor
+     * or a share of the disk.
      *
-     * This is the guard that makes "any size" safe to offer. The panel shares
-     * a filesystem with every site on the box, so an upload that fills the
-     * disk does not fail politely — it takes down every hosted site, plus the
-     * databases, plus the panel's own ability to report why. Refusing a chunk
-     * is recoverable; a full disk is an outage.
+     * This guard makes "any size" safe: an upload that fills the shared disk takes down every
+     * site, the databases and the panel. Refusing a chunk is recoverable; a full disk is not.
      */
     public const MIN_FREE_BYTES = 5 * 1024 * 1024 * 1024;
 
     public const MIN_FREE_FRACTION = 0.10;
 
     /**
-     * Upload ids are generated here, not accepted from the client: the id
-     * becomes a filename, and a client-chosen one is a path-traversal
-     * primitive. 32 hex chars, validated on the way back in.
+     * Upload ids are generated here, never accepted from the client: the id becomes a filename,
+     * so a client-chosen one is a path-traversal primitive. 32 hex chars, validated on the way in.
      */
     public const ID_PATTERN = '/^[a-f0-9]{32}$/';
 
@@ -97,35 +70,17 @@ class ChunkedUpload
     ) {}
 
     /**
-     * Opens an upload and returns its id.
-     *
-     * Validates up front what would otherwise only surface after the user has
-     * spent an hour uploading: that the destination directory exists, and that
-     * the disk has room.
-     */
-    /**
      * The largest chunk this server can actually accept.
      *
-     * Told to the client rather than assumed by it. Laravel's ValidatePostSize
-     * compares Content-Length against `post_max_size` on every request, PUT
-     * included, and answers 413 "The POST data is too large" when it does not
-     * fit — so a client that picks its own chunk size is guessing at a number
-     * only the server knows.
-     *
-     * It surfaced when chunk size started scaling with the file: an 8 MB chunk
-     * sat right on the stock 8M limit and mostly squeaked through, and a 32 MB
-     * one for a multi-gigabyte upload did not. The size did not cause that, it
-     * revealed it.
-     *
-     * The margin covers the request line and headers, which count toward
-     * Content-Length's limit but are not part of the chunk.
+     * Told to the client rather than assumed: Laravel's ValidatePostSize compares Content-Length
+     * with `post_max_size` on every request (PUT included) and answers 413 when it does not fit.
+     * The margin covers the request line and headers, which count toward that limit.
      */
     public static function maxChunkBytes(): int
     {
         $post = self::iniBytes((string) ini_get('post_max_size'));
 
-        // 0 means unlimited in PHP. Anything the client asks for is fine, so
-        // report the ladder's own ceiling rather than a fictional number.
+        // 0 means unlimited in PHP: report the ladder's own ceiling.
         if ($post <= 0) {
             return 64 * 1024 * 1024;
         }
@@ -152,30 +107,30 @@ class ChunkedUpload
         };
     }
 
+    /**
+     * Opens an upload and returns its id.
+     *
+     * Validates up front what would otherwise only surface after a long upload: that the
+     * destination directory exists, and that the disk has room.
+     */
     public function begin(Application $application, string $path, int $expectedBytes = 0): string
     {
         $target = $this->resolve($application, $path);
 
         $this->assertDirectoryExists($application, dirname($target));
 
-        // Checked here as well as at finalize, and this is the one that
-        // matters to the user: refusing now costs nothing, refusing after a
-        // two-gigabyte upload costs the upload.
+        // Checked here as well as at finalize: refusing now costs nothing.
         $this->assertAbsent($application, $target);
 
-        // Checked against the *whole* declared size, not just the floor: the
-        // point is to fail now rather than an hour in, with the disk full and
-        // a part file to clean up. The client is not trusted to be honest
-        // about this -- the per-chunk check still runs regardless -- but it is
-        // trusted enough to save everyone the wasted hour when it is right.
+        // Against the *whole* declared size, to fail now rather than an hour in. The client is not
+        // trusted (the per-chunk check still runs), only used to save the wasted hour.
         $this->assertDiskHasRoom($application, $expectedBytes);
 
         $id = bin2hex(random_bytes(16));
 
         $this->ensureTempDir($application);
 
-        // Create it empty, so `status` on a fresh upload reports 0 rather than
-        // "not found" and the client has one less case to special-case.
+        // Created empty, so `status` on a fresh upload reports 0 rather than "not found".
         $this->run($application, ['touch', $this->partPath($application, $id)], 'upload_begin');
 
         return $id;
@@ -190,15 +145,11 @@ class ChunkedUpload
     {
         $part = $this->partPath($application, $this->assertValidId($id));
 
-        // Checked per chunk rather than once at the start: the total is not
-        // known (the client is not trusted to declare it), other sites are
-        // writing to the same disk throughout, and a long upload has plenty of
-        // time for the free space to change under it.
+        // Per chunk, not once: the total is untrusted and other sites write to the same disk.
         $this->assertDiskHasRoom($application, 0);
 
-        // `tee -a` rather than a shell append: no shell, so the path is an
-        // argument and not something to quote. The stream is piped, so the
-        // chunk is never held in PHP memory.
+        // `tee -a`, not a shell append: no shell, so the path is an argument. Piped as a stream,
+        // so the chunk is never held in PHP memory.
         $this->run($application, ['tee', '-a', $part], 'upload_chunk', input: $stream, timeout: 300);
 
         return $this->size($application, $part);
@@ -215,9 +166,8 @@ class ChunkedUpload
     /**
      * Moves the completed upload into place.
      *
-     * A rename, not a copy: same filesystem, so no bytes move and the
-     * destination goes from absent to complete in one step. Nothing ever
-     * observes a half-written file at the target path.
+     * A rename, not a copy: same filesystem, so the destination goes from absent to complete in
+     * one step and nothing observes a half-written file.
      */
     public function finalize(Application $application, string $id, string $path): void
     {
@@ -227,16 +177,14 @@ class ChunkedUpload
         abort_if($this->size($application, $part) === null, 404);
         $this->assertDirectoryExists($application, dirname($target));
 
-        // Again, because an upload is not instant: the file can appear between
-        // `begin` and here, and `mv -f` would take it away without a word.
+        // Again: the file can appear between `begin` and here, and `mv -f` would replace it silently.
         $this->assertAbsent($application, $target);
 
         $this->run($application, ['mv', '-f', $part, $target], 'upload_finalize');
     }
 
     /**
-     * Discards an upload. Safe to call for an id that is already gone, so a
-     * client retrying an abort does not get an error for succeeding.
+     * Discards an upload. Safe for an id that is already gone, so a retried abort succeeds.
      */
     public function abort(Application $application, string $id): void
     {
@@ -250,9 +198,8 @@ class ChunkedUpload
     /**
      * Deletes part files idle longer than $hours.
      *
-     * A closed laptop mid-upload leaves the part file behind, and with no size
-     * limit that file can be enormous. Without this, abandoned uploads are a
-     * slow disk leak that ends as the outage MIN_FREE_BYTES exists to prevent.
+     * An abandoned upload leaves a part file behind, possibly enormous: a slow disk leak toward
+     * the outage MIN_FREE_BYTES exists to prevent.
      */
     public function reap(Application $application, int $hours = 24): void
     {
@@ -276,10 +223,8 @@ class ChunkedUpload
     /**
      * Create the upload directory and hand it to the site user.
      *
-     * Elevated, then chowned — not `runuser ... mkdir`, which is permission
-     * denied inside root-owned `.panel`. The reasoning lives in
-     * PanelDirectory, which the file browser needs for exactly the same
-     * reason.
+     * Elevated, then chowned: `runuser ... mkdir` is denied inside root-owned `.panel` (see
+     * PanelDirectory).
      */
     private function ensureTempDir(Application $application): void
     {
@@ -312,7 +257,7 @@ class ChunkedUpload
             $this->asUser($application, ['stat', '-c', '%s', $path]),
             ['feature' => 'application', 'op' => 'file_upload_size', 'application' => $application->id],
             timeout: 15,
-            expectedExitCodes: [1], // "does not exist" is the null answer (bug #48)
+            expectedExitCodes: [1], // "does not exist" is the null answer
         );
 
         return $result->failed() ? null : (int) trim($result->output());
@@ -321,8 +266,8 @@ class ChunkedUpload
     /**
      * Refuse a target that already exists.
      *
-     * `mv -f` at the end of an upload replaces silently, so without this the
-     * only sign a file had been destroyed was that its contents changed.
+     * `mv -f` at the end of an upload replaces silently, so without this an existing file is
+     * destroyed without trace.
      */
     private function assertAbsent(Application $application, string $target): void
     {
@@ -332,12 +277,8 @@ class ChunkedUpload
             timeout: 15,
         );
 
-        // Fail closed. `test -e` exits 1 for "nothing there" and sudo exits 1
-        // for "you may not ask", and reading the second as the first turns the
-        // next line — `mv -f` — into a silent delete of whatever was already
-        // at this path. Of everything that reads a probe in this codebase,
-        // this is the one that must never guess: the whole reason the guard
-        // exists is that its failure leaves no trace but changed contents.
+        // Fail closed. `test -e` exits 1 for "nothing there" and sudo exits 1 for "you may not ask";
+        // reading the second as the first makes the later `mv -f` a silent delete.
         if (! $result->answered) {
             throw new FileOperationException($result->reference);
         }
@@ -353,10 +294,7 @@ class ChunkedUpload
             timeout: 15,
         );
 
-        // This one already failed closed — but it told the user their
-        // directory was missing when the truth was that the panel could not
-        // look. Sending someone to create a directory that is already there is
-        // its own kind of wrong answer.
+        // Fail closed: "could not look" must not be reported as "directory missing".
         if (! $result->answered) {
             throw new FileOperationException($result->reference);
         }
@@ -365,13 +303,8 @@ class ChunkedUpload
     }
 
     /**
-     * What the disk can currently accept, for a client that wants to know
-     * before it starts rather than after.
-     *
-     * Selecting a 40 GB file onto a disk with 20 GB free should say so at the
-     * moment of selection — not an hour later, with the disk near full and a
-     * part file to reap. The numbers are returned rather than just a verdict
-     * so the UI can tell the user *how much* room there is.
+     * What the disk can currently accept, so a client can check before it starts. Numbers are
+     * returned rather than a verdict so the UI can say *how much* room there is.
      *
      * @return array{available: int, usable: int, floor: int}
      */
@@ -380,9 +313,8 @@ class ChunkedUpload
         $disk = $this->freeSpace($application);
 
         if ($disk === null) {
-            // Unknown free space must not read as "no room" — that would block
-            // uploads the disk can take. PHP_INT_MAX means "cannot say"; the
-            // per-chunk guard and ENOSPC remain as the real backstops.
+            // Unknown must not read as "no room". PHP_INT_MAX means "cannot say"; the per-chunk
+            // guard and ENOSPC remain the backstops.
             return ['available' => PHP_INT_MAX, 'usable' => PHP_INT_MAX, 'floor' => 0];
         }
 
@@ -400,9 +332,7 @@ class ChunkedUpload
     {
         $disk = $this->freeSpace($application);
 
-        // Unreadable free space is not a reason to block an upload the disk
-        // may well have room for; the write itself still fails safely on
-        // ENOSPC. Logged by ServerOps either way.
+        // Unreadable free space does not block an upload; the write still fails safely on ENOSPC.
         if ($disk === null) {
             return;
         }

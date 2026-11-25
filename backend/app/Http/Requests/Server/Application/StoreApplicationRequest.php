@@ -36,23 +36,21 @@ use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\Rules\Password;
 
 /**
- * Validation is driven by the chosen site type's own field schema, so the form
- * and the rules can never drift apart: WordPress demands an admin email, git
- * demands a repository, and neither can be satisfied by sending the other's
- * fields.
+ * Validation is driven by the chosen site type's own field schema, so the form and the rules
+ * cannot drift apart (WordPress demands an admin email, git a repository).
  */
 class StoreApplicationRequest extends FormRequest
 {
     /**
-     * What the image filled in (DS-03), set by `after()` for a Docker site.
+     * What the image filled in, set by `after()` for a Docker site.
      *
      * @var array{container_port: int|null, volume_mounts: list<array{path: string}>|null, warnings: list<string>, error: string|null, env_error: string|null}|null
      */
     private ?array $dockerDefaults = null;
 
     /**
-     * The validated data plus what the image filled in: the container port
-     * when none was typed, its VOLUMEs when no volumes were named.
+     * The validated data plus what the image filled in: the container port when none was typed,
+     * its VOLUMEs when no volumes were named.
      *
      * @return array<string, mixed>
      */
@@ -94,10 +92,8 @@ class StoreApplicationRequest extends FormRequest
             return false;
         }
 
-        // A stored registry credential is used at create — to inspect the
-        // image and then to pull it — so choosing one needs what choosing one
-        // on the inspect endpoint needs (`DockerImageRequest`): `registry`
-        // (view). Otherwise its id is an oracle for someone else's credential.
+        // Choosing a stored registry credential needs `registry` (view), as on the inspect
+        // endpoint (`DockerImageRequest`); otherwise its id is an oracle for someone else's credential.
         return ! $this->filled('registry_id') || $user->canView('registry');
     }
 
@@ -111,42 +107,25 @@ class StoreApplicationRequest extends FormRequest
 
         $rules = [
             'site_type' => ['required', Rule::in($manager->names())],
-            // Unique because it names the web-server config file. Two sites
-            // sharing a name shared a file, and the second silently replaced
-            // the first with nothing anywhere saying so.
-            // `SingleLine` because the name reaches the systemd unit's
-            // `Description=` for a Node application: a newline there injects a
-            // directive into a file the panel writes and systemd runs.
-            // `AvailableSiteName` because unique-in-the-table is not
-            // unique-on-the-disk: `www` is the distro's PHP pool and `panel`
-            // is the panel's own vhost, and both were accepted.
+            // Unique because it names the web-server config file. `SingleLine`: the name reaches a
+            // systemd unit's `Description=`, so a newline would inject a directive.
+            // `AvailableSiteName`: unique in the table is not unique on disk (`www` is the distro's
+            // PHP pool, `panel` the panel's own vhost).
             'name' => ['required', 'string', 'max:'.Application::MAX_NAME_LENGTH, new SingleLine, Rule::unique('applications', 'name'), new AvailableSiteName],
             'domain' => [
                 'required', 'string', 'max:255',
                 new Hostname,
-                // The domains table owns hostnames across the whole server.
-                // Validate that fact here rather than letting its unique
-                // index surface as a database exception after the application
-                // row has already been inserted.
+                // The domains table owns hostnames server-wide; fail here, not on its unique index
+                // after the application row exists.
                 Rule::unique('application_domains', 'domain'),
                 new NotPanelHost,
             ],
-            // Whether the hostname above is one the user owns or the temporary
-            // `<name>.<ip>.nip.io` the panel offers. The name itself is sent
-            // either way — only its provenance differs, and that is what
-            // decides whether it may ever go on a certificate.
-            //
-            // Optional so a caller that predates the create form's toggle keeps
-            // working; an unlabelled name is treated as the user's own, and a
-            // wildcard-DNS suffix is caught regardless of the label.
+            // Whether the hostname is the user's own or the temporary `<name>.<ip>.nip.io`; that
+            // decides whether it may go on a certificate. Optional: an unlabelled name is treated
+            // as the user's own, and a wildcard-DNS suffix is caught regardless of the label.
             'domain_type' => ['sometimes', new Enum(DomainOrigin::class)],
-            // Let the panel create a dedicated Linux account for this site.
-            //
-            // Gated on `system_user` manage, not on `application` manage: this
-            // creates a real account on the box, and the "Create system user"
-            // link in this same form is already hidden without that permission.
-            // Allowing it here would mean anyone who can add a site can add
-            // Linux users, which is a wider grant than the one they were given.
+            // Let the panel create a dedicated Linux account for this site. Gated on `system_user`
+            // manage, not `application` manage: it creates a real account on the box.
             'generate_system_user' => [
                 'sometimes', 'boolean',
                 function (string $attribute, mixed $value, Closure $fail) {
@@ -156,11 +135,8 @@ class StoreApplicationRequest extends FormRequest
                 },
             ],
 
-            // FS-B9: the generated account's name and password, chosen on the
-            // create form, in this same request — it was a POST /system-users
-            // and then this, with the client deleting the user if this failed.
-            // Only beside `generate_system_user`; the same rules as creating a
-            // system user on its own.
+            // The generated account's name and password, in this same request. Only beside
+            // `generate_system_user`; same rules as creating a system user on its own.
             'system_user' => ['sometimes', 'array'],
             'system_user.username' => [
                 'required_with:system_user', 'string',
@@ -170,10 +146,8 @@ class StoreApplicationRequest extends FormRequest
             ],
             'system_user.password' => ['sometimes', 'nullable', 'string', Password::defaults(), 'not_regex:'.ChpasswdLine::FORBIDDEN],
 
-            // Required only when the caller is choosing one. `exclude_if` would
-            // be wrong: a client that sends both a generate flag and an id is
-            // confused about its own intent, and silently honouring one of them
-            // is how a site ends up owned by an account nobody picked.
+            // Required only when the caller is choosing one. Sending both a generate flag and an id
+            // is refused, not silently resolved, so a site is never owned by an account nobody picked.
             'system_user_id' => [
                 Rule::requiredIf(fn () => ! $this->boolean('generate_system_user')),
                 'nullable', 'integer', 'exists:system_users,id',
@@ -183,32 +157,17 @@ class StoreApplicationRequest extends FormRequest
                     }
                 },
             ],
-            // Both versions become path segments and, for PHP, part of an
-            // executed binary path. `max:10` alone let a newline through.
-            //
-            // Checked against what is installed as well as its shape, the same
-            // way `SavePhpSettingsRequest` already checks it on the version
-            // *change* endpoint. Creation did not, and the two web-server
-            // families fail differently: on nginx and Apache the pool step
-            // writes into an `/etc/php/<version>` that does not exist and
-            // provisioning stops with something to read. On OpenLiteSpeed
-            // there is no pool step at all — `PoolManager::supported()` is
-            // true only for the FPM stack — so nothing checked, the vhost was
-            // written naming an `lsphp` binary that is not on the box, the
-            // config test passed (it does not stat the interpreter), and the
-            // site went Active and answered 503 on every request.
+            // Both versions become path segments and, for PHP, part of an executed binary path
+            // (`max:10` alone let a newline through). PHP is also checked against what is installed:
+            // on OpenLiteSpeed there is no pool step to fail, so a missing `lsphp` binary would
+            // leave an Active site answering 503.
             'php_version' => [
                 'nullable', 'string', 'max:10', 'regex:/^\d+\.\d+$/',
                 function (string $attribute, mixed $value, Closure $fail) {
                     $installed = app(PhpVersionManager::class)->versions();
 
-                    // Nothing detected is not "nothing installed" — it is also
-                    // what a stack we cannot read looks like. Refusing every
-                    // creation on the strength of an empty list would turn an
-                    // unreadable directory into a server that cannot host a
-                    // site. A server with genuinely no PHP is already refused
-                    // one layer up, by the runtime capability check in
-                    // `SiteTypeManager::unavailable()`.
+                    // Nothing detected may mean an unreadable stack, not "nothing installed"; a
+                    // server with no PHP is refused earlier by `SiteTypeManager::unavailable()`.
                     if ($installed === [] || in_array((string) $value, $installed, true)) {
                         return;
                     }
@@ -216,31 +175,14 @@ class StoreApplicationRequest extends FormRequest
                     $fail(__('php_settings.errors.version_not_installed', ['version' => $value]));
                 },
             ],
-            // The same hole as `php_version`, one runtime along. A Node
-            // version was checked for shape, and — once `SupportedNodeVersion`
-            // existed — against the range the application runs on, but never
-            // against what is on the box. Nothing else checks it either: the
-            // version becomes a path in `NodeRuntime::binaryPath()` that goes
-            // straight into the systemd unit's `ExecStart`, and systemd does
-            // not stat a binary when a unit is written. The site is created,
-            // reported Active, and the unit fails on every start with a 502
-            // from the vhost in front of a port nobody is listening on.
-            // Which database engine to provision, where the application
-            // accepts more than one and the server actually has more than one.
-            //
-            // Optional, and absent means the old behaviour exactly: the first
-            // accepted engine the server has. That keeps every existing client
-            // working and makes this a choice rather than a new obligation.
-            //
-            // Validated against the *installer's* list rather than the whole
-            // catalog of engines, the same rule the attach-database endpoint
-            // follows: the panel must never accept a pairing that provisioning
-            // would refuse a moment later.
+            // Which database engine to provision, where the application accepts more than one and
+            // the server has more than one. Optional: absent means the first accepted engine the
+            // server has. Validated against the *installer's* list, as the attach-database endpoint
+            // does, so a pairing that provisioning would refuse is never accepted.
             'database_engine' => [
                 'nullable', 'string',
                 function (string $attribute, mixed $value, Closure $fail) use ($type) {
-                    // An unknown site_type is already refused above; there is
-                    // no installer to ask, and asking was a 500 (bug #12).
+                    // An unknown site_type is already refused above; there is no installer to ask.
                     if ($type === null) {
                         return;
                     }
@@ -261,22 +203,16 @@ class StoreApplicationRequest extends FormRequest
                         return;
                     }
 
-                    // Accepted by the application, but not present here. Told
-                    // apart from the case above deliberately: one is "this app
-                    // cannot use that", the other is "install it first", and
-                    // they send the user to different screens.
+                    // Accepted by the application, but not present here ("install it first", not
+                    // "this app cannot use that"): different remedies, different screens.
                     if (! app(DatabaseManager::class)->engine($value)->available()) {
                         $fail(__('errors/application.database_engine_unavailable'));
 
                         return;
                     }
 
-                    // Present and reachable, but older than the application
-                    // will run on. A third distinct case for a third distinct
-                    // remedy: not "pick another app", not "install it", but
-                    // "upgrade the one you have" — and without this the site
-                    // is created and dies inside the application's own
-                    // installer.
+                    // Present, but older than the application runs on ("upgrade it"); otherwise the
+                    // site is created and dies inside the application's own installer.
                     $minimum = app(EngineVersionSupport::class)
                         ->shortfall($value, $installer->minimumEngineVersions());
 
@@ -289,16 +225,15 @@ class StoreApplicationRequest extends FormRequest
                     }
                 },
             ],
+            // Checked against what is on the box too: the version becomes a path in the systemd
+            // unit's `ExecStart`, which systemd does not stat, so a missing one gives an Active
+            // site that 502s on every start.
             'node_version' => [
                 'nullable', 'string', 'max:10', 'regex:/^\d+(\.\d+)*$/',
                 function (string $attribute, mixed $value, Closure $fail) {
                     $node = app(NodeRuntime::class);
 
-                    // Empty means fnm is not installed or could not be read,
-                    // which is not the same as "no versions" — see the note on
-                    // `php_version` above. A site type that needs Node is
-                    // already refused on a server without it by the runtime
-                    // capability check.
+                    // Empty means fnm is missing or unreadable, not "no versions" (see `php_version`).
                     if ($node->versions() === [] || $node->installed((string) $value)) {
                         return;
                     }
@@ -306,46 +241,32 @@ class StoreApplicationRequest extends FormRequest
                     $fail(__('errors/node.not_installed', ['version' => $value]));
                 },
             ],
-            // Any port the owner of this server wants, provided nothing is
-            // already using it. The auto-allocated range is a default, not a
-            // restriction.
+            // Any port nothing is using; the auto-allocated range is a default, not a restriction.
             'app_port' => ['nullable', 'integer', 'between:1024,65535', new AvailablePort],
             // Becomes systemd's ExecStart, which is not a shell — see the rule.
             'start_command' => ['nullable', 'string', 'max:500', new StartCommand],
-            // A relative path under the site, and nothing else. This reaches
-            // `mkdir -p`, `chown -R` and `tee` as root, so a `..` segment would
-            // walk out of the site — `web_root=../../../../etc` handed /etc to
-            // the site's own user.
+            // A relative path under the site only. It reaches `mkdir -p`, `chown -R` and `tee` as
+            // root, so a `..` segment would walk out of the site (`../../../../etc`).
             'web_root' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._\-\/]+$/', 'not_regex:/(^|\/)\.\.(\/|$)/'],
         ];
 
-        // An unknown site_type fails on the rule above; skip type rules so we
-        // don't resolve fields on null.
+        // An unknown site_type fails on the rule above; skip type rules.
         if ($type === null) {
             return $rules;
         }
 
         $rules = array_merge($rules, $type->rules());
 
-        // Applied after the merge, and centrally rather than in each type's own
-        // `rules()`, so a site type that declares a fixed layout cannot forget
-        // to enforce it.
-        //
-        // Only for the types whose installer *builds* that layout — Craft and
-        // Statamic. For everything else the web root is genuinely the user's
-        // choice: WordPress unpacks into whatever directory the vhost points
-        // at. Here it is not a choice, and accepting one produces a site that
-        // 403s on every request while serving the application's own source.
+        // Applied after the merge, centrally, so a type with a fixed layout cannot forget to
+        // enforce it. Only for types whose installer *builds* that layout (Craft, Statamic):
+        // another web root would 403 every request while serving the application's source.
         // `nullable` stays: an omitted value still falls back to the default.
         if (($fixed = $type->fixedWebRoot()) !== null) {
             $rules['web_root'] = ['nullable', Rule::in([$fixed, ltrim($fixed, '/')])];
         }
 
-        // Same reasoning, same place: the type knows which Node versions its
-        // application runs on, and until this existed nothing acted on that.
-        // Appended rather than replacing the base rules, so the shape checks
-        // above still run first — this rule answers "will it run", not "is
-        // this a version string".
+        // The type knows which Node versions its application runs on. Appended, so the shape checks
+        // still run first; this rule answers "will it run", not "is this a version string".
         if (($range = $type->supportedNodeRange()) !== null) {
             $rules['node_version'][] = new SupportedNodeVersion(
                 $range['min'] ?? null,
@@ -354,11 +275,7 @@ class StoreApplicationRequest extends FormRequest
             );
         }
 
-        // And the same for PHP, which had the identical hole one runtime over
-        // until a PrestaShop install was handed the box's newest PHP and died
-        // inside its own vendored Symfony. Appended for the same reason: the
-        // shape and is-it-installed checks above still run first, and this one
-        // answers only "will the application run on it".
+        // The same for PHP, appended for the same reason (shape and is-installed checks run first).
         if (($rule = $this->phpRangeRule($type)) !== null) {
             $rules['php_version'][] = $rule;
         }
@@ -374,14 +291,10 @@ class StoreApplicationRequest extends FormRequest
     }
 
     /**
-     * The type's supported PHP range, as a rule — carrying the version an
-     * empty field resolves to.
+     * The type's supported PHP range, as a rule carrying the version an empty field resolves to.
      *
-     * Built here rather than inline because `after()` needs the same object:
-     * a `ValidationRule` is **not implicit**, so Laravel skips it entirely
-     * when the attribute is empty, and empty is exactly the case that was
-     * broken. Two constructions of the same rule would be two chances to pass
-     * a different range.
+     * Built here because `after()` needs the same object: a `ValidationRule` is not implicit, so
+     * Laravel skips it when the attribute is empty.
      */
     private function phpRangeRule(?SiteType $type): ?SupportedPhpVersion
     {
@@ -393,19 +306,15 @@ class StoreApplicationRequest extends FormRequest
             $range['min'] ?? null,
             $range['max'] ?? null,
             app(SiteTypeText::class)->title($type->name()),
-            // What an empty field will actually run on: the field is
-            // `nullable` and provisioning resolves a blank one to the server
-            // default, so without this the range is enforced on every value
-            // except the one the user gets by touching nothing.
+            // What an empty field will actually run on (provisioning resolves a blank one to the
+            // server default), so the range also applies to an untouched field.
             app(ServerDefaultPhp::class)->version(),
         );
     }
 
     /**
-     * `Rule::in` says "the selected web root is invalid", which tells the user
-     * nothing about what to select instead. This is the one rule here a caller
-     * can hit while doing something entirely reasonable — clearing an advanced
-     * field — so it says which value the type needs and why.
+     * `Rule::in` says only "the selected web root is invalid"; this says which value the type
+     * needs and why.
      *
      * @return array<string, string>
      */
@@ -414,16 +323,13 @@ class StoreApplicationRequest extends FormRequest
         $type = app(SiteTypeManager::class)->find((string) $this->input('site_type'));
         $fixed = $type?->fixedWebRoot();
 
-        // FS-B6: a password policy written as four regexes answered "format
-        // is invalid" for a missing symbol — name the rule instead.
-        // n8n's policy has no symbol rule; Moodle's does.
+        // Name the password rule instead of "format is invalid". n8n's policy has no symbol rule;
+        // Moodle's does.
         $messages = ['admin_password.regex' => __($type?->name() === 'n8n'
             ? 'validation.admin_password_strength_no_symbol'
             : 'validation.admin_password_strength')];
 
-        // A Docker volume typed into the mounts list: the same sentence the
-        // other Docker name fields give (ExistingDockerVolume, NewDockerName),
-        // rather than Laravel's bare "format is invalid".
+        // Same sentence as the other Docker name fields (ExistingDockerVolume, NewDockerName).
         $messages['volume_mounts.*.volume.regex'] = __('validation.docker_volume_invalid');
 
         if ($fixed === null) {
@@ -439,15 +345,13 @@ class StoreApplicationRequest extends FormRequest
     }
 
     /**
-     * The server has to be able to serve the chosen type — otherwise the
-     * record would describe something that can never be provisioned.
+     * The server has to be able to serve the chosen type.
      */
     public function after(): array
     {
         return [
-            // FS-B9: a chosen name only for a generated account, and one the
-            // server does not already have (a hand-made account is in
-            // /etc/passwd with no row here).
+            // A chosen name only for a generated account, and one the server does not already have
+            // (a hand-made account is in /etc/passwd with no row here).
             function (Validator $validator) {
                 if (! $this->has('system_user') || $validator->errors()->isNotEmpty()) {
                     return;
@@ -473,35 +377,24 @@ class StoreApplicationRequest extends FormRequest
                     return;
                 }
 
-                // The same check the card grid renders from, so a card the user
-                // could click can never be refused here for a reason the grid
-                // did not show.
+                // The same check the card grid renders from.
                 if (($blocked = $manager->unavailable($type)) !== null) {
                     $validator->errors()->add('site_type', $blocked['reason']);
 
                     return;
                 }
 
-                // A type served more than one way (git) is offered when the
-                // server hosts any of them; the way this site would be served
-                // has to be one it hosts too.
+                // A type served more than one way (git) is offered when the server hosts any of
+                // them; the way this site would be served must be one it hosts.
                 if (count($type->servingProfiles()) > 1
                     && ($refusal = $manager->unservedProfile(ServingProfile::resolve($type, $this->all()))) !== null) {
                     $validator->errors()->add('rendering_type', $refusal);
                 }
             },
 
-            // A pasted compose file, checked here rather than at deploy time.
-            //
-            // It was only checked in the supervisor, so a refused file was
-            // accepted by the form, an application row was created, the vhost
-            // was written, and provisioning then failed — leaving a site that
-            // answered 502 and an application the user had to delete. The
-            // refusal has to arrive on the field, before any of that exists.
-            //
-            // Still checked in the supervisor too: the form is not the only
-            // way a row changes, and a rule enforced once at the boundary
-            // holds only until something else writes it.
+            // A pasted compose file, checked here rather than at deploy time, so a refusal arrives
+            // on the field before any row or vhost exists. Still checked in the supervisor too:
+            // the form is not the only way a row changes.
             function (Validator $validator) {
                 $compose = (string) $this->input('compose');
 
@@ -509,12 +402,8 @@ class StoreApplicationRequest extends FormRequest
                     return;
                 }
 
-                // Validated against a directory that exists and that the panel
-                // can enter, because Compose resolves relative bind sources
-                // against the process's working directory — and the
-                // application's own directory has not been created yet at
-                // validation time. The site root it will get is under the
-                // system user's home, so that is the shape to check against.
+                // Validated against a directory that exists: Compose resolves relative bind sources
+                // against the working directory, and the site's own one is not created yet.
                 $composeValidator = app(ComposeValidator::class);
                 $verdict = $composeValidator->validate($compose, sys_get_temp_dir());
 
@@ -522,8 +411,7 @@ class StoreApplicationRequest extends FormRequest
                     $validator->errors()->add('compose', $error);
                 }
 
-                // A port another site holds (RC-43). Accepted, it failed later on
-                // the unique index, with no reason on the site.
+                // A port another site holds; otherwise it fails later on the unique index.
                 $taken = $verdict['resolved'] === null ? null : $composeValidator->portTaken(
                     $verdict['resolved'],
                     filled($this->input('container_port')) ? (int) $this->input('container_port') : null,
@@ -533,8 +421,8 @@ class StoreApplicationRequest extends FormRequest
                     $validator->errors()->add('compose', $taken);
                 }
 
-                // Docker's own networks and every site's private one (RC-28):
-                // the site does not exist yet, so none of them is its own.
+                // Docker's own networks and every site's private one: the site does not exist yet,
+                // so none of them is its own.
                 $network = $verdict['resolved'] === null ? null : $composeValidator->unjoinableNetwork($verdict['resolved']);
 
                 if ($network !== null) {
@@ -542,19 +430,17 @@ class StoreApplicationRequest extends FormRequest
                 }
             },
 
-            // A Docker image site: what the image says about itself (DS-03).
-            // Last of the cheap checks and only when everything else passed,
-            // because it may ask a registry. Port, default volumes and warnings
-            // are kept for the controller; see creation() and warnings().
+            // A Docker image site: what the image says about itself. Last of the cheap checks and
+            // only when everything else passed, because it may ask a registry. Port, default
+            // volumes and warnings are kept for the controller; see creation() and warnings().
             function (Validator $validator) {
                 if ((string) $this->input('site_type') !== 'docker') {
                     return;
                 }
 
                 if (filled($this->input('compose'))) {
-                    // Env and volumes are written into the GENERATED file. A
-                    // pasted one says its own, so honouring these would mean
-                    // editing the user's YAML; refused rather than dropped.
+                    // Env and volumes go into the GENERATED file; a pasted one says its own, so
+                    // these are refused rather than silently dropped.
                     foreach (['env', 'volume_mounts'] as $field) {
                         if (filled($this->input($field))) {
                             $validator->errors()->add($field, __('validation.prohibited', ['attribute' => $field]));
@@ -605,11 +491,8 @@ class StoreApplicationRequest extends FormRequest
                 }
             },
 
-            // A git site's repository and branch, before anything exists
-            // (bug #101). A wrong URL used to create the site anyway: it said
-            // "Running" and its first deploy failed with no reason shown.
-            // Last of the field checks, and only when everything else passed,
-            // because it reaches the git host.
+            // A git site's repository and branch, before anything exists. Last of the field checks
+            // and only when everything else passed, because it reaches the git host.
             function (Validator $validator) {
                 if ($validator->errors()->isNotEmpty()
                     || app(SiteTypeManager::class)->find((string) $this->input('site_type'))?->method() !== 'git') {
@@ -636,11 +519,9 @@ class StoreApplicationRequest extends FormRequest
                 }
             },
 
-            // The PHP range, for the one value `rules()` cannot reach: a
-            // custom rule is skipped when the attribute is empty, and an empty
-            // `php_version` is not "no version" — it is the server default,
-            // which is the newest PHP on the box and therefore the exact
-            // version a ceiling exists to exclude.
+            // The PHP range for the value `rules()` cannot reach: a custom rule is skipped when the
+            // attribute is empty, and an empty `php_version` means the server default (the newest
+            // PHP, which a ceiling exists to exclude).
             function (Validator $validator) {
                 if (filled($this->input('php_version'))) {
                     return;

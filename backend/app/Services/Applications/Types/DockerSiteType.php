@@ -18,27 +18,14 @@ use App\Services\Server\HostCpus;
  * An application that is a container.
  *
  * The panel writes a compose file, brings it up, and points the existing nginx
- * vhost at the port it publishes. Nothing about the vhost is new — it is the
- * same template a Node application already gets, and it was already entirely
- * runtime-agnostic: `proxy_pass 127.0.0.1:{{ $appPort }}` plus the WebSocket
- * upgrade pair, with nothing in it that knows or asks what is listening.
+ * vhost (the same runtime-agnostic proxy template a Node app gets) at the port
+ * it publishes.
  *
- * Few fields, not twenty. The temptation with "give every Docker option" is a
- * form field per `docker run` flag — registry, entrypoint, restart policy,
- * healthcheck, limits, user, volumes — which is a surface that grows every
- * time Docker adds one. The compose file is that surface already, so the
- * structured fields are only the ones the panel must own to wire the site up:
- * the image to run, the port inside the container to proxy to, and the network
- * to join. Everything else is compose's job.
- *
- * The test a field has to pass to be here is not "is it useful" — it is *can
- * compose answer this without the panel*. A healthcheck it can: the file says
- * it and Docker does it. A network it cannot, and that is the whole reason the
- * third field exists: the network is an object the PANEL created, on a page
- * Compose has never heard of, and a generated file that does not name it with
- * `external: true` silently joins a different network with the project name
- * prefixed. Without this field the Docker page could create networks that
- * nothing the panel builds was able to use.
+ * Few fields on purpose: only what the panel must own to wire the site up (image,
+ * container port, network). A field belongs here only if compose cannot answer it
+ * without the panel; everything else is compose's job. The network is panel-owned,
+ * and a generated file that does not name it with `external: true` silently joins
+ * a differently-prefixed network.
  */
 class DockerSiteType extends AbstractSiteType
 {
@@ -73,8 +60,7 @@ class DockerSiteType extends AbstractSiteType
     }
 
     /**
-     * No. A container that wants a database brings one — that is the whole
-     * premise of the stack, and it is why this server manages no engine.
+     * No: a container that wants a database brings its own.
      */
     public function needsDatabase(): bool
     {
@@ -82,34 +68,19 @@ class DockerSiteType extends AbstractSiteType
     }
 
     /**
-     * What a container's screens are, and — more usefully — what they are not.
+     * The container's screens: the default set minus Clone.
      *
-     * Two are removed from the default set, both because they would appear to
-     * work and quietly do the wrong thing. That is worse than their absence:
-     * a screen that is missing prompts a question, and one that succeeds
-     * without doing the job does not.
-     *
-     *  - **Clone.** Cloning copies the served files. A container's files are
-     *    in its image and its state is in its volumes, so a clone would come
-     *    up looking correct with none of the data. It arrives here by default
-     *    because the default rule is `! needsDatabase()`, which is true of a
-     *    container for a reason that has nothing to do with cloning.
-     *  - **Backup is now offered**, and this is the phase that was meant. The
-     *    objection was never Docker, it was the artefact: the pipeline could
-     *    archive a document root and a database, a container site has neither,
-     *    and the honest description of the result was "one YAML file".
-     *    `ArchiveVolumes` captures the volumes and `ArchiveFiles` the compose
-     *    file beside them, so the archive is now the whole site. `BackupType`
-     *    records why nothing captures the container itself.
+     * Clone copies served files, but a container's files are in its image and its
+     * state is in its volumes, so a clone would look right with none of the data.
+     * Backup is offered: `ArchiveVolumes` captures the volumes and `ArchiveFiles`
+     * the compose file.
      *
      * @return array<int, string>
      */
     public function features(): array
     {
-        // `app_container` and `app_compose` are NOT added here. They belong to
-        // every container-served type, so the parent adds them on
-        // `servingProfile() === 'docker'` — adding them here as well left the
-        // fifteen one-click apps without them.
+        // `app_container` and `app_compose` are added by the parent on
+        // `servingProfile() === 'docker'`; adding them here left the one-click apps without them.
         return array_values(array_diff(parent::features(), ['app_clone']));
     }
 
@@ -119,13 +90,8 @@ class DockerSiteType extends AbstractSiteType
     public function fields(): array
     {
         return [
-            // **The first decision, and the reason this card is not confusing any
-            // more.** An image-and-port site and a pasted compose file are
-            // alternatives, and the form used to show both sets at once with help
-            // text reading "leave the picker above empty and type a name here".
-            // Choosing between them up front is what that text was standing in for.
-            //
-            // Not advanced: it decides which other fields exist.
+            // Image-and-port versus a pasted compose file are alternatives; choosing up
+            // front decides which other fields exist, so it is not advanced.
             $this->field('docker_mode', 'select', extra: [
                 'default' => 'simple',
                 'help' => __('application.help.docker_mode'),
@@ -135,10 +101,7 @@ class DockerSiteType extends AbstractSiteType
                 ],
             ]),
 
-            // Required only when there is no compose file. A pasted compose
-            // names its own images — asking for one as well is asking the
-            // same question twice and refusing an answer the user already
-            // gave.
+            // Required only when there is no compose file (a pasted compose names its own images).
             $this->field('image', 'text', extra: [
                 'depends_on' => 'docker_mode:simple',
                 'placeholder' => 'nginx:1.27-alpine',
@@ -146,61 +109,31 @@ class DockerSiteType extends AbstractSiteType
                 'required_without' => 'compose',
             ]),
 
-            // Which stored credential to pull with, from the registries on the
-            // Docker page.
-            //
-            // **Deliberately NOT `depends_on: docker_mode:simple`**, unlike the
-            // two fields around it. A pasted compose file names its own images
-            // and any of them can be private, so hiding this in compose mode
-            // would make the panel's only private-registry support unreachable
-            // from the mode most likely to need it.
-            //
-            // The second field here that is not "an option Docker takes" — it is
-            // a panel-owned row, like the network below, and for the same reason
-            // it has to be asked rather than discovered.
+            // Which stored registry credential to pull with. Deliberately NOT
+            // `depends_on: docker_mode:simple`: images in a pasted compose file can be
+            // private too. A panel-owned row, like the network below, so it has to be asked.
             $this->field('registry_id', 'select', extra: [
                 'default' => '',
                 'help' => __('application.help.registry_id'),
                 'options' => $this->registryOptions(),
             ]),
 
-            // The port *inside* the container. The published port on the host
-            // is allocated by the panel and is not the user's to choose —
-            // picking it would let two applications collide, and picking 80
-            // would collide with the web server itself.
-            // Same, and for a second reason: with a compose file the panel
-            // reads the published port out of the resolved document instead,
-            // so asking would let the two disagree.
+            // The port *inside* the container. The published host port is allocated by
+            // the panel (a user-picked one could collide, e.g. with the web server on 80;
+            // with a compose file it is read from the resolved document).
             //
-            // Optional since DS-03, and no default: left empty it is read from
-            // the image's EXPOSE, and an image that declares none is refused
-            // with a question rather than given 80. The 80 that used to sit
-            // here is how Memos ended up proxied to a port nothing listened on.
+            // Optional and no default: left empty it is read from the image's EXPOSE, and
+            // an image that declares none is refused rather than given 80.
             $this->field('container_port', 'number', extra: [
                 'depends_on' => 'docker_mode:simple',
                 'help' => __('application.help.container_port'),
             ]),
 
-            // How big this container is allowed to be.
-            //
-            // **Not advanced**, unlike the network and volume fields below, and the
-            // difference is what the field is for rather than how often it is used.
-            // A network picker is advanced because the common case is one container
-            // that talks to nobody, so putting it on the front of the form implies
-            // a decision most people do not have to make. A size is the opposite:
-            // everybody has an opinion about how much memory their app needs, and
-            // it was the first thing looked for here and not found.
-            //
-            // **No `depends_on`**, unlike `image` and `container_port`, and for the
-            // same reason `registry_id` has none: the panel's compose override
-            // applies both limits to every service in a PASTED file too, so hiding
-            // them in compose mode would take sizing away from the mode most likely
-            // to need it.
-            //
-            // No `default` on either. Left empty, memory falls back to the
-            // configured server default and CPU means no quota at all — and a
-            // pre-filled CPU value would be a default by another name, capping
-            // every site created through this form.
+            // How big this container may be. Not advanced: everybody has an opinion on memory.
+            // No `depends_on`: the compose override applies both limits to every service in a
+            // PASTED file too.
+            // No `default`: left empty, memory falls back to the server default and CPU means
+            // no quota (a pre-filled CPU value would cap every site).
             $this->field('memory_limit', 'text', extra: [
                 'placeholder' => (string) config('server.docker.default_memory_limit', '512m'),
                 'help' => __('application.help.memory_limit', [
@@ -208,10 +141,7 @@ class DockerSiteType extends AbstractSiteType
                 ]),
             ]),
 
-            // Cores, as Docker counts them. The help text names what this machine
-            // actually has, because the bound is the host's core count and a
-            // sentence describing the rule cannot be acted on — the form would be
-            // telling somebody to go and find out how big their own server is.
+            // Cores, as Docker counts them. The help text names the host's actual core count.
             $this->field('cpu_limit', 'text', extra: [
                 'placeholder' => __('application.placeholders.cpu_limit'),
                 'help' => __('application.help.cpu_limit', [
@@ -219,57 +149,32 @@ class DockerSiteType extends AbstractSiteType
                 ]),
             ]),
 
-            // The network to join, chosen from the ones on the Docker page.
+            // The network to join, chosen from the ones on the Docker page. Compose cannot
+            // discover a panel-created network: the generated file must name it with
+            // `external: true`.
             //
-            // This is the one field here that is not "an option Docker takes" —
-            // it is a panel-owned object. Compose cannot discover a network the
-            // panel created: the generated file has to name it with
-            // `external: true` or the site joins a differently-prefixed network
-            // of its own and reaches nothing. So the panel has to ask, the same
-            // way it has to ask for `container_port`.
-            //
-            // Options resolved here rather than fetched by the form, because a
-            // `select` the API declares with no options is not an empty
-            // chooser — the create form falls back to the runtime version list
-            // and offers PHP versions as networks.
-            //
-            // Advanced: the common case is one container that talks to nobody,
-            // and a network picker on the front of the form implies a decision
-            // most people do not have to make.
+            // Options are resolved here: a `select` declared with no options makes the create
+            // form fall back to the runtime version list and offer PHP versions as networks.
+            // Advanced: the common case is one container that talks to nobody.
             $this->field('docker_network', 'select', advanced: true, extra: [
                 'depends_on' => 'docker_mode:simple',
                 'help' => __('application.help.docker_network'),
                 'options' => $this->networkOptions(),
             ]),
 
-            // Or make one, here, with a name you choose.
-            //
-            // Two fields rather than a picker with a "Create new…" entry, because
-            // the create form renders what the API declares and has no notion of
-            // a choice that reveals an input. Two plain fields that say what they
-            // do beat a control the renderer would have to learn.
-            //
-            // Refused if the name already exists, rather than quietly adopting
-            // it. Adopting looks like success and attaches the site to somebody
-            // else's network — and a typo that happens to collide is exactly the
-            // case that must not silently work.
+            // Or create one with a name you choose. A separate field, because the create form
+            // has no choice that reveals an input.
+            // Refused if the name already exists: adopting would attach the site to somebody
+            // else's network (e.g. on a typo that collides).
             $this->field('docker_network_new', 'text', advanced: true, extra: [
                 'depends_on' => 'docker_mode:simple',
                 'placeholder' => 'ghost-net',
                 'help' => __('application.help.docker_network_new'),
             ]),
 
-            // A volume, created and mounted as part of creating the site.
-            //
-            // Both halves or neither: a volume name without a path is not
-            // something the panel can act on, and a path without a name is not
-            // a volume. The pair is validated together.
-            //
-            // One volume here, not a list. The create form is for getting a site
-            // running; a second and third volume is a settled site being
-            // adjusted, and that is what the Container card is for. A repeater on
-            // the create form would be the most complex control on it, used by
-            // almost nobody, for a job that has a better home.
+            // A volume, created and mounted while creating the site. Name and path are
+            // validated together (both or neither). One volume only; more are added on the
+            // Container card.
             $this->field('volume_new', 'text', advanced: true, extra: [
                 'depends_on' => 'docker_mode:simple',
                 'placeholder' => 'ghost-content',
@@ -282,14 +187,8 @@ class DockerSiteType extends AbstractSiteType
                 'help' => __('application.help.volume_path'),
             ]),
 
-            // Paste your own, and everything compose supports is supported.
-            // Advanced, because the two fields above cover the common case and
-            // a textarea of YAML on the create form would make a one-image
-            // deploy look like work.
-            //
-            // Left empty, the panel writes the file from the fields. Filled,
-            // this is the file — validated first, and the validator is where
-            // the interesting part of this feature lives.
+            // A pasted compose file. Left empty, the panel writes the file from the fields;
+            // filled, this is the file, validated first (see ComposeValidator).
             $this->field('compose', 'textarea', extra: [
                 'depends_on' => 'docker_mode:compose',
                 'help' => __('application.help.compose'),
@@ -305,69 +204,47 @@ class DockerSiteType extends AbstractSiteType
     public function rules(): array
     {
         return [
-            // Deliberately permissive about the *shape* of a reference — a
-            // registry host, a port, a namespace, a tag and a digest are all
-            // legal, and a regex tight enough to be useful here is tight
-            // enough to reject something real. What is refused is whitespace
-            // and shell metacharacters, because the value reaches a command.
+            // Permissive about the shape of a reference (host, port, namespace, tag and
+            // digest are all legal); whitespace and shell metacharacters are refused
+            // because the value reaches a command.
             'image' => ['required_without:compose', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9][A-Za-z0-9._\/:@-]*$/D'],
-            // Not required: StoreApplicationRequest fills it from the image, and
-            // refuses only when the image does not say (DS-03).
+            // Not required: StoreApplicationRequest fills it from the image.
             'container_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
 
-            // Environment variables for the container, written to the site's
-            // env file — the one the Environment screen edits — before the
-            // first start. Kept encrypted until then, never in `settings`.
-            // Values may be multi-line; keys are what a shell and Compose accept.
+            // Container environment variables, written to the site's env file before the
+            // first start; kept encrypted until then, never in `settings`.
             'env' => ['nullable', 'array', 'max:100'],
             'env.*.key' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z_][A-Za-z0-9_]*$/D'],
             'env.*.value' => ['nullable', 'string', 'max:65535'],
 
-            // Any number of volumes at create, the shape the Container card
-            // edits. `volume` may be left out: the panel names it
-            // `<site>-<last path segment>`. An existing name is mounted as is.
-            // Absent altogether, the image's own VOLUMEs are used.
+            // Volumes at create, the shape the Container card edits. `volume` may be left
+            // out (named `<site>-<last path segment>`); absent altogether, the image's own
+            // VOLUMEs are used.
             'volume_mounts' => ['nullable', 'array', 'max:20'],
             'volume_mounts.*.volume' => ['nullable', 'string', 'max:128', 'regex:/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/D'],
-            // `SingleLine` and the positive pattern because the path is written
-            // into the generated compose file, which no validator reads after
-            // this: a newline in it was a new YAML key (`privileged: true`).
+            // `SingleLine` and the positive pattern: the path is written into the generated
+            // compose file, which no validator reads after this (a newline would add a YAML key).
             'volume_mounts.*.path' => ['required', 'string', 'max:255', new SingleLine, 'regex:'.ContainerMountPath::PATTERN, 'not_regex:/(^|\/)\.\.(\/|$)/', new ContainerMountPath],
-            // The same two rules the Container settings screen uses, because a
-            // limit refused after the site exists and accepted while creating it
-            // would be one form contradicting the other. `WithinHostCpus` matters
-            // more here: at create time the refusal would otherwise land as a
-            // failed provision rather than a field error.
+            // The same rules as the Container settings screen. `WithinHostCpus` matters here:
+            // otherwise the refusal lands as a failed provision rather than a field error.
             'memory_limit' => ['nullable', 'string', 'max:20', new ContainerMemoryLimit],
             'cpu_limit' => ['nullable', 'string', 'max:16', new WithinHostCpus],
-            // Bounded, because it reaches a parser and then a file. 128 KB is
-            // far past any real compose file and far short of a problem.
+            // Bounded (128 KB), because it reaches a parser and then a file.
             'compose' => ['nullable', 'string', 'max:131072'],
-            // Checked against the box, not just the shape: `external: true`
-            // makes Compose look the name up, so a network that is not there
-            // is a container that will not start — and the refusal has to
-            // arrive on the field rather than on the next deploy.
-            // Never persisted and deliberately not validated against a list: it is a
-            // form affordance, and the either/or it expresses is already enforced by
-            // `required_without:compose` on the fields themselves. A site created in
-            // compose mode is recognisable by having a compose file, which is a
-            // better answer than a column repeating it.
+            // Never persisted and not validated against a list: a form affordance; the
+            // either/or is enforced by `required_without:compose`.
             'docker_mode' => ['nullable', 'string', 'max:20'],
 
-            // Checked against the table, not just the shape: a site pointed at a
-            // registry that is not there pulls anonymously and fails on the next
-            // deploy with a reason that names credentials nobody configured.
+            // Checked against the table: a missing registry would pull anonymously and fail
+            // on the next deploy.
             'registry_id' => ['nullable', 'integer', 'exists:registries,id'],
 
-            // No application yet, so the rule has nothing it may call its own:
-            // Docker's built-ins and every site's private network are refused
-            // (RC-28), and the site is created on a shared network or its own.
+            // No application yet: Docker's built-ins and every site's private network are
+            // refused; the site joins a shared network or its own.
             'docker_network' => ['nullable', 'string', 'max:255', new ExistingDockerNetwork],
 
-            // A name to CREATE, so the opposite rule: it must not exist yet.
-            // `prohibits` rather than a hand-rolled check — picking an existing
-            // network and naming a new one are two answers to one question, and
-            // honouring both would mean deciding which the user meant.
+            // A name to CREATE, so it must not exist yet; `prohibits` because picking and
+            // naming are two answers to one question.
             'docker_network_new' => ['nullable', 'string', 'max:255', 'prohibits:docker_network', new NewDockerName('network')],
 
             'volume_new' => ['nullable', 'string', 'max:255', 'required_with:volume_path', new NewDockerName('volume')],
@@ -378,17 +255,10 @@ class DockerSiteType extends AbstractSiteType
     /**
      * The registries this server can pull with, as chooser options.
      *
-     * Gated on the server hosting containers for the same reason
-     * `networkOptions()` is: `fields()` is serialised for every site type in the
-     * catalog listing, and an ungated query here would run on a LEMP box to build
-     * options for a card that is not shown. Unlike that method this is a database
-     * read rather than a shell-out, so the cost is smaller — but the gate is what
-     * keeps the two consistent, and consistency is what stops the next person
-     * removing it.
+     * Gated on the server hosting containers, like `networkOptions()`: `fields()` is
+     * serialised for every site type in the catalog listing.
      *
-     * The empty option is not listed. It is the default, and it means "pull
-     * anonymously" — which is the correct answer for every public image and all
-     * fifteen one-click apps.
+     * The empty option is not listed; it is the default and means "pull anonymously".
      *
      * @return list<array{value: string, label: string}>
      */
@@ -403,9 +273,7 @@ class DockerSiteType extends AbstractSiteType
             ->get(['id', 'name', 'registry'])
             ->map(fn ($registry): array => [
                 'value' => (string) $registry->id,
-                // The address alongside the name, because a name is whatever
-                // somebody typed and two rows called "main" and "backup" say
-                // nothing about which one is GHCR.
+                // The address alongside the name: a name says nothing about which registry it is.
                 'label' => $registry->name.' — '.$registry->registry,
             ])
             ->all();
@@ -414,15 +282,13 @@ class DockerSiteType extends AbstractSiteType
     /**
      * The networks this server has, as chooser options.
      *
-     * Gated on the server actually hosting containers, because `fields()` is
-     * serialised for EVERY site type in the catalog listing — ungated this
-     * would run `docker network ls` on a LEMP box, on a request that has
-     * nothing to do with Docker, to build options for a card that is not shown.
+     * Gated on the server hosting containers: `fields()` is serialised for every site
+     * type in the catalog listing, so ungated this would run `docker network ls` on a
+     * LEMP box.
      *
      * Only networks the site may join: Docker's own and every site's private
-     * `sv-app-<id>_*` network are left out, because the rule on the field
-     * refuses them (RC-28) and an option that answers 422 is a trap. The empty
-     * choice is the default and means the site's own network.
+     * `sv-app-<id>_*` network are left out, because the field's rule refuses them. The
+     * empty choice is the default and means the site's own network.
      *
      * @return list<array{value: string, label: string}>
      */

@@ -12,20 +12,10 @@ use Illuminate\Support\Str;
 /**
  * Decides whether a compose file somebody pasted is safe to run here.
  *
- * **Parsed by Docker itself**, with `docker compose config --format json`, not
- * by a YAML library. That is the important decision in this class and it is a
- * security one: a validator whose parser differs from the executor's parser is
- * a bypass waiting to be found. Anything my parser reads differently from the
- * daemon's is a way past every rule below. Using the same parser makes that
- * class of hole impossible rather than unlikely.
- *
- * It also normalises, which removes the other half of the problem. Compose
- * accepts `- /:/host` and `- {type: bind, source: /, target: /host}` and they
- * mean the same thing; `config` resolves both into the second shape, so each
- * rule here is written once against one canonical form instead of guessing at
- * five spellings.
- *
- * `config` parses and interpolates. It does not pull, create or start
+ * Parsed by Docker itself (`docker compose config --format json`), not by a YAML
+ * library: a validator whose parser differs from the executor's is a bypass waiting
+ * to be found. `config` also normalises (`- /:/host` and the long bind form resolve
+ * to one shape), so each rule is written once. It does not pull, create or start
  * anything.
  */
 class ComposeValidator
@@ -36,28 +26,18 @@ class ComposeValidator
     /**
      * Service keys that hand over the host, whatever else the file says.
      *
-     * Not a stylistic list. Each of these is a documented way out of the
-     * container and onto the machine:
+     * Each is a documented way out of the container onto the machine:
      *
-     *  - `privileged` — all capabilities, all devices. It is root on the host
-     *    with extra steps.
+     *  - `privileged` — all capabilities and devices; root on the host.
      *  - `cap_add` — `SYS_ADMIN` alone is enough to mount filesystems.
-     *  - `devices` — raw block devices; `/dev/sda` is every file on the disk,
-     *    including ones the container has no mount for.
-     *  - `pid` / `ipc` / `userns_mode` — sharing the host's namespaces, which
-     *    is how you read another process's memory or signal it.
-     *  - `security_opt` — where `apparmor:unconfined` and
-     *    `seccomp:unconfined` are spelled.
-     *  - `network_mode` — `host` puts the container on the host's stack, past
-     *    the loopback publishing this panel relies on and past the firewall
-     *    with it.
-     *  - `cgroup_parent` — escaping the resource limits the panel sets.
-     *  - `build` — a build context is a host path the daemon reads as root, and
-     *    `dockerfile_inline` can `COPY` from it. `context: /root` puts the
-     *    server's own keys inside an image the site then runs. The bind-mount
-     *    check below does not cover it: that walks `volumes`, and this is a
-     *    different key reaching the same filesystem. The panel RUNS images, it
-     *    is not a build service — every template here names one.
+     *  - `devices` — raw block devices expose every file on the disk.
+     *  - `pid` / `ipc` / `userns_mode` — shares the host's namespaces.
+     *  - `security_opt` — where `apparmor:unconfined` / `seccomp:unconfined` are set.
+     *  - `network_mode` — `host` bypasses the loopback publishing and the firewall.
+     *  - `cgroup_parent` — escapes the panel's resource limits.
+     *  - `build` — the context is a host path the daemon reads as root (`context: /root`
+     *    puts the server's keys in an image); the bind-mount check walks only `volumes`.
+     *    The panel runs images, it is not a build service.
      *
      * @var array<string, string>
      */
@@ -79,14 +59,9 @@ class ComposeValidator
     /**
      * Check a compose file, fixing what can safely be fixed.
      *
-     * `compose` in the result is what should actually be written — the user's
-     * file, with published ports bound to loopback if they were not already.
-     * That rewrite is the difference between a panel that refuses upstream's
-     * own file and one that runs it.
-     *
-     * Everything else stays a refusal, because there is no safe rewrite for
-     * it: `privileged`, `network_mode: host` and a bind mount of `/` are "no",
-     * not "let me fix that for you".
+     * `compose` in the result is what should be written: the user's file with published
+     * ports bound to loopback. Everything else stays a refusal (`privileged`,
+     * `network_mode: host`, a bind mount of `/`): there is no safe rewrite.
      *
      * @return array{ok: bool, errors: list<string>, resolved: array<string, mixed>|null, compose: string, rewrote_ports: bool}
      */
@@ -98,10 +73,8 @@ class ComposeValidator
         if ($parsed === null) {
             return [
                 'ok' => false,
-                // Docker's own words, because the log that used to hold them is
-                // not one the user can open (RC-29). Nothing to quote — a
-                // refused sudo grant, a timeout — gets the sentence without it
-                // rather than "…compose file: " followed by silence.
+                // Docker's own words; with nothing to quote (refused sudo grant, timeout) the
+                // generic sentence is used.
                 'errors' => [$dockerError === null
                     ? __('errors/application.compose_unparsable_generic')
                     : __('errors/application.compose_unparsable', ['error' => $dockerError])],
@@ -113,11 +86,8 @@ class ComposeValidator
 
         $rewrote = false;
 
-        // Rewrite, then **verify with Docker's own parser**. The safety does
-        // not rest on the regex being complete: if any published port still
-        // lacks a loopback address after the rewrite, the file is refused. A
-        // mapping form the rewrite misses is therefore refused, never silently
-        // published to the world.
+        // Rewrite, then verify with Docker's own parser: if any published port still lacks a
+        // loopback address, the file is refused, never silently published to the world.
         if ($this->hasPublicPort($parsed)) {
             $candidate = $this->bindToLoopback($compose);
             $reparsed = $candidate === $compose ? null : $this->parse($candidate, $documentRoot);
@@ -131,9 +101,8 @@ class ComposeValidator
 
         $errors = [];
 
-        // Only reached when the rewrite could not fix it — an exotic mapping
-        // form, or one the re-parse rejected. The message still says what to
-        // do, because at that point the user has to do it.
+        // Only reached when the rewrite could not fix it (exotic mapping form, or the
+        // re-parse rejected it).
         if ($this->hasPublicPort($parsed)) {
             $errors[] = __('errors/application.compose_port_public', [
                 'service' => '',
@@ -165,8 +134,7 @@ class ComposeValidator
 
         return [
             'ok' => $errors === [],
-            // Unique: one forbidden key repeated across five services is one
-            // problem to fix, and five identical lines reads as five.
+            // Unique: one forbidden key across five services is one problem.
             'errors' => array_values(array_unique($errors)),
             'resolved' => $parsed,
             'compose' => $compose,
@@ -177,18 +145,10 @@ class ComposeValidator
     /**
      * The host port nginx should proxy to, from a resolved compose document.
      *
-     * The panel cannot allocate this one. With a generated file the panel
-     * picks the port and writes it in; with a pasted file the user has
-     * already chosen, and proxying to a port the panel allocated instead
-     * would point nginx at nothing — the container is listening where the
-     * compose file says, not where the panel wished.
-     *
-     * One published port is unambiguous. Several is legitimate — an
-     * application and its metrics endpoint — and then `container_port`
-     * disambiguates by naming the port *inside* the container, which is the
-     * number the user knows. Only when neither settles it does this give up,
-     * and the caller turns that into a message asking for the container port
-     * rather than guessing.
+     * The panel cannot allocate this one: with a pasted file the container listens where
+     * the compose file says. One published port is unambiguous; with several,
+     * `container_port` (the port inside the container) picks one. Otherwise null, and the
+     * caller asks for the container port rather than guessing.
      *
      * @param  array<string, mixed>  $resolved
      */
@@ -225,21 +185,15 @@ class ComposeValidator
     }
 
     /**
-     * Why this file may not use one of the networks it names, or null (RC-28).
+     * Why this file may not use one of the networks it names, or null.
      *
-     * `network_mode` is refused above, but it is not the only way onto a
-     * network: a top-level `networks:` entry with `external: true` and `name:
-     * host` (or `name: sv-app-6_default`) joins one too, and the Container card's
-     * own network field already refuses both. Same rule, from the same class.
+     * `network_mode` is not the only way onto a network: a top-level `networks:` entry
+     * with `external: true` and `name: host` (or `name: sv-app-6_default`) joins one too.
+     * Every resolved name is checked, external or not: an explicit `name:` makes Compose
+     * reuse an existing network.
      *
-     * Every resolved name is checked, external or not: an explicit `name:`
-     * without `external` makes Compose reuse a network that is already there.
-     * The ones Compose makes up are `<project>_<key>`, and the project at
-     * validation time is never another site's unless the file says so.
-     *
-     * Asked by the requests, not by `validate()`: a site already deploying a file
-     * that names such a network is not stopped on its next redeploy by a rule it
-     * predates — only a save of the file is.
+     * Asked by the requests, not by `validate()`, so a redeploy of an existing site is not
+     * stopped by a rule it predates; only a save of the file is.
      *
      * @param  array<string, mixed>  $resolved
      * @param  int|null  $applicationId  the site the file is for; its own networks
@@ -254,8 +208,8 @@ class ComposeValidator
         }
 
         foreach ($networks as $network) {
-            // `config` writes the real name on every entry, external ones
-            // included. Not the key: the key `default` is the project's own.
+            // `config` writes the real name on every entry, external ones included; not the
+            // key (`default` is the project's own).
             $name = is_array($network) ? ($network['name'] ?? null) : null;
 
             if (is_string($name) && ($refusal = NetworkIsolation::refusal($name, $applicationId)) !== null) {
@@ -269,17 +223,11 @@ class ComposeValidator
     /**
      * Why this file cannot have its ports, when another application holds one.
      *
-     * `applications.app_port` is unique, and for a good reason: two sites on one
-     * port means nginx sends one site's traffic to the other. A pasted file chooses
-     * its own port, so the form has to ask before the row exists. Unasked, the
-     * file was accepted with a 201 and the provisioning job then died on the
-     * index when it recorded the port, leaving a `failed` site with no reason
-     * (RC-43, measured on 2026-10-15).
+     * `applications.app_port` is unique (two sites on one port would cross traffic). A
+     * pasted file chooses its own port, so this must be asked before the row exists, or
+     * the provisioning job dies on the unique index and leaves a `failed` site.
      *
-     * Every port the file publishes is checked, not only the proxied one: the
-     * other application's container listens on its port, so this one could not
-     * bind there either. The proxied port is named first, because that is the
-     * clash the user is most likely to recognise.
+     * Every published port is checked, not only the proxied one, which is named first.
      *
      * @param  array<string, mixed>  $resolved
      * @param  int|null  $except  the application being edited; its own port is no clash
@@ -312,18 +260,13 @@ class ComposeValidator
     /**
      * A published port something on the server is already listening on.
      *
-     * The check above knows only the panel's own applications. Everything else
-     * on the box passed — the web server on 80 and 443, SSH, a database — and the
-     * file was accepted, rewritten to `127.0.0.1:80`, and then failed at
-     * "Container start" with no reason: found in Docker QA on a real box, where
-     * the server-ops log said `bind host port 127.0.0.1:80/tcp: address already
-     * in use` with nginx holding `0.0.0.0:80`. So the form asks what is listening,
-     * the same way {@see PortAllocator::conflict()} already does for every other
-     * port a user picks.
+     * The check above knows only the panel's own applications. Anything else on the box
+     * (web server on 80/443, SSH, a database) would otherwise pass and fail later at
+     * "Container start" with "address already in use". Same approach as
+     * {@see PortAllocator::conflict()}.
      *
-     * When the file belongs to an existing site, the ports its own containers
-     * publish right now are not a conflict: while it runs, the listener IS the
-     * site, and refusing them would refuse every save of an unchanged file.
+     * For an existing site, the ports its own containers publish right now are not a
+     * conflict (the listener is the site itself).
      *
      * @param  list<array{0: int, 1: int}>  $ranges
      */
@@ -379,10 +322,8 @@ class ComposeValidator
     /**
      * Bind mounts must stay inside the application's own directory.
      *
-     * The check is on the *resolved* path, and that matters: `source` may be
-     * relative, and `../..` climbs out of the tree while looking local. Named
-     * volumes are untouched — they are Docker's to place and cannot point at
-     * the host filesystem.
+     * Checked on the *resolved* path: a relative `source` such as `../..` climbs out of
+     * the tree while looking local. Named volumes are untouched.
      *
      * @param  array<string, mixed>  $service
      * @return list<string>
@@ -399,9 +340,8 @@ class ComposeValidator
 
             $source = (string) ($volume['source'] ?? '');
 
-            // Compare on a normalised absolute path, with the separator
-            // appended to both sides. Without the separator `/home/shop-evil`
-            // passes a `str_starts_with('/home/shop')` check.
+            // Separator appended to both sides: otherwise `/home/shop-evil` passes a
+            // `str_starts_with('/home/shop')` check.
             $resolved = $this->normalise($source, $root);
 
             if ($resolved !== $root && ! str_starts_with($resolved.'/', $root.'/')) {
@@ -418,17 +358,10 @@ class ComposeValidator
     /**
      * Whether any published port is bound to every address.
      *
-     * A missing `host_ip` in the resolved document means exactly that, which
-     * is what `"8080:80"` expands to. Docker's rules sit ahead of the ones ufw
-     * manages, so such a port is reachable from the internet while the panel's
-     * Firewall page reports it closed.
-     *
-     * This used to be an error. It is now a thing to *fix*, because refusing
-     * it was right about the danger and wrong as a product decision:
-     * `"3001:3001"` is the normal Docker idiom and **every upstream compose
-     * file publishes that way** — it is what the project's own README says. A
-     * panel that refuses a file copied verbatim from the project's docs is
-     * hostile, and would be hostile for every image anyone ever tried.
+     * A missing `host_ip` in the resolved document means that (`"8080:80"` expands so).
+     * Docker's rules sit ahead of ufw's, so such a port is reachable from the internet while
+     * the Firewall page reports it closed. It is fixed by a rewrite rather than refused,
+     * because upstream compose files publish that way.
      *
      * @param  array<string, mixed>  $resolved
      */
@@ -452,20 +385,15 @@ class ComposeValidator
     /**
      * Rewrite short-form port mappings to publish on loopback.
      *
-     * A text rewrite, and deliberately not a clever one — it handles the short
-     * forms (`- "3001:3001"`, `- 3001:3001`) because those are what people
-     * paste. The safety does **not** rest on this regex being complete: the
-     * caller re-runs `docker compose config` on the result and refuses unless
-     * *every* published port now names a loopback address. So a form this
-     * misses is refused, not silently published — the verification is the
-     * guarantee, the rewrite is only the convenience.
+     * A plain text rewrite of the short forms (`- "3001:3001"`, `- 3001:3001`). Safety does
+     * not rest on it: the caller re-runs `docker compose config` and refuses unless every
+     * published port names a loopback address.
      */
     private function bindToLoopback(string $compose): string
     {
         return preg_replace_callback(
-            // A list entry that is a bare `host:container[/proto]` mapping,
-            // optionally quoted. An entry that already carries an address has
-            // two colons before the protocol and does not match.
+            // A bare `host:container[/proto]` mapping, optionally quoted; one that already has
+            // an address has two colons and does not match.
             '/^(\s*-\s*)(["\']?)(\d+:\d+(?:\/\w+)?)\2\s*$/m',
             fn (array $m): string => $m[1].'"127.0.0.1:'.$m[3].'"',
             $compose,
@@ -475,10 +403,8 @@ class ComposeValidator
     /**
      * Absolute, with `.` and `..` collapsed, without touching the filesystem.
      *
-     * `realpath()` is wrong here: it returns false for a path that does not
-     * exist yet, and a bind mount to a directory compose will create is
-     * legitimate. It also follows symlinks, which means the answer depends on
-     * what is on disk at validation time rather than on what was written.
+     * Not `realpath()`: it returns false for a directory compose will create, and follows
+     * symlinks, so the answer would depend on what is on disk.
      */
     private function normalise(string $path, string $root): string
     {
@@ -514,19 +440,13 @@ class ComposeValidator
             ['feature' => 'application', 'op' => 'compose_validate'],
             timeout: 30,
             input: $compose,
-            // The working directory is load-bearing, not tidiness. Compose
-            // resolves a relative bind source against the CWD of the process
-            // reading the file — measured: from /home/ubuntu, `./data` became
-            // `/home/ubuntu/data`. Validate from anywhere other than the
-            // directory the deploy will run in and the two resolve different
-            // paths, which is the validation/execution mismatch this whole
-            // class is built to avoid.
+            // The cwd is load-bearing: Compose resolves a relative bind source against it, so
+            // validating elsewhere than the deploy directory resolves different paths.
             cwd: $documentRoot,
         );
 
         if (! $result->answered) {
-            // A refused grant puts sudo's complaint on stderr, not Docker's —
-            // showing it would blame the user's file for the panel's setup.
+            // A refused grant puts sudo's complaint on stderr; showing it would blame the file.
             $dockerError = $result->denied ? null : $this->shortError($result->errorOutput());
 
             return null;
@@ -540,15 +460,12 @@ class ComposeValidator
     /**
      * Docker's complaint reduced to something safe to put in a 422.
      *
-     * `docker compose config` echoes values back in some messages — a bad
-     * `$` in an environment value is reported with the whole value, and a type
-     * mismatch quotes the offending scalar — and a pasted file is where
-     * passwords live. So the shapes known to carry a value are masked on top
-     * of what CommandRedactor already catches, and the result is capped.
+     * `docker compose config` echoes values back in some messages (a bad `$` in an
+     * environment value, a type mismatch), and pasted files hold passwords. Known shapes are
+     * masked on top of CommandRedactor, and the result is capped.
      *
-     * Warning lines are dropped: `docker compose` prints a `WARN` for a
-     * deprecated `version:` key ahead of the real error, and quoting that
-     * would send the user to fix the wrong thing.
+     * Warning lines are dropped: a `WARN` for a deprecated `version:` key precedes the real
+     * error.
      */
     private function shortError(string $stderr): ?string
     {

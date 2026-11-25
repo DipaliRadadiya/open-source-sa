@@ -47,8 +47,7 @@ class BackupController extends Controller
     /**
      * Every backup across every application — the restore list.
      *
-     * One screen rather than per-application history, because restore
-     * overwrites live data and one screen means one set of guardrails.
+     * One screen, because restore overwrites live data and needs one set of guardrails.
      */
     public function index(IndexBackupsRequest $request): JsonResponse
     {
@@ -56,7 +55,7 @@ class BackupController extends Controller
     }
 
     /**
-     * One application's backups, same shape as the list above (BK-K).
+     * One application's backups, same shape as the list above.
      */
     public function indexForApplication(IndexApplicationBackupsRequest $request, Application $application): JsonResponse
     {
@@ -72,26 +71,20 @@ class BackupController extends Controller
         $archived = array_key_exists('archived', $filter) && $filter['archived'] !== null ? (bool) $filter['archived'] : null;
 
         $backups = Backup::query()
-            // The destination comes through the target, and this list is
-            // paginated: without it here every row asks for its own target and
-            // its own destination, which is forty extra queries on a page of
-            // twenty. `whenLoaded` in the resource is what makes the field
-            // appear, so the two have to move together.
+            // Eager-loaded to avoid a query per row; the resource's `whenLoaded` shows the field,
+            // so the two must move together.
             ->with(['application:id,name,domain', 'database:id,name,engine', 'storageDestination:id,name'])
             ->when($filter['application_id'] ?? null, fn ($query, $id) => $query->where('application_id', $id))
             ->tap(fn ($query) => $this->subjectFilters($query, $filter, $archived))
             ->when($filter['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filter['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
             ->when($filter['from'] ?? null, fn ($query, $from) => $query->where('created_at', '>=', Carbon::parse($from)->startOfDay()))
-            // End of day, not midnight: a user asking for backups "to
-            // Tuesday" means Tuesday included, and `<= 2026-03-10 00:00:00`
-            // would silently drop everything that ran that day.
+            // End of day, not midnight: "to Tuesday" includes Tuesday.
             ->when($filter['to'] ?? null, fn ($query, $to) => $query->where('created_at', '<=', Carbon::parse($to)->endOfDay()))
             ->latest('id')
             ->paginate($request->validated('per_page', 20));
 
         // Per-status counts, same filters as the main query (no pagination).
-        // Replaces four separate per_page=1 requests the frontend was making.
         $baseQuery = Backup::query()
             ->when($filter['application_id'] ?? null, fn ($query, $id) => $query->where('application_id', $id))
             ->tap(fn ($query) => $this->subjectFilters($query, $filter, $archived))
@@ -119,13 +112,11 @@ class BackupController extends Controller
     }
 
     /**
-     * What the backup settings form offers, so the frontend holds no list of
-     * its own.
+     * What the backup settings form offers, so the frontend holds no list of its own.
      *
-     * Built from the same constants the save validation uses, so a value this
-     * offers is one the API accepts and the reverse. Labels and hints come back
-     * translated. `time` says which picker a frequency needs: `minute` for
-     * hourly, `time` for the rest, null for manual.
+     * Built from the constants the save validation uses, so offered values are accepted values.
+     * Labels and hints come back translated. `time` says which picker a frequency needs:
+     * `minute` for hourly, `time` for the rest, null for manual.
      */
     public function options(): JsonResponse
     {
@@ -137,14 +128,9 @@ class BackupController extends Controller
                 'hint' => __('backup.frequency_hint.'.$frequency),
             ], BackupTarget::FREQUENCIES),
             'default_frequency' => 'daily',
-            // `family` because this endpoint has no application to scope to, and
-            // the two families are not interchangeable: `volumes` on a WordPress
-            // site finds nothing and `filesystem` on a container site archives
-            // one compose file. `SaveBackupTargetRequest` refuses the mismatch,
-            // so without this the form would offer six types where the API
-            // accepts three — the exact divergence this method's docblock
-            // promises not to have. The caller already knows the site's
-            // `serving_profile` and filters on it.
+            // `family`: this endpoint has no application to scope to, and the families are not
+            // interchangeable (`SaveBackupTargetRequest` refuses the mismatch). The caller
+            // filters on the site's `serving_profile`.
             'types' => array_map(fn (BackupType $type): array => [
                 'value' => $type->value,
                 'label' => __('backup.type.'.$type->value),
@@ -159,18 +145,11 @@ class BackupController extends Controller
     /**
      * Every application and its backup configuration — the overview screen.
      *
-     * Driven from applications, not from backup targets: listing targets can
-     * only ever return the sites that are already protected, and the question
-     * this screen exists to answer is which ones are not. `meta` carries the
-     * counts so the header does not depend on the caller reducing the list.
+     * Driven from applications, not from backup targets: listing targets would only return
+     * sites that are already protected, and this screen exists to show which are not.
      *
-     * Paged, but the counts are not. This used to say "not paginated, because a
-     * '5 of 7 protected' built from page one would be wrong" — the observation
-     * was right and the conclusion has been narrowed rather than dropped: the
-     * counts are now taken with their own aggregate queries over every
-     * application, so they describe the server whatever page you are on and
-     * whatever you have filtered to. A header that changed when you turned the
-     * page would be answering a question nobody asked.
+     * Paged, but `meta` counts are not: they come from aggregate queries over every application,
+     * so they describe the server whatever page or filter is active.
      */
     public function indexTargets(IndexBackupTargetsRequest $request): JsonResponse
     {
@@ -194,8 +173,7 @@ class BackupController extends Controller
             IndexBackupTargetsRequest::SORTS,
         )->paginate($request->validated('per_page', IndexBackupTargetsRequest::PER_PAGE));
 
-        // Counted, not fetched: one grouped query over every application, so
-        // the four states add up to `total` whatever the page, search or filter.
+        // One grouped query over every application: the four states add up to `total`.
         $states = BackupCoverage::counts(Application::query(), 'application_id');
         $total = array_sum($states);
         $configured = Application::query()->whereHas('backupTarget')->count();
@@ -204,9 +182,7 @@ class BackupController extends Controller
             'backup_targets' => ApplicationBackupResource::collection($applications->items())->resolve(),
             'meta' => [
                 'total' => $total,
-                // The four states (BackupCoverage); they add up to `total`.
-                // `unprotected` is the sites with no settings at all, as the
-                // state says — paused and failing are counted on their own.
+                // The four BackupCoverage states; `unprotected` means no settings at all.
                 'protected' => $states[BackupCoverage::PROTECTED],
                 'unprotected' => $states[BackupCoverage::UNPROTECTED],
                 'paused' => $states[BackupCoverage::PAUSED],
@@ -215,9 +191,7 @@ class BackupController extends Controller
                 'configured' => $configured,
                 'current_page' => $applications->currentPage(),
                 'per_page' => $applications->perPage(),
-                // How many rows the current search and filter match, which is
-                // not `total` — `total` is how many sites exist. Two different
-                // numbers that both deserve a name.
+                // Rows matching the current search and filter; `total` is how many sites exist.
                 'matched' => $applications->total(),
                 'last_page' => $applications->lastPage(),
             ],
@@ -227,10 +201,8 @@ class BackupController extends Controller
     /**
      * The backup settings for one application, or null when unconfigured.
      *
-     * `has_volumes` lets the form disable `volumes` for a container site with
-     * none, which the save refuses (S-02). Null when it does not apply — a
-     * hosted site — or Docker could not be asked; the form then offers every
-     * container type and the save still has the last word.
+     * `has_volumes` lets the form disable `volumes` for a container site with none, which the
+     * save refuses. Null when it does not apply (hosted site) or Docker could not be asked.
      */
     public function showTarget(Application $application, VolumeSizes $volumes): JsonResponse
     {
@@ -261,8 +233,7 @@ class BackupController extends Controller
     /**
      * Delete one backup, archive included.
      *
-     * 204 rather than the deleted row: there is nothing left to return, and
-     * echoing a record that no longer exists invites a client to act on it.
+     * 204: there is nothing left to return.
      */
     public function destroy(Backup $backup, DeleteBackup $action): JsonResponse
     {
@@ -274,15 +245,12 @@ class BackupController extends Controller
     /**
      * Delete several backups at once.
      *
-     * 200 with a per-backup outcome rather than 204, because a batch can
-     * half-work and the caller has to be able to say which half. Same
-     * `succeeded`/`failed` shape the file manager's bulk operations use, so a
-     * client reads one contract for both.
+     * 200 with a per-backup outcome, because a batch can half-work. Same `succeeded`/`failed`
+     * shape as the file manager's bulk operations.
      */
     public function destroyMany(BulkDeleteBackupsRequest $request, DeleteBackups $action): JsonResponse
     {
-        // Ordered oldest first so a batch that is cut short by anything has
-        // removed the backups least likely to be wanted.
+        // Oldest first, so a batch cut short has removed the backups least likely to be wanted.
         $backups = Backup::query()
             ->whereIn('id', $request->validated('ids'))
             ->with('target.storageDestination', 'application')
@@ -300,9 +268,8 @@ class BackupController extends Controller
     /**
      * Stop backing this application up.
      *
-     * The archives are the destructive part, not the schedule, so this refuses
-     * while any exist unless `delete_backups` says otherwise — and then deletes
-     * them through the same path a single delete uses.
+     * The archives are the destructive part, so this refuses while any exist unless
+     * `delete_backups` says otherwise, then deletes them as a single delete does.
      */
     public function destroyTarget(Application $application, DeleteBackupTarget $action): JsonResponse
     {
@@ -314,10 +281,7 @@ class BackupController extends Controller
     /**
      * Run a backup now.
      *
-     * 202 with the target, not the backup: the run happens on the queue and
-     * the row does not exist until a worker picks it up. Returning a `Backup`
-     * here would mean inventing one, and the client would poll something the
-     * runner has not created.
+     * 202 with the target, not the backup: the row does not exist until a worker picks the job up.
      */
     public function run(Application $application, StaleBackupReaper $reaper): JsonResponse
     {
@@ -329,26 +293,22 @@ class BackupController extends Controller
             ]);
         }
 
-        // Reaps abandoned rows before answering. Without this a run stranded by
-        // a killed worker blocks the site forever: it is in flight by status
-        // and gone in fact, and nothing else ever revisits it.
         if (Restore::inProgressFor($target->application_id)) {
             throw ValidationException::withMessages([
                 'application' => [__('backup.errors.restore_already_running')],
             ]);
         }
 
+        // Also reaps abandoned rows: a run stranded by a killed worker would otherwise block the
+        // site forever. The job is unique per target too; this tells the user why.
         if ($reaper->hasLiveRun($target)) {
-            // Two archives of the same site at once would compete for the same
-            // disk and the same lock. The job is unique per target as well;
-            // this is the half that can tell the user why.
             throw ValidationException::withMessages([
                 'application' => [__('backup.errors.already_running')],
             ]);
         }
 
         $this->refuseVolumesWithoutVolumes($target);
-        // Room for it first (2026-10-29): said now, not by a failed backup.
+        // Room for it first: said now, not by a failed backup.
         app(DiskSpaceCheck::class)->requireForBackup($target);
 
         RunBackup::dispatch($target->id, request()->user()?->id);
@@ -359,14 +319,10 @@ class BackupController extends Controller
     }
 
     /**
-     * A `volumes` target of a site with no volumes, refused before it is queued
-     * (S-02).
+     * A `volumes` target of a site with no volumes, refused before it is queued.
      *
-     * The save refuses this now, but a target saved before it did is still in
-     * the table, and "Back up now" answering 202 for a run that can only fail
-     * is the silent half. The same message as the save, so both say one thing.
-     * A scheduled run cannot be answered like this; `ArchiveVolumes` fails it
-     * with this reason instead.
+     * Targets saved before the save-time check still exist; a 202 for a run that can only
+     * fail would hide it. A scheduled run fails in `ArchiveVolumes` with the same reason.
      */
     private function refuseVolumesWithoutVolumes(BackupTarget $target): void
     {
@@ -384,25 +340,17 @@ class BackupController extends Controller
     /**
      * Hand over a time-limited link to the archive itself.
      *
-     * Presigned and returned as JSON — the panel never streams the bytes.
-     * Proxying would pin one PHP-FPM worker for the length of a
-     * multi-gigabyte transfer, and a handful of concurrent downloads is a
-     * dead panel; a 302 would send the browser cross-origin carrying headers
-     * the presigned signature does not cover.
+     * Presigned and returned as JSON; the panel never streams the bytes (that would pin a
+     * PHP-FPM worker per multi-gigabyte transfer, and a 302 would send headers the signature
+     * does not cover).
      *
-     * SFTP and FTP have no such link, and answer 409 `prepare_required`: the
-     * archive is copied to the panel on the queue first, and only that local
-     * copy is ever served — a few at once at most
-     * ({@see BackupDownloadController}). Never proxied from the storage
-     * server itself: the FTP adapter's read buffers the whole archive before
-     * the first byte.
+     * SFTP and FTP have no such link and answer 409 `prepare_required`: the archive is copied
+     * to the panel on the queue first and only that local copy is served
+     * ({@see BackupDownloadController}). Never proxy from the storage server: the FTP
+     * adapter buffers the whole archive before the first byte.
      *
-     * Deliberately not gated on `verified` the way restore is. Restore
-     * overwrites a live site, so an unverified source is dangerous;
-     * downloading changes nothing, and a failed run's partial archive is
-     * sometimes exactly what someone needs to work out what went wrong. The
-     * three guards below already exclude every case where there is nothing
-     * to hand over.
+     * Not gated on `verified` like restore: downloading changes nothing, and a failed run's
+     * partial archive can help debugging.
      */
     public function download(Backup $backup, DestinationDisk $disks, StorageDriverFactory $drivers, ActivityLogger $activity): JsonResponse
     {
@@ -422,19 +370,12 @@ class BackupController extends Controller
             ]);
         }
 
-        // Asked of the *driver* before the disk, because only the driver knows
-        // whether its provider has such a thing. This used to go straight to
-        // `temporaryUrl()`, which only the S3 adapter implements — so FTP,
-        // SFTP and both Drive destinations answered a raw 500 for the entire
-        // life of the feature, surfacing the day the first Drive backup got
-        // far enough to be downloadable.
+        // Asked of the *driver* before the disk: only it knows whether its provider has a link
+        // (`temporaryUrl()` exists on the S3 adapter alone).
         $driver = $drivers->for($destination);
 
-        // SFTP and FTP: no link exists to hand over, so the panel copies the
-        // archive here first (`POST …/download/prepare`) and serves the copy.
-        // Answered before the disk is touched — saying "prepare it" needs no
-        // connection to the storage server, and the prepare step makes one
-        // on the queue rather than in this request.
+        // SFTP and FTP: the panel copies the archive here first (`POST …/download/prepare`) and
+        // serves the copy. Answered before the disk is touched; no storage connection needed.
         if ($driver instanceof PreparesDownloads) {
             return response()->json([
                 'message' => __('backup.errors.download_prepare_required'),
@@ -447,27 +388,20 @@ class BackupController extends Controller
         $disk = $disks->for($destination);
 
         if (! $disk->exists($key)) {
-            // The row says the archive exists; the bucket disagrees. Saying
-            // so beats handing over a link that 404s in the browser, where
-            // it looks like the panel is broken rather than the bucket.
+            // The row says the archive exists; the bucket disagrees.
             throw ValidationException::withMessages([
                 'backup' => [__('backup.errors.download_missing')],
             ]);
         }
 
-        // Short: long enough to start the transfer, not long enough for the
-        // link to be worth passing around. S3 authorises at signature check,
-        // so a download already in flight is unaffected when it lapses.
+        // Short: long enough to start the transfer, too short to be worth passing around.
         $expiresAt = now()->addMinutes(5);
 
-        // Made before the log entry, because making it can still be refused
-        // (a destination with no signed links). Bug #45: the entry used to
-        // come first, so a refused download was recorded as "Downloaded".
+        // Before the log entry: making it can still be refused (no signed links), and a
+        // refused download must not be logged as "Downloaded".
         $url = $driverUrl ?? $this->signedUrl($disk, $key, $expiresAt);
 
-        // A link to every file on the site plus its database dump. Who asked
-        // for it belongs in the audit trail — the URL itself does not, since
-        // it carries a working credential for those five minutes.
+        // The audit trail records who asked, never the URL: it is a working credential.
         $activity->log('backup.downloaded', $backup, [
             'application' => $backup->subjectName(),
             'backup_id' => $backup->getKey(),
@@ -477,10 +411,7 @@ class BackupController extends Controller
             'download' => [
                 'url' => $url,
 
-                // Only meaningful for a signed URL. A Drive link does not
-                // expire — it is gated on who the browser is signed in as, not
-                // on a clock — and printing a five-minute countdown next to one
-                // would be a confident lie about when it stops working.
+                // Only for a signed URL: a Drive link does not expire, it is gated on who is signed in.
                 'expires_at' => $driverUrl !== null ? null : $expiresAt->format('d-m-Y H:i:s'),
                 'filename' => $backup->downloadFilename(),
                 'size_bytes' => $backup->size_bytes,
@@ -491,12 +422,8 @@ class BackupController extends Controller
     /**
      * The S3 path: a signed link that carries its own expiry.
      *
-     * Guarded rather than called blind. `temporaryUrl()` throws
-     * `RuntimeException: This driver does not support creating temporary URLs`
-     * on every adapter but S3, and that exception reaching the handler is the
-     * 500 this whole change exists to remove — so the one place still allowed
-     * to call it checks first, and a driver that can do neither gets a named
-     * reason instead.
+     * Guarded: `temporaryUrl()` throws a RuntimeException on every adapter but S3, which would
+     * surface as a 500, so a driver that cannot sign gets a named reason instead.
      */
     private function signedUrl(Filesystem $disk, string $key, CarbonInterface $expiresAt): string
     {
@@ -512,9 +439,7 @@ class BackupController extends Controller
     /** Poll one backup while it runs. */
     public function show(Backup $backup): JsonResponse
     {
-        // Loaded so this row carries the same fields as a row from the list.
-        // A polled backup that drops `storage_destination_name` on refresh
-        // would blank a column the user is watching.
+        // Loaded so a polled row carries the same fields as a row from the list.
         return response()->json([
             'backup' => BackupResource::make($backup->load('storageDestination:id,name'))->resolve(),
         ]);
@@ -559,7 +484,7 @@ class BackupController extends Controller
         }
 
         $this->refuseVolumesWithoutVolumes($target);
-        // Room for it first (2026-10-29): said now, not by a failed backup.
+        // Room for it first: said now, not by a failed backup.
         app(DiskSpaceCheck::class)->requireForBackup($target);
 
         RunBackup::dispatch($target->id, request()->user()?->id);
@@ -572,17 +497,12 @@ class BackupController extends Controller
     /**
      * Close out a run that is stuck in flight.
      *
-     * The automatic reaping only happens when somebody next asks for a backup,
-     * and the wait until a run is provably dead is over an hour. This is the
-     * button for the person looking at a site that says "running" from
-     * yesterday and wants it back now.
+     * Automatic reaping only happens when somebody next asks for a backup, and a run is
+     * provably dead only after over an hour; this is the manual button.
      *
-     * **A run that could still be alive is refused.** There is no way from here
-     * to kill a job already executing on a worker, so marking it failed would
-     * not stop it — it would leave the row saying one thing and the process
-     * doing another, and free the guard for a second backup to start alongside
-     * the first. Both would then write to the same disk and the same archive
-     * key. Refusing and saying when it clears itself is the honest answer.
+     * **A run that could still be alive is refused.** A running job cannot be killed from here,
+     * so marking it failed would free the guard for a second backup writing to the same disk
+     * and archive key.
      */
     public function clear(Backup $backup, StaleBackupReaper $reaper, ActivityLogger $activity): JsonResponse
     {
@@ -612,8 +532,8 @@ class BackupController extends Controller
     }
 
     /**
-     * The database half of the filters: a database's own backups, archived
-     * ones (no site and no database any more), and the engine they hold.
+     * The database half of the filters: a database's own backups, archived ones (no site and no
+     * database any more), and the engine they hold.
      *
      * @param  array<string, mixed>  $filter
      */
@@ -626,13 +546,9 @@ class BackupController extends Controller
             ->when($filter['engine'] ?? null, fn ($q, $engine) => $q->where('subject_engine', $engine));
     }
 
-    /** A backup target that will actually run on its own. */
     /**
-     * The overview's database rows (RC-23): every database that is not part of
-     * a site, since only those can have a schedule of their own — a site's
-     * database is backed up with the site and already has its row. Same
-     * filters, paging and counts as the applications, so the screen renders
-     * both the same way.
+     * The overview's database rows: every database that is not part of a site (a site's
+     * database is backed up with the site). Same filters, paging and counts as the applications.
      *
      * @param  array<string, mixed>  $filter
      */
@@ -675,12 +591,11 @@ class BackupController extends Controller
     }
 
     /**
-     * The coverage list's filters, every one through BackupCoverage so a row's
-     * `state` and the filter that found it are the same rule.
+     * The coverage list's filters, all through BackupCoverage so a row's `state` and the filter
+     * that found it are the same rule.
      *
-     * `filter[protected]`: `1` is the protected sites only; `0` is everything
-     * else — unprotected, paused AND failing. A failing schedule is not
-     * protection, and `0` used to leave it out.
+     * `filter[protected]`: `1` is protected sites only; `0` is everything else (unprotected,
+     * paused AND failing).
      *
      * @param  array<string, mixed>  $filter
      */
@@ -706,8 +621,8 @@ class BackupController extends Controller
     }
 
     /**
-     * `sort=state` (the default) or `-state` through BackupCoverage; any other
-     * whitelisted column through ListSort, as before.
+     * `sort=state` (the default) or `-state` through BackupCoverage; any other whitelisted
+     * column through ListSort.
      *
      * @param  list<string>  $columns
      */

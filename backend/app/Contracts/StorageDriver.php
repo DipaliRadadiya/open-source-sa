@@ -9,16 +9,10 @@ use Throwable;
 /**
  * Everything that differs between one storage provider and another (strategy).
  *
- * The point of this interface is that **nothing downstream branches on the
- * provider**. `UploadArtifact`, `VerifyArtifact`, `PruneOldBackups`,
- * `DownloadArtifact` and the prober all take a destination and get a
- * filesystem; which service is on the other end is this layer's problem and
- * nobody else's.
- *
- * Provider knowledge that used to be spread across four places — a hardcoded
- * S3 config array, a hardcoded `'driver' => 's3'` in the Resource, a set of
- * S3-only validation rules, and a `classify()` that fingerprints AWS SDK
- * exception names — lives behind this one contract instead.
+ * **Nothing downstream branches on the provider**: `UploadArtifact`, `VerifyArtifact`,
+ * `PruneOldBackups`, `DownloadArtifact` and the prober take a destination and get a filesystem.
+ * All provider knowledge (config, validation rules, failure classification) lives behind this
+ * contract.
  */
 interface StorageDriver
 {
@@ -27,9 +21,8 @@ interface StorageDriver
     /**
      * The Laravel/Flysystem disk config for this destination.
      *
-     * Built on demand and never registered in `filesystems.disks`: a
-     * destination's credentials must not bleed into other code that resolves
-     * a named disk, across queue workers, Octane tasks or a later request.
+     * Built on demand, never registered in `filesystems.disks`: a destination's credentials must
+     * not bleed into other code that resolves a named disk.
      *
      * @return array<string, mixed>
      */
@@ -38,10 +31,8 @@ interface StorageDriver
     /**
      * Validation rules for this provider's `config.*` keys.
      *
-     * Returned rather than applied: validation still *lives in* the
-     * FormRequest, which composes these into its own `rules()`. The driver
-     * only knows what its provider needs — it does not know whether this is a
-     * create or a partial update, and it must not decide.
+     * Returned, not applied: the FormRequest composes these into its own `rules()`. The driver
+     * does not know whether this is a create or a partial update.
      *
      * @param  bool  $requireSecrets  False on a partial update, where an
      *                                omitted credential means "keep the
@@ -53,9 +44,8 @@ interface StorageDriver
     /**
      * Which `config` keys hold secrets.
      *
-     * Used to keep them out of API responses and logs, and to decide whether
-     * a partial update is rotating a credential or merely renaming. Anything
-     * not named here is addressing information and is safe to echo back.
+     * Used to keep them out of API responses and logs, and to tell a credential rotation from a
+     * rename. Anything not named here is addressing information, safe to echo back.
      *
      * @return list<string>
      */
@@ -64,8 +54,7 @@ interface StorageDriver
     /**
      * The non-secret part of the config, for the API response.
      *
-     * A destination has to be describable in a list — "which bucket?", "which
-     * host?" — without ever putting a credential in the envelope.
+     * Describes a destination in a list ("which bucket?") without a credential in the envelope.
      *
      * @return array<string, mixed>
      */
@@ -75,12 +64,9 @@ interface StorageDriver
      * Categorise a failure into one of the two stable public classes:
      * `invalid_credentials` or `unreachable`.
      *
-     * Per-provider because the evidence is per-provider. The S3 SDK raises
-     * `SignatureDoesNotMatch`; an FTP server answers `530`; SSH throws on
-     * authentication with none of those words in it. A shared implementation
-     * can only recognise one of the three, and silently calls the other two
-     * "unreachable" — which sends someone to check their hostname when their
-     * password is what is wrong.
+     * Per-provider because the evidence is: S3 raises `SignatureDoesNotMatch`, FTP answers `530`,
+     * SSH throws on authentication. A shared implementation would call the unrecognised ones
+     * "unreachable" and send someone to check the hostname when the password is wrong.
      *
      * Return the i18n key, not the bare category.
      */
@@ -90,111 +76,70 @@ interface StorageDriver
      * A precondition to check before the write/read/delete round trip, or null
      * when the provider has none.
      *
-     * Exists because **writability is not always a sufficient test**. A Google
-     * service account has no Drive quota of its own, so a 64-byte sentinel can
-     * succeed into a personal folder where a real archive fails with
-     * `storageQuotaExceeded` — the probe would go green and the first backup
-     * would fail at 3am. The question "is this folder in a Shared Drive" has an
-     * unambiguous answer, so it is asked directly rather than inferred from a
-     * write.
+     * **Writability is not always a sufficient test.** A Google service account has no Drive quota
+     * of its own, so a small sentinel can succeed into a personal folder where a real archive fails
+     * with `storageQuotaExceeded`. "Is this folder in a Shared Drive" is asked directly.
      *
-     * Returns the i18n key of the failure, or null if the destination passes.
-     * Implementations must not throw for an ordinary failure — the prober's
-     * catch-all would classify it, losing the specific reason this exists to
-     * give.
+     * Returns the i18n key of the failure, or null if the destination passes. Must not throw for
+     * an ordinary failure: the prober's catch-all would lose the specific reason.
      */
     public function preflight(StorageDestination $destination): ?string;
 
     /**
      * Put right anything about this destination the panel can fix on its own.
      *
-     * Called before a destination is used, so it runs on a scheduled backup at
-     * 3am as well as on a button press. Most providers have nothing to do: a
-     * bucket is not something the panel created, and its absence is a decision
-     * somebody made elsewhere.
+     * Called before a destination is used, including scheduled backups. Most providers have
+     * nothing to do: a bucket was not created by the panel.
      *
-     * Google Drive is different. The panel creates its own folder there, the
-     * folder lives in somebody's *personal* Drive where they are entitled to
-     * delete it, and the panel still holds a working refresh token afterwards —
-     * so it can simply make another. Demanding a full re-consent to replace a
-     * folder we can create with the credential we already have is friction for
-     * its own sake.
+     * Google Drive is different: the panel creates its own folder in somebody's *personal* Drive,
+     * where it can be deleted, and the panel still holds a refresh token, so it can make another
+     * without demanding a full re-consent.
      *
-     * Must be safe to call often and must not throw: a repair that cannot
-     * happen leaves the destination exactly as it was, and the ordinary failure
-     * path reports it.
+     * Must be safe to call often and must not throw: a repair that cannot happen leaves the
+     * destination as it was, and the ordinary failure path reports it.
      */
     public function heal(StorageDestination $destination): void;
 
     /**
      * Fetch one object straight onto local disk.
      *
-     * Exists because `readStream()` is not always a stream. The FTP adapter
-     * implements it as `fopen('php://temp')` + `ftp_fget`, which downloads the
-     * **entire** object into a buffer before the caller sees a byte — and
-     * `php://temp` spills into the system temp directory, which on a normal
-     * install is a tmpfs of a couple of gigabytes. A 24 GB archive therefore
-     * filled /tmp and the restore failed with "Unable to read file", while the
-     * transfer itself was fine: the same download to /dev/null finished in 34
-     * seconds.
+     * Exists because `readStream()` is not always a stream: the FTP adapter downloads the
+     * **entire** object into `php://temp` first, which spills into /tmp (often a small tmpfs), so
+     * a multi-gigabyte archive fails with "Unable to read file". Large archives belong under
+     * `server.backups.working_dir` (in `storage/`), never /tmp.
      *
-     * The panel had already decided this for the other direction —
-     * `server.backups.working_dir` lives under `storage/` precisely because
-     * "/tmp is cleared on reboot and is often a small tmpfs, and a
-     * multi-gigabyte site archive would fill it". Backups honoured that;
-     * restores went through /tmp anyway, via the adapter.
-     *
-     * Returning false means "I have no special way to do this", and the caller
-     * falls back to the streaming copy — correct for the drivers whose
-     * `readStream()` really does stream.
+     * Returning false means "no special way", and the caller falls back to the streaming copy
+     * (correct for drivers whose `readStream()` really streams).
      */
     public function downloadTo(StorageDestination $destination, string $key, string $path): bool;
 
     /**
      * A URL the operator's browser can fetch the archive from directly.
      *
-     * `BackupController::download()` used to call `$disk->temporaryUrl()`
-     * unconditionally. **Only the S3 adapter implements that**, so Download
-     * answered a raw 500 — "This driver does not support creating temporary
-     * URLs" — for FTP, SFTP and both Drive destinations: four providers out of
-     * five, for as long as the feature has existed. It surfaced the day the
-     * first Drive backup got far enough to be downloadable.
+     * **Only the S3 adapter implements `temporaryUrl()`**, so callers ask the driver first.
      *
-     * Returning null means "I have no such URL", exactly as `downloadTo()`
-     * returns false, and the caller then falls back to `temporaryUrl()` before
-     * refusing with a named reason. A driver that cannot do this is a normal
-     * state to be reported, not an exception to be thrown.
+     * Returning null means "no such URL" (as `downloadTo()` returns false); the caller falls back
+     * to `temporaryUrl()` before refusing with a named reason. That is a normal state, not an
+     * exception.
      *
-     * **Never a link that makes the archive public.** The object is a complete
-     * copy of a site and its database. An implementation that widens
-     * permissions to produce a URL is trading the operator's data for
-     * convenience they did not ask for; if the only way to produce a link is
-     * to share the file, return null instead.
+     * **Never a link that makes the archive public.** The object is a complete copy of a site and
+     * its database: if the only way to produce a link is to share the file, return null.
      */
     public function downloadUrl(StorageDestination $destination, string $key): ?string;
 
     /**
      * Upload a local file with this provider's own resumable machinery.
      *
-     * Returning false means "I have no special way to do this" — exactly as
-     * {@see self::downloadTo()} does — and the caller falls back to
-     * `writeStream()`. A driver that cannot resume should not pretend to.
+     * Returning false means "no special way" (as {@see self::downloadTo()}) and the caller falls
+     * back to `writeStream()`. A driver that cannot resume should not pretend to.
      *
-     * **Why this exists at all.** Flysystem's `writeStream()` is one shot: the
-     * Drive adapter loops chunks with no retry, and on any failure returns
-     * `false`, which surfaces as "Not able to write the file" with no cause
-     * attached anywhere. One bad chunk out of a thousand therefore discards the
-     * entire upload *and* the archiving that preceded it — measured on
-     * 2026-09-23, a 102 GB backup died after 35 chunks and lost 19 minutes.
+     * **Why this exists.** Flysystem's `writeStream()` is one shot: the Drive adapter loops chunks
+     * with no retry, so one bad chunk discards the whole upload and the archiving before it. Google's
+     * resumable protocol lets the session report its committed offset and carry on, turning a
+     * transient blip into a pause.
      *
-     * Google's resumable protocol is built for precisely this: ask the session
-     * for its committed offset and carry on. The vendor even ships a
-     * `resume()` method for it, and never calls it. A driver implementing this
-     * turns a transient blip from a total loss into a pause.
-     *
-     * `$onProgress` receives the cumulative byte count after each chunk, so the
-     * panel keeps showing movement — and so the heartbeat the reaper reads
-     * stays warm across a retry.
+     * `$onProgress` receives the cumulative byte count after each chunk, keeping the progress and
+     * the heartbeat the reaper reads warm across a retry.
      *
      * @param  null|callable(int): void  $onProgress
      */

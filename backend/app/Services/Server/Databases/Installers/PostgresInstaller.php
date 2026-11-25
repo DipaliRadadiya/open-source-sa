@@ -13,55 +13,30 @@ use Illuminate\Support\Str;
 /**
  * Installs PostgreSQL from Ubuntu's own archive and gives the panel an account.
  *
- * Standalone rather than an `AbstractSqlEngineInstaller` subclass, for two
- * reasons that are not stylistic:
+ * Standalone rather than an `AbstractSqlEngineInstaller` subclass, for two non-stylistic reasons:
  *
- *  - That class reaches the engine with `--protocol=socket --user=root`, which
- *    works because on MySQL and MariaDB `root@localhost` authenticates by
- *    *being OS root* — which ServerOps already is. PostgreSQL uses **peer**
- *    auth, and root is not `postgres`, so the same call is refused. Everything
- *    here goes through `runuser -u postgres`.
- *  - It refuses to install when the *other* SQL engine is present, because they
- *    fight over 3306. PostgreSQL is on 5432 and coexists with both, so that
- *    check would be inventing a conflict.
+ *  - That class connects with `--protocol=socket --user=root`, which works on MySQL/MariaDB
+ *    because `root@localhost` authenticates by being OS root. PostgreSQL uses **peer** auth and
+ *    root is not `postgres`, so everything here goes through `runuser -u postgres`.
+ *  - It refuses to install when the *other* SQL engine is present (they fight over 3306);
+ *    PostgreSQL is on 5432 and coexists with both.
  *
- * **Health is never asked of systemd**, and that is measured rather than
- * assumed. The shipped units say:
+ * **Health is never asked of systemd.** `postgresql.service` is a `Type=oneshot` with
+ * `ExecStart=/bin/true` and `RemainAfterExit=on`, so `is-active` says `active` whatever the
+ * clusters do; `postgresql@.service` starts with `ExecStart=-/usr/bin/pg_ctlcluster ...`, whose
+ * leading `-` makes systemd ignore a failed start. Only `pg_isready` answers "is PostgreSQL up".
  *
- *     # postgresql.service
- *     Type=oneshot
- *     ExecStart=/bin/true
- *     RemainAfterExit=on
- *
- * — its own comment calls it "more like a systemd target", so `is-active`
- * answers `active` because `/bin/true` succeeded, whatever the clusters are
- * doing. And the real unit is worse:
- *
- *     # postgresql@.service
- *     ExecStart=-/usr/bin/pg_ctlcluster --skip-systemctl-redirect %i start
- *
- * The leading `-` tells systemd to ignore a non-zero exit, so even starting a
- * specific cluster reports success when the cluster failed to come up. There is
- * no systemd question that answers "is PostgreSQL up". `pg_isready` is.
- *
- * Nothing here touches `postgresql.conf` or `pg_hba.conf`. Ubuntu's default
- * hba already allows scram-sha-256 from 127.0.0.1, which is exactly what the
- * stored connection uses — so the panel needs no edit to a file that other
- * things on the box may depend on.
+ * Nothing here touches `postgresql.conf` or `pg_hba.conf`: Ubuntu's default hba already allows
+ * scram-sha-256 from 127.0.0.1, which is what the stored connection uses.
  */
 class PostgresInstaller implements EngineInstaller
 {
     /**
      * `panel_` plus ten random characters.
      *
-     * Random so a fixed, guessable superuser is not sitting behind 5432 on
-     * every install of this panel; prefixed anyway, because an admin reading
-     * `\du` has to be able to tell this is the panel's role — an opaque name
-     * holding SUPERUSER looks exactly like a backdoor, and someone would
-     * eventually drop it.
-     *
-     * No length ceiling worth worrying about here, unlike MySQL's 16/32: a
-     * PostgreSQL identifier allows 63 bytes.
+     * Random so no guessable superuser sits behind 5432 on every install; prefixed so an admin
+     * reading `\du` can tell it is the panel's role (an opaque SUPERUSER looks like a backdoor
+     * and would get dropped). A PostgreSQL identifier allows 63 bytes, so no length concern.
      */
     private const USERNAME_PREFIX = 'panel_';
 
@@ -77,17 +52,15 @@ class PostgresInstaller implements EngineInstaller
     /**
      * Is the *server* here?
      *
-     * `dpkg-query` on the server package rather than "does psql exist", for the
-     * reason the MongoDB installer gives: the client packages are on plenty of
-     * boxes that run no server, and reporting one of those as installed offers
-     * databases the panel cannot make.
+     * `dpkg-query` on the server package, not "does psql exist": client packages are common on
+     * boxes with no server (as in the MongoDB installer).
      */
     public function installed(): bool
     {
         $status = trim($this->serverOps->run(
             ['dpkg-query', '-W', '-f=${Status}', $this->serverPackage()],
             $this->context('detect'),
-            // Exit 1: not installed — an answer, not a failure (FS-C34).
+            // Exit 1: not installed, an answer, not a failure.
             expectedExitCodes: [1],
         )->output());
 
@@ -99,11 +72,8 @@ class PostgresInstaller implements EngineInstaller
      */
     public function install(?callable $onStep = null, ?callable $onOutput = null, ?bool $wasAbsent = null): void
     {
-        // Whether this install put PostgreSQL here, not whether this attempt
-        // did. Same reasoning as MongoDB's, and the same trap: a first attempt
-        // that installed the package and then failed leaves it present, so a
-        // retry that re-asks the box is told "already here" and takes the
-        // brownfield path — on a server the panel then reports as installed.
+        // Whether this install (not this attempt) put PostgreSQL here, as in MongoDB's: a failed
+        // first attempt leaves the package present, so re-asking the box takes the brownfield path.
         $fresh = $wasAbsent ?? ! $this->installed();
 
         if ($fresh) {
@@ -127,8 +97,7 @@ class PostgresInstaller implements EngineInstaller
             timeout: (int) config('server.databases.install_timeout', 900),
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
             onOutput: $onOutput,
-            // A fresh box's unattended-upgrades holds the lock for minutes;
-            // the screen should say so rather than "Preparing packages".
+            // A fresh box's unattended-upgrades holds the lock for minutes; say so on screen.
             onWait: $onWait,
         );
 
@@ -143,11 +112,8 @@ class PostgresInstaller implements EngineInstaller
     /**
      * Start the cluster the package created, then prove it answers.
      *
-     * The cluster is **discovered**, not assumed to be `16-main`: the instance
-     * name is version-and-name, the version moves with the distribution, and a
-     * box can carry several. Guessing it would mean starting nothing on a
-     * server whose cluster is called something else, and then reporting
-     * success because systemd said so.
+     * The cluster is **discovered**, not assumed to be `16-main`: the version moves with the
+     * distribution and a box can carry several.
      *
      * @throws EngineInstallException
      */
@@ -158,9 +124,7 @@ class PostgresInstaller implements EngineInstaller
         $cluster = $this->cluster();
 
         if ($cluster === null) {
-            // The package is installed and created no cluster — a real state
-            // (a failed initdb, a purged cluster left behind) and one worth
-            // naming, because "start it again" is not the fix.
+            // Installed but no cluster (failed initdb, purged cluster): "start it again" is not the fix.
             throw EngineInstallException::because('cluster_missing', null);
         }
 
@@ -172,8 +136,7 @@ class PostgresInstaller implements EngineInstaller
             );
         }
 
-        // The whole reason this method does not trust its own systemctl calls.
-        // See the class docblock: neither unit can report a failed cluster.
+        // systemctl cannot be trusted here (see the class docblock); prove it with pg_isready.
         $this->report($onStep, 'verifying_cluster');
         $ready = $this->isReady();
 
@@ -185,8 +148,7 @@ class PostgresInstaller implements EngineInstaller
     /**
      * The first cluster `pg_lsclusters` reports, as `<version>-<name>`.
      *
-     * Parsed from its machine-readable listing: `--no-header` so there is no
-     * header row to skip, and the first two columns are version and name.
+     * Parsed with `--no-header`; the first two columns are version and name.
      */
     private function cluster(): ?string
     {
@@ -213,9 +175,7 @@ class PostgresInstaller implements EngineInstaller
     /**
      * Does the cluster answer?
      *
-     * `pg_isready` against the loopback rather than the socket, because that is
-     * the connection the panel will actually use — a socket that answers while
-     * the TCP listener is off would be a green check on a path nothing takes.
+     * `pg_isready` against the loopback, not the socket: that is the connection the panel uses.
      */
     private function isReady(): ServerOpsResult
     {
@@ -229,10 +189,8 @@ class PostgresInstaller implements EngineInstaller
     /**
      * Create (or re-credential) the panel's own role.
      *
-     * The stored username wins, for the reason the MySQL installer gives: a
-     * random name plus `CREATE ROLE IF NOT EXISTS` would mint a *new*
-     * superuser on every run, and both this and the endpoint that calls it are
-     * re-runnable — so a re-run reuses the name and rotates only the password.
+     * The stored username wins: this is re-runnable, and a fresh random name each time would mint a
+     * new superuser per run. A re-run reuses the name and rotates only the password.
      *
      * @throws EngineInstallException
      */
@@ -243,9 +201,8 @@ class PostgresInstaller implements EngineInstaller
         $username = $this->existingPanelUsername($connection) ?? $this->generateUsername();
         $password = DatabasePassword::generate();
 
-        // `DO` because PostgreSQL has no `CREATE ROLE IF NOT EXISTS`, and the
-        // alternative — create, ignore the error — is exactly the "a failure
-        // that looks like success" shape ON_ERROR_STOP exists to prevent.
+        // `DO` because PostgreSQL has no `CREATE ROLE IF NOT EXISTS`; ignoring the error would hide
+        // real failures that ON_ERROR_STOP exists to surface.
         $sql = <<<SQL
             DO \$\$
             BEGIN
@@ -264,18 +221,14 @@ class PostgresInstaller implements EngineInstaller
         }
 
         $connection->fill([
-            // TCP on the loopback, not the socket. A socket connection lands on
-            // `peer` auth and would be refused for the panel's Linux user,
-            // whereas Ubuntu's default pg_hba already allows scram-sha-256 from
-            // 127.0.0.1 — so this works without editing a file other things on
-            // the box may depend on.
+            // TCP on the loopback, not the socket: a socket lands on `peer` auth and is refused for
+            // the panel's Linux user, while the default pg_hba allows scram-sha-256 from 127.0.0.1.
             'connection_type' => 'tcp',
             'host' => '127.0.0.1',
             'port' => $this->port(),
             'socket' => config("server.databases.engines.{$this->engine()}.default_socket"),
             'username' => $username,
-            // `encrypted` cast — a copy of the panel's database on its own is
-            // useless without APP_KEY, which is the realistic leak.
+            // `encrypted` cast: a copy of the panel's database is useless without APP_KEY.
             'password' => $password,
         ])->save();
     }
@@ -283,15 +236,12 @@ class PostgresInstaller implements EngineInstaller
     /**
      * Run SQL as the `postgres` superuser.
      *
-     * `runuser -u postgres` because peer authentication identifies the *OS*
-     * user: ServerOps is root, root is not postgres, and `psql -U postgres`
-     * over the socket is refused. This is the one place the installer has
-     * privileges the engine class never gets.
+     * `runuser -u postgres` because peer auth identifies the *OS* user (ServerOps is root, and
+     * `psql -U postgres` over the socket is refused).
      *
-     * Statements over stdin, never argv — this creates a SUPERUSER credential,
-     * and anything on a command line is readable in /proc for the life of the
-     * process. `ON_ERROR_STOP=1` because psql otherwise exits 0 on a script
-     * whose statements failed, measured on PostgreSQL 16.
+     * Statements go over stdin, never argv: this creates a SUPERUSER credential and a command
+     * line is readable in /proc. `ON_ERROR_STOP=1` because psql otherwise exits 0 on a script
+     * whose statements failed.
      */
     private function psqlAsPostgres(string $sql): ServerOpsResult
     {
@@ -310,9 +260,7 @@ class PostgresInstaller implements EngineInstaller
     /**
      * The role already provisioned for this engine, if any.
      *
-     * `postgres` is explicitly not ours: that is the cluster's own superuser,
-     * and reusing it would mean re-credentialling the account this class
-     * deliberately never touches.
+     * `postgres` is never ours: it is the cluster's own superuser, which this class never touches.
      */
     private function existingPanelUsername(DatabaseConnection $connection): ?string
     {
@@ -358,8 +306,7 @@ class PostgresInstaller implements EngineInstaller
     }
 
     /**
-     * Maps apt's output to a stable code. Unmatched output is `unknown` rather
-     * than a guess — a wrong reason sends the user somewhere useless.
+     * Maps apt's output to a stable code. Unmatched output is `unknown`, not a guess.
      */
     private function classify(string $stderr): string
     {

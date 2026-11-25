@@ -14,43 +14,30 @@ use Illuminate\Support\Str;
 /**
  * MongoDB.
  *
- * Deliberately not extending {@see AbstractSqlEngineInstaller}. That class shares
- * a path between MySQL and MariaDB because they differ only in package and client
- * name; MongoDB differs in every step that matters — it is not in Ubuntu's
- * archive, it does not use SQL, it does not listen on 3306 so it conflicts with
- * nothing, and **it ships with authentication switched off**. Folding it in would
- * have meant four abstract methods and a branch in every one.
+ * Deliberately not extending {@see AbstractSqlEngineInstaller}: MongoDB differs in every step
+ * that matters (not in Ubuntu's archive, no SQL, not on 3306, and **it ships with
+ * authentication switched off**).
  *
- * Four things this has to get right, each of which is a way to leave a server
- * worse than it was found:
+ * Four things this has to get right:
  *
- *  - **The repository is versioned and codename-specific.** MongoDB publishes
- *    per-series lists (`8.0`, `7.0`) per Ubuntu codename; there is no "latest"
- *    line. A wrong codename produces a list that adds cleanly and then carries
- *    nothing, so `apt-get install` fails with "Unable to locate package" — which
- *    reads as our bug, not a missing repository.
+ *  - **The repository is versioned and codename-specific** (per-series lists such as `8.0`,
+ *    per Ubuntu codename; no "latest"). A wrong codename adds cleanly but carries nothing,
+ *    so `apt-get install` fails with "Unable to locate package".
  *  - **`apt-get update` after adding it.** The list on disk is not the index.
- *  - **Auth is off by default, and turning it on edits somebody's config.** The
- *    package default binds to localhost with no authentication, which on a panel
- *    that gives every site its own Linux user means every site can read every
- *    other site's collections — the same isolation hole per-app FPM pools were
- *    built to close. So a *fresh* install gets authentication enabled. A server
- *    that already had MongoDB does not: its config is not ours to rewrite and
- *    something already connects to it. {@see memory/database-engine-install-design.md}
- *  - **The account is created before auth is enabled**, because after it there is
- *    only the localhost exception to get back in, and that is a narrower door
- *    than it looks.
+ *  - **Auth is off by default, and turning it on edits somebody's config.** With no auth every
+ *    site's Linux user can read every other site's collections. A *fresh* install gets
+ *    authentication enabled; a server that already had MongoDB keeps its config, which is not
+ *    ours to rewrite. {@see memory/database-engine-install-design.md}
+ *  - **The account is created before auth is enabled**: afterwards only the narrow localhost
+ *    exception gets you back in.
  *
- * Nothing here stores a root password, for the same reason the SQL installer does
- * not: MongoDB has no root account to borrow, and inventing a superuser we then
- * have to keep is a secret that did not need to exist.
+ * No root password is stored, as in the SQL installer: MongoDB has no root account to borrow.
  */
 class MongoDbInstaller implements EngineInstaller
 {
     /**
-     * Same shape and the same reasoning as the SQL installer's: an admin reading
-     * `db.getUsers()` has to be able to tell which account is the panel's, or an
-     * opaque name holding `root` looks exactly like a backdoor.
+     * As in the SQL installer: an admin reading `db.getUsers()` must be able to tell which
+     * account is the panel's, or an opaque name holding `root` looks like a backdoor.
      */
     private const USERNAME_PREFIX = 'panel_';
 
@@ -68,13 +55,11 @@ class MongoDbInstaller implements EngineInstaller
 
     public function installed(): bool
     {
-        // The server package, not `mongosh`. The shell is installed on plenty of
-        // boxes that only *talk* to a remote MongoDB, and treating one of those
-        // as "installed" would have the panel offer databases it cannot make.
+        // The server package, not `mongosh`: the shell is often installed only to talk to a remote MongoDB.
         $status = trim($this->serverOps->run(
             ['dpkg-query', '-W', '-f=${Status}', $this->serverPackage()],
             ['feature' => 'database', 'engine' => 'mongodb', 'op' => 'detect'],
-            // Exit 1: not installed, an answer (bug #48).
+            // Exit 1: not installed, an answer.
             expectedExitCodes: [1],
         )->output());
 
@@ -86,22 +71,10 @@ class MongoDbInstaller implements EngineInstaller
      */
     public function install(?callable $onStep = null, ?callable $onOutput = null, ?bool $wasAbsent = null): void
     {
-        // Whether this *install* put MongoDB on the box — not whether this
-        // attempt did. It decides whether the config is ours to change: a
-        // server that already had one is a server something already connects
-        // to, and rewriting its config would break whatever that is.
-        //
-        // Taken from what was recorded when the install was requested, because
-        // asking the box is only right the first time. A first attempt that
-        // got as far as installing the package and then failed leaves MongoDB
-        // present; the retry then asked, was told "already here", took the
-        // brownfield path and skipped enabling authentication — on a database
-        // the panel went on to report as successfully installed. That is the
-        // one outcome this class exists to prevent, reached by the safest
-        // sounding branch in it.
-        //
-        // Null means nobody recorded an answer, which is the pre-existing
-        // behaviour and no worse than it was.
+        // Whether this *install* (not this attempt) put MongoDB on the box; it decides whether the
+        // config is ours to change. Taken from what was recorded when the install was requested:
+        // a failed first attempt leaves the package present, and asking the box again would take
+        // the brownfield path and skip enabling authentication. Null: nobody recorded an answer.
         $fresh = $wasAbsent ?? ! $this->installed();
 
         if ($fresh) {
@@ -119,19 +92,16 @@ class MongoDbInstaller implements EngineInstaller
     /**
      * Add MongoDB's apt repository, signed-by rather than trusted globally.
      *
-     * Idempotent: an existing list for the same series is left alone, so a
-     * re-run after a failure does not stack duplicate sources.
+     * Idempotent: an existing list for the same series is left alone, so a re-run does not
+     * stack duplicate sources.
      *
      * @throws EngineInstallException
      */
     private function addRepository(?callable $onStep): void
     {
         $series = $this->series();
-        // MongoDB publishes an ASCII-armoured key. APT chooses the keyring
-        // parser from the extension: `.asc` is armoured, while `.gpg` must be
-        // dearmoured binary data. The old installer saved the armoured response
-        // as `.gpg`, so apt ignored it and reported NO_PUBKEY even though the
-        // file existed.
+        // MongoDB's key is ASCII-armoured. APT picks the parser from the extension: `.asc` is
+        // armoured, `.gpg` must be binary (an armoured `.gpg` gives NO_PUBKEY).
         $keyring = "/etc/apt/keyrings/mongodb-server-{$series}.asc";
         $list = "/etc/apt/sources.list.d/mongodb-org-{$series}.list";
 
@@ -145,9 +115,8 @@ class MongoDbInstaller implements EngineInstaller
             (string) config('server.databases.mongodb.component', 'multiverse'),
         );
 
-        // The pair is the unit of idempotency. Checking only the list made a
-        // failed first attempt permanent: the malformed key remained beside a
-        // source file, and every retry skipped the code that could repair it.
+        // The list and key pair is the unit of idempotency; checking only the list would leave a
+        // malformed key unrepaired on every retry.
         $existingList = $this->serverOps->run(['cat', $list], $this->context('repo_check_list'));
         $existingKey = $this->serverOps->run(['cat', $keyring], $this->context('repo_check_key'));
 
@@ -163,8 +132,7 @@ class MongoDbInstaller implements EngineInstaller
             $this->context('repo_keyring_dir'),
         ), 'repository_failed');
 
-        // --fail so an error page is never written out as a key, and https only
-        // including across redirects.
+        // --fail so an error page is never written out as a key; https only, redirects included.
         $this->must($this->serverOps->run(
             [
                 'curl', '--fail', '--location', '--silent', '--show-error',
@@ -185,18 +153,15 @@ class MongoDbInstaller implements EngineInstaller
 
         $this->must($this->serverOps->run(['chmod', '0644', $keyring], $this->context('repo_key_mode')), 'repository_failed');
 
-        // The codename is the panel's own, from the OS it detected — not a
-        // guess. A list naming a codename MongoDB does not publish for adds
-        // without complaint and then carries no packages at all.
+        // The codename comes from the detected OS, not a guess: an unpublished one adds without
+        // complaint and carries no packages.
         $this->must($this->serverOps->run(
             ['tee', $list],
             $this->context('repo_list'),
             input: $line,
         ), 'repository_failed');
 
-        // The list on disk is not the index. Without this, the very next
-        // apt-get install fails with "Unable to locate package mongodb-org",
-        // which reads as a broken panel rather than a stale index.
+        // The list on disk is not the index: without this, install fails with "Unable to locate package".
         $this->report($onStep, 'updating_package_index');
 
         $updated = $this->serverOps->apt(
@@ -207,19 +172,8 @@ class MongoDbInstaller implements EngineInstaller
         );
 
         if ($updated->failed()) {
-            // Classified, not assumed. This used to be `repository_failed`
-            // unconditionally — "the MongoDB package repository could not be
-            // added, check the server has network access to repo.mongodb.org"
-            // — which is a fair description of *some* ways this fails and a
-            // misdirection for the one that actually happens: a fresh server
-            // still running unattended-upgrades holds the apt lists lock, and
-            // the reader goes looking at DNS for a problem that was Ubuntu
-            // installing its own updates. `installPackages()` below has
-            // classified its failures all along; this call never did.
-            //
-            // repository_failed stays the fallback, because it carries
-            // information this classifier does not: an unrecognised failure
-            // *here* really is about adding the repository.
+            // Classified, not assumed: a fresh server running unattended-upgrades holds the apt
+            // lists lock, which is not a network problem. `repository_failed` stays the fallback.
             throw EngineInstallException::because(
                 $this->classify($updated->errorOutput().' '.$updated->output(), 'repository_failed'),
                 $updated->reference,
@@ -245,23 +199,11 @@ class MongoDbInstaller implements EngineInstaller
             $reason = $this->classify($result->errorOutput().' '.$result->output());
 
             /*
-             * "Unable to locate package" means something specific here, and it
-             * is not what the generic reason says.
-             *
-             * Everywhere else `package_not_found` means the sources are wrong
-             * or unreachable and the remedy is to fix them. Not here: the panel
-             * wrote this source list itself, from the codename it read off the
-             * box, and `addRepository()` has already run `apt-get update`
-             * successfully against it. The index was fetched. The package is
-             * simply not in it — which happens because MongoDB publishes per
-             * Ubuntu codename and has not built for this one yet. Ubuntu 26.04
-             * (resolute) is the live example: MongoDB ships the tools for it
-             * and not the server.
-             *
-             * The panel supports that release; MongoDB does not, and there is
-             * no second source to point at the way PHP has sury.org. So the
-             * honest answer is to name the release and stop, rather than send
-             * somebody to audit apt sources that are correct.
+             * "Unable to locate package" means something specific here: the panel wrote the
+             * source list itself and `addRepository()` already ran `apt-get update` against it,
+             * so the index was fetched and the package is not in it. MongoDB has not built for
+             * this Ubuntu codename (26.04 ships the tools, not the server). Name the release
+             * rather than send anyone to audit correct apt sources.
              */
             if ($reason === 'package_not_found') {
                 $reason = 'os_unsupported';
@@ -286,11 +228,8 @@ class MongoDbInstaller implements EngineInstaller
             );
         }
 
-        // Proven, not assumed — a package that unpacked is not an engine that
-        // answers, and every step after this needs it to. Held in a variable
-        // rather than probed twice: the second call is a second round trip, and
-        // if it happened to succeed the exception would carry a reference to a
-        // command that worked.
+        // Proven, not assumed: an unpacked package is not an engine that answers. Probed once so
+        // the exception's reference is of the failing command.
         $this->report($onStep, 'verifying_connection');
         $ping = $this->ping();
 
@@ -309,16 +248,12 @@ class MongoDbInstaller implements EngineInstaller
     {
         $connection = DatabaseConnection::firstOrNew(['engine' => 'mongodb']);
 
-        // Probed once. Each call is a round trip to the daemon, and the answer
-        // cannot change underneath this method.
+        // Probed once: each call is a round trip to the daemon.
         $authOn = $this->authEnabled();
 
         if (! $fresh) {
             if ($authOn) {
-                // Already installed, already locked down, and we have no
-                // credential for it. Creating one would need a credential we do
-                // not have, and guessing at the config of a server somebody
-                // else set up is how you take their database down.
+                // Already locked down and we have no credential; never guess at somebody else's config.
                 if (blank($connection->username)) {
                     throw EngineInstallException::because('auth_required', null);
                 }
@@ -326,12 +261,8 @@ class MongoDbInstaller implements EngineInstaller
                 return;
             }
 
-            // Pre-existing and open. Storing a username here would be actively
-            // harmful, not merely useless: MongoEngine builds
-            // `mongodb://user:pass@host` whenever one is set, and a server with
-            // authentication off *rejects* credentials rather than ignoring
-            // them — so every later operation would fail on a database that
-            // works fine. Record how to reach it and nothing else.
+            // Pre-existing and open. Never store a username: MongoEngine then builds
+            // `mongodb://user:pass@host`, and a server with auth off *rejects* credentials.
             $connection->fill([
                 'connection_type' => 'tcp',
                 'host' => $connection->host ?: '127.0.0.1',
@@ -344,13 +275,11 @@ class MongoDbInstaller implements EngineInstaller
             return;
         }
 
-        // The stored username wins, so a re-run rotates the password rather than
-        // minting a second full-privilege account each time.
+        // The stored username wins, so a re-run rotates the password instead of minting another account.
         $username = $this->existingPanelUsername($connection) ?? $this->generateUsername();
         $password = DatabasePassword::generate();
 
-        // Credentials travel inside the script on stdin, never on argv — this
-        // one holds `root` on every database.
+        // Credentials travel in the script on stdin, never on argv: this account holds `root`.
         $script = 'const admin = db.getSiblingDB("admin");'."\n"
             .'const existing = admin.getUser('.$this->js($username).');'."\n"
             .'if (existing) {'."\n"
@@ -359,17 +288,14 @@ class MongoDbInstaller implements EngineInstaller
             .'  admin.createUser({ user: '.$this->js($username).', pwd: '.$this->js($password).', roles: [{ role: "root", db: "admin" }] });'."\n"
             .'}'."\n";
 
-        // Unauthenticated: this is a server we just installed, so authentication
-        // is still off — it is switched on below, once there is an account to
-        // switch it on behind.
+        // Unauthenticated: auth on a fresh install is only switched on below.
         $result = $this->runScript($script, authenticated: false);
 
         if ($result->failed()) {
             throw EngineInstallException::because('grant_failed', $result->reference);
         }
 
-        // Only now. The account has to exist before the door closes, or the
-        // only way back in is the localhost exception.
+        // Only now: the account must exist before the door closes.
         $this->enableAuthentication();
 
         $connection->fill([
@@ -378,8 +304,7 @@ class MongoDbInstaller implements EngineInstaller
             'port' => (int) config('server.databases.engines.mongodb.default_port', 27017),
             'socket' => null,
             'username' => $username,
-            // `encrypted` cast on the model — a copy of the panel's database is
-            // useless without APP_KEY, which is the realistic leak.
+            // `encrypted` cast on the model: a copy of the panel's database is useless without APP_KEY.
             'password' => $password,
         ])->save();
     }
@@ -387,11 +312,9 @@ class MongoDbInstaller implements EngineInstaller
     /**
      * Switch authentication on and restart.
      *
-     * `/etc/mongod.conf` is a single YAML file with no conf.d, so this is a
-     * read-modify-write of somebody's config — done only on a server this run
-     * installed, and marked so a re-run replaces its own block instead of
-     * appending a second `security:` key, which would make the file invalid
-     * YAML and stop mongod starting at all.
+     * `/etc/mongod.conf` is a single YAML file with no conf.d, so this edits somebody's config:
+     * only on a server this run installed, and marked so a re-run does not append a second
+     * `security:` key (invalid YAML, mongod would not start).
      *
      * @throws EngineInstallException
      */
@@ -400,12 +323,8 @@ class MongoDbInstaller implements EngineInstaller
         $path = (string) config('server.databases.mongodb.config_file', '/etc/mongod.conf');
         $read = $this->serverOps->run(['cat', $path], $this->context('auth_read'));
 
-        // Unreadable is not the same as empty. `tee -a` on a path we could not
-        // read would create a file holding nothing but our security block —
-        // no dbPath, no bindIp — and mongod would not start again.
-        // Unreadable is not the same as empty. `tee -a` on a path we could not
-        // read would create a file holding nothing but our security block —
-        // no dbPath, no bindIp — and mongod would not start again.
+        // Unreadable is not empty: `tee -a` on it would create a file holding only our security
+        // block (no dbPath, no bindIp) and mongod would not start.
         if ($read->failed()) {
             throw EngineInstallException::because('auth_failed', $read->reference);
         }
@@ -416,11 +335,8 @@ class MongoDbInstaller implements EngineInstaller
             return;
         }
 
-        // Appended rather than spliced into an existing `security:` block. If the
-        // package default ever grows one, two `security:` keys would be a YAML
-        // error — so a file that already mentions it is left exactly as it is and
-        // the operator is told, rather than edited into something that will not
-        // start.
+        // Appended, never spliced into an existing `security:` block: two keys are a YAML error, so
+        // a file that already has one is left as it is and the operator is told.
         if (preg_match('/^\s*security:/m', $current) === 1) {
             throw EngineInstallException::because('auth_config_present', null);
         }
@@ -445,9 +361,8 @@ class MongoDbInstaller implements EngineInstaller
     /**
      * Whether the running server demands credentials.
      *
-     * Probed rather than read out of the config file: the file is what someone
-     * intended, the probe is what the daemon is doing. An unauthenticated command
-     * that needs privileges succeeds when auth is off and fails when it is on.
+     * Probed, not read from the config file: the probe is what the daemon is doing. A privileged
+     * unauthenticated command succeeds when auth is off and fails when it is on.
      */
     private function authEnabled(): bool
     {
@@ -462,9 +377,8 @@ class MongoDbInstaller implements EngineInstaller
     /**
      * Run a mongosh script over stdin.
      *
-     * `--nodb` plus an explicit `connect()` inside the script, matching
-     * {@see MongoEngine}: it is the only way to
-     * keep a URI with credentials in it off the command line.
+     * `--nodb` plus an explicit `connect()` inside the script, as in {@see MongoEngine}: the only
+     * way to keep a URI with credentials off the command line.
      */
     private function runScript(string $body, bool $authenticated): ServerOpsResult
     {
@@ -529,11 +443,8 @@ class MongoDbInstaller implements EngineInstaller
     }
 
     /**
-     * The OS codename MongoDB publishes for, from the box rather than a guess.
-     *
-     * Falls back to the configured default when `/etc/os-release` cannot be read
-     * — a wrong codename is a repository that carries nothing, so the fallback is
-     * a value somebody chose rather than an empty string.
+     * The OS codename MongoDB publishes for, from the box rather than a guess. Falls back to the
+     * configured default when `/etc/os-release` cannot be read.
      */
     private function codename(): string
     {
@@ -590,8 +501,7 @@ class MongoDbInstaller implements EngineInstaller
     }
 
     /**
-     * Maps apt's output to a stable code. Unmatched output is `unknown` rather
-     * than a guess — a wrong reason sends the user somewhere useless.
+     * Maps apt's output to a stable code. Unmatched output is `unknown`, not a guess.
      */
     private function classify(string $stderr, string $fallback = 'unknown'): string
     {

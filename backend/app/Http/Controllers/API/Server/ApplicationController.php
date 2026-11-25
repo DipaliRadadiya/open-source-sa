@@ -60,24 +60,18 @@ class ApplicationController extends Controller
         $filter = (array) $request->validated('filter', []);
 
         $applications = Application::query()
-            // Eager, not lazy: `ApplicationResource` reads `botRules` for
-            // every row, and the alternative to loading it here is a query per
-            // application. Loaded on the list as well as `show()` so the two
-            // cannot disagree about whether the field exists.
+            // Eager: `ApplicationResource` reads `botRules` per row. Loaded here and in `show()` so
+            // the two cannot disagree about whether the field exists.
             ->with('systemUser', 'botRules', 'latestContainerRedeploy')
-            // Exact matches on indexed columns; the enum and the site-type list
-            // are validated in the request, so anything reaching here is real.
-            // A paused site is `active` in the column, so Running has to
-            // leave it out and Paused has to find it by `disabled_at`.
+            // Exact matches on indexed columns (validated in the request). A paused site is
+            // `active` in the column, so Running excludes it and Paused finds it by `disabled_at`.
             ->when($filter['status'] ?? null, fn ($query, $status) => match ($status) {
                 IndexApplicationsRequest::PAUSED => $query->whereNotNull('disabled_at'),
                 ApplicationStatus::Active->value => $query->where('status', $status)->whereNull('disabled_at'),
                 default => $query->where('status', $status),
             })
             ->when($filter['site_type'] ?? null, fn ($query, $type) => $query->where('site_type', $type))
-            // Name or domain — the two things somebody has in mind when they
-            // go looking for a site. The helper groups the OR and makes the
-            // comparison case-insensitive on every supported database.
+            // Name or domain; the helper groups the OR and is case-insensitive on every database.
             ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name', 'domain']));
 
         $applications = ListSort::apply(
@@ -88,15 +82,9 @@ class ApplicationController extends Controller
             caseInsensitive: ['name'],
         )->paginate($request->validated('per_page', IndexApplicationsRequest::PER_PAGE));
 
-        // Sites that have never been measured get queued for it, capped and
-        // deduplicated by the job. Not measured inline: `du` walks every inode
-        // under a site, so counting each one here would make this the slowest
-        // page in the panel and put that load on the disk serving the sites.
-        //
-        // Over every application, not the page. Backfilling only what is
-        // visible would leave page three unmeasured until somebody happened to
-        // scroll to it — and the job is already capped and deduplicated, which
-        // is what makes asking for all of them cheap.
+        // Never-measured sites are queued for it (capped and deduplicated by the job). Not inline:
+        // `du` walks every inode and would load the disk serving the sites. Over every application,
+        // not the page, so later pages are not left unmeasured.
         MeasureApplicationSize::backfill(Application::query()->get());
 
         return response()->json([
@@ -116,24 +104,17 @@ class ApplicationController extends Controller
 
         return response()->json([
             'application' => ApplicationResource::make($application)->resolve(),
-            // Created, but with something the user should know — a container
-            // port the image does not declare (DS-03). Always a list.
+            // Created, but with something the user should know (e.g. a container port the image
+            // does not declare). Always a list.
             'warnings' => $request->warnings(),
         ], 201);
     }
 
     public function show(Application $application): JsonResponse
     {
-        // `botRules` as well as the system user, because the resource exposes
-        // `bot_blocked` / `bot_allowed` through `whenLoaded` -- so without the
-        // relation those keys are simply **absent**, not empty.
-        //
-        // That absence was load-bearing in the worst way. The Bot Blocker
-        // screen read no rules, rendered two empty lists, and the next save
-        // sent them back as `[]` -- which the API correctly reads as "clear
-        // them", because absent means "leave alone" and empty means "none".
-        // So reloading the page and pressing save deleted every custom rule
-        // the site had.
+        // `botRules` must be loaded: the resource exposes `bot_blocked` / `bot_allowed` through
+        // `whenLoaded`, so without it the keys are **absent**, not empty. The Bot Blocker screen
+        // would then save `[]`, which the API reads as "clear them" (absent means "leave alone").
         return response()->json([
             'application' => ApplicationResource::make($application->load('systemUser', 'botRules', 'latestCheckout', 'latestContainerRedeploy'))->resolve(),
         ]);
@@ -149,28 +130,22 @@ class ApplicationController extends Controller
     }
 
     /**
-     * Retry provisioning after a failure. Explicit rather than automatic: the
-     * job does not retry itself, because repeating a server mutation the user
-     * has not seen the reason for is how half-applied state happens.
+     * Retry provisioning after a failure. Explicit, never automatic: repeating a server mutation
+     * whose failure the user has not seen risks half-applied state.
      */
     public function provision(Application $application): JsonResponse
     {
-        // A second click while this job is queued/running must not reset its
-        // progress or enqueue concurrent writes to the same site.
+        // A second click while queued/running must not reset progress or enqueue concurrent writes.
         if ($application->status === ApplicationStatus::Provisioning) {
             return response()->json([
                 'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
             ], 202);
         }
 
-        // Persist before dispatch. A fast worker can otherwise finish and mark
-        // the site active before this request overwrites it as provisioning.
-        // `failed_reason` too: it was added after this line was written, and a
-        // retried site that then succeeded went on showing the old reason.
+        // Persist before dispatch: a fast worker could otherwise mark the site active first.
         $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'failed_reason' => null, 'reference' => null]);
 
-        // Opened here, like a deployment row, so Background jobs shows the
-        // retry as waiting before a worker picks it up (D3).
+        // Opened here, like a deployment row, so Background jobs shows the retry as waiting.
         app(ApplicationRuns::class)->open($application, ApplicationRun::INSTALL, Auth::id());
 
         ProvisionApplication::queueOrFail($application->id, Auth::id());
@@ -183,18 +158,14 @@ class ApplicationController extends Controller
     /**
      * Fetch the application's code from git.
      *
-     * Only for git applications — there is nothing to pull for a one-click or
-     * blank site, and pretending otherwise would just fail confusingly.
+     * Only for git applications: a one-click or blank site has nothing to pull.
      */
     public function deploy(Application $application): JsonResponse
     {
         abort_unless($application->site_type === 'git', 422, __('errors/application.not_a_git_application'));
         abort_if($application->gitAccountMissing(), 422, __('errors/application.git_account_missing'));
 
-        // Records like any other deploy. This endpoint predates the
-        // Deployment screen and stays for compatibility, but a deploy that
-        // leaves no history depending on which button started it would be a
-        // gap nobody could explain.
+        // Records history like any other deploy (this endpoint predates the Deployment screen).
         app(DeployQueue::class)->queue($application, DeploymentTrigger::Manual, Auth::id());
 
         return response()->json([
@@ -205,10 +176,8 @@ class ApplicationController extends Controller
     /**
      * Whether a port can be used, before the user submits the form.
      *
-     * A read, so it needs only `application` — checking a port is not a
-     * change. Three answers rather than two: taken, free, or free but named
-     * after a service, which the screen should show as a warning rather than
-     * an error. See PortAllocator::inspect().
+     * A read, so it needs only `application`. Three answers: taken, free, or free but named after
+     * a service (a warning, not an error). See PortAllocator::inspect().
      */
     public function portCheck(Request $request, PortAllocator $ports): JsonResponse
     {
@@ -217,8 +186,7 @@ class ApplicationController extends Controller
             'application_id' => ['nullable', 'integer', 'exists:applications,id'],
         ]);
 
-        // Excluded so an application editing its own settings is not told its
-        // current port is taken — by itself.
+        // Excluded so an application is not told its own port is taken.
         $except = filled($validated['application_id'] ?? null)
             ? Application::find($validated['application_id'])
             : null;
@@ -241,14 +209,10 @@ class ApplicationController extends Controller
     /**
      * Start, stop or restart the application's own process.
      *
-     * Refused for an application that has none: a PHP site has no process to
-     * act on, and reporting success for a no-op would teach the user that the
-     * button does something.
+     * Refused for an application that has none (a PHP site): a no-op must not report success.
      *
-     * A Docker application has no process of its own either, but it has
-     * containers, and restarting them is the one thing here that means
-     * something for it. Start and stop stay refused: for a container app those
-     * are Pause and Resume.
+     * A Docker application has containers instead, and restarting them is the one action that
+     * applies. Start and stop stay refused: for a container app those are Pause and Resume.
      */
     public function process(
         Application $application,
@@ -286,14 +250,11 @@ class ApplicationController extends Controller
     /**
      * Move an adopted application onto a systemd unit of ours.
      *
-     * Only offered for one that is still under the old panel's PM2 daemon.
-     * **This restarts the application** — there is no zero-downtime path, since
-     * one supervisor has to release the port before the other can bind it — so
-     * it is a deliberate action behind its own endpoint rather than something
-     * an ordinary update does as a side effect.
+     * Only offered for one still under the old panel's PM2 daemon. **This restarts the
+     * application** (one supervisor must release the port before the other binds it), so it is
+     * its own endpoint, never a side effect of an update.
      *
-     * A failure has already put the application back under PM2 and started it;
-     * the 500 reports that rather than leaving the caller to guess.
+     * A failure has already put the application back under PM2 and started it; the 500 says so.
      */
     public function convertSupervisor(
         Application $application,
@@ -353,14 +314,12 @@ class ApplicationController extends Controller
     }
 
     /**
-     * Removing an application also stops it being served. The site's files are
-     * kept unless `remove_files=true` is asked for explicitly, and its
-     * databases unless `remove_databases=true` is — deleting a panel record
-     * must not silently destroy someone's code or their data.
+     * Removing an application also stops it being served. Files are kept unless
+     * `remove_files=true` and databases unless `remove_databases=true`: deleting a panel record
+     * must not silently destroy code or data.
      *
-     * Answers 200 even when a database could not be dropped: the site really
-     * is gone, and a 500 would tell the panel nothing happened when most of it
-     * did. What survived is named in the body instead.
+     * Answers 200 even when a database could not be dropped (the site is gone); what survived
+     * is named in the body.
      */
     public function destroy(
         Application $application,
@@ -374,43 +333,33 @@ class ApplicationController extends Controller
         AdoptedSiteConfig $adopted,
         CertificateLock $certificates,
     ): JsonResponse {
-        // First, before anything at all changes: deleting the files of a site
-        // that a worker Server Sync adopted — from a shared supervisor file or
-        // a systemd unit the panel cannot prove it owns — still runs from is
-        // refused, and that worker is named (FS-C22 #14). Read-only; a refusal
-        // leaves the site, its record, its backups and every service as they
-        // were. Without `remove_files` the delete goes ahead and names it.
+        // First, before anything changes: deleting the files of a site that an adopted worker (from
+        // a shared supervisor file or a systemd unit the panel cannot prove it owns) still runs from
+        // is refused, naming the worker. Read-only; without `remove_files` the delete goes ahead.
         if ($request->boolean('remove_files')) {
             $adopted->refuseUnprovenWorkers($application);
         }
 
-        // Takes turns with issuing this site's certificate (CertificateLock),
-        // before the first write below — the stranded-install close included —
-        // so a delete that waits out an issuance answers 503 with nothing
-        // changed. Held until the row is gone: an issuance that then gets the
-        // lock finds no site and creates nothing, and one that held it first
-        // has finished, so the certificate step below removes a lineage that
-        // exists instead of losing to certbot's own lock (2026-10-21).
+        // Takes turns with certificate issuance (CertificateLock), before the first write below, so a
+        // delete that waits out an issuance answers 503 with nothing changed. Held until the row is
+        // gone, so the certificate step removes a lineage that exists instead of losing to certbot's lock.
         $certificateLock = $certificates->forDelete($application);
 
         try {
-            // A queued worker can still be writing this site's files and config.
-            // Deleting its record now would leave those mutations untracked — unless
-            // its install job is provably gone, which would otherwise leave the site
-            // undeletable for good (StrandedProvisioning).
+            // A queued worker can still be writing this site's files and config, so deleting the
+            // record would leave those untracked, unless its install job is provably gone
+            // (StrandedProvisioning), which would otherwise make the site undeletable.
             if ($stranded->close($application)) {
                 $application->refresh();
             }
 
             abort_if($application->status === ApplicationStatus::Provisioning, 503, __('errors/server.busy'));
 
-            // A Pull and redeploy still running would `compose up` this site's
-            // containers again after the delete removed them (D5).
+            // A running Pull and redeploy would `compose up` the containers again after the delete.
             abort_if($runs->redeployInFlight($application) !== null, 503, __('errors/server.busy'));
 
-            // Its backups are archived on delete; one still being written, or a
-            // restore still replacing the site, would finish against nothing.
-            // Refused before anything is removed from the server.
+            // Backups are archived on delete; one still being written, or a restore replacing the
+            // site, would finish against nothing. Refused before anything is removed.
             $backupBusy = Backup::query()->where('application_id', $application->id)
                 ->whereIn('status', [BackupStatus::Pending->value, BackupStatus::Running->value, BackupStatus::Verifying->value])
                 ->exists()
@@ -422,38 +371,26 @@ class ApplicationController extends Controller
                 ]);
             }
 
-            // Read before the record goes. `databases.application_id` is
-            // `nullOnDelete`, so the moment the application row is deleted nothing
-            // points at these any more and the databases this call was asked to
-            // remove can no longer be found.
+            // Read before the record goes: `databases.application_id` is `nullOnDelete`, so afterwards
+            // the databases to remove can no longer be found.
             $attached = $request->boolean('remove_databases')
                 ? $application->databases()->with('users')->get()
                 : null;
 
-            // Decided BEFORE the row is deleted, because "does another site mount this"
-            // is a query over applications and after the delete every volume looks
-            // unclaimed. Removed AFTER deprovision, because `docker volume rm` refuses a
-            // volume any container references and `docker network rm` refuses a network
-            // with an attached endpoint — and until `compose down` runs, this site's own
-            // containers are both.
-            //
-            // Doing both halves up front was the first attempt and failed on a real box
-            // with `solo-net:remove-failed`. Same before/after split as the databases
-            // below, for the same kind of reason.
+            // Planned BEFORE the row is deleted ("does another site mount this" queries applications),
+            // applied AFTER deprovision: `docker volume rm` / `network rm` refuse resources still
+            // referenced by this site's containers until `compose down` has run.
             $dockerPlan = $request->boolean('remove_docker_resources')
                 ? $dockerResources->plan($application)
                 : null;
 
-            // Its images too, unless turned off (2026-10-29). Read now, while
-            // the containers still say which images they run.
+            // Its images too, unless turned off; read now, while the containers still say which they run.
             if ($application->serving_profile === 'docker' && $request->removeDockerImages()) {
                 $dockerPlan = $dockerResources->planImages($application, $dockerPlan ?? ['volumes' => [], 'networks' => [], 'kept' => []]);
             }
 
-            // The Docker opt-in reaches `compose down` as `--volumes`. Without it a
-            // pasted compose file's own named volumes survive the delete they were
-            // explicitly included in — found on a real box, see ContainerSupervisor.
-            // Read before the row goes, as the databases are.
+            // The Docker opt-in reaches `compose down` as `--volumes` (see ContainerSupervisor).
+            // The owner is read before the row goes, as the databases are.
             $owner = $request->boolean('remove_system_user') ? $application->systemUser : null;
 
             $deprovision->execute(
@@ -470,9 +407,8 @@ class ApplicationController extends Controller
             $dockerResources->apply($application, $dockerPlan);
         }
 
-        // Site first, databases after — never the reverse. A database dropped
-        // before a site delete that then failed is the data of a site still
-        // serving traffic.
+        // Site first, databases after, never the reverse: a database dropped before a failed site
+        // delete is the data of a site still serving traffic.
         $outcome = $attached === null
             ? null
             : $databases->execute($attached, $application->id);
@@ -483,9 +419,8 @@ class ApplicationController extends Controller
     }
 
     /**
-     * OLD-20: the site's Linux account, when it owns nothing else. After the
-     * site, never before — and never failing the delete that already
-     * happened: the answer says what became of the account instead.
+     * The site's Linux account, removed when it owns nothing else. Always after the site, and
+     * never failing the delete that already happened: the answer says what became of it.
      *
      * @return array{username: string, outcome: string, message: string}
      */
@@ -496,12 +431,9 @@ class ApplicationController extends Controller
         if ($owner->applications()->exists()) {
             $outcome = 'still_used';
         } else {
-            // The site's own PHP workers can outlive its vhost — measured on
-            // OpenLiteSpeed, where the account's lsphp kept running for half
-            // a minute after the delete reached userdel. Those serve a site
-            // that no longer exists, so they are ended; anything else the
-            // account runs (an SSH session, a shell) is left alone and
-            // answered as "still running something".
+            // The site's PHP workers can outlive its vhost (OpenLiteSpeed's lsphp), so they are
+            // ended; anything else the account runs (SSH session, shell) is left alone and answered
+            // as "still running something".
             $deleter = app(DeleteSystemUser::class);
 
             for ($attempt = 0; ; $attempt++) {
@@ -536,19 +468,14 @@ class ApplicationController extends Controller
     /**
      * The app sidebar for this specific application.
      *
-     * Filtered two ways: what this app type supports (SiteType), and what
-     * the user has been granted (permission pivot). A WordPress site does not
-     * show "Workers"; a user without `app_staging` does not see Staging.
+     * Filtered by what this app type supports (SiteType) and what the user has been granted
+     * (permission pivot): a WordPress site has no "Workers"; no `app_staging` means no Staging.
      *
-     * Grouped by sub-level so the frontend can render section headers without
-     * hardcoding them.
+     * Grouped by sub-level so the frontend renders section headers without hardcoding them.
      */
     public function sidebar(Application $application, VisiblePermissions $permissions): JsonResponse
     {
-        // Resolved by the same service `/permissions` uses. This method used
-        // to build its own answer from `$user->permissions()` — a relation
-        // deleted when per-user grants gave way to roles — so the sidebar had
-        // been a 500 since that refactor.
+        // Resolved by the same service `/permissions` uses.
         $items = AppSidebarResource::collection(
             $permissions->for(Auth::user(), 'application', $application)
         )->resolve();
@@ -559,15 +486,10 @@ class ApplicationController extends Controller
     /**
      * Measure this site's directory now.
      *
-     * Its own call rather than something the listing does: `du` walks every
-     * inode, so the cost is the file count — a site with node_modules is a
-     * hundred thousand of them — and doing that for every site on every list
-     * would make the Applications screen as slow as the heaviest site on the
-     * box. Nothing measures it on a timer either, for the same reason on the
-     * machine that is also serving those sites.
-     *
-     * So the stored size is whatever was last measured, and the response says
-     * when that was. This is the button that makes it now.
+     * Its own call, not part of the listing: `du` walks every inode (a site with node_modules has
+     * a hundred thousand), so measuring every site on every list would be as slow as the heaviest
+     * site, and nothing measures on a timer either. The stored size is the last measurement; this
+     * button measures now.
      */
     public function measureDirectorySize(Application $application, FileBrowser $files): JsonResponse
     {

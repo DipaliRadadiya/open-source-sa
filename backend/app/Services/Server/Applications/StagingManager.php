@@ -25,12 +25,10 @@ use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
- * Everything about staging that is the same no matter what is being staged:
- * creating the `Application` row, provisioning its vhost, copying files, the
- * maintenance-mode window, and a pre-push database safety dump. Only the
- * type-specific 20% — "does this need a database, and how do I point it at
- * the right one" — is delegated to that type's `StagingStrategy` (see
- * `App\Contracts\StagingStrategy`).
+ * Everything about staging that is the same whatever is staged: the `Application` row, its vhost,
+ * copying files, the maintenance-mode window and a pre-push database safety dump. The
+ * type-specific part (does it need a database, how to point it at the right one) is delegated to
+ * that type's `StagingStrategy`.
  */
 class StagingManager
 {
@@ -57,9 +55,8 @@ class StagingManager
 
         $name = Application::uniqueName("{$production->name} (Staging)");
 
-        // forceCreate, not create: `slug` is not fillable, and without one the
-        // staging site's document root collapses onto the system user's home
-        // — the same directory production's own clone would land in.
+        // forceCreate, not create: `slug` is not fillable, and without one the staging document
+        // root collapses onto the system user's home.
         $staging = Application::forceCreate([
             'system_user_id' => $production->system_user_id,
             'production_application_id' => $production->id,
@@ -76,52 +73,36 @@ class StagingManager
             'status' => 'pending',
         ]);
 
-        // The Domains screen reads `application_domains`, not this column —
-        // `applications.domain` is only the mirror of whichever row is
-        // primary. CreateApplication writes that row; this path does not go
-        // through it, so a staging site came up serving its domain with a
-        // completely empty Domains section.
-        //
-        // Worse than cosmetic. `Application::serverNames()` falls back to this
-        // column only while the relation is empty, so adding a single alias
-        // afterwards made the relation non-empty *without* the primary in it —
-        // and the next vhost dropped the site's own domain.
+        // The Domains screen reads `application_domains`; `applications.domain` only mirrors the
+        // primary row, and this path bypasses CreateApplication. Without the row,
+        // `Application::serverNames()` falls back to the column only while the relation is empty,
+        // so adding an alias later would drop the site's own domain from the vhost.
         $staging->domains()->create([
             'domain' => strtolower(trim((string) $staging->domain)),
             'type' => DomainType::Primary,
-            // A generated staging hostname is usually a wildcard-DNS name, and the
-            // certificate actions filter on this flag to avoid spending the
-            // shared nip.io rate limit.
+            // A generated staging hostname is usually wildcard DNS; certificate actions filter on
+            // this flag to avoid spending the shared nip.io rate limit.
             'is_test' => ApplicationDomain::looksTemporary((string) $staging->domain),
         ]);
 
         $staging->load('systemUser');
 
-        // Everything from here can fail on the server, and the row already
-        // exists. Left behind, that row holds the domain and satisfies the
-        // `$production->staging !== null` guard above — so a staging attempt
-        // that failed once blocked every later attempt, and the panel listed a
-        // site that was never created. See `discard()`.
+        // Everything from here can fail on the server and the row already exists; left behind it
+        // would hold the domain and block every later attempt. See `discard()`.
         try {
-            // skipInstaller=true: staging is provisioned from production's copied
-            // files, not from a fresh installation. Running the marketplace
-            // installer would call `wp core install` against a site that already
-            // has a database and configuration — the same bug CloneManager already
-            // avoids with the same flag.
+            // skipInstaller=true: staging is provisioned from production's copied files; the
+            // marketplace installer would run `wp core install` against an existing site (as in
+            // CloneManager).
             $this->provisioner->provision($staging, skipInstaller: true);
 
-            // Same exclusions in this direction. `create()` writes staging's
-            // own wp-config immediately afterwards, but excluding it here
-            // means the file never exists holding production's credentials
-            // under staging's document root, even for a moment.
+            // Same exclusions in this direction, so a file holding production's credentials never
+            // exists under staging's document root, even briefly.
             $this->rsync(
                 $this->provisioner->documentRoot($production->load('systemUser')),
                 $this->provisioner->documentRoot($staging),
                 $staging,
                 $strategy->syncExcludes(),
-                // Media crosses in this direction too, and for the same
-                // reason: without it a staging site cloned from a live shop
-                // starts with every existing image broken.
+                // Media crosses in this direction too, or staging starts with broken images.
                 $strategy->mergePaths(),
             );
 
@@ -141,14 +122,9 @@ class StagingManager
     /**
      * Undo a half-made site.
      *
-     * Deprovision goes through the provisioner rather than
-     * `DeprovisionApplication`, which returns early for a `pending`
-     * application — and a site that failed on the way up is exactly that, so
-     * the action would skip the vhost it did manage to write.
-     *
-     * Cleanup failures are swallowed on purpose. The caller is already
-     * throwing the reason the site could not be created, and replacing that
-     * with "cleanup failed" would hide the thing the user needs to read.
+     * Goes through the provisioner, not `DeprovisionApplication`, which returns early for a
+     * `pending` application and would skip the vhost already written. Cleanup failures are
+     * swallowed so they do not hide the error that made the caller throw.
      */
     private function discard(Application $application): void
     {
@@ -163,8 +139,7 @@ class StagingManager
             ]);
         }
 
-        // The row is what actually blocks a retry: it holds the domain, the
-        // name, the slug and any allocated port.
+        // The row is what blocks a retry: it holds the domain, name, slug and any port.
         $application->delete();
     }
 
@@ -175,15 +150,10 @@ class StagingManager
     public const KEEP_PRE_PUSH_DUMPS = 3;
 
     /**
-     * Push staging onto production — one at a time per site, never during a
-     * restore of it.
+     * Push staging onto production: one at a time per site, never during a restore of it.
      *
-     * It ran inside the request with no lock: a double-click started two
-     * pushes that snapshot, overwrite and roll back the same production site
-     * at once, and nothing stopped one running while a restore swapped the
-     * same files (found in code review 2026-09-29). The marker is what the
-     * backup job reads, so a scheduled backup does not archive a site that
-     * is half-overwritten either.
+     * The lock stops a double-click from running two overlapping pushes; the marker is what the
+     * backup job reads, so a scheduled backup does not archive a half-overwritten site.
      */
     public function push(Application $production, string $mode, bool $safetyCopy = true): void
     {
@@ -214,20 +184,15 @@ class StagingManager
     }
 
     /**
-     * Update staging from live — the reverse of a push (v7's sync-to-staging).
+     * Update staging from live: the reverse of a push.
      *
-     * Staging's files and/or database are replaced with live's, and staging
-     * stays staging: its own wp-config (database, URL, cron off), mail trap and
-     * noindex are never overwritten, and the strategy re-asserts them after.
+     * Staging's files and/or database are replaced with live's, and staging stays staging: its
+     * own wp-config (database, URL, cron off), mail trap and noindex are never overwritten and
+     * the strategy re-asserts them after. Staging is snapshotted and its database dumped first,
+     * and a failure puts both back. Live is only read, never disabled.
      *
-     * v7 did this with no copy of staging and with live's config copied over
-     * staging's — a non-WordPress staging site came out connected to the live
-     * database. Here staging is snapshotted and its database dumped first, and
-     * a failure puts both back. Live is only read, never disabled.
-     *
-     * Both sites are locked: live's lock is the one a push takes, so a push and
-     * a pull of the same pair cannot run together; staging's is the one its own
-     * safety-copy restore takes.
+     * Both sites are locked: live's lock is the push lock, so a push and a pull of the same pair
+     * cannot overlap; staging's is the one its own safety-copy restore takes.
      */
     public function pull(Application $production, string $mode, bool $safetyCopy = true): void
     {
@@ -276,11 +241,9 @@ class StagingManager
     }
 
     /**
-     * ST-B3: the pre-push copies of the live database, newest first.
+     * The pre-push copies of the live database, newest first.
      *
-     * Each push that replaces the database writes one, and three are kept —
-     * but nothing could list them, so the way back existed only for someone
-     * with a shell on the server.
+     * Each push that replaces the database writes one; three are kept.
      *
      * @return list<array{name: string, size_bytes: int, created_at: string}>
      */
@@ -293,8 +256,7 @@ class StagingManager
             expectedExitCodes: [1],
         );
 
-        // No directory yet is no copies, not an error: a site that never
-        // pushed its database has none (`find` exits 1 for a missing path).
+        // No directory yet means no copies, not an error (`find` exits 1 for a missing path).
         if ($listed->failed()) {
             return [];
         }
@@ -321,12 +283,10 @@ class StagingManager
     }
 
     /**
-     * ST-B3: put one pre-push copy back into the live database.
+     * Put one pre-push copy back into the live database.
      *
-     * Under the push lock, so it cannot run while a push is replacing the same
-     * database, and refused during a backup restore. The database as it is now
-     * is dumped first, the same safety copy a push takes, so this is undoable
-     * from the same list.
+     * Under the push lock, and refused during a backup restore. The current database is dumped
+     * first, like a push does, so this is undoable from the same list.
      */
     public function restoreSafetyDump(Application $production, string $name): void
     {
@@ -383,10 +343,8 @@ class StagingManager
     }
 
     /**
-     * Whether something holds this site's push lock right now — asked by
-     * taking it and letting go at once (RC-16): a push or pull now runs on
-     * the queue, and the request has to refuse a second one up front rather
-     * than queue a run that can only fail.
+     * Whether something holds this site's push lock right now (taken and released at once): a
+     * push or pull runs on the queue, so the request must refuse a second one up front.
      */
     public static function locked(int $applicationId): bool
     {
@@ -414,18 +372,15 @@ class StagingManager
     /**
      * Keep the newest few pre-push dumps and remove the rest.
      *
-     * Each is a full copy of the production database, written before every
-     * push and never removed, so a site that pushed often slowly filled the
-     * disk. The newest are kept as a manual way back. Best-effort: a push
-     * that succeeded is not failed by housekeeping.
+     * Each is a full copy of the production database, so unpruned they fill the disk. Best-effort:
+     * a push that succeeded is not failed by housekeeping.
      */
     private function pruneSafetyDumps(Application $production): void
     {
         $directory = $production->panelPath().'/staging-backups';
         $context = ['feature' => 'application', 'op' => 'staging_dump_prune', 'application' => $production->id];
 
-        // `.panel` and this directory are root's (PanelDirectory), and -type f
-        // matches only real files, so nothing here follows a link.
+        // `.panel` and this directory are root's (PanelDirectory) and `-type f` skips links.
         $listed = $this->serverOps->run(
             ['find', $directory, '-mindepth', '1', '-maxdepth', '1', '-type', 'f', '-name', 'pre-push-*.sql', '-printf', '%f\n'],
             $context,
@@ -488,9 +443,7 @@ class StagingManager
         $target->load('systemUser');
         $source->load('systemUser');
 
-        // Each mode moves one half, the other, or both. Named here so the
-        // branches below read as intent rather than as string comparisons
-        // repeated five times.
+        // Each mode moves the files, the database, or both.
         $pushesFiles = in_array($mode, ['files', 'full'], true);
         $pushesDatabase = in_array($mode, ['database', 'full'], true);
 
@@ -498,9 +451,7 @@ class StagingManager
         $fileSnapshot = $rollbackDirectory.'/files';
         $databaseSnapshot = null;
 
-        // No file snapshot for a database-only push. Nothing writes to the
-        // document root in that mode, so copying the whole of it would be a
-        // slow way to protect files that cannot change.
+        // No file snapshot for a database-only push: nothing writes to the document root.
         if ($pushesFiles) {
             try {
                 $this->snapshotFiles($target, $fileSnapshot);
@@ -511,15 +462,11 @@ class StagingManager
             }
         }
 
-        // Any mode that replaces the database dumps it first — that is the
-        // half carrying orders and customers, and it is the half that cannot
-        // restore itself. A files-only push does not touch it: the post-push
-        // work it runs writes nothing but transients and `rewrite_rules`,
-        // which WordPress regenerates on demand, so dumping a large database
-        // there would be real cost to protect data that comes back anyway.
-        // Unless the user turned the copy off (2026-10-29): then a database
-        // that fails part-way is not put back. Files still are — their
-        // snapshot is only kept while the swap runs, never as a copy.
+        // Any mode that replaces the database dumps it first (it holds orders and customers and
+        // cannot restore itself). A files-only push skips it: its post-push work writes only
+        // transients and `rewrite_rules`, which WordPress regenerates. With the safety copy turned
+        // off a database that fails part-way is not put back; files still are, from a snapshot
+        // kept only while the swap runs.
         if ($pushesDatabase && $safetyCopy) {
             try {
                 $databaseSnapshot = $this->safetyDump($target);
@@ -530,9 +477,8 @@ class StagingManager
             }
         }
 
-        // A visitor mid-checkout must never see the site half-swapped —
-        // the same "unavailable" page enable/disable already trusts, reused
-        // rather than a second maintenance-mode mechanism invented here.
+        // A visitor mid-checkout must never see a half-swapped site: reuse the "unavailable" page
+        // of enable/disable.
         try {
             $this->provisioner->disable($target);
         } catch (Throwable $failure) {
@@ -556,10 +502,8 @@ class StagingManager
             $this->provisioner->enable($target);
         } catch (Throwable $pushFailure) {
             try {
-                // Only restore halves that were snapshotted. A database-only
-                // push never took a file snapshot, and `restoreFiles` against
-                // a directory that was never written would replace the live
-                // document root with nothing.
+                // Only restore halves that were snapshotted: restoring files after a database-only
+                // push would replace the live document root with nothing.
                 if ($pushesFiles) {
                     $this->restoreFiles($target, $fileSnapshot);
                 }
@@ -611,9 +555,7 @@ class StagingManager
      */
     private function rsync(string $source, string $destination, Application $owner, array $patterns, array $mergePaths = []): void
     {
-        // The list comes from the strategy: which files carry a site's own
-        // identity is a question only the site type can answer, and when this
-        // manager tried to answer it the WordPress ones were missing.
+        // Which files carry a site's own identity is a question only the site type can answer.
         $excludes = $patterns === []
             ? []
             : array_merge(...array_map(fn (string $pattern) => ['--exclude', $pattern], $patterns));
@@ -628,9 +570,8 @@ class StagingManager
             throw new StagingOperationException($result->reference);
         }
 
-        // Before the chown below, deliberately: these passes write files as
-        // root, and a pushed image owned by root is one the site user cannot
-        // replace or delete from the Media Library afterwards.
+        // Before the chown below: these passes write as root, and a root-owned image cannot be
+        // replaced or deleted by the site user afterwards.
         foreach ($mergePaths as $path) {
             $this->merge($source, $destination, $owner, $path);
         }
@@ -648,17 +589,11 @@ class StagingManager
     /**
      * One additive pass: copy `$path` across, remove nothing.
      *
-     * No `--delete`, which is the whole point — this runs for the paths that
-     * must cross without a push being able to erase what is already on the
-     * other side.
+     * No `--delete`: a push must not erase what is already on the other side.
      *
-     * The source is probed first because a site that has never had an upload
-     * has no `wp-content/uploads` at all, and rsync exits non-zero on a
-     * missing source — which would fail the push of a site whose only fault is
-     * that nobody has added a photo yet. `probe()` rather than a bare `run()`
-     * so that "the directory is not there" stays distinct from "the panel was
-     * not allowed to ask": a sudo refusal must fail the push, not be read as
-     * an answer and silently skip the media.
+     * The source is probed first because a site with no uploads has no `wp-content/uploads` and
+     * rsync fails on a missing source. `probe()`, not `run()`, so "not there" stays distinct from
+     * "the panel was not allowed to ask": a sudo refusal must fail the push, not skip the media.
      */
     private function merge(string $source, string $destination, Application $owner, string $path): void
     {
@@ -678,10 +613,8 @@ class StagingManager
             return;
         }
 
-        // mkdir -p, because rsync will create the leaf but not the path above
-        // it — `wp-content` exists on any WordPress site, but this contract is
-        // not WordPress-only and a nested merge path on a fresh destination
-        // would otherwise fail.
+        // mkdir -p: rsync creates the leaf but not the path above it, and merge paths are not
+        // WordPress-only.
         $directory = $this->serverOps->run(
             ['mkdir', '-p', $to],
             ['feature' => 'application', 'op' => 'staging_merge_dir', 'application' => $owner->id],
@@ -715,11 +648,9 @@ class StagingManager
 
         $source = rtrim($this->provisioner->documentRoot($production), '/');
 
-        // Room for it first (2026-10-29): the snapshot is a whole copy of the
-        // site's files on this server's disk for as long as the push runs,
-        // and a full disk takes every site down with it. Measured now with
-        // `du`, which still prints a usable total when it cannot read a few
-        // entries; no total at all is let through, as for backups.
+        // Room first: the snapshot is a whole copy of the site's files for as long as the push
+        // runs, and a full disk takes every site down. `du` still prints a total when it cannot
+        // read a few entries; no total at all is let through, as for backups.
         $measured = $this->serverOps->run(
             ['du', '-sb', '--', $source],
             ['feature' => 'application', 'op' => 'staging_snapshot_size', 'application' => $production->id],
@@ -795,12 +726,8 @@ class StagingManager
     }
 
     /**
-     * A local DB dump kept on the site's own disk before a full push
-     * overwrites production's database — not a substitute for the full
-     * Backups feature (which needs a configured storage destination that
-     * may not exist), just a same-box safety net for the one irreversible
-     * part of a push. Kept, not pruned — a handful of SQL files is cheap,
-     * and this is the file someone reaches for the day a push goes wrong.
+     * A local DB dump kept on the site's own disk before a push overwrites production's database:
+     * a same-box safety net for the one irreversible part of a push, not a substitute for Backups.
      *
      * @return array{database: Database, path: string}|null
      */
@@ -812,9 +739,8 @@ class StagingManager
             return null;
         }
 
-        // Above the document root: this is a full dump of the production
-        // database, and inside the served directory the only thing between it
-        // and the internet is a vhost deny rule.
+        // Above the document root: a full production dump inside the served directory would be
+        // protected only by a vhost deny rule.
         $directory = $production->panelPath().'/staging-backups';
         $path = $directory.'/pre-push-'.now()->format('Ymd-His').'-'.Str::lower(Str::random(6)).'.sql';
 
@@ -827,10 +753,8 @@ class StagingManager
             throw new StagingOperationException($created->reference, $created->busy, $created->staleLock);
         }
 
-        // Room for it first (2026-10-29): the dump goes to this server's disk,
-        // and a full disk takes every site down with it. Measured now rather
-        // than read from the stored size, which can be days old. Unknown size
-        // or an unmeasurable disk is let through, as for backups.
+        // Room first: a full disk takes every site down. Measured now, not read from the stored
+        // size, which can be days old. Unknown size or an unmeasurable disk is let through.
         $bytes = (int) $this->sizes->refresh($database)->size_bytes;
 
         try {
@@ -844,8 +768,7 @@ class StagingManager
         try {
             $this->databases->engine($database->engine)->dump($database->name, $path);
         } catch (Throwable $e) {
-            // A dump that died part-way — out of space, most likely — is not a
-            // copy anyone can restore from, and it is holding the space.
+            // A dump that died part-way (likely out of space) cannot be restored and holds the space.
             $this->serverOps->run(
                 ['rm', '-f', '--', $path],
                 ['feature' => 'application', 'op' => 'staging_safety_dump_cleanup', 'application' => $production->id],

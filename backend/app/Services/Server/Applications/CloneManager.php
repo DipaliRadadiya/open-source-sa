@@ -19,47 +19,31 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Duplicate any application to a brand-new domain as a fully independent
- * site — no ongoing relationship to the source, unlike Staging (there is no
- * "push back"; `cloned_from_application_id` is informational only).
+ * Duplicate any application to a new domain as a fully independent site (unlike Staging
+ * there is no "push back"; `cloned_from_application_id` is informational only).
  *
- * Generic for any site type: create the row, provision its vhost with the
- * marketplace installer and process-start skipped (there are no files yet —
- * `rsync` supplies them a moment later, not a fresh install), copy files,
- * then only if the type actually needs a database does a `CloneStrategy`
- * get involved at all. A type with no database (static, blank PHP, node,
- * git with no database) never touches the strategy hook.
+ * Generic for any site type: create the row, provision its vhost with the installer and
+ * process start skipped (`rsync` supplies the files), copy files, and only for a type that
+ * needs a database involve a `CloneStrategy`.
  */
 class CloneManager
 {
     /**
-     * Same defaults Staging uses — caches, VCS metadata, build artifacts,
-     * the panel's own bookkeeping directory don't belong in a clone either.
+     * Same defaults Staging uses.
      *
      * @var array<int, string>
      */
     /**
-     * Never worth copying, for any site type: caches that rebuild themselves,
-     * logs that belong to the site they were written on, and the panel's own
-     * state directory.
+     * Never worth copying, for any site type: caches, logs and the panel's own state directory.
      */
     private const FILE_EXCLUDES = [
         'wp-content/cache/', '*.log', 'wp-content/upgrade/', '.panel/',
     ];
 
     /**
-     * Dropped from the exclude list for a git application, because a clone of
-     * one has to be a *working copy*.
-     *
-     * `.git/` was excluded, so the copy was not a checkout: no remote, no
-     * branch, no HEAD. Nothing could be deployed from it and `git status` in it
-     * was an error. `node_modules/` was excluded, so a Node site could not
-     * start until something rebuilt it — and nothing does, because a clone does
-     * not run a deploy.
-     *
-     * They are still excluded everywhere else. A WordPress install has no
-     * checkout to preserve, and its `node_modules` (a theme build directory)
-     * is genuinely disposable.
+     * Dropped from the exclude list for a git application: its clone has to be a working
+     * copy (without `.git/` it is not a checkout; without `node_modules/` a Node site cannot
+     * start, since a clone runs no deploy). Still excluded for every other type.
      */
     private const GIT_WORKING_COPY = ['.git/', 'node_modules/'];
 
@@ -78,9 +62,8 @@ class CloneManager
     /**
      * Run an async clone from the queue, recording named steps.
      *
-     * Called by RunClone job. The Clone record already exists (created by
-     * the controller before dispatching the job); this method creates the
-     * target Application and records steps as it progresses.
+     * Called by the RunClone job; the Clone record already exists. Creates the target
+     * Application and records steps as it progresses.
      */
     public function execute(SiteClone $cloneRecord): Application
     {
@@ -99,10 +82,8 @@ class CloneManager
 
         $name = $cloneRecord->name ?? Application::uniqueName("{$source->name} (Clone)");
 
-        // forceCreate, not create: `slug` is deliberately not fillable — it
-        // names the web-server config file the panel overwrites, so a client
-        // must never choose it — which means mass assignment drops it in
-        // silence and the site provisions into the system user's home.
+        // forceCreate, not create: `slug` is deliberately not fillable (it names the config
+        // file the panel overwrites), so mass assignment would drop it silently.
         $target = Application::forceCreate([
             'system_user_id' => $source->system_user_id,
             'cloned_from_application_id' => $source->id,
@@ -121,49 +102,29 @@ class CloneManager
             'build_command' => $source->build_command,
             'deploy_script' => $source->deploy_script,
             'start_command' => $source->start_command,
-            // The account the source deploys with, and the commit it is
-            // actually on.
-            //
-            // `git_account_id` was the one git column left behind, so the clone
-            // came up with a repository, a branch and no way to reach either:
-            // `git_account_missing` true, the Deployment screen asking to
-            // relink, and the user re-picking credentials the panel already
-            // holds. Copying a foreign key to the same stored credential grants
-            // nothing new — the clone runs on the same box, as the same system
-            // user, against the same repository.
+            // The git account the source deploys with (the same stored credential, on the same
+            // box and system user, so this grants nothing new) and the commit it is on.
             'git_account_id' => $source->git_account_id,
             'repository' => $source->repository,
             'repository_url' => $source->repository_url,
             'branch' => $source->branch,
-            // What is on disk after the copy, which is the source's commit. A
-            // clone reporting "never deployed" while serving deployed code is
-            // the Deployment screen lying about the site in front of you.
+            // What is on disk after the copy is the source's commit.
             'last_commit' => $source->last_commit,
             'last_deployed_at' => $source->last_deployed_at,
-            // Deliberately NOT copied: `webhook_*`. `webhook_identifier` is
-            // UNIQUE, so it cannot be, and duplicating the secret would make one
-            // `git push` deploy the original and the clone together — which is
-            // the opposite of what a copy is for. Deploy-on-push stays off until
-            // it is switched on deliberately.
+            // Deliberately NOT copied: `webhook_*` (the identifier is UNIQUE, and a shared
+            // secret would deploy the original and the clone on one `git push`).
             'status' => 'pending',
         ]);
 
-        // The Domains screen reads `application_domains`, not this column —
-        // `applications.domain` is only the mirror of whichever row is
-        // primary. CreateApplication writes that row; this path does not go
-        // through it, so a cloned site came up serving its domain with a
-        // completely empty Domains section.
-        //
-        // Worse than cosmetic. `Application::serverNames()` falls back to this
-        // column only while the relation is empty, so adding a single alias
-        // afterwards made the relation non-empty *without* the primary in it —
-        // and the next vhost dropped the site's own domain.
+        // The Domains screen reads `application_domains`; `applications.domain` only mirrors
+        // the primary row, and CreateApplication (which writes it) is not used here.
+        // `Application::serverNames()` falls back to the column only while the relation is
+        // empty, so the first alias added later would drop the site's own domain from the vhost.
         $target->domains()->create([
             'domain' => strtolower(trim((string) $target->domain)),
             'type' => DomainType::Primary,
-            // A generated clone hostname is usually a wildcard-DNS name, and the
-            // certificate actions filter on this flag to avoid spending the
-            // shared nip.io rate limit.
+            // A generated clone hostname is usually wildcard DNS; certificate actions filter
+            // on this flag to avoid spending the shared nip.io rate limit.
             'is_test' => ApplicationDomain::looksTemporary((string) $target->domain),
         ]);
 
@@ -172,26 +133,12 @@ class CloneManager
             $target->save();
         }
 
-        // The source's PHP settings, before provisioning reads them.
+        // The source's PHP settings (memory_limit, upload limits, open_basedir,
+        // disable_functions, timezone). `replicate()` carries every attribute, so columns
+        // added later are cloned too; the two excluded keys are the row's identity and owner.
         //
-        // The clone copied php_version and stopped there, so a cloned site
-        // came up with the interpreter its source used and none of the
-        // configuration around it: memory_limit, the upload limits,
-        // open_basedir, disable_functions, the timezone. A site cloned to
-        // reproduce a problem did not reproduce the environment the problem
-        // lived in, and one cloned as a staging copy quietly ran on different
-        // limits than the site it was standing in for.
-        //
-        // `replicate()` rather than naming columns: it carries every attribute
-        // the model has, so a setting added to the table later is cloned
-        // without anyone remembering to come back here. The two excluded keys
-        // are the two that must not travel — the identity of the row and its
-        // owner.
-        //
-        // Before provision(), deliberately. The harden_php step reads this row
-        // and fills disable_functions only when it is null, so a copy that
-        // landed afterwards would be written over by the strict default and
-        // the inheritance would silently not happen.
+        // Must happen before provision(): the harden_php step fills disable_functions only
+        // when it is null, so a later copy would be overwritten by the strict default.
         if ($source->phpSettings !== null) {
             $settings = $source->phpSettings->replicate(['id', 'application_id']);
             $settings->application_id = $target->id;
@@ -200,18 +147,9 @@ class CloneManager
             $target->unsetRelation('phpSettings');
         }
 
-        // Deploy-on-push, re-armed with credentials of the clone's own.
-        //
-        // The source's identifier cannot be reused — it is UNIQUE — and its
-        // secret must not be, because one `git push` would then deploy both
-        // sites. So the clone gets a fresh pair, and the result screen shows
-        // the new URL with the one instruction that cannot be automated:
-        // add it to the repository. Nothing on this box can register a webhook
-        // on somebody's GitHub.
-        //
-        // Only when the source actually used it. Minting credentials for a
-        // webhook nobody asked for would leave a live endpoint with no traffic
-        // and no reason to exist.
+        // Deploy-on-push, re-armed with a fresh identifier and secret of the clone's own (the
+        // source's identifier is UNIQUE and its secret would deploy both sites). The user adds
+        // the new URL to the repository themselves. Only when the source used it.
         if ($source->webhook_enabled && $source->site_type === 'git') {
             try {
                 $this->webhooks->execute($target, [
@@ -221,10 +159,8 @@ class CloneManager
 
                 $target->refresh();
             } catch (Throwable $exception) {
-                // An unsupported or missing provider. The copy is otherwise
-                // fine, so it is not worth failing the clone over — it comes up
-                // with deploy-on-push off, exactly as it did before, and the
-                // next-steps card says to reconnect it.
+                // An unsupported or missing provider: not worth failing the clone over; it comes
+                // up with deploy-on-push off and the next-steps card says to reconnect it.
                 Log::warning('clone could not arm deploy-on-push', [
                     'application' => $target->id,
                     'message' => $exception->getMessage(),
@@ -234,11 +170,8 @@ class CloneManager
 
         $target->load('systemUser');
 
-        // Everything from here can fail on the server, and the row already
-        // exists. Left behind it holds the domain — which is unique — so
-        // retrying the same clone was refused with a validation error, and the
-        // panel listed a site that had never been created. The SiteClone
-        // record keeps the history; the half-made application does not.
+        // Everything from here can fail on the server; a half-made row would hold the unique
+        // domain and block a retry, so it is discarded (the SiteClone record keeps the history).
         try {
             // Named steps recorded on the Clone record so the frontend can poll.
             $cloneRecord->update(['current_step' => 'provisioning', 'reason' => null]);
@@ -246,23 +179,10 @@ class CloneManager
 
             $cloneRecord->update(['current_step' => 'copying_files']);
 
-            // `codePath()`, not `documentRoot()`.
-            //
-            // They are the same directory for most site types, and for those
-            // this changes nothing. They are NOT the same for the two shapes
-            // that build a project around the served directory:
-            //
-            //  - a git checkout always lands at `public_html`, whatever
-            //    `web_root` says — so a repository whose front controller is in
-            //    `public/` had only `public/` copied. Not the application
-            //    source, not composer.json, and not the `.env`, which
-            //    `ApplicationEnvironment` writes at `codePath()/.env` — one
-            //    level above what was being copied.
-            //  - Craft and Statamic put `craft`/`please` and the whole project
-            //    one level above `web/`, and were cloned just as partially.
-            //
-            // The old behaviour produced a clone of the served assets and
-            // called it a copy of the site.
+            // `codePath()`, not `documentRoot()`: they differ for a git checkout (always at
+            // `public_html`, whatever `web_root` says; the `.env` is at `codePath()/.env`) and for
+            // Craft/Statamic (project one level above `web/`); copying the served directory
+            // would copy only part of the site.
             $this->rsync(
                 $this->provisioner->codePath($source),
                 $this->provisioner->codePath($target),
@@ -279,9 +199,7 @@ class CloneManager
 
             if ($this->supervisor->runs($target)) {
                 $cloneRecord->update(['current_step' => 'starting_process']);
-                // Same path as the copy: a Node process whose working
-                // directory is `public/` cannot find the server it is meant to
-                // start.
+                // Same path as the copy: a working directory of `public/` cannot find the server.
                 $this->supervisor->apply($target, $this->provisioner->codePath($target), start: true);
             }
         } catch (Throwable $e) {
@@ -300,20 +218,15 @@ class CloneManager
     }
 
     /**
-     * A git site's databases, copied, and its `.env` pointed at the copies
-     * (CLN-01).
+     * A git site's databases, copied, and its `.env` pointed at the copies.
      *
-     * A git site has no install recipe, so it never had a CloneStrategy, and
-     * the clone came up on its source's database with the source's `.env`:
-     * every change made "on the copy" was made on the live site. A database
-     * linked to the source is the panel's record of what the site uses, so
-     * each one is copied; the `.env` then has the source's database name, user
-     * and password swapped for the copy's, and its own domain for the clone's.
+     * A git site has no CloneStrategy; without this the clone would run on the source's
+     * database and every change "on the copy" would hit the live site. Each database linked to
+     * the source is copied; the `.env` gets the copy's database name, user and password and the
+     * clone's domain.
      *
-     * The `.env` is written whether or not there is a database: one kept
-     * above the served directory is not inside what rsync copies, so without
-     * this the clone had no `.env` at all, and one that was copied still named
-     * the source's URL.
+     * The `.env` is written even with no database: one kept above the served directory is not
+     * copied by rsync, and a copied one still names the source's URL.
      */
     private function cloneLinkedDatabases(SiteClone $cloneRecord, Application $source, Application $target): void
     {
@@ -353,10 +266,8 @@ class CloneManager
     /**
      * What a clone may leave behind.
      *
-     * Nothing for a git site (it has to be a working copy), and not
-     * node_modules for a Node site: a one-click Node app (Uptime Kuma, n8n…)
-     * was cloned without it, and nothing installs it again — a clone runs no
-     * deploy — so the copy could not start (bug #91).
+     * Nothing for a git site (it has to be a working copy), and not node_modules for a Node
+     * site: a clone runs no deploy, so nothing would install it again.
      *
      * @return list<string>
      */
@@ -372,21 +283,9 @@ class CloneManager
     }
 
     /**
-     * Undo a half-made clone.
-     *
-     * Deprovision goes through the provisioner rather than
-     * `DeprovisionApplication`, which returns early for a `pending`
-     * application — and a clone that failed on the way up is exactly that, so
-     * the action would skip the vhost it did manage to write.
-     *
-     * The cleanup's own failure is logged and swallowed: the caller is about
-     * to report why the clone failed, and that is the message worth keeping.
-     */
-    /**
-     * Undo the half-made copy of a clone whose job died before its own
-     * cleanup could run — killed at the job's time limit mid-copy (CL-B4).
-     * Found by what the copy is, not by `target_application_id`, which is
-     * only recorded once the copy is finished.
+     * Undo the half-made copy of a clone whose job died before its own cleanup (e.g. killed
+     * at the time limit mid-copy). Found by what the copy is, not by `target_application_id`,
+     * which is only recorded once the copy is finished.
      */
     public function discardAbandoned(SiteClone $cloneRecord): void
     {
@@ -401,10 +300,17 @@ class CloneManager
         }
     }
 
+    /**
+     * Undo a half-made clone.
+     *
+     * Deprovisions through the provisioner, not `DeprovisionApplication`, which returns early
+     * for a `pending` application and would skip the vhost already written. A cleanup failure
+     * is logged and swallowed: the caller is about to report why the clone failed.
+     */
     private function discard(Application $application): void
     {
-        // A database made for the clone before it failed. Left behind it is
-        // a full copy of the source's data, linked to nothing.
+        // A database made for the clone before it failed would be a full copy of the source's
+        // data, linked to nothing.
         foreach (Database::where('application_id', $application->id)->with('users')->get() as $database) {
             try {
                 $this->deleteDatabase->execute($database);
@@ -420,9 +326,7 @@ class CloneManager
         }
 
         try {
-            // With its files (CL-B4): the copy is the clone's alone, and left
-            // behind it is a second copy of the source's site — 117 MB on a
-            // test server — in a directory nothing lists any more.
+            // With its files: the copy is the clone's alone.
             $this->provisioner->deprovision($application, removeFiles: $this->ownsItsDirectory($application));
         } catch (Throwable $cleanupFailure) {
             Log::channel('server-ops')->warning('could not deprovision a half-made clone', [
@@ -433,15 +337,13 @@ class CloneManager
             ]);
         }
 
-        // The row is what blocks the retry: it holds the unique domain, the
-        // unique name and slug, and any port allocated above.
+        // The row blocks the retry: it holds the unique domain, name, slug and port.
         $application->delete();
     }
 
     /**
-     * Whether a half-made clone's directory is its own to remove: it has a
-     * slug (without one the path is the user's whole home), and slugs are
-     * unique, so `{home}/{slug}` is no other application's.
+     * Whether a half-made clone's directory is its own to remove: it needs a slug (without
+     * one the path is the user's whole home); slugs are unique, so `{home}/{slug}` is its alone.
      */
     private function ownsItsDirectory(Application $application): bool
     {
@@ -464,9 +366,7 @@ class CloneManager
         $result = $this->serverOps->run(
             array_merge(['rsync', '-a'], $args, [rtrim($source, '/').'/', rtrim($destination, '/').'/']),
             ['feature' => 'application', 'op' => 'clone_rsync', 'application' => $owner->id],
-            // Raised with the payload. A served directory was the old scope; a
-            // working copy carries `.git` and `node_modules` too, which on a
-            // real project is usually the bulk of it.
+            // A working copy carries `.git` and `node_modules`, usually the bulk of a project.
             timeout: (int) config('server.clone.rsync_timeout', 900),
         );
 

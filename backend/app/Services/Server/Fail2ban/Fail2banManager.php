@@ -16,26 +16,14 @@ use Symfony\Component\HttpFoundation\IpUtils;
 /**
  * fail2ban: watches logs for repeated failures and bans the source IP.
  *
- * No DB. Live state (which jails run, who is banned) comes from
- * `fail2ban-client`, and the settings we manage live in `jail.local`
- * ({@see dropInPath()}) — which fail2ban loads *after* `jail.d/*.conf`, so the
- * panel's values win over the distribution's. That is load-bearing: Ubuntu
- * ships `jail.d/defaults-debian.conf` with `[sshd] enabled = true`, and
- * without the later file, installing fail2ban through the panel would start
- * banning SSH immediately — which the panel deliberately does not do.
+ * No DB. Live state (jails, bans) comes from `fail2ban-client`; the settings we manage live in
+ * `jail.local` ({@see dropInPath()}), which fail2ban loads after `jail.d/*.conf`, so ours win.
+ * That matters: Ubuntu's `jail.d/defaults-debian.conf` enables `[sshd]`, and without our file
+ * installing fail2ban would start banning SSH at once.
  *
- * `jail.local` is also a file an administrator may have written by hand, and
- * this class replaces it wholesale, hence {@see MANAGED_HEADER}: before
- * overwriting, it checks whose file it is.
- *
- * Ours is one file among several; the effective configuration is whatever
- * fail2ban makes of all of them, which is why live state is read back rather
- * than assumed.
- *
- * The recurring hazard is that this feature's entire job is locking people
- * out, and it cannot tell an attacker from an administrator having a bad
- * morning. Hence the ignore list, and the refusal to enable the SSH jail
- * without an acknowledgement.
+ * `jail.local` may be hand-written and this class replaces it wholesale: see {@see MANAGED_HEADER}.
+ * This feature locks people out and cannot tell an attacker from an admin having a bad day,
+ * hence the ignore list and the refusal to enable the SSH jail without an acknowledgement.
  */
 class Fail2banManager
 {
@@ -43,12 +31,8 @@ class Fail2banManager
     public const ALWAYS_IGNORED = ['127.0.0.1/8', '::1'];
 
     /**
-     * The first line of every file this panel writes to `jail.local`.
-     *
-     * It is how the panel recognises its own work. `jail.local` is a file the
-     * distribution does not ship and an administrator may well have written by
-     * hand, and this class replaces it wholesale — so before overwriting, it
-     * has to know whose file it is looking at.
+     * First line of every file the panel writes to `jail.local`: how it tells its own file from
+     * one an administrator wrote by hand before overwriting.
      */
     public const MANAGED_HEADER = '# Managed by the control panel — do not edit by hand';
 
@@ -81,9 +65,7 @@ class Fail2banManager
     /**
      * The jails the panel manages, with their live state.
      *
-     * `sshd` protects the way into the server and is the reason to run
-     * fail2ban at all. `recidive` watches fail2ban's own log and bans anyone
-     * who keeps coming back for much longer.
+     * `sshd` protects the way into the server; `recidive` bans repeat offenders for much longer.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -106,9 +88,7 @@ class Fail2banManager
     /**
      * A jail's counters.
      *
-     * `currently_failed` is the one worth showing prominently: it means an
-     * attack is in progress right now, as opposed to the totals, which only
-     * say one happened at some point.
+     * `currently_failed` means an attack is in progress now; the totals only say one happened.
      *
      * @return array<string, int>
      */
@@ -144,9 +124,7 @@ class Fail2banManager
                 $banned[] = [
                     'ip' => $ip,
                     'jail' => $jail,
-                    // A list of bare addresses doesn't tell you whether to
-                    // wait or to unban. Null when this fail2ban is too old to
-                    // report timings — better an absent field than a guess.
+                    // Null when this fail2ban is too old to report timings.
                     ...($times[$ip] ?? ['banned_at' => null, 'expires_at' => null, 'seconds_left' => null]),
                 ];
             }
@@ -158,9 +136,8 @@ class Fail2banManager
     /**
      * Ban and expiry times per IP for a jail.
      *
-     * `--with-time` is not in every fail2ban, and an older one answers with
-     * plain addresses instead of failing — so a parse that finds no timestamps
-     * yields no timings rather than nonsense.
+     * An older fail2ban ignores `--with-time` and prints bare addresses; no timestamps parsed
+     * means no timings.
      *
      * @return array<string, array{banned_at: string, expires_at: string, seconds_left: int}>
      */
@@ -193,11 +170,7 @@ class Fail2banManager
     }
 
     /**
-     * Release every banned address.
-     *
-     * For the case this exists to serve — an office or a VPN range banned by
-     * mistake — unbanning eleven addresses one at a time is not the moment for
-     * careful clicking.
+     * Release every banned address (e.g. an office or VPN range banned by mistake).
      *
      * @return array<int, string> the addresses released
      */
@@ -217,12 +190,10 @@ class Fail2banManager
     }
 
     /**
-     * Settings from our drop-in — what the settings form controls.
+     * Settings from our drop-in, i.e. what the settings form controls.
      *
-     * Deliberately not read back from fail2ban: the effective value can come
-     * from any of several files, and showing another file's value in a form
-     * that writes ours would invite the user to "fix" a number that then
-     * refuses to change.
+     * Not read back from fail2ban: the effective value can come from another file, and showing
+     * it in a form that writes ours would offer a number that then refuses to change.
      *
      * @return array<string, mixed>
      */
@@ -239,8 +210,7 @@ class Fail2banManager
     }
 
     /**
-     * The ignore list, without the loopback entries we always add — the user
-     * did not put those there and cannot remove them.
+     * The ignore list, without the loopback entries we always add.
      *
      * @return array<int, string>
      */
@@ -255,31 +225,15 @@ class Fail2banManager
     }
 
     /**
-     * Is this the machine's own address — one the panel never lets you ban?
+     * Is this one of the machine's own addresses, which the panel never lets you ban?
      *
-     * 🔴 A ban on loopback holds. That is the whole reason this exists, and it
-     * was measured rather than assumed: an address sitting in fail2ban's own
-     * `ignoreip` was banned by hand, survived `fail2ban-client reload`, and
-     * stayed in the nftables set. `ignoreip` governs *detection*; a manual ban
-     * is carried out regardless.
+     * A manual ban on loopback holds even when the address is in `ignoreip` (that only governs
+     * detection). On `recidive` (all ports) banning 127.0.0.1 blocks MariaDB, Redis and the
+     * panel's own loopback, and the panel cannot unban itself through the API it just cut off;
+     * recovery is SSH only.
      *
-     * What that costs depends on the jail, and the worst case is not the SSH
-     * one. `sshd` bans `tcp dport 22`, so loopback SSH breaks and little else.
-     * `recidive` uses `banaction_allports` — `meta l4proto tcp ... reject`,
-     * every port — so banning 127.0.0.1 there rejects all TCP from the server
-     * to itself: MariaDB on 127.0.0.1:3306, Redis, the panel's own loopback.
-     * The panel goes down, and it cannot unban itself, because unbanning runs
-     * through the API that just became unreachable. Recovery is SSH only.
-     *
-     * Matched with `IpUtils` rather than string equality: {@see ALWAYS_IGNORED}
-     * holds `127.0.0.1/8`, and the address that was actually banned was
-     * `127.0.0.1`. An exact comparison can never match those two, which is
-     * precisely how the hole existed — the CIDR handling *is* the fix, not a
-     * refinement of it.
-     *
-     * Deliberately not applied to the user's own ignore entries. Since bans do
-     * hold, blocking one host inside a range you generally trust is a coherent
-     * thing to want, and taking that away would fix nothing anyone reported.
+     * Matched with `IpUtils`, not string equality: {@see ALWAYS_IGNORED} holds `127.0.0.1/8`.
+     * Not applied to the user's own ignore entries: blocking one host inside a trusted range is valid.
      */
     public function isOwnAddress(string $ip): bool
     {
@@ -289,10 +243,9 @@ class Fail2banManager
             return true;
         }
 
-        // Its other addresses too (bug #27): banning the public IP on
-        // `recidive` cut the panel off from its own API exactly as loopback
-        // did. The interfaces' addresses, plus the public one, which behind
-        // NAT is on no interface and comes from the cloud's metadata.
+        // Its other addresses too: banning the public IP on `recidive` cuts the panel off like
+        // loopback does. Interface addresses plus the public one (behind NAT it is on no
+        // interface; it comes from the cloud's metadata).
         $own = [
             ...app(ServerAddresses::class)->local(),
             app(ServerPublicIp::class)->detect(fn () => app(DnsVerifier::class)->serverIp()),
@@ -317,12 +270,9 @@ class Fail2banManager
             ."bantime = {$settings['bantime']}\n"
             ."findtime = {$settings['findtime']}\n"
             ."maxretry = {$settings['maxretry']}\n"
-            // No `backend` here, deliberately. `[DEFAULT]` applies to every
-            // jail, and the systemd backend makes fail2ban ignore `logpath`
-            // and read the journal instead — so a `backend = systemd` here
-            // silently disabled every file-watching jail this panel writes.
-            // It is set on the `sshd` jail instead, where it is wanted; see
-            // `server.fail2ban.jails` for the full reasoning.
+            // No `backend` in [DEFAULT]: the systemd backend makes fail2ban ignore `logpath`, which
+            // would disable every file-watching jail. It is set on the `sshd` jail instead
+            // (see `server.fail2ban.jails`).
             ."ignoreip = {$ignore}\n";
 
         foreach ((array) config('server.fail2ban.jails', []) as $jail) {
@@ -338,11 +288,8 @@ class Fail2banManager
 
         $path = $this->dropInPath();
 
-        // Whose file is this? Answered before a single byte is written, and
-        // read through ServerOps rather than PHP's own filesystem calls: the
-        // panel account is unprivileged, so `file_get_contents` on a
-        // root-owned file returns false — indistinguishable, to the code that
-        // used to be here, from "there was nothing to keep".
+        // Whose file is this? Checked before writing, through ServerOps: the panel account is
+        // unprivileged, so PHP's own read of a root-owned file returns false ("nothing to keep").
         $previous = $this->currentDropIn($path);
 
         $result = $this->serverOps->run(
@@ -366,8 +313,7 @@ class Fail2banManager
             $this->reload();
         } catch (Fail2banException $exception) {
             $this->restoreDropIn($path, $previous);
-            // Reload the known-good configuration; its failure is logged by
-            // ServerOps, while the original reference remains user-visible.
+            // Reload the known-good configuration; ServerOps logs a failure here.
             $this->client(['reload']);
             throw $exception;
         }
@@ -376,13 +322,10 @@ class Fail2banManager
     /**
      * fail2ban's own `recidive` filter, minus the per-site jails.
      *
-     * `recidive` bans on every port for a week after three bans from any jail
-     * in a day. A site jail bans an address for that one site; counted here,
-     * three wrong-password streaks on a WordPress site turned into the whole
-     * server — panel and SSH — going dark for that address (measured on the
-     * OLS test box, 2026-10-07). `_jailname` is the jail recidive's regex
-     * already leaves out; it lives in `[DEFAULT]` there, so it is overridden
-     * there here (a `[Definition]` override was measured to change nothing).
+     * `recidive` bans every port for a week after three bans in a day. Counting site jails would
+     * let three wrong-password streaks on one site black out the whole server for that address.
+     * `_jailname` is overridden in `[DEFAULT]`, where recidive defines it; a `[Definition]`
+     * override has no effect.
      */
     private function ensureRecidiveFilter(): void
     {
@@ -409,12 +352,9 @@ class Fail2banManager
     /**
      * What is at `jail.local` now, or null when nothing is.
      *
-     * Refuses rather than guessing in the two cases that matter. A file the
-     * panel did not write is somebody's configuration — a server migrated from
-     * another panel very likely owns `jail.local` already — and replacing it
-     * with ours would be a silent, unrecoverable deletion of their work. A
-     * file that cannot be read is the same situation with less information,
-     * which is a reason for more caution and not less.
+     * Refuses rather than guesses: a file the panel did not write (e.g. from another panel) is
+     * someone's configuration, and replacing it would silently destroy it. An unreadable file is
+     * the same with less information.
      *
      * @throws Fail2banException
      */
@@ -453,9 +393,8 @@ class Fail2banManager
 
     private function restoreDropIn(string $path, ?string $previous): void
     {
-        // Only when we established there was nothing here before. `false` used
-        // to arrive from an unreadable file and land in this branch, so the
-        // rollback deleted the very file it was restoring.
+        // Only when we established there was nothing here before; an unreadable file must not
+        // be deleted by the rollback.
         if ($previous === null) {
             $this->serverOps->run(['rm', '-f', $path], ['feature' => 'fail2ban', 'op' => 'restore_config']);
 
@@ -468,11 +407,8 @@ class Fail2banManager
     /**
      * A jail's options, with `{ssh_port}` resolved.
      *
-     * The sshd jail defaults to `port = ssh`, which resolves to 22 — and this
-     * panel lets the user move SSH somewhere else. Left alone, fail2ban would
-     * detect the attack correctly (it reads the journal, not the socket) and
-     * then ban a port nobody is using, while the screen reported the server as
-     * protected. The port has to come from the same setting that moved it.
+     * The sshd jail defaults to `port = ssh` (22), but the user can move SSH; otherwise fail2ban
+     * would ban a port nobody uses while the screen reported the server as protected.
      *
      * @param  array<string, mixed>  $jail
      * @return array<string, string>
@@ -488,8 +424,7 @@ class Fail2banManager
     }
 
     /**
-     * Shared with the firewall, which must never close this port, and with
-     * Settings, which changes it. One source, so they cannot disagree.
+     * Shared with the firewall (which must never close this port) and Settings (which changes it).
      */
     public function sshPort(): int
     {
@@ -497,8 +432,7 @@ class Fail2banManager
     }
 
     /**
-     * Reload rather than restart: a restart forgets every active ban, quietly
-     * undoing the protection the user just came here to configure.
+     * Reload, not restart: a restart forgets every active ban.
      */
     public function reload(): void
     {
@@ -510,14 +444,11 @@ class Fail2banManager
     }
 
     /**
-     * Restart the running jails whose options name the SSH port, so their
-     * firewall rule is rebuilt for the port SSH is on now (bug #31).
+     * Restart the running jails whose options name the SSH port, so their firewall rule is
+     * rebuilt for the port SSH is on now.
      *
-     * A reload re-reads jail.local and keeps a running jail's nftables rule:
-     * measured on the nginx test box, after a move to 2222 jail.local said
-     * 2222 while the rule still matched `dport 22` — bans landed on a port
-     * nothing listened on. `reload --restart <jail>` rebuilt it, and the bans
-     * came back from fail2ban's own database.
+     * A reload keeps a running jail's nftables rule, so after a port move bans would still land on
+     * the old port. `reload --restart <jail>` rebuilds it; bans return from fail2ban's database.
      */
     public function restartSshJails(): void
     {
@@ -551,9 +482,7 @@ class Fail2banManager
     }
 
     /**
-     * Unban an IP. Without a jail, from every jail holding it — a user
-     * clicking "unban" on an address means it should be able to connect
-     * again, not that it should stay banned by the jail they didn't look at.
+     * Unban an IP. Without a jail, from every jail holding it.
      *
      * @return array<int, string> the jails it was released from
      */
@@ -579,18 +508,13 @@ class Fail2banManager
      * @return array<int, string>
      */
     /**
-     * Which jails the *file* has enabled — not which ones are running.
+     * Which jails the *file* has enabled, not which ones are running.
      *
-     * {@see activeJails()} asks the daemon, and answers `[]` when it is not
-     * running. That is the right answer for a status screen and a dangerous
-     * one for anything that rewrites the file: a resync run while fail2ban
-     * happened to be down would persist "nothing is enabled" and switch off
-     * the operator's SSH protection. The file is what `write()` is about to
-     * replace, so the file is what it reads.
+     * {@see activeJails()} asks the daemon and answers `[]` when it is down; a rewrite based on
+     * that would persist "nothing enabled" and switch off SSH protection. So this reads the file.
      *
-     * Returns an empty array when the panel does not own the file, which the
-     * caller must treat as "do not write" rather than "disable everything" —
-     * there is no panel configuration to preserve.
+     * Returns an empty array when the panel does not own the file; callers must treat that as
+     * "do not write", not "disable everything".
      *
      * @return array<string, bool> jail name => enabled
      */
@@ -599,12 +523,8 @@ class Fail2banManager
         try {
             $contents = $this->currentDropIn($this->dropInPath());
         } catch (Fail2banException) {
-            // `currentDropIn()` refuses a file the panel did not write, which
-            // is right for the save path — there, somebody is asking to
-            // replace it and deserves to be told no. Here the answer is just
-            // "there is no panel configuration to read", and this runs
-            // unattended from a deploy where an exception is an aborted
-            // update rather than something anyone can act on.
+            // `currentDropIn()` refuses a foreign file, which is right for the save path. This runs
+            // unattended from a deploy, where an exception would abort the update.
             return [];
         }
 

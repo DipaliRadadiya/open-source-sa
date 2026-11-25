@@ -15,23 +15,12 @@ use App\Services\Server\ServerOps;
  * The PHP extensions available to a version, which are installed, and which
  * are switched on.
  *
- * Two axes, not one. An extension is *installed* when its apt package put a
- * `.so` on disk and an ini in `mods-available`; it is *enabled* when that ini
- * is symlinked into a SAPI's `conf.d`. Debian's postinst enables on install,
- * so on a fresh box the two look identical — they only diverge once somebody
- * deliberately turns something off, which is exactly the case this screen
- * exists for.
+ * Two axes: *installed* (the apt package put a `.so` on disk and an ini in
+ * `mods-available`) and *enabled* (that ini is symlinked into a SAPI's `conf.d`).
  *
- * The catalog is keyed by **package**, not module, because those are not the
- * same thing: `php8.4-mysql` is one package providing `mysqli`, `mysqlnd` and
- * `pdo_mysql`. A design keyed on a single name is wrong for a good chunk of
- * the list, and the user thinks in packages anyway — they want "mysql", not
- * three checkboxes that must move together.
- *
- * Package → modules is read from the shipped `.so` files rather than from
- * `mods-available`: the core packages *generate* their ini in postinst, so
- * dpkg does not own it and cannot tell you who it belongs to. The `.so` is
- * always shipped.
+ * The catalog is keyed by package, not module: `php8.4-mysql` provides `mysqli`,
+ * `mysqlnd` and `pdo_mysql`. Package → modules is read from the shipped `.so` files,
+ * because core packages generate their ini in postinst, so dpkg does not own it.
  */
 class PhpExtensionManager
 {
@@ -57,8 +46,7 @@ class PhpExtensionManager
         $enabled = $this->enabledBySapi($version);
         $enabledEverywhere = $this->intersect(array_values($enabled));
 
-        // In-flight and last-failed apt runs for this version's extensions.
-        // One query for the whole catalog rather than one per row.
+        // In-flight and last-failed apt runs for this version's extensions (one query).
         $installs = $this->installs->extensions('php', $version);
 
         $rows = [];
@@ -72,27 +60,19 @@ class PhpExtensionManager
                 'package' => $this->stack->extensionPackage($version, $name),
                 'modules' => $modules,
                 'installed' => $installed,
-                // On only when every module the package provides is on. A
-                // half-enabled package is off as far as the toggle is
-                // concerned, because that is what it behaves like.
+                // On only when every module the package provides is on.
                 'enabled' => $installed && $modules === array_values(array_intersect($modules, $enabledEverywhere)),
                 'builtin' => false,
-                // apt's one-line description, as v7 shows it (bug #29: many
-                // rows had none). English, from the package index — the
-                // screen's own translation, where one exists, comes first.
+                // apt's one-line description (English, from the package index).
                 'summary' => $summary,
                 'sapis' => $this->sapiState($modules, $enabled),
-                // The state of the *operation*, not of the extension. A row
-                // that has never been installed is `ready` — meaning nothing
-                // is in flight, so `installed` and `enabled` above can be
-                // trusted. If this meant installedness it would contradict
-                // them on every row.
+                // The state of the *operation*, not of the extension: `ready` means nothing
+                // is in flight.
                 ...$this->progress($installs->get($name)),
             ];
         }
 
-        // Compiled into the binary: present, useful to see, impossible to turn
-        // off. Listed without a control rather than given a button that lies.
+        // Compiled into the binary: listed without a control, since it cannot be turned off.
         foreach ($this->builtins($version, $installedModules) as $name) {
             $rows[] = [
                 'name' => $name,
@@ -103,8 +83,7 @@ class PhpExtensionManager
                 'builtin' => true,
                 'summary' => null,
                 'sapis' => [],
-                // Compiled in: there is no apt package, so there is nothing
-                // that could ever be mid-install.
+                // Compiled in: no apt package, so never mid-install.
                 ...$this->progress(null),
             ];
         }
@@ -131,8 +110,7 @@ class PhpExtensionManager
     /**
      * Turn an extension on in every SAPI, then apply the change.
      *
-     * Which tool does that is the stack's business: `phpenmod` is Debian's and
-     * only understands `/etc/php`.
+     * Which tool does that is the stack's business (`phpenmod` only understands `/etc/php`).
      */
     public function enable(string $version, string $name): void
     {
@@ -153,8 +131,7 @@ class PhpExtensionManager
     }
 
     /**
-     * Install the package behind an extension. Slow — apt — so this is called
-     * from a job, never from a request.
+     * Install the package behind an extension. Slow (apt): call from a job, never a request.
      */
     public function install(string $version, string $name, ?callable $onOutput = null): void
     {
@@ -165,14 +142,11 @@ class PhpExtensionManager
             ['feature' => 'php', 'op' => 'extension_install', 'version' => $version, 'extension' => $name],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             env: ['DEBIAN_FRONTEND' => 'noninteractive'],
-            // Same apt call as a version install, so the same phases and the
-            // same output — an extension that fails on a missing package
-            // deserves to say so as plainly as a version does.
+            // Same apt call as a version install, so the same phases and output.
             onOutput: $onOutput,
         );
 
-        // Same classification as a version install: the screen shows both in
-        // the same list, so "why did it fail" has to mean the same thing.
+        // Same classification as a version install (the screen lists both together).
         if ($result->failed()) {
             throw new RuntimeInstallException(
                 $result->reference,
@@ -180,10 +154,8 @@ class PhpExtensionManager
             );
         }
 
-        // On a stack with no toggle, the package's ini already sits where the
-        // interpreter reads it — there is nothing to switch on, only the
-        // running processes to restart. Calling enable() here would refuse and
-        // report a failed install for an apt run that succeeded.
+        // With no toggle the ini already sits where the interpreter reads it; only a restart
+        // is needed. enable() would refuse and report a failed install for a successful apt run.
         if (! $this->stack->togglesExtensions()) {
             try {
                 $this->reload($version);
@@ -194,19 +166,13 @@ class PhpExtensionManager
             return;
         }
 
-        // Debian's postinst normally enables the module itself — but "normally"
-        // is not a guarantee, nothing here checked it, and the job goes on to
-        // log `extension_enabled` regardless. Enable explicitly so the claim
-        // and the state agree: phpenmod on an already-enabled module is a
-        // no-op, and it performs the reload FPM needs anyway.
+        // Debian's postinst normally enables the module, but that is not guaranteed. Enable
+        // explicitly (a no-op if already on; it also does the FPM reload).
         try {
             $this->enable($version, $name);
         } catch (PhpConfigException $e) {
-            // Installed but not switched on is its own outcome, and worth
-            // saying so — "the install failed" would be wrong, and the user
-            // would retry an apt run that already succeeded.
-            // Switched on and not reloaded is not "could not be switched on" —
-            // pressing the toggle again would not be the fix.
+            // Installed but not switched on is its own outcome, not "the install failed";
+            // switched on but not reloaded is not "could not be switched on" either.
             throw new RuntimeInstallException(
                 (string) $e->reference,
                 $e->reason() === 'reload_failed' ? 'reload_failed' : 'enable_failed',
@@ -215,9 +181,9 @@ class PhpExtensionManager
     }
 
     /**
-     * Modules the panel cannot run without — refused on the panel's own
-     * version only. Disabling pdo_sqlite under the panel means the request to
-     * turn it back on never gets answered.
+     * Modules the panel cannot run without, refused on the panel's own version only
+     * (disabling pdo_sqlite under the panel means the request to re-enable it never gets
+     * answered).
      *
      * @return array<int, string>
      */
@@ -225,10 +191,8 @@ class PhpExtensionManager
     {
         $required = (array) config('server.runtimes.php.panel_required', []);
 
-        // The fixed list knows nothing about how this panel is configured.
-        // Cache, queue and sessions run on phpredis (bug #27: turning redis
-        // off took the panel down), and redis.so will not load without
-        // igbinary, which it was built against.
+        // The fixed list does not know the panel's config: cache, queue and sessions may run
+        // on phpredis, and redis.so will not load without igbinary.
         if (config('database.redis.client') === 'phpredis') {
             array_push($required, 'redis', 'igbinary');
         }
@@ -269,9 +233,7 @@ class PhpExtensionManager
             'message' => null,
             'reference' => null,
             'error_line' => null,
-            // Same keys whether or not an install touched this extension: a
-            // field that appears only sometimes is one the frontend has to
-            // guard on every read.
+            // Same keys whether or not an install touched this extension.
             'current_step' => null,
             'output' => null,
         ];
@@ -294,45 +256,22 @@ class PhpExtensionManager
 
         $this->reload($version);
 
-        // Read back, not assumed. `phpdismod` exits 0 for a name it has no ini
-        // for, so "the command succeeded" was never evidence the extension
-        // moved — and the screen and the activity log both said it had.
+        // Read back, not assumed: `phpdismod` exits 0 for a name it has no ini for.
         if (($this->find($version, $name)['enabled'] ?? null) !== $enable) {
             throw PhpConfigException::extensionUnchanged($version, $name, $enable, $result->reference);
         }
     }
 
     /**
-     * phpenmod moves symlinks and stops there — it has no idea a daemon is
-     * reading them. Without this the toggle flips in the UI and changes
-     * nothing at all until something else happens to restart FPM.
+     * phpenmod only moves symlinks; the daemon reading them must be reloaded or the toggle
+     * changes nothing until something else restarts FPM.
      */
     private function reload(string $version): void
     {
-        // Asked of the stack, not inferred from whether it has a systemd unit.
-        //
-        // This used to return early when `serviceName()` was null, on the
-        // reasoning that a stack with no per-version unit has nothing to
-        // reload. That is true of the unit and false of the interpreter:
-        // LSPHP has no unit and reloads perfectly well, by restarting the web
-        // server that spawns it. The two docblocks said so in opposite
-        // directions -- install() called this because there was "only the
-        // running processes to restart", and this refused because there was
-        // "nothing here to reload".
-        //
-        // What it cost on OpenLiteSpeed: installing a PHP extension put the
-        // package on disk, logged `extension_enabled`, showed it enabled in
-        // the UI, and left every running worker without it until 5000
-        // requests recycled them or somebody restarted by hand. A setting
-        // that reports success and changes nothing is the bug this whole
-        // stack's PHP work keeps being about.
-        //
-        // Every stack implements reload() -- it is on the contract, described
-        // as "apply a configuration change for a version" -- so there is no
-        // stack this is unsafe to call for.
-        //
-        // And its result is read. Ignored, a failed reload answered the toggle
-        // with success while every running worker went on without the change.
+        // Asked of every stack, not skipped when there is no systemd unit: LSPHP has no unit
+        // but reloads by restarting the web server that spawns it (otherwise workers keep
+        // running without the change). The result is read: ignored, a failed reload would
+        // report success.
         $result = $this->stack->reload($version);
 
         if ($result->failed()) {
@@ -343,14 +282,9 @@ class PhpExtensionManager
     /**
      * Extension packages apt knows about for this version.
      *
-     * Read from the package index rather than hardcoded — a box with the
-     * Ondřej archive has ~84, a plain distro far fewer, and both are correct
-     * for that box. Non-extension packages that share the prefix (the SAPIs,
-     * `-common`, `-dev`) are dropped: they are not things to toggle.
-     *
-     * Keyed by extension, with apt's one-line description as the value (null
-     * when the index gives none) — the same line `apt-cache search` already
-     * prints, so it costs nothing extra.
+     * Read from the package index, not hardcoded (the Ondřej archive has far more than a
+     * plain distro). Non-extension packages sharing the prefix (SAPIs, `-common`, `-dev`)
+     * are dropped. Keyed by extension, with apt's one-line description (null when none).
      *
      * @return array<string, string|null>
      */
@@ -369,9 +303,7 @@ class PhpExtensionManager
         return collect($matches)
             ->mapWithKeys(fn (array $match) => [$match[1] => trim($match[2] ?? '') ?: null])
             ->reject(fn (?string $summary, string $name) => in_array($name, $excluded, true))
-            // LiteSpeed's repository carries `lsphp84-ioncube`. Installing it
-            // beside the loader the ionCube card manages is two loaders in one
-            // PHP — so ionCube has one control, and it is not this list.
+            // `lsphp84-ioncube` beside the ionCube card's loader would be two loaders in one PHP.
             ->reject(fn (?string $summary, string $name) => $this->isIonCube($name))
             ->sortKeys()
             ->all();
@@ -387,10 +319,8 @@ class PhpExtensionManager
     {
         $dir = $this->stack->modsDir($version);
 
-        // LiteSpeed's PECL packages number their ini — `50-redis.ini`,
-        // `40-apcu.ini` — where Debian's are bare. Read as-is, the module was
-        // `50-redis`: the package row said "not installed" and a second
-        // `redis` row turned up as a built-in, for an extension that was on.
+        // LiteSpeed's PECL packages number their ini (`50-redis.ini`), Debian's are bare;
+        // moduleName() strips the number.
         return collect(glob($dir.'/*.ini') ?: [])
             ->map(fn (string $path) => $this->moduleName($path))
             ->sort()
@@ -401,9 +331,7 @@ class PhpExtensionManager
     /**
      * Which package provides which modules, for the installed ones.
      *
-     * Asked of dpkg in a single call over the extension directory rather than
-     * once per package: the answer is the same and 80 subprocesses to render
-     * one screen is not.
+     * Asked of dpkg in a single call over the extension directory, not once per package.
      *
      * @param  array<int, string>  $installedModules
      * @return array<string, array<int, string>>
@@ -414,17 +342,14 @@ class PhpExtensionManager
         $objects = $dir !== null ? (glob($dir.'/*.so') ?: []) : [];
 
         if ($objects === []) {
-            // No extension dir to ask about (a version installed without its
-            // CLI, or a test fixture). Fall back to assuming the package name
-            // is the module name, which is true for all but a handful.
+            // No extension dir to ask about: assume package name = module name.
             return collect($installedModules)->mapWithKeys(fn (string $m) => [$m => [$m]])->all();
         }
 
         $output = $this->serverOps->run(
             ['dpkg-query', '-S', ...$objects],
             ['feature' => 'php', 'op' => 'extension_owners', 'version' => $version],
-            // Exit 1 when some file belongs to no package (ionCube); the
-            // rest of the answer is still on stdout (bug #48).
+            // Exit 1 when some file belongs to no package (ionCube); the rest is still on stdout.
             expectedExitCodes: [1],
         )->output();
 
@@ -451,18 +376,14 @@ class PhpExtensionManager
     }
 
     /**
-     * Enabled modules, per SAPI, read from the conf.d symlinks — which are
-     * the truth phpquery itself reports.
+     * Enabled modules, per SAPI, read from the conf.d symlinks (what phpquery reports).
      *
      * @return array<string, array<int, string>>
      */
     private function enabledBySapi(string $version): array
     {
-        // No toggle means installed *is* enabled: the ini is already in a
-        // directory the interpreter loads, and there are no conf.d symlinks to
-        // read a second state from. Reporting every extension as disabled —
-        // which globbing a conf.d that does not exist would do — is worse than
-        // useless, because the screen offers to enable what is already on.
+        // No toggle means installed *is* enabled: there are no conf.d symlinks to read
+        // (globbing a missing conf.d would report everything disabled).
         if (! $this->stack->togglesExtensions()) {
             return [$this->stack->sapis($version)[0] ?? 'litespeed' => $this->installedModules($version)];
         }
@@ -514,8 +435,7 @@ class PhpExtensionManager
 
         $lowerInstalled = array_map([$this, 'normaliseModule'], $installedModules);
 
-        // `[PHP Modules]` only: `[Zend Modules]` repeats what is already
-        // listed above it, under display names ("the ionCube PHP Loader").
+        // `[PHP Modules]` only: `[Zend Modules]` repeats them under display names.
         $section = preg_split('/^\[Zend Modules\]\s*$/m', $output)[0] ?? $output;
 
         return collect(preg_split('/\r?\n/', trim($section)) ?: [])
@@ -523,8 +443,7 @@ class PhpExtensionManager
             ->filter(fn (string $line) => $line !== '' && ! str_starts_with($line, '['))
             ->map(fn (string $line) => $this->normaliseModule($line))
             ->reject(fn (string $module) => in_array($module, $lowerInstalled, true))
-            // "ionCube Loader" in [PHP Modules] (measured on lsphp 8.4 with
-            // loader 15.5) — the ionCube card's, not a built-in.
+            // "ionCube Loader" belongs to the ionCube card, not a built-in.
             ->reject(fn (string $module) => $this->isIonCube($module))
             ->unique()
             ->sort()
@@ -533,17 +452,13 @@ class PhpExtensionManager
     }
 
     /**
-     * Where this version keeps its `.so` files. Asked of the binary rather
-     * than guessed: the directory is named after PHP's internal API date
-     * (`/usr/lib/php/20240924`), which differs per version and is not
-     * derivable from the version number.
+     * Where this version keeps its `.so` files. Asked of the binary: the directory is named
+     * after PHP's API date (`/usr/lib/php/20240924`), not derivable from the version.
      */
     private function extensionDir(string $version): ?string
     {
-        // OLD-5: a startup warning ("Module 'redis' is already loaded") is
-        // printed on stdout before the answer, and read as part of the path
-        // it made every installed extension show "not installed". Startup
-        // output off, and the answer read as the last line that is a path.
+        // A startup warning ("Module 'redis' is already loaded") is printed on stdout before
+        // the answer: startup output off, and the answer read as the last line that is a path.
         $result = $this->serverOps->run(
             [$this->binary($version), '-d', 'display_startup_errors=0', '-d', 'display_errors=0', '-r', 'echo "\n", ini_get("extension_dir");'],
             ['feature' => 'php', 'op' => 'extension_dir', 'version' => $version],
@@ -571,10 +486,8 @@ class PhpExtensionManager
     }
 
     /**
-     * `php -m` uses display names, not module names: OPcache comes back as
-     * "Zend OPcache" while its package and ini are plain `opcache`. Compared
-     * naively, it is missing from the installed set and gets listed a second
-     * time as a built-in — one extension, two rows, one of them a lie.
+     * `php -m` uses display names ("Zend OPcache" vs the ini's `opcache`); unnormalised it
+     * would be listed a second time as a built-in.
      */
     private function normaliseModule(string $name): string
     {

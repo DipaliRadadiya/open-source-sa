@@ -12,27 +12,18 @@ use RuntimeException;
 /**
  * Reads and writes one application's `.env`.
  *
- * Distinct from `App\Services\Server\EnvFile`, which edits single keys in the
- * *panel's own* `.env`. This one handles a file the panel does not own: it
- * belongs to the site's system user, is often 0600, and is edited wholesale by
- * a human rather than one key at a time. Every read and write therefore goes
- * through ServerOps rather than PHP's filesystem functions — the panel account
- * cannot open it directly.
+ * Distinct from `App\Services\Server\EnvFile`, which edits keys in the *panel's own* `.env`. This
+ * file belongs to the site's system user and is often 0600, so every read and write goes through
+ * ServerOps, not PHP's filesystem functions.
  *
- * Whole-file writes, not key edits: comments, blank-line grouping and ordering
- * are the user's, and rebuilding the file from parsed pairs would quietly
- * throw all three away.
+ * Whole-file writes, not key edits: rebuilding from parsed pairs would drop the user's comments,
+ * grouping and ordering.
  */
 class ApplicationEnvironment
 {
     /**
-     * Saves kept per application. Enough to undo a mistake, bounded.
-     *
-     * Raised from 5 once the history list existed to show what was being lost:
-     * a `.env` is a few kilobytes, and five was under a day of editing for a
-     * site more than one person touches. The activity log outlives these files
-     * either way — the history says so per row rather than pretending the
-     * record and the file are the same thing.
+     * Saves kept per application. Enough to undo a mistake, bounded. The activity log outlives
+     * these files; the history says so per row.
      */
     public const KEEP_BACKUPS = 20;
 
@@ -40,12 +31,8 @@ class ApplicationEnvironment
     private const MAX_BYTES = 262144;
 
     /**
-     * Exactly what {@see backup()} writes, and nothing else.
-     *
-     * One constant rather than the same literal in three places: this pattern
-     * is the only thing standing between a user-supplied string and a path, so
-     * the copy that guards a read must not be able to drift from the copy that
-     * guards a restore.
+     * Exactly what {@see backup()} writes, and nothing else. One constant: this pattern is all that
+     * stands between a user-supplied string and a path, so the read and restore guards must not drift.
      */
     public const BACKUP_NAME = '/^\.env\.bak-\d{8}-\d{6}(?:-\d{1,2})?$/';
 
@@ -66,17 +53,10 @@ class ApplicationEnvironment
     /**
      * Where this application's `.env` lives.
      *
-     * Two rules, because they answer different questions. **Create where it is
-     * safe** — {@see Application::envPath()}, beside the code but never inside
-     * a file-served directory. **Read where it actually is**: if a `.env`
-     * already sits beside the code, that is the file the framework loads, and
-     * that is the one this screen must open.
-     *
-     * Without the second rule the panel reported "no environment file" for a
-     * site whose `.env` was plainly visible in the file manager, and a save
-     * would have written a second copy one directory up that nothing reads.
-     * Declining to show an already-exposed file does not unexpose it; it only
-     * hides it from the one person who could move it.
+     * Two rules. **Create where it is safe**: {@see Application::envPath()}, beside the code but
+     * never inside a file-served directory. **Read where it actually is**: a `.env` already beside
+     * the code is the one the framework loads, so that is the one to open; otherwise a save would
+     * write a second copy that nothing reads.
      */
     public function path(Application $application): string
     {
@@ -96,12 +76,8 @@ class ApplicationEnvironment
     }
 
     /**
-     * Where the file used to be, before it moved beside the code.
-     *
-     * Sites deployed before that change have their `.env` at the app root, and
-     * the panel would otherwise open a different, empty file and offer to
-     * create one — quietly stranding the real settings one directory up.
-     * {@see migrateLegacy()}
+     * Where the file used to be, before it moved beside the code: older sites have it at the app
+     * root. {@see migrateLegacy()}
      */
     private function legacyPath(Application $application): string
     {
@@ -118,22 +94,14 @@ class ApplicationEnvironment
     /**
      * Is that file there?
      *
-     * `test -f` exits 1 for a file that is absent **and** for a command that
-     * never ran — a sudoers grant that predates this build, a home directory
-     * the panel cannot traverse. Both look identical from the exit code, and
-     * reading the second as the first is how this screen offered to create a
-     * `.env` for a site that already had one, with the user looking at its
-     * contents in the file manager on the next tab.
-     *
-     * `test` prints nothing on either outcome, so anything on stderr came from
-     * whatever refused to run it. That is the difference between "no file" and
-     * "no answer", and the second is worth a 500 with a reference rather than
-     * a silent, confident lie.
+     * `test -f` exits 1 both for an absent file and for a command that never ran (an outdated
+     * sudoers grant, an untraversable home directory). `test` prints nothing on either outcome,
+     * so anything on stderr means "no answer", which is worth a 500 with a reference rather than
+     * a confident "no file".
      */
     private function present(Application $application, string $path, string $op): bool
     {
-        // Exit 1 is the answer "no such file", not a failure (bug #48): it
-        // filled the admin error log, once per site per screen load.
+        // Exit 1 is the answer "no such file", not a failure (keeps it out of the error log).
         $result = $this->run($application,
             ['test', '-f', $path],
             $this->context($application, $op),
@@ -151,13 +119,8 @@ class ApplicationEnvironment
     /**
      * Move a pre-existing `.env` beside the code, once.
      *
-     * A move rather than a copy, and only when the new location is empty:
-     * leaving both would give the site two `.env` files whose contents drift,
-     * and the one the panel showed would not be the one the application read —
-     * which is the bug this whole change exists to remove.
-     *
-     * Silent when there is nothing to move, which is every site created after
-     * this shipped.
+     * A move, not a copy, and only when the new location is empty: two files would drift and the
+     * one shown might not be the one the application reads. Silent when there is nothing to move.
      */
     private function migrateLegacy(Application $application): void
     {
@@ -176,8 +139,8 @@ class ApplicationEnvironment
             return;
         }
 
-        // The legacy file is at the top of the site root, so moving it out is
-        // a change to that directory — see mutate().
+        // The legacy file is at the top of the site root, so moving it is a change to that
+        // directory; see mutate().
         $this->rootLock->unlocked($application, fn () => $this->serverOps->run(
             ['mv', $legacy, $current],
             $this->context($application, 'env_legacy_move'),
@@ -203,15 +166,11 @@ class ApplicationEnvironment
     /**
      * Replace the file, keeping a copy of what was there.
      *
-     * The backup comes first and its failure is fatal: this screen's whole
-     * safety story is "you can get the previous version back", and a save that
-     * silently skipped the copy would be the one time that promise mattered.
+     * The backup comes first and its failure is fatal: a save that silently skipped the copy would
+     * break the promise that the previous version can be restored.
      *
-     * Returns the name of the backup it took, or null when there was no file
-     * to copy — a first save. The caller records that name on the activity row,
-     * which is what turns a log entry and a file called `.env.bak-20260907-…`
-     * into one thing somebody can act on rather than two they have to match up
-     * by eye.
+     * Returns the name of the backup it took, or null when there was no file to copy (a first
+     * save); the caller records it on the activity row.
      */
     public function write(Application $application, string $contents, bool $keepPrevious = true): ?string
     {
@@ -223,10 +182,9 @@ class ApplicationEnvironment
     }
 
     /**
-     * `$keepPrevious` is false for a clone (CLN-01): the file it replaces is
-     * the source's, copied, and kept it would be one more copy of the source's
-     * credentials that nothing uses. And, since 2026-10-29, when the user
-     * turned the copy off on save or restore: then nothing can be undone.
+     * `$keepPrevious` is false for a clone (the replaced file is the source's copy, so keeping it
+     * would be one more unused copy of its credentials) and when the user turned the copy off,
+     * in which case nothing can be undone.
      */
     private function replace(Application $application, string $contents, bool $keepPrevious): ?string
     {
@@ -235,9 +193,7 @@ class ApplicationEnvironment
 
         $backup = $keepPrevious && $this->exists($application) ? $this->backup($application) : null;
 
-        // Written beside the target and renamed. A half-written `.env` is an
-        // application that will not boot at all, which is worse than any value
-        // in it being wrong.
+        // Written beside the target and renamed: a half-written `.env` stops the application booting.
         $temporary = $path.'.panel-tmp';
 
         $written = $this->run($application,
@@ -251,18 +207,15 @@ class ApplicationEnvironment
             throw new RuntimeException('the environment file could not be written');
         }
 
-        // Ownership and mode before the rename, so the file is never briefly
-        // in place while readable by anyone else — nor unreadable by the site.
-        // A flat 0600 here took the file away from a site whose PHP runs as the
-        // web server's account; mode and group follow who runs PHP
-        // (RuntimeOwnership), the same rule the installers write it under.
+        // Ownership and mode before the rename, so the file is never in place readable by anyone
+        // else nor unreadable by the site. Mode and group follow who runs PHP (RuntimeOwnership),
+        // as in the installers; a flat 0600 would lock out a site running as the web server's account.
         $owner = $application->systemUser?->username;
         $group = $this->ownership->secretFileGroup($application);
 
         if ($owner !== null && ($asRoot || $group !== $owner)) {
-            // Root's, since the user cannot give a file to the web server's
-            // group; `-h` so a link swapped in for the temporary file is
-            // changed itself rather than followed.
+            // Root's, since the user cannot give a file to the web server's group; `-h` so a link
+            // swapped in for the temporary file is changed itself, not followed.
             $this->serverOps->run(['chown', '-h', $owner.':'.$group, $temporary], $this->context($application, 'env_chown'), timeout: 15);
         }
 
@@ -298,9 +251,7 @@ class ApplicationEnvironment
 
         $names = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', $result->output()) ?: [])));
 
-        // The timestamp is in the name, so sorting the names sorts by time —
-        // no stat call per file, and no dependence on mtime, which a restore
-        // would rewrite.
+        // The timestamp is in the name, so sorting names sorts by time (mtime is rewritten by a restore).
         rsort($names);
 
         return array_map(fn (string $name): array => [
@@ -310,18 +261,13 @@ class ApplicationEnvironment
     }
 
     /**
-     * Put a previous save back. Taking a backup of the current state first, so
-     * restoring the wrong one is itself undoable.
-     *
-     * Returns the name of that safety copy, for the same reason {@see write()}
-     * does: a restore is a change to the file like any other, and its history
-     * row should be able to undo it.
+     * Put a previous save back, after backing up the current state so a wrong restore is undoable.
+     * Returns the name of that safety copy, like {@see write()}.
      */
     public function restore(Application $application, string $name, bool $keepCopy = true): ?string
     {
         if (preg_match(self::BACKUP_NAME, $name) !== 1) {
-            // The name reaches a path. Anything not matching exactly what we
-            // write is refused rather than sanitised.
+            // The name reaches a path: refuse anything not exactly what we write.
             throw new RuntimeException('that is not a known backup');
         }
 
@@ -340,11 +286,8 @@ class ApplicationEnvironment
     /**
      * The contents of one previous save.
      *
-     * Same name validation as {@see restore()}, for the same reason: the name
-     * reaches a path, and anything not matching exactly what this class writes
-     * is refused rather than sanitised. Returns null when the file is gone —
-     * pruned, or never taken — which is an ordinary answer here rather than an
-     * error, since the history outlives the files it points at.
+     * Same name validation as {@see restore()}. Returns null when the file is gone (pruned or never
+     * taken), which is ordinary since the history outlives the files.
      */
     public function readBackup(Application $application, string $name): ?string
     {
@@ -384,13 +327,8 @@ class ApplicationEnvironment
     /**
      * A name no existing backup is using.
      *
-     * The timestamp is second-precision, and two saves inside one second are
-     * reachable — the write endpoint allows twenty a minute, and two people can
-     * hold the same screen. Overwriting mattered little when these files were
-     * an anonymous undo list; now that a history row names the backup holding
-     * the state before *that* change, a collision means a row that restores
-     * somebody else's edit while claiming to restore the one it is labelled
-     * with. Silent and wrong, which is the worst pair.
+     * The timestamp has second precision and two saves can land in one second; a collision would
+     * make a history row restore somebody else's edit.
      */
     private function unusedBackupName(Application $application): string
     {
@@ -401,8 +339,7 @@ class ApplicationEnvironment
             return $base;
         }
 
-        // Bounded rather than a while(true): if a hundred backups landed in one
-        // second something is wrong that another loop iteration will not fix.
+        // Bounded: a hundred backups in one second means something a loop will not fix.
         for ($suffix = 2; $suffix <= 99; $suffix++) {
             $candidate = $base.'-'.$suffix;
 
@@ -441,9 +378,8 @@ class ApplicationEnvironment
     /** `.env.bak-20260804-132011` → `04-08-2026 13:20:11`, the panel's format. */
     private function timestampFrom(string $name): string
     {
-        // Anchored on the `bak-` prefix rather than the end of the string, so a
-        // collision suffix (`…-132011-2`) still reads its own timestamp instead
-        // of falling through to the empty string and losing its date.
+        // Anchored on the `bak-` prefix, not the end, so a collision suffix (`…-132011-2`) still
+        // reads its timestamp.
         if (preg_match('/bak-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/', $name, $m) !== 1) {
             return '';
         }
@@ -454,21 +390,15 @@ class ApplicationEnvironment
     /**
      * Whether the `.env` lives in a directory the site's user owns.
      *
-     * Two homes, two rules. At the top of the site root the directory is
-     * root's and immutable ({@see SiteRootLock}): nothing the user controls is
-     * on the path, so root may write there — with the flag lifted, since a save
-     * renames a file into it. Anywhere else it is beside the code, inside
-     * `public_html`, a directory the user owns and can fill with symlinks; root
-     * following one of those wrote and chowned whatever it pointed at, and read
-     * it back into this editor. There every command runs as the user, so a
-     * planted link reaches only what the user could already touch.
+     * Two homes, two rules. At the top of the site root the directory is root's and immutable
+     * ({@see SiteRootLock}), so root may write there with the flag lifted. Beside the code, inside
+     * `public_html`, the user owns the directory and can plant symlinks, so every command runs as
+     * the user; a planted link then reaches only what the user could already touch.
      */
     private function asUser(Application $application): bool
     {
-        // Not `path()`: resolving the path is itself a `test -f`, which comes
-        // back through here, and asking for the path from inside its own
-        // resolution recurses forever. Until it is resolved the only command
-        // run is that one existence test, as before.
+        // Not `path()`: resolving it runs a `test -f` that comes back through here, which would
+        // recurse forever. Until resolved, only that one existence test runs.
         $path = $this->resolved[$application->id] ?? null;
 
         return $path !== null
@@ -477,8 +407,7 @@ class ApplicationEnvironment
     }
 
     /**
-     * A save, restore or backup: the flag lifted when the file is at the top
-     * of the site root, nothing to lift when it is not.
+     * A save, restore or backup: the flag lifted when the file is at the top of the site root.
      *
      * @template T
      *

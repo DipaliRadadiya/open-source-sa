@@ -19,34 +19,27 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * What deleting a site that Server Sync adopted has to do about the config and
- * workers it was adopted *from* (FS-C22 #14).
+ * workers it was adopted *from*.
  *
- * The panel's own delete knows only the files it writes — `{slug}.conf` and its
- * HTTPS siblings, `sv-worker-{slug}`. An adopted site is served from whatever
- * the server already had: `example.com.conf`, a v7 `-le-ssl` file, a program
- * in a shared supervisor file, a systemd unit. Left alone, those keep serving a
- * deleted site, or keep running inside a directory about to be removed.
+ * The panel's own delete knows only the files it writes (`{slug}.conf`, `sv-worker-{slug}`). An
+ * adopted site is served from whatever the server already had (`example.com.conf`, a v7 `-le-ssl`
+ * file, a program in a shared supervisor file, a systemd unit), which would keep serving a deleted site.
  *
- * The rule throughout: **nothing is removed whose ownership the panel cannot
- * prove, and everything left behind is named.** The only record used is the
- * one Sync wrote at the time (`sync_items`, with the exact path it read); the
- * server is never searched for a likely match, because a guess is how an
- * operator's own vhost gets deleted.
+ * The rule: **nothing is removed whose ownership the panel cannot prove, and everything left
+ * behind is named.** The only record used is what Sync wrote (`sync_items`, with the exact path
+ * it read); the server is never searched for a likely match.
  *
- *  - a vhost file is removed only if it is a plain file at the recorded path,
- *    still serves exactly this site's root and only this site's domains, is
- *    not another site's file, and its enabled entry is a link to it (or an
- *    identical copy). Every block in it must be named and none the default;
- *    nothing at the top but those blocks; every include one of the distro's
- *    or certbot's own snippets or inside the site; every alias inside the
- *    site. Then the web server's config test must pass, or every file and
- *    link is put back exactly as it was — bytes, link target, mode, owner;
- *  - an OpenLiteSpeed vhost under another name lives in the server-wide
- *    `httpd_config.conf`, outside the panel's markers: reported, not edited;
- *  - a worker adopted from a shared file or a systemd unit is never stopped,
- *    disabled or edited. Deleting the site *with its files* is refused while
- *    one exists ({@see refuseUnprovenWorkers()}), because the files are what
- *    it runs from; without the files it is reported.
+ *  - a vhost file is removed only if it is a plain file at the recorded path, still serves
+ *    exactly this site's root and domains, is not another site's file, and its enabled entry is
+ *    a link to it (or an identical copy). Every block must be named and none the default; nothing
+ *    at the top but those blocks; every include a standard snippet or inside the site; every
+ *    alias inside the site. Then the web server's config test must pass, or every file and link
+ *    is put back exactly as it was (bytes, link target, mode, owner);
+ *  - an OpenLiteSpeed vhost under another name lives in the server-wide `httpd_config.conf`,
+ *    outside the panel's markers: reported, not edited;
+ *  - a worker adopted from a shared file or a systemd unit is never stopped, disabled or edited.
+ *    Deleting the site *with its files* is refused while one exists ({@see refuseUnprovenWorkers()});
+ *    without the files it is reported.
  */
 class AdoptedSiteConfig
 {
@@ -62,16 +55,12 @@ class AdoptedSiteConfig
      * Refuse "delete with files" while an adopted worker the panel cannot
      * prove it owns still runs from this site — before anything is changed.
      *
-     * Read-only. Called first thing by the delete endpoint, ahead of every
-     * removal, the backups, the database drops and the activity entry, so a
-     * refusal means the site, its record and every service are exactly as
-     * they were. Nothing here stops or edits the worker: it may be somebody
-     * else's, and that is the user's call on their own server.
+     * Read-only, called first by the delete endpoint, so a refusal leaves the site and every
+     * service exactly as they were. Nothing here stops or edits the worker: it may be somebody else's.
      *
      * Counted:
-     *  - an adopted worker with no canonical `program` — it came from a
-     *    shared supervisor file or a systemd unit. An unset `program` is never
-     *    read as "safe": it is the panel's own only when Sync never adopted it;
+     *  - an adopted worker with no canonical `program` — it came from a shared supervisor file or
+     *    a systemd unit. An unset `program` is never read as "safe";
      *  - an adopted canonical `program` whose file no longer proves it is that
      *    worker's alone ({@see WorkerSupervisor::unprovableProgram()}).
      *
@@ -110,18 +99,15 @@ class AdoptedSiteConfig
             'workers' => array_map(fn (array $u): array => ['worker' => $u['worker']->id, 'path' => $u['path']], $unproven),
         ]);
 
-        // The name and the config file it lives in, so the user can find it.
-        // Never the command line: an adopted one can carry a password.
+        // The name and its config file, never the command line: an adopted one can carry a password.
         throw FileRefusedException::because('remove_files', 'adopted_worker_unproven', 'errors/application.delete_files_adopted_worker', [
             'workers' => implode(', ', array_map(fn (array $u): string => '"'.$u['worker']->name.'" ('.$u['path'].')', $unproven)),
         ]);
     }
 
     /**
-     * Name the original of an adopted worker that the delete leaves running:
-     * a program in a shared supervisor file, or a systemd unit. The panel's
-     * own `sv-worker-{slug}` program is still removed as before; this is the
-     * one Sync found, which it never controlled.
+     * Name the original of an adopted worker that the delete leaves running: a program in a
+     * shared supervisor file, or a systemd unit. The panel's own `sv-worker-{slug}` is still removed.
      */
     public function reportWorkerSource(Application $application, Worker $worker): void
     {
@@ -146,20 +132,16 @@ class AdoptedSiteConfig
     }
 
     /**
-     * Remove the vhost files Sync adopted this site from, when — and only
-     * when — they can be shown to be this site's alone.
-     *
-     * Runs from {@see ApplicationArtifacts}, before the driver removes the
-     * slug files and before any `rm -rf` of the site.
+     * Remove the vhost files Sync adopted this site from, only when they can be shown to be this
+     * site's alone. Runs from {@see ApplicationArtifacts}, before the driver removes the slug
+     * files and before any `rm -rf` of the site.
      */
     public function remove(Application $application): void
     {
         $item = $this->adoptedItem($application);
 
         if ($item === null) {
-            // Adopted, but the record of where from is gone. There is nothing
-            // to remove that is not a guess, so nothing is — said in the log,
-            // which is all there is to say without a path.
+            // Adopted, but the record of where from is gone: nothing to remove that is not a guess.
             if (isset($application->settings['adoption'])) {
                 Log::channel('server-ops')->warning('adopted site config unknown: no sync record of where it was found', [
                     'feature' => 'application',
@@ -209,10 +191,7 @@ class AdoptedSiteConfig
         }
     }
 
-    /**
-     * The newest record of Sync adopting this site, which holds the exact
-     * vhost path it read.
-     */
+    /** The newest record of Sync adopting this site, which holds the exact vhost path it read. */
     private function adoptedItem(Application $application): ?SyncItem
     {
         return SyncItem::query()
@@ -225,10 +204,9 @@ class AdoptedSiteConfig
     }
 
     /**
-     * The v7 HTTPS file and any other vhost Sync found for the same folder in
-     * the same run. It was skipped as `folder_taken` because the first file
-     * already claimed the folder, so it is linked to nothing — but it serves
-     * this site. Each one is verified on its own merits, like the first.
+     * The v7 HTTPS file and any other vhost Sync found for the same folder in the same run.
+     * Skipped as `folder_taken`, so linked to nothing, but it serves this site: each is verified
+     * on its own merits.
      *
      * @return array<int, string>
      */
@@ -271,10 +249,9 @@ class AdoptedSiteConfig
     }
 
     /**
-     * Snippets a vhost may include that are not this site's but are the same
-     * on every server: the distro's FastCGI parameters, v7's ACME location
-     * and certbot's TLS settings. Relative names are under the web server's
-     * own directory, as the web server resolves them.
+     * Snippets a vhost may include that are the same on every server: the distro's FastCGI
+     * parameters, v7's ACME location and certbot's TLS settings. Relative names are under the
+     * web server's own directory.
      */
     private const STANDARD_INCLUDES = [
         'nginx' => ['fastcgi.conf', 'fastcgi_params', 'snippets/fastcgi-php.conf', 'snippets/lets-encrypt-alias.conf', '/etc/letsencrypt/options-ssl-nginx.conf'],
@@ -295,9 +272,8 @@ class AdoptedSiteConfig
         $enabled = rtrim((string) config("server.web_server_drivers.{$driver->name()}.sites_dir"), '/');
         $base = basename($path);
 
-        // Exactly one name inside sites-available, spelt as the web server
-        // reads it. Anything else — another directory, `..`, a doubled slash —
-        // is not a path the panel would ever have recorded.
+        // Exactly one name inside sites-available. Anything else (another directory, `..`, a
+        // doubled slash) is not a path the panel would have recorded.
         $pattern = $driver->name() === 'apache'
             ? '/^[A-Za-z0-9][A-Za-z0-9._-]*\.conf$/D'
             : '/^[A-Za-z0-9][A-Za-z0-9._-]*(\.conf)?$/D';
@@ -368,8 +344,7 @@ class AdoptedSiteConfig
         $linkPath = $enabled.'/'.$base;
 
         if ($link['type'] === 'l') {
-            // a2ensite writes `../sites-available/<name>`; by hand it is
-            // usually the absolute path. Both name this file and nothing else.
+            // a2ensite writes `../sites-available/<name>`; by hand it is usually the absolute path.
             $relative = dirname($enabled) === dirname($available) ? '../'.basename($available).'/'.$base : null;
 
             return $link['target'] === $path || ($relative !== null && $link['target'] === $relative)
@@ -401,13 +376,12 @@ class AdoptedSiteConfig
      */
     private function ownership(Application $application, string $server, string $available, array $parsed, array $structure, array $recordedRoots): ?string
     {
-        // The names and folders as the web server reads them too, so a
-        // spelling the patterns miss (a quoted directive) still counts.
+        // Names and folders as the web server reads them too, so a spelling the patterns miss
+        // (a quoted directive) still counts.
         $named = array_map('strtolower', array_merge(...array_column($structure['blocks'], 'names')));
         $roots = array_values(array_unique([...$parsed['roots'], ...array_map(fn (string $r): string => rtrim($r, '/'), $structure['roots'])]));
 
-        // A catch-all, a wildcard, or a second directory: shared by
-        // construction, whoever wrote it.
+        // A catch-all, a wildcard, or a second directory: shared by construction.
         if ($parsed['domains'] === [] || $parsed['unowned_names'] !== [] || count($roots) !== 1
             || array_filter($named, fn (string $d): bool => $d === '' || $d === '_' || str_contains($d, '*')) !== []) {
             return 'not_this_site';
@@ -468,16 +442,13 @@ class AdoptedSiteConfig
     }
 
     /**
-     * The rest of "this site's and nothing else's": the parts that serve
-     * something without naming a domain or a root.
+     * The rest of "this site's and nothing else's": the parts that serve something without naming
+     * a domain or a root.
      *
-     *  - every block is named, and none is the default: an unnamed block, or
-     *    `default_server`/`_default_`, answers requests for names nobody
-     *    else claims — removing it hands them to some other site;
-     *  - nothing at the top but those blocks: an `upstream`, `map` or include
-     *    there is shared with every other file the web server loads;
-     *  - every include is one of the standard snippets or inside this site:
-     *    anything else says whatever another file says;
+     *  - every block is named and none is the default (`default_server`/`_default_` answers names
+     *    nobody else claims, so removing it hands them to another site);
+     *  - nothing at the top but those blocks (an `upstream`, `map` or include is shared);
+     *  - every include is a standard snippet or inside this site;
      *  - every alias is inside this site.
      *
      * @param  array{blocks: array<int, array{names: array<int, string>, default: bool}>, includes: array<int, string>, aliases: array<int, string>, roots: array<int, string>, stray: array<int, string>}  $structure
@@ -536,8 +507,7 @@ class AdoptedSiteConfig
         $reason = null;
 
         foreach ($removable as $plan) {
-            // The link before its file, so the web server never reads a link
-            // to nothing.
+            // The link before its file, so the web server never reads a dangling link.
             foreach ([$plan['link'], ['kind' => 'file', 'path' => $plan['path'], 'contents' => $plan['contents'], 'meta' => $plan['meta']]] as $entry) {
                 if ($entry === null) {
                     continue;
@@ -569,10 +539,8 @@ class AdoptedSiteConfig
             return;
         }
 
-        // Back in reverse: each file before the link that points at it, each
-        // exactly as it was — same link target, same bytes, same mode and
-        // owner. Only into the web server's own directories, which only root
-        // can write.
+        // Back in reverse (each file before the link that points at it), exactly as it was: same
+        // link target, bytes, mode and owner.
         $restored = true;
 
         foreach (array_reverse($removed) as $entry) {
@@ -587,13 +555,11 @@ class AdoptedSiteConfig
     /**
      * Put one removed file or link back.
      *
-     * A file is created empty, 0600 and root's, before a byte goes into it —
-     * `tee` keeps the mode of a file that exists and would otherwise create
-     * it with root's umask, so contents that were private would be readable
-     * by everyone until the chmod. Then its owner, then its mode: `chown`
-     * clears setuid/setgid bits. If the private file cannot be made, nothing
-     * is written into a wider one: the restore failed, and is said to.
-     * A link is never chmod-ed — that would change the file it points at.
+     * A file is created empty, 0600 and root's, before a byte goes into it: `tee` keeps the mode
+     * of an existing file and would otherwise create it with root's umask, exposing private
+     * contents until the chmod. Then owner, then mode (`chown` clears setuid/setgid). If the
+     * private file cannot be made, nothing is written into a wider one. A link is never chmod-ed
+     * (that would change the file it points at).
      *
      * @param  array{kind: string, path: string, meta: array{mode: string, uid: string, gid: string}, target?: string, contents?: string}  $entry
      * @param  array<string, mixed>  $context
@@ -614,10 +580,9 @@ class AdoptedSiteConfig
     }
 
     /**
-     * OpenLiteSpeed: the panel removes `<root>/{slug}/`. A vhost adopted under
-     * another directory name is registered in the server-wide
-     * `httpd_config.conf` outside the panel's markers, which every site on the
-     * server depends on — so it is reported rather than edited.
+     * OpenLiteSpeed: the panel removes `<root>/{slug}/`. A vhost adopted under another directory
+     * name is registered in the server-wide `httpd_config.conf` outside the panel's markers, so it
+     * is reported rather than edited.
      */
     private function reportOls(Application $application, WebServerDriver $driver, mixed $path): void
     {
@@ -642,10 +607,9 @@ class AdoptedSiteConfig
      * What sits at `<directory>/<name>`, without following it: null when
      * nothing does, false when the directory could not be read.
      *
-     * The directory is listed rather than the path tested, so "not there" is
-     * an empty answer — not an error indistinguishable from a refused grant.
-     * Its mode and owner come from the same listing, for putting it back
-     * exactly; one that does not read as numbers is "could not be read".
+     * The directory is listed rather than the path tested, so "not there" is an empty answer, not
+     * an error indistinguishable from a refused grant. Mode and owner come from the same listing;
+     * one that does not read as numbers is "could not be read".
      *
      * @return array{type: string, target: string, meta: array{mode: string, uid: string, gid: string}}|false|null
      */
@@ -693,10 +657,7 @@ class AdoptedSiteConfig
         return $slug === '' ? [] : ["{$slug}.conf", "{$slug}-le-ssl.conf", "{$slug}-ssl.conf"];
     }
 
-    /**
-     * Named in the server-ops log and in the activity log, which is where a
-     * user looking at a deleted site will see it. Paths only, never contents.
-     */
+    /** Named in the server-ops log and the activity log. Paths only, never contents. */
     private function leftover(Application $application, string $artifact, string $path, string $reason): void
     {
         Log::channel('server-ops')->{$reason === 'restore_failed' ? 'error' : 'warning'}('adopted site config left in place', [

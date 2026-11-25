@@ -15,29 +15,21 @@ use Illuminate\Support\Str;
  *
  * Three things are unlike anything else here.
  *
- * **The release comes from PrestaShop's distribution API, chosen by PHP.**
- * Not GitHub — their 9.x tags publish no package at all — and no longer the
- * `channel.xml` feed, which on 2026-09-26 still named 8.2.1 as current stable
- * with 9.1.5 out since August. 8.x tops out at PHP 8.1, and LiteSpeed ships no
- * lsphp81 for Ubuntu 26.04, so following the feed made PrestaShop impossible
- * on every such server. {@see self::release()}
+ * **The release comes from PrestaShop's distribution API, chosen by PHP.** Not GitHub (9.x tags
+ * publish no package) and not the `channel.xml` feed (stale; 8.x tops out at PHP 8.1, which
+ * LiteSpeed does not ship for Ubuntu 26.04). {@see self::release()}
  *
- * **The download is a zip inside a zip.** The published archive contains a
- * single `prestashop.zip`; unpacking once leaves an archive in the web root
- * rather than a shop.
+ * **The download is a zip inside a zip:** unpacking once leaves a `prestashop.zip` in the web root.
  *
  * **Its installer takes both passwords as arguments and offers nothing else.**
- * `install/index_cli.php` reads `$argv` and never touches stdin — there is no
- * prompt to answer. Every other installer here keeps secrets off the command
- * line; this one cannot, so it is the deliberate exception rather than an
- * oversight, and the API reference says so plainly.
+ * `install/index_cli.php` reads `$argv`, never stdin. Every other installer keeps secrets off
+ * the command line; this one cannot, so it is the deliberate exception.
  */
 class PrestaShopInstaller extends AbstractPhpInstaller
 {
     /**
-     * Characters a shop name cannot carry through PrestaShop's CLI installer
-     * (PR-01): `< > = { }` fail its isGenericName check, and its argument
-     * parser drops a value containing `=`, `|` or a backtick.
+     * Characters a shop name cannot carry through PrestaShop's CLI installer: `< > = { }` fail
+     * its isGenericName check, and its argument parser drops a value containing `=`, `|` or a backtick.
      */
     public const SHOP_NAME_FORBIDDEN = '/[<>={}|`]/';
 
@@ -73,51 +65,31 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             ...$this->phpCommand($application), 'install/index_cli.php',
             '--domain='.$application->domain,
             '--base_uri=/',
-            // PrestaShop's CLI has no --db_port; its own docs say to put a
-            // non-3306 port here as `host:port`.
+            // PrestaShop's CLI has no --db_port: a non-3306 port goes here as `host:port`.
             '--db_server='.$this->hostWithPort($context),
             '--db_name='.$context['database'],
             '--db_user='.$context['db_user'],
-            // See the class note: PrestaShop's installer has no prompt, so
-            // these two are the only way in.
+            // See the class note: no prompt, so these two are the only way in.
             '--db_password='.$context['db_password'],
             '--email='.($settings['admin_email'] ?? ''),
             '--password='.($settings['admin_password'] ?? ''),
             '--firstname='.($settings['admin_first_name'] ?? 'Admin'),
             '--lastname='.($settings['admin_last_name'] ?? 'User'),
-            // `--name`, not `--shop_name` (PR-01): datas.php maps the
-            // `shop_name` setting to the option `name`, and ignores an option
-            // it does not know, so every shop was called "PrestaShop".
+            // `--name`, not `--shop_name`: datas.php ignores options it does not know.
             '--name='.$this->shopName($settings['shop_name'] ?? $application->name),
             '--country='.($settings['country'] ?? 'gb'),
             '--language='.($settings['language'] ?? 'en'),
             '--timezone='.($settings['timezone'] ?? 'UTC'),
             '--prefix='.($settings['table_prefix'] ?? 'ps_'),
-            // No `--license`. It reads as "accept the licence" and is the
-            // opposite: PrestaShop's own datas.php defines it as
-            // `'show_license' => ['name' => 'license', 'default' => 0,
-            // 'help' => 'show PrestaShop license']`. Passing 1 told the
-            // installer to print the licence and stop, so every install exited
-            // 0 in a third of a second having created nothing, and the shop
-            // then answered `"install" directory is missing`.
-            //
-            // The default is correct, so the option is simply absent.
-            // Never drop tables: the database is ours and freshly made, and a
-            // retry must not be able to wipe a shop that already installed.
+            // No `--license`: despite the name it means "show the licence and stop" (datas.php
+            // `show_license`), so passing 1 exits 0 having installed nothing. The default is right.
+            // Never drop tables: a retry must not wipe a shop that already installed.
             '--db_clear=0',
         ], null, $documentRoot);
 
-        // Exit 0 is not evidence that anything happened. `index_cli.php` has
-        // returned success in half a second having written no configuration at
-        // all, leaving a shop that answers every request with
-        // `"install" directory is missing` — because the step below had by then
-        // removed the wizard that could have finished the job.
-        //
-        // So the config it must write is checked before anything is destroyed,
-        // the same shape as the restore flow's VerifyDownload: the last gate
-        // before the irreversible step. Failing here leaves `install/` in place,
-        // which is the difference between a site somebody can rescue in a
-        // browser and one that can only be deleted.
+        // Exit 0 is not evidence: `index_cli.php` can succeed having written no configuration. The
+        // config is checked before anything is destroyed (the last gate before the irreversible
+        // step); failing here leaves `install/` in place so the site can be rescued in a browser.
         $this->assertInstalled($application, $documentRoot);
 
         $this->recordRelease($application, $release);
@@ -130,11 +102,9 @@ class PrestaShopInstaller extends AbstractPhpInstaller
     /**
      * Did the CLI installer actually install anything?
      *
-     * PrestaShop writes its database credentials into `app/config/parameters.php`
-     * as the last thing it does, so its presence is the one cheap signal that
-     * the run got to the end. Older branches used `config/settings.inc.php`;
-     * both are accepted, since which branch is installed depends on the
-     * site's PHP.
+     * PrestaShop writes `app/config/parameters.php` last, so its presence signals the run finished.
+     * Older branches used `config/settings.inc.php`; both are accepted (the branch depends on the
+     * site's PHP).
      *
      * @throws ProvisioningFailedException
      */
@@ -158,18 +128,12 @@ class PrestaShopInstaller extends AbstractPhpInstaller
     /**
      * The newest stable release whose PHP range holds this site's PHP.
      *
-     * From `api.prestashop-project.org/prestashop`, the list PrestaShop's own
-     * Docker images build from: every release with its stability, its PHP
-     * range and its package URL. Chosen per site rather than "latest", because
-     * the two branches do not overlap — 9.1 runs on 8.1 – 8.5 and 8.2 on
-     * 7.2.5 – 8.1 — so an 8.4 shop gets 9.1 and a 7.4 shop gets 8.2, and
-     * neither is handed a release that dies on its interpreter.
+     * From `api.prestashop-project.org/prestashop` (stability, PHP range and package URL per
+     * release). Chosen per site, not "latest": the branches do not overlap (9.1 runs on PHP
+     * 8.1 – 8.5, 8.2 on 7.2.5 – 8.1), so an 8.4 shop gets 9.1 and a 7.4 shop gets 8.2.
      *
-     * Ranges are compared as major.minor ({@see SupportedPhpVersion}): the
-     * site holds `7.2`, and `7.2.5` as a floor would otherwise exclude it.
-     *
-     * The package layout is the same on both branches — a zip holding
-     * `prestashop.zip`, unpacked below — measured on 8.2.8 and 9.1.5.
+     * Ranges are compared as major.minor ({@see SupportedPhpVersion}): the site holds `7.2`, which
+     * a `7.2.5` floor would exclude. Both branches package a zip holding `prestashop.zip`.
      *
      * @return array{zip_download_url: string, version?: string, php_min_version?: string, php_max_version?: string}
      *
@@ -180,14 +144,12 @@ class PrestaShopInstaller extends AbstractPhpInstaller
         $configured = (string) config('server.installers.prestashop.download_url', '');
 
         if ($configured !== '') {
-            // Pinned by the operator: nothing is known about its PHP range, so
-            // none is recorded and the shop keeps PrestaShop 8's.
+            // Pinned by the operator: its PHP range is unknown, so none is recorded.
             return ['zip_download_url' => $configured];
         }
 
         $php = $this->phpVersion($application);
-        // FS-B3: a release host that does not answer is a reason, not a
-        // bare "download failed".
+        // A release host that does not answer is a reason, not a bare "download failed".
         try {
             $response = Http::timeout(15)->get((string) config('server.installers.prestashop.releases_api'));
         } catch (ConnectionException) {
@@ -200,8 +162,7 @@ class PrestaShopInstaller extends AbstractPhpInstaller
                 && ($release['stability'] ?? null) === 'stable'
                 && is_string($release['version'] ?? null)
                 && is_string($release['zip_download_url'] ?? null)
-                // The download step refuses anything else, including on a
-                // redirect; choosing an http entry would only fail later.
+                // The download step refuses anything but https, redirects included.
                 && str_starts_with($release['zip_download_url'], 'https://')
                 && is_string($release['php_min_version'] ?? null)
                 && is_string($release['php_max_version'] ?? null)
@@ -214,9 +175,8 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             ->first();
 
         if ($release === null) {
-            // Unreachable, or nothing runs on this PHP. Either way nothing is
-            // downloaded — never whatever else answers, unpacked into a live
-            // web root.
+            // Unreachable, or nothing runs on this PHP: download nothing rather than unpack
+            // whatever else answers into a live web root.
             throw new ProvisioningFailedException('download', (string) Str::uuid(), $response->successful() ? 'release_not_found' : 'download_unreachable');
         }
 
@@ -226,9 +186,8 @@ class PrestaShopInstaller extends AbstractPhpInstaller
     /**
      * Keep the installed release's PHP range on the shop.
      *
-     * The type's range is the union of every release the installer might
-     * choose; a shop has exactly one, and the PHP screen must hold it to that
-     * one. {@see PrestaShopSiteType::supportedPhpRangeFor()}
+     * The type's range is the union of every release; a shop has one, and the PHP screen must hold
+     * it to that. {@see PrestaShopSiteType::supportedPhpRangeFor()}
      *
      * @param  array<string, mixed>  $release
      */
@@ -256,39 +215,25 @@ class PrestaShopInstaller extends AbstractPhpInstaller
     /**
      * PrestaShop keeps its own copy of the shop address, in the database.
      *
-     * `install/index_cli.php` is given `--domain=` at install time and writes
-     * it to `shop_url.domain`; nothing has ever updated it since. So a shop
-     * issued a certificate served its pages over https while every image,
-     * stylesheet and generated link still pointed at http — the browser sees
-     * the mix and drops the padlock. The certificate was never the problem.
+     * `install/index_cli.php` writes `--domain=` to `shop_url.domain` once and nothing updates it,
+     * so after a certificate the pages are https while assets and links stay http.
      *
      * ## Why this one writes SQL
      *
-     * Every other syncUrl here edits a config file or calls the application's
-     * own CLI. PrestaShop has neither for this: the value lives in
-     * `shop_url` and `configuration`, and its console ships no command to
-     * change them. Four rows, by name, with bound parameters.
-     *
-     * `domain_ssl` matters as much as `domain` — PrestaShop reads that one
-     * when building an https link, and a shop with the two disagreeing
-     * generates links to whichever address is in the wrong column.
+     * PrestaShop has no config file or console command for this: the value lives in `shop_url`
+     * and `configuration`. Four rows, by name, with bound parameters. `domain_ssl` matters as much
+     * as `domain` (it is read when building https links).
      *
      * ## Where the credentials come from
      *
-     * The shop's own `app/config/parameters.php`. The panel does not store
-     * database passwords — it generates one at install and forgets it — so
-     * the only account that can still reach this database is the shop, and
-     * the file is read by a process running as the site user, never by the
-     * panel. The prefix comes from there too rather than from the panel's
-     * saved setting: the shop is the authority on its own table names, and a
-     * setting edited afterwards would send this at tables that do not exist.
+     * The shop's own `app/config/parameters.php`, read by a process running as the site user, never
+     * by the panel (which does not store database passwords). The prefix comes from there too: the
+     * shop is the authority on its table names.
      *
      * ## Why stdin
      *
-     * The domain is user input. Interpolating it into a `php -r` program
-     * would be building code out of it — so the program is fixed and its
-     * three values arrive as JSON on stdin, the same reason every query below
-     * binds rather than concatenates.
+     * The domain is user input: the `php -r` program is fixed and its values arrive as JSON on stdin,
+     * never interpolated into code.
      */
     public function syncUrl(Application $application, string $url): void
     {
@@ -307,10 +252,8 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             'ssl' => parse_url($url, PHP_URL_SCHEME) === 'https' ? 1 : 0,
         ], JSON_THROW_ON_ERROR), $documentRoot);
 
-        // The compiled container and Smarty templates hold the old address.
-        // Best-effort and deliberately last: the rows are already correct, and
-        // failing here would roll a certificate back over a cache directory
-        // that the next request rebuilds anyway.
+        // The compiled container and Smarty templates hold the old address. Best-effort and last:
+        // failing here must not roll a certificate back over a cache the next request rebuilds.
         try {
             $this->runAsSiteUser('sync_url', $application, [
                 'sh', '-c', 'rm -rf '.escapeshellarg($documentRoot.'/var/cache').'/*',
@@ -321,8 +264,7 @@ class PrestaShopInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * The program run as the site user. Fixed text — every value it works on
-     * arrives on stdin. {@see self::syncUrl()}
+     * The program run as the site user. Fixed text; every value arrives on stdin. {@see self::syncUrl()}
      */
     private function syncUrlProgram(): string
     {
@@ -397,8 +339,8 @@ class PrestaShopInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * The form refuses these characters; the application's own name, used when
-     * no shop name was given, never went through that rule.
+     * The form refuses these characters; the application name used as a fallback never went
+     * through that rule.
      */
     private function shopName(string $name): string
     {

@@ -17,12 +17,8 @@ use App\Services\Server\Php\ServerDefaultPhp;
 abstract class AbstractSiteType implements SiteType
 {
     /**
-     * Just the declared profile, which is the honest answer for every type
-     * whose rendering is fixed by the product it installs: WordPress is PHP,
-     * Uptime Kuma is Node, and no choice on the create form changes either.
-     *
-     * Only a type that lets the *user* decide how it is served overrides this —
-     * `GitSiteType`, where the rendering type does exactly that.
+     * Just the declared profile: for most types the product fixes the rendering. Only a
+     * type that lets the user decide how it is served overrides this (`GitSiteType`).
      *
      * @return array<int, string>
      */
@@ -32,17 +28,13 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
-     * Derived rather than listed, so adding a type does not mean copying
-     * sixteen names into it. Only the differences are worth writing down, and
-     * a type overrides this when it has one.
+     * Derived rather than listed; a type overrides this only for its differences.
      *
      * @return array<int, string>
      */
     public function features(): array
     {
-        // True of every site: it has a name, it is served, it is logged, it
-        // can be backed up and protected. No `app_setting` — there is no
-        // dedicated Settings screen; enable/disable lives on the Dashboard.
+        // True of every site. No `app_setting`: enable/disable lives on the Dashboard.
         $features = [
             'app_dashboard',
             'app_domain',
@@ -55,70 +47,43 @@ abstract class AbstractSiteType implements SiteType
             'app_fail2ban',
         ];
 
-        // Cloning copies the served files, which works for any type. A type
-        // holding its state in a database needs its own recipe on top —
-        // dumping it, loading it into the copy's database, and rewriting
-        // whatever the application stores its own URL in.
+        // Cloning copies the served files; a database-backed type needs its own recipe on
+        // top. `CloneManager` refuses that combination only inside the queued job, so
+        // offering the feature here would accept the POST and fail later.
         //
-        // `CloneManager` already refuses exactly that combination, but it does
-        // so *inside the queued job*, after the API has answered 202. So the
-        // sidebar offered Site Clone on eight database-backed types, the POST
-        // was accepted, and the refusal arrived later as a failed clone. The
-        // condition was right and only the timing was wrong.
-        //
-        // Asked as `cloneStrategy() !== null` this would read better and cost
-        // a container resolution of the whole strategy — `ApplicationProvisioner`
-        // and four services deep — on every permissions request, to answer a
-        // boolean. So the cheap half of the condition is asked here and a type
-        // that has built a recipe adds `app_clone` back in its own `features()`,
-        // exactly as `app_staging` is only ever added by the type that has a
-        // `stagingStrategy()`. `ApplicationFeaturesTest` pins the resulting
-        // set, so a recipe added without its feature fails rather than going
-        // unnoticed.
+        // The cheap half of the condition is asked here (resolving `cloneStrategy()` is a
+        // deep container resolution on every permissions request); a type with a recipe adds
+        // `app_clone` back in its own `features()`. `ApplicationFeaturesTest` pins the set.
         if (! $this->needsDatabase()) {
             $features[] = 'app_clone';
         }
 
-        // Deployment is a git screen. A one-click install has no repository, no
-        // branch and no commit history — the screen would have nothing on it.
+        // Deployment is a git screen; a one-click install has no repository.
         if ($this->method() === 'git') {
             $features[] = 'app_deployment';
         }
 
-        // PHP settings edit a pool and a php.ini. A static site has neither,
-        // and a Node site's runtime is not PHP.
+        // PHP settings edit a pool and a php.ini; static and Node sites have neither.
         if ($this->servingProfile() === 'php') {
             $features[] = 'app_php';
         }
 
-        // Something running in the background: a Node process, or the queue
-        // workers a deployed application tends to need. A marketplace PHP app
-        // manages its own scheduling and has nothing here to supervise.
+        // Background processes: a Node process or a deployed application's queue workers.
+        // A marketplace PHP app manages its own scheduling.
         if ($this->servingProfile() === 'node' || $this->method() === 'git') {
             $features[] = 'app_worker';
         }
 
-        // An environment file the panel owns. Git and Node applications read
-        // one; a marketplace PHP app keeps its configuration in its own file
-        // (wp-config.php and friends), which is the application's business,
-        // not ours to present as ".env".
+        // An environment file the panel owns; a marketplace PHP app keeps its configuration
+        // in its own file (wp-config.php).
         if ($this->method() === 'git' || $this->servingProfile() === 'node') {
             $features[] = 'app_environment';
         }
 
-        // Anything a container serves has a container to configure and a compose
-        // file that defines it — the BYO-image type and all fifteen one-click apps
-        // alike.
-        //
-        // Here rather than on each of those, and that is not tidiness: they were on
-        // `DockerSiteType` only, which quietly 404'd the credentials endpoint for
-        // every one-click app — the exact set of sites that HAS generated
-        // credentials. Found by installing Ghost, not by a test, because every test
-        // that exercised the endpoint used the BYO type.
-        //
-        // A container also gets no `app_environment` above, by the same condition:
-        // its variables live in the compose file rather than in a `.env` the panel
-        // owns, which is why that screen is replaced rather than joined.
+        // Anything a container serves (BYO-image and one-click apps alike) has a container
+        // and compose file to configure. Declared here, not on `DockerSiteType` only, or the
+        // credentials endpoint 404s for one-click apps. A container gets no `app_environment`:
+        // its variables live in the compose file.
         if ($this->servingProfile() === 'docker') {
             $features[] = 'app_container';
             $features[] = 'app_compose';
@@ -133,9 +98,8 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
-     * Most applications authenticate with a cookie or a session, which does
-     * not collide with Basic Auth. Only the ones that put a token in the
-     * `Authorization` header override this.
+     * Most applications use a cookie or session, which does not collide with Basic Auth;
+     * only ones that put a token in the `Authorization` header override this.
      */
     public function authorizationHeaderAuth(): bool
     {
@@ -193,10 +157,8 @@ abstract class AbstractSiteType implements SiteType
     /**
      * Runtime + port fields for anything that runs its own process.
      *
-     * The port is optional and advanced: the panel allocates a free one, and
-     * on a server the user owns they may still want to choose. There is no
-     * start-command field — a one-click application has exactly one right
-     * answer and its installer writes it.
+     * The port is optional and advanced: the panel allocates a free one. There is no
+     * start-command field; the installer writes it.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -213,24 +175,12 @@ abstract class AbstractSiteType implements SiteType
     /**
      * The PHP version the create form opens on.
      *
-     * This used to be the literal string `8.4`, on every server, whatever was
-     * installed. On a box whose PHP is 8.3 — and on OpenLiteSpeed, where the
-     * installer installs exactly one `lsphp`, the panel's own version — the
-     * form therefore pre-selected a version that is not there. Accepting it is
-     * now refused (see StoreApplicationRequest), but a form that opens on a
-     * value the server will reject is a worse answer than one that opens on
-     * the version the site would actually run.
+     * Must be a version that is installed (the form would otherwise pre-select one the server
+     * rejects). The server's default wins when installed and in range ({@see ServerDefaultPhp});
+     * otherwise the newest installed one; null when nothing was detected.
      *
-     * The server's default wins when it is installed and in range — the version
-     * "Make default" on the PHP screen chose ({@see ServerDefaultPhp}).
-     * Otherwise the newest installed one; null when nothing was detected,
-     * which leaves the field unset rather than asserting a version.
-     *
-     * Read fresh each time rather than memoized. `fields()` renders for every
-     * site type in the catalog, so this runs a dozen times per request — but
-     * it is a `glob` over `/etc/php` (or the lsws tree) and nothing else, and
-     * a cached answer in a long-lived queue worker would go on offering a
-     * version the user has since removed.
+     * Read fresh, not memoized: it is only a `glob`, and a cached answer in a long-lived
+     * queue worker would keep offering a removed version.
      */
     protected function defaultPhpVersion(): ?string
     {
@@ -248,18 +198,11 @@ abstract class AbstractSiteType implements SiteType
     /**
      * Installed PHP versions this type can actually run on, newest first.
      *
-     * The narrowing is the fix for what happened on 2026-09-08: the form
-     * opened on `$installed[0]`, and `FpmPhpStack::versions()` sorts
-     * descending, so on a box with PHP 8.5 the newest version won regardless of
-     * whether the application had ever been run on it. PrestaShop 8.2.1 got
-     * 8.5, and its vendored Symfony died in a cache warmer twenty-one frames
-     * into the install.
+     * `versions()` sorts descending, so without the narrowing the newest PHP wins even when
+     * the application has never run on it.
      *
-     * Falling back to the unfiltered list when nothing matches is deliberate.
-     * An empty select is a form nobody can submit, and it would be the answer
-     * on any server whose PHP simply predates the range — where the right
-     * outcome is that the user picks something and the validation rule
-     * explains, rather than that the field silently offers nothing.
+     * Falls back to the unfiltered list when nothing matches: an empty select cannot be
+     * submitted, and the validation rule can explain the problem instead.
      *
      * @return array<int, string>
      */
@@ -281,8 +224,8 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
-     * Nothing by default: most types either keep their private files outside
-     * the web root or narrow the web root to a public folder.
+     * Nothing by default: most types keep private files outside the web root or narrow it to
+     * a public folder.
      *
      * @return array<int, string>
      */
@@ -324,8 +267,7 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
-     * None by default. A git site's code is the user's own, and rotating its
-     * key is theirs to decide.
+     * None by default (a git site's code is the user's own).
      */
     public function lockedEnvironmentKeys(): array
     {
@@ -345,16 +287,9 @@ abstract class AbstractSiteType implements SiteType
     /**
      * The only web root this type can be served from, or null when any works.
      *
-     * Distinct from {@see defaultWebRoot()} on purpose: that is what the field
-     * is pre-filled with, this is what the site can actually run on. For most
-     * types they are different questions — WordPress unpacks into whatever
-     * directory the vhost points at, so any web root is as good as another.
-     *
-     * For a type whose installer *builds* a fixed layout the answer is
-     * singular, and getting it wrong is not a preference the user expressed.
-     * Craft ships `index.php` inside `web/`; point the vhost anywhere else and
-     * the site 403s on every request, while the directory it does serve holds
-     * the application's own source and its `.env`.
+     * Distinct from {@see defaultWebRoot()}: that pre-fills the field, this is what the site
+     * can actually run on. Craft ships `index.php` inside `web/`; any other root 403s while
+     * serving the application's source and `.env`.
      */
     public function fixedWebRoot(): ?string
     {
@@ -362,15 +297,9 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
-     * The server default, for anything with no measured appetite of its own.
-     *
-     * `server.applications.memory_max` is 512M and its own note says it was
-     * "chosen from common practice, not measurement — revisit when there is
-     * real traffic". That figure is fine for a small Node service and is below
-     * what some of the one-click applications document as their *minimum*, and
-     * because `MemoryMax` kills rather than throttles, being under it is not a
-     * slow site — it is a unit that dies, hits its start limit, and leaves a
-     * 502 on a site the panel reports as installed.
+     * The server default (`server.applications.memory_max`), for types with no figure of
+     * their own. A type whose application documents a higher minimum overrides it:
+     * `MemoryMax` kills rather than throttles, so too low a value means a dead unit and a 502.
      */
     public function defaultMemoryMax(): ?string
     {
@@ -380,16 +309,9 @@ abstract class AbstractSiteType implements SiteType
     /**
      * No constraint by default.
      *
-     * Same shape of problem as {@see fixedWebRoot()}, and found the same way:
-     * the installers know what their application needs and nothing acted on
-     * it, so the panel would take a Node version the application refuses to
-     * run under, report the site as created, and serve a 502 from a process
-     * that exited on startup. n8n says so out loud — "Your Node.js version is
-     * currently not supported by n8n" — into a journal nobody was reading.
-     *
-     * A range rather than a list: these projects state their support as a
-     * floor and sometimes a ceiling, and a list would need editing every time
-     * a new Node is released, which is how it would end up wrong.
+     * Without it the panel would accept a Node version the application refuses to run under
+     * and serve a 502 from a process that exited on startup. A range rather than a list:
+     * projects state support as a floor and sometimes a ceiling.
      *
      * @return array{min: ?string, max: ?string}|null
      */
@@ -399,8 +321,8 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
-     * Nothing by default. A type that installs an npm package says so, and
-     * gets its Node range read off that package instead of written down.
+     * Nothing by default. A type that installs an npm package names it, and its Node range
+     * is read from that package.
      */
     public function npmPackage(): ?string
     {
@@ -408,9 +330,8 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
-     * No opinion by default, and that is the honest answer for most types: a
-     * blank PHP site or a git deployment runs whatever the user's code runs.
-     * Only a type whose application publishes a supported range overrides it.
+     * No opinion by default (a blank PHP site or git deployment runs whatever the user's code
+     * runs); only a type whose application publishes a supported range overrides it.
      *
      * @return array{min: ?string, max: ?string}|null
      */
@@ -425,9 +346,7 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
-     * No recipe by default — a type overrides this only once one has
-     * actually been built for it, matching how `app_staging` itself only
-     * ever appears in the feature list a type declares.
+     * No recipe by default; a type overrides this once one has been built for it.
      */
     public function stagingStrategy(): ?StagingStrategy
     {

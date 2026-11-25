@@ -20,16 +20,12 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
 /**
- * The database half of WordPress staging: clone it, point wp-config.php at
- * the copy, rewrite the URLs a serialized-data-safe way, and trap outbound
- * mail. Files are already copied and the staging site already provisioned
- * (real vhost, real document root) by the time `StagingManager` calls in
- * here — see the `StagingStrategy` contract.
+ * The database half of WordPress staging: clone it, point wp-config.php at the copy, rewrite the
+ * URLs in a serialized-data-safe way, and trap outbound mail. Files are already copied and the
+ * staging site provisioned by the time `StagingManager` calls in; see the `StagingStrategy` contract.
  *
- * `--skip-plugins --skip-themes` on every `wp` call: a broken plugin/theme
- * on the production site must not also break staging it, the same reasoning
- * `AbstractSiteInstaller`'s own WP-CLI calls don't yet apply (this is where
- * that convention starts).
+ * `--skip-plugins --skip-themes` on every `wp` call: a broken plugin or theme on production must
+ * not also break staging.
  */
 class WordPressStagingStrategy implements StagingStrategy
 {
@@ -47,9 +43,8 @@ class WordPressStagingStrategy implements StagingStrategy
         $productionDatabase = Database::where('application_id', $production->id)->with('users')->first();
 
         if ($productionDatabase === null) {
-            // Should not happen — WordPress::needsDatabase() is true, so
-            // provisioning would have failed already without one. Refusing
-            // rather than silently skipping the database half.
+            // Should not happen (WordPress::needsDatabase() is true); refuse rather than silently
+            // skip the database half.
             throw new StagingOperationException((string) Str::uuid());
         }
 
@@ -69,18 +64,14 @@ class WordPressStagingStrategy implements StagingStrategy
 
         $this->writeWpConfig($staging, $this->tablePrefix->of($production), $stagingDocumentRoot, $stagingDatabase, "{$connection->host}:{$connection->port}");
 
-        // Every spelling, not just the one URL (bug #92): a link saved as
-        // http:// or in the block editor's escaped form otherwise still points
-        // at the live site.
+        // Every spelling, not just the one URL: a link saved as http:// or in the block editor's
+        // escaped form would otherwise still point at the live site.
         $this->rewriteUrls($staging, $stagingDocumentRoot, $production, $staging);
 
         $this->writeMailTrap($staging, $stagingDocumentRoot);
         $this->writeNoIndexPlugin($staging, $stagingDocumentRoot);
 
-        // The setting as well as the file. The file is what actually holds
-        // under a database import, but the setting is what an owner sees
-        // under Settings > Reading — leaving it ticked would tell them the
-        // clone is public while the header says otherwise.
+        // The setting as well as the file: the owner sees it under Settings > Reading.
         $this->updateOption($staging, $stagingDocumentRoot, 'blog_public', '0');
 
         $this->flushCaches($staging, $stagingDocumentRoot);
@@ -89,17 +80,12 @@ class WordPressStagingStrategy implements StagingStrategy
     /**
      * Never synced, in either direction.
      *
-     * `wp-config.php` is the one that mattered: it carries DB_NAME, DB_USER,
-     * DB_PASSWORD, WP_HOME and WP_SITEURL. Copying staging's onto production
-     * pointed the live site at the staging database and pinned its URL to
-     * staging's — and because those are PHP constants they override whatever
-     * `wp_options` says, so the search-replace below was doing its job and
-     * being silently overruled.
+     * `wp-config.php` carries DB_NAME, DB_USER, DB_PASSWORD, WP_HOME and WP_SITEURL. Copying
+     * staging's onto production would point the live site at the staging database, and those PHP
+     * constants override `wp_options`, so the search-replace would be silently overruled.
      *
-     * The mail trap is the other one, and it fails silently in the worst way:
-     * pushed to production it makes the live site stop sending email
-     * altogether — order confirmations, password resets — with no error
-     * anywhere.
+     * The mail trap must not reach production either: the live site would stop sending email
+     * (order confirmations, password resets) with no error anywhere.
      *
      * @return array<int, string>
      */
@@ -111,12 +97,8 @@ class WordPressStagingStrategy implements StagingStrategy
             // Written by the panel onto staging *because* it is staging.
             'wp-content/mu-plugins/panel-staging-mail-trap.php',
             'wp-content/mu-plugins/panel-staging-noindex.php',
-            // Media: kept out of *this* pass because it carries --delete, and
-            // a photo uploaded to production while somebody worked in staging
-            // must survive a push. It is copied by `mergePaths()` instead —
-            // excluding it outright meant the database carried the attachment
-            // rows and the files never crossed, so every pushed image 404'd
-            // from a Media Library that listed it.
+            // Media: kept out of *this* pass because it carries --delete and a photo uploaded to
+            // production meanwhile must survive a push. `mergePaths()` copies it instead.
             'wp-content/uploads/',
             // Regenerates itself, and is per-site by nature.
             'wp-content/cache/',
@@ -129,19 +111,12 @@ class WordPressStagingStrategy implements StagingStrategy
     /**
      * Media, and only media.
      *
-     * WordPress stores an upload as two things: a row in `wp_posts` and a file
-     * under `wp-content/uploads`. The database half crosses in a push whether
-     * anyone asks it to or not, so leaving the file half behind does not
-     * produce a site without the image — it produces a site that *lists* the
-     * image and serves a 404 for it.
+     * An upload is a `wp_posts` row plus a file under `wp-content/uploads`; the row crosses with
+     * the database, so leaving the file behind makes the Media Library list an image that 404s.
      *
-     * Additive, not mirrored: nothing here is ever removed from the
-     * destination. That is the deliberate half of the trade — a push cannot
-     * destroy production media it has no copy of, and the cost is that
-     * deleting a file in staging leaves it in place on production.
-     *
-     * The cache and upgrade directories are *not* here. They regenerate, and
-     * copying them merges two sites' stale artefacts instead of one's.
+     * Additive, not mirrored: nothing is removed from the destination, so a push cannot destroy
+     * production media it has no copy of (at the cost that deleting a file in staging leaves it
+     * on production). Cache and upgrade directories are not here: they regenerate.
      *
      * @return array<int, string>
      */
@@ -154,15 +129,11 @@ class WordPressStagingStrategy implements StagingStrategy
     {
         $productionDocumentRoot = $this->provisioner->documentRoot($production);
 
-        // `database` and `full` both replace the database, so both need the
-        // URL rewrite and the rewrite-rule flush below. The only difference
-        // between them is whether the files were rsynced, which is the
-        // manager's business and not visible from here.
+        // `database` and `full` both replace the database, so both need the URL rewrite and the
+        // rewrite-rule flush below; whether files were rsynced is the manager's business.
         if ($mode === 'files') {
-            // Files only — the database is untouched, so there are no staging
-            // URLs to rewrite. The caches still have to go: the pushed files
-            // include templates and assets, and a page cache serving the old
-            // markup makes the push look like it did nothing.
+            // Files only: no staging URLs to rewrite, but the caches must go or a page cache
+            // serving old markup makes the push look like it did nothing.
             $this->flushCaches($production, $productionDocumentRoot);
             $this->assertProductionIntact($production, $staging, $productionDocumentRoot);
 
@@ -176,16 +147,10 @@ class WordPressStagingStrategy implements StagingStrategy
             throw new StagingOperationException((string) Str::uuid());
         }
 
-        // Read before anything is replaced, and refuse the push if it cannot
-        // be read.
-        //
-        // Staging is deliberately `blog_public = 0`, so the database about to
-        // land on production carries that value. Letting it through would
-        // quietly de-index a live site — no error, no visible change, and
-        // nobody notices until the traffic goes. Guessing is not better than
-        // failing here: forcing 1 would expose a site whose owner chose to
-        // keep it hidden, and forcing 0 is the bug itself. So the live site's
-        // own answer is captured now and written back after the restore.
+        // Read before anything is replaced; refuse the push if it cannot be read. Staging is
+        // `blog_public = 0`, so the incoming database would silently de-index the live site, and
+        // guessing is wrong either way (forcing 1 may expose a hidden site). The live value is
+        // captured now and written back after the restore.
         $productionVisibility = $this->readOption($production, $productionDocumentRoot, 'blog_public');
 
         if ($productionVisibility === null) {
@@ -200,19 +165,14 @@ class WordPressStagingStrategy implements StagingStrategy
 
         $this->serverOps->run(['rm', '-f', $dumpPath], $this->context($production, 'staging_push_dump_cleanup'));
 
-        // The production database now physically contains staging's rows —
-        // including staging's URL, in every spelling WordPress and its
-        // plugins use. Rewrite them back on the production site; the staging
-        // site's own files and config are untouched by a push.
+        // The production database now holds staging's URL in every spelling; rewrite them back.
         $this->rewriteUrls($production, $productionDocumentRoot, $staging, $production);
 
-        // Put the live site's own search-engine visibility back. The row that
-        // just arrived is staging's, and staging is always hidden.
+        // Put the live site's own search-engine visibility back (staging's row is always hidden).
         $this->updateOption($production, $productionDocumentRoot, 'blog_public', $productionVisibility);
 
-        // Permalinks come from the staging database that was just restored.
-        // Without a flush the rewrite rules on disk no longer match, and
-        // every post and page 404s until somebody re-saves permalinks.
+        // Without a flush the rewrite rules on disk no longer match the restored permalinks and
+        // every post and page 404s.
         $this->flushRewrites($production, $productionDocumentRoot);
         $this->flushCaches($production, $productionDocumentRoot);
 
@@ -221,13 +181,10 @@ class WordPressStagingStrategy implements StagingStrategy
     }
 
     /**
-     * Update staging from live. Staging's wp-config never moved (it is in
-     * `syncExcludes()`), so staging keeps its own database, URL and
-     * DISABLE_WP_CRON; this copies live's rows in, points every URL in them at
-     * staging, and re-asserts what makes staging safe to have: hidden from
-     * search engines and unable to email live customers. Live's rows carry
-     * live's `blog_public` and none of the panel's mu-plugins, so both are
-     * written again rather than trusted to have survived.
+     * Update staging from live. Staging's wp-config never moved (`syncExcludes()`), so it keeps its
+     * own database, URL and DISABLE_WP_CRON; this copies live's rows in, points every URL at
+     * staging, and re-asserts what makes staging safe: hidden from search engines and unable to
+     * email live customers (live's rows carry its `blog_public` and none of the mu-plugins).
      */
     public function pull(Application $production, Application $staging, string $mode): void
     {
@@ -266,9 +223,8 @@ class WordPressStagingStrategy implements StagingStrategy
     }
 
     /**
-     * The mirror of `assertProductionIntact()`: a pull must never leave
-     * staging connected to live's database or pinned to live's URL — that is
-     * the v7 failure, a staging copy that writes to the live shop.
+     * The mirror of `assertProductionIntact()`: a pull must never leave staging connected to
+     * live's database or pinned to live's URL (a staging copy that writes to the live shop).
      */
     private function assertStagingIntact(Application $production, Application $staging, string $documentRoot): void
     {
@@ -285,8 +241,8 @@ class WordPressStagingStrategy implements StagingStrategy
         $productionDatabase = Database::where('application_id', $production->id)->first();
 
         if (($productionDatabase !== null && str_contains($contents, "'{$productionDatabase->name}'"))
-            // Quoted, as wp-config writes it: a staging domain built on live's
-            // (`shop.com.staging…`) contains live's URL as a prefix.
+            // Quoted, as wp-config writes it: a staging domain built on live's contains live's URL
+            // as a prefix.
             || str_contains($contents, "'".$production->url()."'")) {
             throw new StagingOperationException((string) Str::uuid());
         }
@@ -311,10 +267,8 @@ class WordPressStagingStrategy implements StagingStrategy
     /**
      * Read one option, or null when it cannot be read.
      *
-     * Null is deliberately distinct from an empty answer: "the site says this
-     * option is empty" and "wp-cli could not tell us" lead to different
-     * decisions, and conflating them is how a live site would get silently
-     * de-indexed on a wp-cli hiccup.
+     * Null is distinct from an empty answer: "the option is empty" and "wp-cli could not tell us"
+     * must not be conflated, or a wp-cli hiccup could silently de-index a live site.
      */
     private function readOption(Application $application, string $documentRoot, string $option): ?string
     {
@@ -345,9 +299,8 @@ class WordPressStagingStrategy implements StagingStrategy
     }
 
     /**
-     * A push must not change whether the live site is visible to search
-     * engines. Getting this wrong is invisible on the day and expensive
-     * months later, which is exactly the kind of thing worth asserting.
+     * A push must not change whether the live site is visible to search engines; getting it
+     * wrong is invisible on the day and expensive months later.
      */
     private function assertVisibilityPreserved(Application $production, string $documentRoot, string $expected): void
     {
@@ -374,14 +327,9 @@ class WordPressStagingStrategy implements StagingStrategy
     }
 
     /**
-     * Refuse to call a push finished if production came out of it wearing
-     * staging's identity.
-     *
-     * This is the check that would have caught the whole class of bug rather
-     * than one instance of it: whatever else changes about the sync, the live
-     * site must still be connected to its own database and answering on its
-     * own URL. Throwing here puts StagingManager into its rollback path,
-     * which restores the file snapshot and the pre-push database dump.
+     * Refuse to call a push finished if production came out of it wearing staging's identity: the
+     * live site must still use its own database and URL. Throwing here puts StagingManager into
+     * its rollback path (file snapshot and pre-push database dump).
      */
     private function assertProductionIntact(Application $production, Application $staging, string $documentRoot): void
     {
@@ -397,8 +345,7 @@ class WordPressStagingStrategy implements StagingStrategy
         $contents = $config->output();
         $stagingDatabase = Database::where('application_id', $staging->id)->first();
 
-        // The live site must not be pointed at staging's database, and must
-        // not have had its URL pinned to staging's by a copied constant.
+        // Not pointed at staging's database, nor its URL pinned to staging's by a copied constant.
         $wearsStagingIdentity = ($stagingDatabase !== null && str_contains($contents, "'{$stagingDatabase->name}'"))
             || str_contains($contents, $staging->url());
 
@@ -450,9 +397,8 @@ class WordPressStagingStrategy implements StagingStrategy
 
     private function writeMailTrap(Application $staging, string $documentRoot): void
     {
-        // As the user, like the file written into it: root would leave a
-        // directory the user's write then cannot enter, and would follow a
-        // `wp-content` that is a link.
+        // As the user, like the file written into it: root would leave a directory the user cannot
+        // enter and would follow a `wp-content` that is a link.
         $directory = $this->serverOps->run(
             ['runuser', '-u', $staging->systemUser->username, '--', 'mkdir', '-p', "{$documentRoot}/wp-content/mu-plugins"],
             $this->context($staging, 'staging_mu_plugins_dir'),
@@ -468,11 +414,8 @@ class WordPressStagingStrategy implements StagingStrategy
     }
 
     /**
-     * Serialized-data-safe: `--recurse-objects --precise` walk PHP-serialized
-     * blobs (widgets, page-builder settings) rather than a flat string
-     * replace, which corrupts them by shifting byte-length prefixes.
-     * `--skip-columns=guid` protects feed identity;
-     * `--skip-plugins --skip-themes` survives a broken one.
+     * Serialized-data-safe: `--recurse-objects --precise` walk PHP-serialized blobs, where a flat
+     * replace would corrupt byte-length prefixes. `--skip-columns=guid` protects feed identity.
      */
     private function searchReplace(Application $application, string $documentRoot, string $from, string $to, bool $regex = false): void
     {
@@ -524,14 +467,10 @@ class WordPressStagingStrategy implements StagingStrategy
     {
         $mode ??= app(RuntimeOwnership::class)->secretFileMode($application);
 
-        // As the site's own user. The directory is a copy of another site —
-        // anything its owner planted there came across with it, including a
-        // `wp-config.php` or `mu-plugins` that is a link — and this ran as
-        // root: `tee` wrote through the link and the `chown` after it handed
-        // the target to the user (the same class of bug found in `.panel`,
-        // 2026-09-29). The copy is already theirs by now (rsync() chowns it),
-        // so as the user the file is theirs by construction and a link
-        // reaches only what they could already write.
+        // As the site's own user: the directory is a copy of another site, so a planted link
+        // (`wp-config.php`, `mu-plugins`) came across with it, and root's `tee` + `chown` would
+        // write through it and hand the target to the user. The copy is already theirs (rsync()
+        // chowns it), so a link reaches only what they could already write.
         $user = $application->systemUser->username;
 
         $written = $this->serverOps->run(['runuser', '-u', $user, '--', 'tee', $path], $this->context($application, 'staging_write_file'), input: $contents);

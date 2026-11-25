@@ -30,17 +30,12 @@ class SecuritySettings implements SettingGroup
     // Keywords `sshd -T` prints once per entry — see parseEffective().
     private const LIST_KEYWORDS = ['allowgroups', 'allowusers', 'denygroups', 'denyusers'];
 
-    // sshd's Include takes the FIRST value seen for each keyword — the
-    // opposite of systemd-style drop-ins, where the last file wins. Cloud
-    // images commonly ship /etc/ssh/sshd_config.d/50-cloud-init.conf, which
-    // sets PasswordAuthentication itself; a file named 99-panel.conf would
-    // load after it and be silently overridden for every keyword both files
-    // set. A low number sorts first, so the panel's values always win.
+    // sshd's Include takes the FIRST value seen for each keyword (the opposite of systemd drop-ins).
+    // Cloud images ship 50-cloud-init.conf, so a `99-` file would be silently overridden; a low
+    // number sorts first, so the panel's values win.
     private const DROP_IN = '00-panel.conf';
 
-    // The name this used before that was understood. Removed on every write
-    // so an upgraded box does not keep both — two files setting the same
-    // keyword is exactly the failure mode above, just against ourselves.
+    // The previous name. Removed on every write: two files setting the same keyword is the failure above.
     private const LEGACY_DROP_IN = '99-panel.conf';
 
     // See port(). Holds the port and whether passwords are accepted.
@@ -74,18 +69,12 @@ class SecuritySettings implements SettingGroup
             'port' => (int) ($effective['port'] ?? config('server.ssh_port', 22)),
             'permit_root_login' => $effective['permitrootlogin'] ?? 'prohibit-password',
             'password_authentication' => ($effective['passwordauthentication'] ?? 'yes') === 'yes',
-            // Deliberately the same predicate `apply()` guards with, not a
-            // second implementation of "is there a key". It lets the UI disable
-            // key-only login up front instead of accepting the choice and then
-            // refusing it — and because there is one function, the greyed-out
-            // control and the 422 can never disagree about why.
+            // The same predicate `apply()` guards with, so the greyed-out control and the 422
+            // can never disagree.
             'has_ssh_key' => $this->hasSshKey($effective['permitrootlogin'] ?? 'prohibit-password'),
-            // FS-C6: whether pressing Save, for any change on this screen,
-            // will also start enforcing the System Users' SSH access switch —
-            // it writes `AllowGroups` (see allowGroupsLine()), and from then
-            // on an account not in ssh-users, sudo or root cannot log in.
-            // Said up front so the confirmation can say so; nothing changes
-            // when this is false.
+            // Whether Save will also start enforcing the System Users' SSH access switch: it writes
+            // `AllowGroups` (see allowGroupsLine()), after which an account not in ssh-users, sudo
+            // or root cannot log in. Lets the confirmation say so.
             'save_enforces_ssh_access' => ($effective['allowusers'] ?? '') === ''
                 && ! in_array('ssh-users', preg_split('/\s+/', trim((string) ($effective['allowgroups'] ?? ''))) ?: [], true),
         ];
@@ -94,10 +83,9 @@ class SecuritySettings implements SettingGroup
     /**
      * The port SSH listens on, and nothing else.
      *
-     * For the Command-line access card (RC-23), which is on every Docker app's
-     * dashboard. `read()` shells out to `sshd -T` and then looks for keys, so
-     * this reads the port alone and keeps it for five minutes; `apply()` drops
-     * it the moment it writes a new one.
+     * For the Command-line access card on every Docker app's dashboard. `read()` shells out to
+     * `sshd -T` and looks for keys; this reads the port alone and caches it for five minutes
+     * (`apply()` drops the cache).
      */
     public function port(): int
     {
@@ -107,9 +95,7 @@ class SecuritySettings implements SettingGroup
     /**
      * Whether sshd accepts passwords, from the same cached read as port().
      *
-     * The card turns container login on with a key or a password (RC-28), and
-     * offers the password only where it would work. The same answer read()
-     * gives as `password_authentication`, without its key lookup.
+     * Lets the card offer the password option only where it would work.
      */
     public function passwordLogin(): bool
     {
@@ -121,9 +107,8 @@ class SecuritySettings implements SettingGroup
      */
     private function loginSummary(): array
     {
-        // A new key, not the old `server.ssh_port.effective`: that one held the
-        // bare port, and a value cached by the previous release must not be
-        // read back as this shape.
+        // A new key: the old `server.ssh_port.effective` held the bare port, and a value cached by
+        // the previous release must not be read back as this shape.
         return Cache::remember(self::PORT_CACHE, now()->addMinutes(5), function (): array {
             $effective = $this->effectiveConfig();
 
@@ -139,19 +124,16 @@ class SecuritySettings implements SettingGroup
      */
     public function apply(array $data): void
     {
-        // Lockout guard: don't let the user turn off password auth unless there
-        // is at least one SSH key to get back in with.
-        // Asked about the root-login setting being SAVED, not the current one:
-        // switching root login off in the same save takes root's key out of
-        // the ways back in.
+        // Lockout guard: don't turn off password auth unless there is an SSH key to get back in
+        // with. Asked about the root-login setting being SAVED: turning root login off in the same
+        // save removes root's key from the ways back in.
         if (! $data['password_authentication'] && ! $this->hasSshKey((string) $data['permit_root_login'])) {
             throw ValidationException::withMessages([
                 'password_authentication' => [__('errors/setting.no_ssh_key')],
             ]);
         }
 
-        // Read before the drop-in changes it: only a port move needs the
-        // socket moved too (moveSocket()).
+        // Read before the drop-in changes it: only a port move needs the socket moved too.
         $previousPort = (int) ($this->effectiveConfig()['port'] ?? config('server.ssh_port', 22));
         $portChanged = (int) $data['port'] !== $previousPort;
 
@@ -171,10 +153,8 @@ class SecuritySettings implements SettingGroup
 
         $dir = rtrim((string) config('server.sshd_config_dir'), '/');
 
-        // The group has to exist before a config names it. `AllowGroups` is a
-        // whitelist, and a name that matches no group matches no user — so a
-        // missing `ssh-users` does not fail loudly, it just quietly stops being
-        // one of the ways in.
+        // The group must exist before a config names it: `AllowGroups` is a whitelist, and a name
+        // that matches no group quietly stops being one of the ways in.
         $this->serverOps->run(
             ['groupadd', '-f', 'ssh-users'],
             ['feature' => 'setting', 'group' => 'security', 'op' => 'ssh_group_ensure'],
@@ -190,8 +170,7 @@ class SecuritySettings implements SettingGroup
             throw new SettingOperationException($write->reference);
         }
 
-        // `sshd -T` reads the files, not the running daemon, so from here on it
-        // answers with the new port whether or not the rest of this succeeds.
+        // `sshd -T` reads the files, not the running daemon, so it answers with the new port from here on.
         Cache::forget(self::PORT_CACHE);
 
         // Refuse to reload on a bad config — the running SSH daemon stays up.
@@ -200,8 +179,7 @@ class SecuritySettings implements SettingGroup
             throw new SettingOperationException($test->reference);
         }
 
-        // Only once the new file is known to parse: drop the legacy name so
-        // it cannot keep outvoting this one on a box that wrote it before.
+        // Only once the new file is known to parse: drop the legacy name so it cannot outvote this one.
         $cleanup = $this->files->delete(
             $dir.'/'.self::LEGACY_DROP_IN,
             ['feature' => 'setting', 'group' => 'security'],
@@ -219,9 +197,8 @@ class SecuritySettings implements SettingGroup
                 ['origin' => 'default', 'description' => 'SSH'],
             );
 
-            // Moving back to a port SSH left earlier finds that port's rule
-            // released as an ordinary one (releaseOldPortRule()). It is the
-            // SSH rule again, so it is the panel's again.
+            // Moving back to a port SSH left earlier finds its rule released as an ordinary one
+            // (releaseOldPortRule()); it is the panel's SSH rule again.
             if ($rule->origin === 'user') {
                 $rule->forceFill(['origin' => 'default'])->save();
             }
@@ -229,11 +206,8 @@ class SecuritySettings implements SettingGroup
             $this->firewall->apply($rule);
         }
 
-        // try-reload-or-restart, not reload: under socket activation
-        // ssh.service is not running until someone connects, and after a
-        // failed socket it is not running at all. `reload` then fails, and
-        // failing here meant a save could never reach moveSocket() — the only
-        // step that brings a dead socket back.
+        // try-reload-or-restart, not reload: under socket activation ssh.service may not be running,
+        // and a failing `reload` would stop a save before moveSocket(), the only step that revives a dead socket.
         $reload = $this->serverOps->run(['systemctl', 'try-reload-or-restart', 'ssh'], ['feature' => 'setting', 'group' => 'security', 'op' => 'reload']);
         if ($reload->failed()) {
             throw new SettingOperationException($reload->reference);
@@ -248,13 +222,11 @@ class SecuritySettings implements SettingGroup
     }
 
     /**
-     * Point the SSH jail at the port SSH now listens on (bug #31). jail.local
-     * resolves `{ssh_port}` when it is written, so after a move it went on
-     * banning port 22 while attacks arrived on the new one.
+     * Point the SSH jail at the port SSH now listens on: jail.local resolves `{ssh_port}` when it
+     * is written, so after a move it would keep banning port 22.
      *
-     * Last, and never fatal: SSH has already moved safely by now, and failing
-     * the save over the jail would report a change that did happen as one
-     * that did not. Logged for the Error Log screen instead.
+     * Last, and never fatal: SSH has already moved, and failing the save over the jail would
+     * report a change that did happen as one that did not. Logged instead.
      */
     private function moveFail2banJail(): void
     {
@@ -267,8 +239,7 @@ class SecuritySettings implements SettingGroup
 
             $fail2ban->write($fail2ban->settings(), $fail2ban->ignoreIps(), $jails);
 
-            // The file alone is not enough: a running jail keeps its firewall
-            // rule on the old port until it is restarted.
+            // A running jail keeps its firewall rule on the old port until restarted.
             $fail2ban->restartSshJails();
         } catch (Throwable $exception) {
             Log::channel('server-ops')->error('fail2ban jail not moved to the new SSH port', [
@@ -281,12 +252,9 @@ class SecuritySettings implements SettingGroup
     /**
      * Refuse a port something else already listens on.
      *
-     * ssh.socket binds the port itself, and a taken one fails it with
-     * "Address already in use" — after the old port has been let go. On the
-     * Apache test box, moving SSH to 80 answered 500 and left no SSH at all,
-     * and saving 22 again could not bring it back; only a reboot did.
-     * sshd's own listener (or systemd holding it for ssh.socket) is not a
-     * conflict: that is SSH already being there.
+     * ssh.socket binds the port itself; a taken one fails it with "Address already in use" after
+     * the old port is released, leaving no SSH until a reboot. sshd's own listener (or systemd
+     * holding it for ssh.socket) is not a conflict.
      */
     private function assertPortFree(int $port): void
     {
@@ -306,16 +274,11 @@ class SecuritySettings implements SettingGroup
     }
 
     /**
-     * Close the port SSH has just left, as v7 does (bug #7).
+     * Close the port SSH has just left, as v7 does.
      *
-     * The rule opened for SSH is the panel's, so it is the panel's to close:
-     * moving SSH to 2222 and back used to leave 2222 open, first with no way
-     * to close it, then as an ordinary rule the user had to find and delete.
-     * Connections already open through the old port survive — ufw keeps
-     * established traffic — so this cannot cut off the session making the
-     * change. A rule the user made for that port is theirs and stays; if
-     * ufw refuses the delete, the rule is released to the user instead.
-     * SshLockoutGuard still protects whatever covers the port SSH is on now.
+     * The rule opened for SSH is the panel's to close. Connections already open survive (ufw keeps
+     * established traffic). A rule the user made for that port stays; if ufw refuses the delete,
+     * the rule is released to the user. SshLockoutGuard still protects the port SSH is on now.
      */
     private function releaseOldPortRule(int $port): void
     {
@@ -332,8 +295,8 @@ class SecuritySettings implements SettingGroup
             ->where('origin', '!=', 'user')
             ->get();
 
-        // Through ufw even while it is off: it keeps its rules when disabled,
-        // and a row deleted here alone would come back open on enable.
+        // Through ufw even while it is off: it keeps its rules when disabled, and a row deleted
+        // here alone would come back open on enable.
         foreach ($rules as $rule) {
             if ($this->firewall->remove($rule)->ok) {
                 $rule->delete();
@@ -346,18 +309,10 @@ class SecuritySettings implements SettingGroup
     /**
      * Move a socket-activated SSH to the new port.
      *
-     * Ubuntu 24.04 and later start sshd from `ssh.socket`, and the port it
-     * listens on is the *socket's*, generated from sshd_config by
-     * `sshd-socket-generator` at daemon-reload. Reloading ssh re-reads the
-     * config and changes nothing about where it listens. Found on the 26.04
-     * test server: the screen, `sshd -T`, the firewall and the fail2ban jail
-     * all said 2222 while SSH went on answering on 22 only — so the SSH
-     * lockout guard was protecting a port nothing listened on.
-     *
-     * daemon-reload regenerates the socket's addresses and a restart of the
-     * socket applies them. Sessions already open stay open (ssh.service is
-     * KillMode=process; measured with a session held across the restart).
-     * The firewall has already been opened for the new port above.
+     * Ubuntu 24.04+ starts sshd from `ssh.socket`, whose port is generated from sshd_config by
+     * `sshd-socket-generator` at daemon-reload; reloading ssh alone does not change where it
+     * listens. daemon-reload regenerates the addresses and a restart of the socket applies them.
+     * Open sessions survive (ssh.service is KillMode=process). The firewall was opened above.
      */
     private function moveSocket(bool $portChanged, string $dropIn, string $config, int $previousPort): void
     {
@@ -365,10 +320,8 @@ class SecuritySettings implements SettingGroup
 
         $state = trim($this->serverOps->run(['systemctl', 'is-active', 'ssh.socket'], $context)->output());
 
-        // A failed socket is restarted whatever the port: it is SSH being
-        // down, and saving this screen is the only repair the panel offers.
-        // A socket that is merely inactive is a server not using socket
-        // activation, and is left alone.
+        // A failed socket is restarted whatever the port (SSH is down, and saving here is the only
+        // repair offered). A merely inactive socket means no socket activation: left alone.
         if (! ($state === 'failed' || ($state === 'active' && $portChanged))) {
             return;
         }
@@ -379,9 +332,8 @@ class SecuritySettings implements SettingGroup
             return;
         }
 
-        // The new port would not bind. Put the old one back and bring the
-        // socket up on it before reporting, so a refused move is a refused
-        // move and not a server with no SSH.
+        // The new port would not bind: put the old one back and bring the socket up on it before
+        // reporting, so a refused move does not leave a server with no SSH.
         if ($portChanged) {
             $this->files->put(
                 $dropIn,
@@ -416,28 +368,17 @@ class SecuritySettings implements SettingGroup
     /**
      * The `AllowGroups` line, or nothing at all.
      *
-     * `AllowGroups` is a whitelist over *every* account, root included, and it
-     * is consulted before `PermitRootLogin` is. Writing a fixed
-     * `ssh-users sudo` therefore locked root out of a server the moment anyone
-     * pressed Save on this screen: root's primary group is `root`, it is not a
-     * member of `sudo`, and most providers hand you a box you log into as root.
-     * `sshd -t` cannot catch it — the syntax is valid — and `reload` leaves the
-     * open session alive, so the lockout is discovered at the next login with
-     * nothing to connect it to.
+     * `AllowGroups` is a whitelist over *every* account, root included, and is consulted before
+     * `PermitRootLogin`. A fixed `ssh-users sudo` would lock root out (its group is `root`), and
+     * `sshd -t` cannot catch it: the lockout shows at the next login. So the list is derived:
      *
-     * So the list is derived rather than assumed:
+     *  - `ssh-users`, the boundary the System User toggle moves accounts across;
+     *  - `sudo` and `root`, the ways an administrator reaches the server (`PermitRootLogin`
+     *    still decides whether root may log in);
+     *  - whatever the machine already allows, so existing policy is widened, never narrowed.
      *
-     *  - `ssh-users`, because that is the boundary the System User toggle moves
-     *    accounts across, and without a line here that toggle enforces nothing.
-     *  - `sudo` and `root`, the two ways an administrator reaches this server.
-     *    Allowing root here does not permit root login — `PermitRootLogin`
-     *    still decides that, and still means no when it says no.
-     *  - whatever the machine already allows, so a policy the distro or the
-     *    operator set is widened by us and never narrowed.
-     *
-     * And if the box restricts by `AllowUsers` instead, no line is written at
-     * all. The two directives are ANDed, so adding ours could only take access
-     * away from a list somebody else chose deliberately.
+     * If the box restricts by `AllowUsers`, no line is written: the two are ANDed, so ours could
+     * only take access away from a list somebody chose deliberately.
      */
     private function allowGroupsLine(): string
     {
@@ -460,13 +401,9 @@ class SecuritySettings implements SettingGroup
     /**
      * Whether the System User "SSH access" toggle actually decides anything.
      *
-     * Membership of `ssh-users` only keeps someone out once sshd carries an
-     * `AllowGroups` naming it, and the only thing that writes one is saving
-     * this screen. So on a fresh server the toggle reads "off" while the
-     * person logs in regardless — reproduced 2026-09-23. Not fixed by writing
-     * the line automatically: `AllowGroups` is a whitelist over every account,
-     * and applying it unasked is how a server locks out whoever the panel
-     * did not know about. Reported instead, so the screen can say so.
+     * `ssh-users` membership only keeps someone out once sshd carries an `AllowGroups` naming it,
+     * and only saving this screen writes one. Not written automatically: it is a whitelist over
+     * every account, and applying it unasked can lock out accounts the panel does not know about.
      *
      * Null when sshd could not be asked — "unknown" is not "no".
      */
@@ -496,14 +433,10 @@ class SecuritySettings implements SettingGroup
     }
 
     /**
-     * `sshd -T` prints a list keyword once PER ENTRY — `AllowGroups admins
-     * devs ops` comes out as three `allowgroups` lines (measured on OpenSSH
-     * 10.2). Keeping the last value per key therefore kept only `ops`, and
-     * `allowGroupsLine()`, whose whole promise is "widened by us and never
-     * narrowed", wrote `AllowGroups ssh-users sudo root ops` into a drop-in
-     * that wins — locking out everyone in `admins` and `devs`. The list
-     * keywords are joined back into the one space-separated value they were
-     * written as.
+     * `sshd -T` prints a list keyword once PER ENTRY (`AllowGroups admins devs ops` is three
+     * `allowgroups` lines). Keeping only the last value would make `allowGroupsLine()` drop
+     * `admins` and `devs` and lock them out, so list keywords are joined back into one
+     * space-separated value.
      *
      * @return array<string, string>
      */
@@ -532,14 +465,7 @@ class SecuritySettings implements SettingGroup
     /**
      * Is there a key someone who administers this server can get back in with?
      *
-     * It used to read /root/.ssh/authorized_keys with PHP's own `is_file()` —
-     * as the panel account, which cannot see into /root — and look at nothing
-     * else. So on an ordinary cloud server (password login already off, root's
-     * key in place, the admin logging in as `ubuntu` with a key) it answered
-     * "no key", and the Security screen could not be saved at all, not even
-     * with the values it already had (reproduced 2026-09-23).
-     *
-     * Now, through ServerOps so the answer is root's:
+     * Read through ServerOps, so the answer is root's (the panel account cannot see /root):
      *  - a key the panel itself recorded, for a user who can still log in;
      *  - a key for any member of `sudo` — the account a cloud image hands you;
      *  - root's own key, but only while root login is allowed, because a key
@@ -547,11 +473,9 @@ class SecuritySettings implements SettingGroup
      */
     private function hasSshKey(string $permitRootLogin): bool
     {
-        // Only a key whose owner sshd will still let in. The same save writes
-        // `AllowGroups ssh-users sudo root`, so a key for a System User with
-        // SSH access off (not in ssh-users, not in sudo) or with a no-login
-        // shell is no way back — counting it let "root login off + keys
-        // only" pass with nobody able to log in (frontend QA FS-C5).
+        // Only a key whose owner sshd will still let in: the same save writes
+        // `AllowGroups ssh-users sudo root`, so a key for a System User with SSH access off
+        // (not in ssh-users or sudo) or a no-login shell is no way back.
         $usableKey = SshKey::query()
             ->whereHas('systemUser', fn ($user) => $user
                 ->where(fn ($access) => $access->where('ssh_access', true)->orWhere('sudo', true))

@@ -11,17 +11,10 @@ use App\Services\Server\ServerOpsResult;
 /**
  * LSPHP — how OpenLiteSpeed runs PHP.
  *
- * OLS cannot use PHP-FPM. It runs LSPHP over LSAPI, and almost every fact
- * differs: the packages are `lsphp84-…` (compact, no dot), the tree is under
- * `/usr/local/lsws` rather than `/etc/php`, the ini is the `litespeed` SAPI's,
- * and there is **no per-version service at all** — lshttpd spawns the LSPHP
- * processes itself, so applying a change means restarting the web server.
- *
- * ⚠️ **Unverified against a real OpenLiteSpeed server.** These paths and
- * package names come from LiteSpeed's documentation, not from a box this code
- * has run on — there was none available. Everything is therefore read from
- * `config/server.php`, so a wrong value is a config edit rather than a patch.
- * The first real OLS server is the test.
+ * OLS cannot use PHP-FPM; it runs LSPHP over LSAPI. Packages are `lsphp84-…` (compact, no dot),
+ * the tree is under `/usr/local/lsws` rather than `/etc/php`, the ini is the `litespeed` SAPI's,
+ * and there is no per-version service: lshttpd spawns the processes, so applying a change means
+ * restarting the web server. Paths and package names are read from `config/server.php`.
  */
 class LsphpPhpStack implements PhpStack
 {
@@ -33,11 +26,7 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
-     * Detected from the lsws tree, newest first.
-     *
-     * From the directories rather than from a package list, same as FPM: a
-     * version whose files are on disk is one the panel can act on, whatever
-     * apt believes.
+     * Detected from the lsws tree, newest first (directories, not the package list).
      *
      * @return array<int, string>
      */
@@ -54,13 +43,8 @@ class LsphpPhpStack implements PhpStack
         foreach (glob($dir.'/lsphp*', GLOB_ONLYDIR) ?: [] as $path) {
             $version = $this->expand(substr(basename($path), strlen('lsphp')));
 
-            // The directory is not the evidence. `lsphp83/` is left behind by
-            // a removed version, and LiteSpeed's own packaging creates the
-            // tree before the interpreter lands in it — so globbing alone
-            // listed PHP 8.3 on a server that has only 8.4, offered it in
-            // every version picker, and let a site be pointed at a binary
-            // systemd would never find. `binaryPath()` two methods down
-            // already refuses to assume; this had not caught up.
+            // The directory is not the evidence: `lsphp83/` is left behind by a removed version, and
+            // packaging creates the tree before the interpreter lands. Require the interpreter.
             if ($version !== null && $this->hasInterpreter($version)) {
                 $versions[] = $version;
             }
@@ -87,14 +71,8 @@ class LsphpPhpStack implements PhpStack
     /**
      * The CLI, found rather than assumed.
      *
-     * LSPHP is not always in the lsws tree — some builds put it at
-     * `/usr/bin/lsphp8.2`, and note the dot there where the lsws tree uses
-     * `lsphp82`. A single hardcoded pattern is right on the common install and
-     * silently wrong on the others, which is the sort of thing that only shows
-     * up as "the installer did nothing" on somebody's server.
-     *
-     * Detection is honest here because the panel runs on the machine it
-     * manages, so the file either exists or it does not.
+     * LSPHP is not always in the lsws tree: some builds use `/usr/bin/lsphp8.2` (with a dot,
+     * where the lsws tree uses `lsphp82`), so one hardcoded pattern is wrong on those installs.
      */
     public function binaryPath(string $version): string
     {
@@ -109,17 +87,12 @@ class LsphpPhpStack implements PhpStack
     /**
      * `bin/lsphp`, not `bin/php`.
      *
-     * The LiteSpeed repository installs both: `lsphp` is the LSAPI build the
-     * web server speaks to, `php` is the ordinary CLI. LiteSpeed's own
-     * documentation names `/usr/local/lsws/lsphpXX/bin/lsphp` everywhere an
-     * external processor is configured. Pointing a vhost at the CLI hands
-     * OpenLiteSpeed a program that does not speak LSAPI, and no PHP would run.
+     * `lsphp` is the LSAPI build the web server speaks to; `php` is the ordinary CLI. A vhost
+     * pointed at the CLI would run no PHP.
      */
     public function handlerPath(string $version): ?string
     {
-        // The LSAPI build only — `bin/php` is deliberately absent from this
-        // list, because the CLI does not speak LSAPI and a vhost pointed at it
-        // serves nothing.
+        // LSAPI build only: `bin/php` is deliberately not in this list.
         return $this->detect('handler_candidates', [
             '{root}/lsphp{compact}/bin/lsphp',
             '/usr/bin/lsphp{version}',
@@ -128,12 +101,8 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
-     * None, and that is the point.
-     *
-     * LSPHP processes belong to lshttpd, so there is no `php8.4-fpm` to start
-     * or stop. Callers use this to decide whether PHP contributes rows to the
-     * Services screen — on OLS it contributes none, rather than rows whose
-     * buttons would do nothing.
+     * None: LSPHP processes belong to lshttpd, so there is no `php8.4-fpm` to start or stop.
+     * Callers use this to decide whether PHP adds rows to the Services screen.
      */
     public function serviceName(string $version): ?string
     {
@@ -146,11 +115,8 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
-     * Restart the web server, because that is what respawns LSPHP.
-     *
-     * Heavier than an FPM reload and unavoidable: there is no per-version
-     * process to signal. `lswsctrl restart` is graceful — new requests go to
-     * new workers while the old ones drain.
+     * Restart the web server, because that is what respawns LSPHP (no per-version process to
+     * signal). `lswsctrl restart` is graceful: old workers drain.
      */
     public function reload(string $version): ServerOpsResult
     {
@@ -161,15 +127,11 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
-     * The nearest honest equivalent of `php-fpm -t`, which is not very near.
+     * The nearest equivalent of `php-fpm -t`.
      *
-     * There is no LSPHP command that validates a php.ini. `openlitespeed -t`
-     * checks the *web server's* configuration and would happily pass a php.ini
-     * we had just broken, so using it here would be a check that lies.
-     *
-     * Instead the version's own binary is asked to start with that ini. It
-     * catches an ini PHP cannot load at all, and misses subtler mistakes — a
-     * weaker guarantee than FPM's, and stated as such rather than dressed up.
+     * No LSPHP command validates a php.ini, and `openlitespeed -t` checks the web server's config
+     * only. So the version's own binary is started with that ini: it catches an ini PHP cannot
+     * load, but is a weaker guarantee than FPM's.
      */
     public function configTest(string $version): ServerOpsResult
     {
@@ -189,42 +151,19 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
-     * `lsphp84-`, not `lsphp8.4-` — LiteSpeed's packages drop the dot, and
-     * assuming otherwise produces a "package not found" that looks like a
-     * broken repository.
-     */
-    /**
      * Register the group, then select it.
      *
-     * `--set` alone is what the panel did, and on a box with no ondrej PHP it
-     * exits 2 with `update-alternatives: error: no alternatives for php`:
-     * LiteSpeed's packages install an interpreter and never call
-     * update-alternatives, so the `php` link group does not exist to be set.
-     * `--install` creates it. On a box that also has ondrej PHP the group is
-     * already there and this adds lsphp to it as another choice, which is
-     * exactly what it should do.
+     * `--set` alone fails with `no alternatives for php` when no ondrej PHP is installed:
+     * LiteSpeed's packages never call update-alternatives. `--install` creates the group (or adds
+     * lsphp to an existing one). The priority is the compact version (85 for 8.5), so a later PHP
+     * outranks an earlier one in automatic mode; `--set` switches to manual.
      *
-     * The priority is the compact version — 85 for 8.5 — so a later PHP
-     * outranks an earlier one if the link is ever returned to automatic mode.
-     * `--set` puts it in manual mode, which is what being asked for a specific
-     * version means.
+     * `/usr/local/bin/php` is what decides the answer: `install.sh` creates it for PHARs' shebang
+     * and `/usr/local/bin` precedes `/usr/bin`, so without moving it `php -v` keeps the old
+     * version. The panel's own interpreter does not depend on it (PanelPhpBinary::runningSibling()).
      *
-     * **And `/usr/local/bin/php`, which is what actually decides the answer.**
-     * Registering the alternative alone was measured on a real OLS server and
-     * changed nothing a user could see: `/usr/bin/php -v` reported the new
-     * version while `php -v` reported the old one, because `install.sh` creates
-     * `/usr/local/bin/php` on this stack for the PHARs whose
-     * `#!/usr/bin/env php` shebang needs *a* `php` on PATH — and
-     * `/usr/local/bin` precedes `/usr/bin` there. So the group is kept correct
-     * for anything reading it, and the symlink is moved because that is the
-     * file `php` resolves through. The panel's own interpreter no longer
-     * depends on it — see PanelPhpBinary::runningSibling().
-     *
-     * `phar` is registered too. LSPHP does ship one — `<tree>/bin/phar8.4` —
-     * and an earlier version of this said it did not, which was copied from the
-     * v7 handler's omission rather than checked against a tree. Non-fatal
-     * because the filename is derived rather than detected, so a layout that
-     * spells it differently leaves `phar` alone instead of failing the change.
+     * `phar` is registered too (`<tree>/bin/phar8.4`); non-fatal because the filename is derived,
+     * not detected.
      *
      * @return array<int, array{command: array<int, string>, fatal: bool}>
      */
@@ -259,16 +198,17 @@ class LsphpPhpStack implements PhpStack
         ];
     }
 
+    /**
+     * `lsphp84-`, not `lsphp8.4-`: LiteSpeed's packages drop the dot.
+     */
     public function packagePrefix(string $version): string
     {
         return 'lsphp'.$this->compact($version).'-';
     }
 
     /**
-     * None. LSPHP has no per-version directory the panel writes into — it
-     * spawns its own processes rather than being handed pool files — so there
-     * is nothing left behind for an uninstall to sweep up, and pointing this
-     * at `lsphpNN/` would have a purge delete parts of the web server.
+     * None: the panel writes no per-version directory here, and pointing this at `lsphpNN/` would
+     * make a purge delete parts of the web server.
      */
     public function residualDir(string $version): ?string
     {
@@ -296,8 +236,7 @@ class LsphpPhpStack implements PhpStack
     {
         $packages = (array) config('server.php_stacks.lsphp.base_packages', ['common', 'mysql', 'curl']);
 
-        // The interpreter package itself has no suffix: `lsphp84`, not
-        // `lsphp84-lsphp`.
+        // The interpreter package has no suffix: `lsphp84`, not `lsphp84-lsphp`.
         return [
             'lsphp'.$this->compact($version),
             ...array_map(fn (string $package) => $this->extensionPackage($version, $package), $packages),
@@ -312,11 +251,8 @@ class LsphpPhpStack implements PhpStack
     /**
      * `lsphp84` → `8.4`.
      *
-     * The expansion is the whole point. Left compact, `84` never matches the
-     * `8.4` that `versions()` reports, so an installed version stays listed as
-     * installable forever — and the value the UI posts back fails the
-     * `major.minor` rule the endpoint enforces, so it can never be installed
-     * either.
+     * Left compact, `84` never matches the `8.4` that `versions()` reports and fails the
+     * endpoint's `major.minor` rule.
      *
      * @return array<int, string>
      */
@@ -353,26 +289,16 @@ class LsphpPhpStack implements PhpStack
     /**
      * `mods-available`, and **not** a per-SAPI `conf.d`.
      *
-     * Measured, not assumed. `lsphp85` on noble is built with:
+     * `lsphp85` is built with:
      *
      *   --with-config-file-path=/usr/local/lsws/lsphp85/etc/php/8.5/litespeed/
      *   --with-config-file-scan-dir=/usr/local/lsws/lsphp85/etc/php/8.5/mods-available/
      *
-     * read out of the shipped binary's own configure line, and the package
-     * contains `litespeed/` and `mods-available/` and no `conf.d` anywhere.
-     * LiteSpeed flattened Debian's two-directory arrangement: there is no
-     * symlink farm here, the scanned directory holds the ini files themselves.
+     * The package has no `conf.d`: the scanned directory holds the ini files themselves.
+     * `$sapi` is ignored because there is only one (`litespeed`).
      *
-     * The `$sapi` argument is ignored because there is only ever one —
-     * `litespeed` — and a per-SAPI split would be inventing a distinction this
-     * stack does not have.
-     *
-     * 🔴 This is what ionCube got wrong. It composed `sapiDir()."/conf.d"`,
-     * which on OpenLiteSpeed is both absent (so `tee` failed and the install
-     * aborted) and unscanned (so creating it would have produced an install
-     * that reported success and never loaded). The second half is the
-     * dangerous one, and it is the reason this is a stack method rather than a
-     * `mkdir` at the call site.
+     * Never compose `sapiDir()."/conf.d"` here: it is absent and not scanned, so an extension
+     * install would report success and never load.
      */
     public function scanDir(string $version, string $sapi): string
     {
@@ -380,9 +306,8 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
-     * LSPHP writes into the web server's error log rather than one of its own,
-     * so there is no per-version file to offer. Null keeps it off the Logs
-     * screen instead of listing a path that will never exist.
+     * LSPHP writes into the web server's error log, so there is no per-version file; null keeps
+     * it off the Logs screen.
      */
     public function logPath(string $version): ?string
     {
@@ -390,32 +315,26 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
-     * No. LiteSpeed's packages put their ini where LSPHP already reads it and
-     * ship nothing to unlink it again, so installed and enabled are the same
-     * state here.
-     */
-    /**
-     * Every site's vhost names its own `extUser` and its own socket, so a site
-     * on this stack is isolated the moment it is written. There is no pool to
-     * create and nothing for the isolation feature to do.
+     * Every site's vhost names its own `extUser` and socket, so a site is isolated the moment it
+     * is written; there is no pool for the isolation feature to create.
      */
     public function isolatesByDefault(): bool
     {
         return true;
     }
 
+    /**
+     * No: LiteSpeed's packages put their ini where LSPHP reads it and ship nothing to unlink it,
+     * so installed and enabled are the same state.
+     */
     public function togglesExtensions(): bool
     {
         return false;
     }
 
     /**
-     * Refused, not silently ignored.
-     *
-     * `phpenmod` is Debian's and only understands `/etc/php`; pointed at the
-     * lsws tree it exits zero having changed nothing. LiteSpeed ships no
-     * equivalent, so until there is one the toggle says it cannot do this
-     * rather than reporting a success that never happened.
+     * Refused, not silently ignored: `phpenmod` only understands `/etc/php` and would exit zero
+     * having changed nothing in the lsws tree.
      *
      * @return array<int, string>
      *
@@ -427,29 +346,17 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
-     * The first candidate that exists, or the first as a last resort.
-     *
-     * Falling back to the first rather than to a bare `lsphp8.4` on PATH:
-     * a PATH name that is not there fails as "command not found", which reads
-     * like a broken panel. An absolute path that is not there names the file
-     * we expected and did not find, which is the more useful thing for
-     * somebody to see in the server-ops log.
+     * The first candidate that exists, or the first as a last resort (an absolute path names the
+     * file we expected; a bare PATH name fails as "command not found").
      *
      * @param  array<int, string>  $defaults
      */
     /**
      * Is there actually an interpreter for this version on disk?
      *
-     * The LSAPI handler specifically, which is what the vhost points at — a
-     * tree holding only the CLI is not a version OpenLiteSpeed can serve with.
-     * Asked of the real candidate list rather than one hardcoded path, because
-     * LSPHP is not always under the lsws tree.
-     *
-     * Separate from `handlerPath()` on purpose: that one always answers with a
-     * path so a caller has something to put in a config, falling back to the
-     * first candidate when nothing exists. Reading "did it find one?" off a
-     * return value that is never empty is the mistake this method exists to
-     * stop being possible.
+     * The LSAPI handler, which is what the vhost points at; a tree holding only the CLI is not
+     * servable. Separate from `handlerPath()`, which always answers with a path, so "did it find
+     * one?" cannot be read off a value that is never empty.
      */
     private function hasInterpreter(string $version): bool
     {
@@ -496,9 +403,8 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
-     * 84 → 8.4. Only ever applied to a directory name we globbed, so anything
-     * that is not two-or-more digits is something else in the lsws tree and is
-     * skipped rather than guessed at.
+     * 84 → 8.4. Anything that is not two-or-more digits is something else in the lsws tree and is
+     * skipped.
      */
     private function expand(string $compact): ?string
     {

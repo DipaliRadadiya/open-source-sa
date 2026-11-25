@@ -23,12 +23,10 @@ class CrontabManager
     public function __construct(private ServerOps $serverOps) {}
 
     /**
-     * Whether the cron daemon is running — null when that could not be told.
+     * Whether the cron daemon is running, or null when that could not be told.
      *
-     * When it is not, no job runs, including the panel's own scheduler, while
-     * every job still shows a next run. A stopped cron used to be visible
-     * nowhere: a cron.d file it could not read crashed it on a test server and
-     * the job list looked exactly as before.
+     * When it is not, no job runs (including the panel's scheduler) while every job still shows a
+     * next run.
      */
     public function serviceRunning(): ?bool
     {
@@ -59,9 +57,7 @@ class CrontabManager
     }
 
     /**
-     * Build the cron.d path from an explicit slug (used to locate the old file
-     * when a job is renamed to a new slug). The basename is the bare slug —
-     * matching the existing cron.d convention.
+     * Build the cron.d path from an explicit slug (to locate the old file when a job is renamed).
      */
     public function pathForSlug(string $slug): string
     {
@@ -80,18 +76,13 @@ class CrontabManager
     }
 
     /**
-     * Remove the file an adopted job was imported from, once the panel has
-     * written its own.
+     * Remove the file an adopted job was imported from, once the panel has written its own.
      *
-     * Server Sync names an adopted job by the slug of its command, not by the
-     * file it was read from, so `path()` points somewhere the original never
-     * was. Editing such a job used to write a second cron.d file and leave the
-     * first one running — the command then ran twice — and deleting it removed
-     * only ours. Neither is recoverable from the slug, which is why the source
-     * path is stored.
+     * Server Sync names an adopted job by the slug of its command, so `path()` is not where the
+     * original was; without this the command would run twice. The source path is stored for that.
      *
-     * Returns null when there is nothing to detach, or when the source is the
-     * file we manage anyway (removing that would delete the job we just wrote).
+     * Returns null when there is nothing to detach, or when the source is the file we manage
+     * anyway (removing it would delete the job we just wrote).
      */
     public function detachSource(Cronjob $cronjob): ?ServerOpsResult
     {
@@ -118,10 +109,8 @@ class CrontabManager
     /**
      * Take an adopted job's line out of the user crontab it was read from.
      *
-     * Only that line, matched exactly, and only the first match: the rest of
-     * the crontab is the user's own and is written back unchanged. A line that
-     * is no longer there (edited or removed by hand) leaves nothing to do, and
-     * neither does a user with no crontab at all.
+     * Only that line, matched exactly, first match only: the rest of the crontab is the user's own
+     * and is written back unchanged. A missing line or crontab leaves nothing to do.
      */
     private function detachCrontabLine(string $username, string $line, Cronjob $cronjob): ?ServerOpsResult
     {
@@ -177,8 +166,7 @@ class CrontabManager
     }
 
     /**
-     * Absolute path of the job's output log. Derived from the same slug as the
-     * cron.d file rather than stored, so the two can never drift apart.
+     * Absolute path of the job's output log, derived from the same slug as the cron.d file.
      */
     public function logPath(Cronjob $cronjob): string
     {
@@ -193,10 +181,8 @@ class CrontabManager
     /**
      * Create the log file up front, owned by the account the job runs as.
      *
-     * Cron's `>>` would create it too, but as whichever user ran first and
-     * inside a directory they may not be able to write to. Creating it here
-     * means the very first run has somewhere to write, and one user's job can
-     * never overwrite another's log.
+     * Cron's `>>` would create it as whichever user ran first, in a directory they may not be able
+     * to write to; creating it here lets the first run write and keeps jobs off each other's logs.
      */
     private function prepareLog(Cronjob $cronjob): void
     {
@@ -213,19 +199,14 @@ class CrontabManager
             ['feature' => 'cronjob', 'op' => 'log_touch', 'cronjob' => $cronjob->id],
         ));
 
-        // The user, not `user:user`. A group of the same name exists for root
-        // and for every account the panel creates, but this feature accepts any
-        // account `getent` resolves — and `nobody`'s group on Debian is
-        // `nogroup`, so `chown nobody:nobody` fails and takes the whole
-        // creation with it. Omitting the group leaves the primary group alone,
-        // which is what was wanted in every case anyway.
+        // The user only, not `user:user`: any account `getent` resolves is accepted, and e.g.
+        // `nobody`'s group on Debian is `nogroup`, so `chown nobody:nobody` would fail the creation.
         $this->attempt('log_chown', $this->serverOps->run(
             ['chown', $cronjob->username, $log],
             ['feature' => 'cronjob', 'op' => 'log_chown', 'cronjob' => $cronjob->id],
         ));
 
-        // A job's output can contain anything it printed — keep it off other
-        // accounts.
+        // A job's output can contain anything: keep it off other accounts.
         $this->attempt('log_chmod', $this->serverOps->run(
             ['chmod', '0640', $log],
             ['feature' => 'cronjob', 'op' => 'log_chmod', 'cronjob' => $cronjob->id],
@@ -233,12 +214,9 @@ class CrontabManager
     }
 
     /**
-     * Install the logrotate policy for cron job logs (idempotent — rewritten
-     * with each job write).
+     * Install the logrotate policy for cron job logs (idempotent, rewritten with each job write).
      *
-     * This ships with the capture, not after it. A job running every minute
-     * appends forever; capturing output with no bound is a disk-fill with a
-     * delayed fuse, and the server it fills is the one running the sites.
+     * Unbounded output capture would eventually fill the disk of the server running the sites.
      */
     private function ensureRotation(): ServerOpsResult
     {
@@ -247,8 +225,8 @@ class CrontabManager
         $size = (string) config('server.cronjob_log_max_size', '10M');
         $path = (string) config('server.cronjob_logrotate_file');
 
-        // copytruncate: the running job holds the file open, so rotating by
-        // rename would leave it writing to a file nobody can see.
+        // copytruncate: the running job holds the file open; rotating by rename would leave it
+        // writing to an unseen file.
         $policy = <<<CONF
             # Managed by the control panel — cron job output logs; do not edit by hand
             {$dir}/*.log {
@@ -274,11 +252,8 @@ class CrontabManager
     /**
      * Write the job to disk, throwing with the step that failed.
      *
-     * Throws rather than returning a result the caller inspects, because the
-     * thing worth knowing — *which* of seven privileged steps went wrong — has
-     * no room in a `ServerOpsResult`. It used to be discarded: every failure
-     * here produced one sentence, so the person who had to fix it learned only
-     * that something had gone wrong somewhere.
+     * Throws rather than returning a result because *which* step went wrong has no room in a
+     * `ServerOpsResult`.
      *
      * @throws CronjobOperationException
      */
@@ -306,9 +281,8 @@ class CrontabManager
     /**
      * Turn a failed step into an exception that names it.
      *
-     * `busy` and `staleLock` are carried through: "the server is occupied" and
-     * "a lock file needs removing" are different advice from "this step
-     * failed", and the base exception already renders each differently.
+     * `busy` and `staleLock` are carried through: the base exception renders them differently
+     * from a plain step failure.
      *
      * @throws CronjobOperationException
      */
@@ -328,9 +302,7 @@ class CrontabManager
     /**
      * Delete the job's output log (idempotent).
      *
-     * Only called when the job itself is deleted. Deactivating a job removes
-     * its cron.d file but keeps the log — a paused job's history is exactly
-     * what you look at to decide whether to re-enable it.
+     * Only called when the job itself is deleted; deactivating keeps the log.
      */
     public function removeLog(Cronjob $cronjob): ServerOpsResult
     {
@@ -341,8 +313,7 @@ class CrontabManager
     }
 
     /**
-     * Follow a renamed job's log to its new slug, so past output survives the
-     * rename instead of being orphaned under a name nothing points at.
+     * Follow a renamed job's log to its new slug, so past output is not orphaned.
      */
     public function moveLog(string $oldSlug, Cronjob $cronjob): ServerOpsResult
     {
@@ -376,15 +347,12 @@ class CrontabManager
     /**
      * Run the job once, now, in the background — "Run now".
      *
-     * In a transient systemd unit of its own rather than in the request or a
-     * queue worker: a job can take an hour, and a worker held that long stops
-     * every queued install behind it. The unit runs as the job's account, in
-     * its home, with cron's PATH and shell, so a job that works here works
-     * from cron too. The command is not %-escaped: that is crontab syntax,
-     * and here it would reach the shell as a literal backslash.
+     * In a transient systemd unit, not the request or a queue worker: a job can take an hour and a
+     * held worker stops every queued install. The unit runs as the job's account, in its home,
+     * with cron's PATH and shell. The command is not %-escaped (that is crontab syntax; here it
+     * would reach the shell as a literal backslash).
      *
-     * The unit name is the slug, so a second Run now while the first is
-     * still going fails to start instead of running the job twice.
+     * The unit name is the slug, so a second Run now fails to start instead of running twice.
      */
     public function startManualRun(Cronjob $cronjob): ServerOpsResult
     {
@@ -398,11 +366,8 @@ class CrontabManager
                 '--property=WorkingDirectory=~',
                 // A job stuck forever would refuse every later Run now.
                 '--property=RuntimeMaxSec='.(int) config('server.cronjob_run_now_max_seconds', 86400),
-                // systemd expands `$VAR` in a unit's command itself and turns
-                // `$$` into `$` before the shell sees it — measured on 255:
-                // `pid=$$` arrived as `pid=$`, and `$PATH` as systemd's own.
-                // Doubling every `$` hands the shell the line unchanged. `%`
-                // is passed through as it is, so it is left alone.
+                // systemd expands `$VAR` and turns `$$` into `$` itself; doubling every `$` hands
+                // the shell the line unchanged. `%` is passed through, so it is left alone.
                 '/bin/sh', '-c', str_replace('$', '$$', $this->shellLine($cronjob->command, $this->logPath($cronjob), manual: true)),
             ],
             ['feature' => 'cronjob', 'op' => 'run_now', 'cronjob' => $cronjob->id],
@@ -411,9 +376,8 @@ class CrontabManager
     }
 
     /**
-     * Whether a Run now of this job is still going. Runs started by cron are
-     * not units and are not counted: overlapping cron is cron's business, and
-     * the history shows them as running from their log markers.
+     * Whether a Run now of this job is still going. Runs started by cron are not units and are
+     * not counted (the history shows them as running from their log markers).
      */
     public function manualRunActive(Cronjob $cronjob): bool
     {
@@ -447,22 +411,16 @@ class CrontabManager
      * The command as cron will run it: output redirected to the job's log,
      * between a start line and its exit status.
      *
-     * The command is wrapped in a subshell because cron entries are shell
-     * lines and people write compound ones. In `a; b >> log`, the redirect
-     * binds to `b` alone — `a`'s output escapes to cron's mail (i.e. nowhere)
-     * and the log silently under-reports. A subshell rather than braces
-     * because a job ending in `exit` would otherwise take the shell with it,
-     * and the status line would never be written.
+     * The command is wrapped in a subshell: in `a; b >> log` the redirect binds to `b` alone and
+     * `a`'s output is lost. A subshell, not braces, so a job ending in `exit` cannot skip the
+     * status line.
      *
-     * That status line is the point of the feature: "printed nothing" and
-     * "failed instantly" look identical in a bare output log, and the second
-     * is what you need to know. `$?` is expanded before the date substitution
-     * runs, so it is the job's status and not `date`'s.
+     * The status line separates "printed nothing" from "failed instantly". `$?` is expanded before
+     * the date substitution runs, so it is the job's status, not `date`'s.
      *
-     * The start line gives the run its duration, and `$$` — the shell running
-     * this line, alive until the job ends — ties the exit back to its start
-     * when two runs overlap. It also tells a run still going from one killed
-     * by a reboot. {@see CronjobHistory} reads all three.
+     * The start line gives the duration, and `$$` (the shell, alive until the job ends) ties an
+     * exit to its start when runs overlap and tells a running job from one killed by a reboot.
+     * {@see CronjobHistory} reads all three.
      */
     private function runLine(Cronjob $cronjob): string
     {
@@ -477,10 +435,8 @@ class CrontabManager
     }
 
     /**
-     * In a crontab, an unescaped `%` ends the command and everything after it
-     * becomes the job's stdin. A command like `date +%Y` would otherwise be
-     * silently truncated — taking our redirect with it, so the failure would
-     * also be invisible.
+     * In a crontab an unescaped `%` ends the command and the rest becomes stdin; `date +%Y` would
+     * be silently truncated, taking our redirect (and so the failure output) with it.
      */
     private function escapePercent(string $command): string
     {

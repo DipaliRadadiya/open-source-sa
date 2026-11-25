@@ -10,42 +10,33 @@ use App\Services\Server\HostCpus;
 /**
  * A one-click application that runs as containers.
  *
- * The shared behavior of recipe-backed Docker app cards. `RecipeSiteType`
- * supplies each app's port, volumes and generated secrets from its recipe.
+ * The shared behavior of recipe-backed Docker app cards. `RecipeSiteType` supplies each app's
+ * port, volumes and generated secrets from its recipe (`resources/recipes`: validated JSON
+ * metadata and a closed compose template language). Rendering stays in `RecipeRenderer`, with
+ * exceptional first-run logic behind PHP recipe hooks.
  *
- * Recipes live in `resources/recipes` as validated JSON metadata and a closed
- * compose template language. `RecipeSiteType` exposes them to the same catalog,
- * stack gate and create form as the host-installed types. Rendering stays in
- * `RecipeRenderer`, with exceptional first-run logic behind PHP recipe hooks.
+ * `method() === 'one_click'` and `servingProfile() === 'docker'`: the profile is what the stack
+ * gate reads (these show on a Docker box and are filtered off a LEMP one); the method drives
+ * which screens the site gets.
  *
- * **Why `method() === 'one_click'` and `servingProfile() === 'docker'`.** The
- * profile is what the stack gate reads, so these appear on a Docker box and are
- * filtered off a LEMP one with no extra code — the mirror of how the PHP
- * one-clicks are filtered off a Docker box. The method drives which screens the
- * site gets.
- *
- * **No fields.** `DockerSiteType` asks for an image and a port because the user
- * is choosing what to run. Here the app has already answered both, and a field
- * offering to change them would be offering to break the compose file the panel
- * is about to write. The domain and the system user are all these need.
+ * **No fields:** the app has already answered image and port, and a field offering to change
+ * them would break the compose file the panel is about to write.
  */
 abstract class AbstractDockerAppType extends AbstractSiteType
 {
     /**
      * The port INSIDE the app's own container, which nginx is proxied to.
      *
-     * Declared even though `ComposeValidator::publishedPort()` can find it in
-     * the rendered file, because the template needs it to write the port
-     * mapping in the first place — and the two must be the same number.
+     * Declared even though `ComposeValidator::publishedPort()` can find it in the rendered file,
+     * because the template needs it to write the port mapping, and the two must match.
      */
     abstract public function containerPort(): int;
 
     /**
      * The volumes this app keeps data in, as role => path inside the container.
      *
-     * Roles, not names: the name is `sv-app-<id>_<role>`, decided at install
-     * time because it needs the id. Roles are what the template refers to, so
-     * a template never contains a site-specific string.
+     * Roles, not names: the volume name is `sv-app-<id>_<role>`, decided at install time because
+     * it needs the id, so a template never contains a site-specific string.
      *
      * @return array<string, string>
      */
@@ -54,8 +45,7 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     /**
      * Environment keys that must be generated per site, never defaulted.
      *
-     * A shipped default secret in a self-hosted panel is a vulnerability, not a
-     * convenience: every install of that app on every server would share it.
+     * A shipped default secret would be shared by every install of that app on every server.
      * The installer generates one value per key per site.
      *
      * @return list<string>
@@ -68,15 +58,9 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     /**
      * Generated secrets that must satisfy a password policy, not just be random.
      *
-     * The default generator is `Str::random(32)` — 32 alphanumeric characters,
-     * which is plenty of entropy and is refused outright by an app that demands a
-     * symbol. Chatwoot does: measured against a running container, an
-     * alphanumeric password creates no user and its onboarding controller answers
-     * the same redirect either way, so the only visible symptom is a site that
-     * never gets an owner.
-     *
-     * The same shape as `N8nSiteType`, which states n8n's rule in `rules()`
-     * "instead of failing the install at the last step".
+     * The default generator is `Str::random(32)` (alphanumeric), which an app demanding a symbol
+     * refuses silently: Chatwoot creates no user and its onboarding answers the same redirect, so
+     * the site never gets an owner.
      *
      * @return list<string>
      */
@@ -88,16 +72,11 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     /**
      * Generated secrets the compose file does NOT contain, and must not.
      *
-     * Every other generated secret is a credential the app reads from its
-     * environment, and a stored secret the template never interpolates is dead
-     * weight — which is an invariant the suite enforces.
-     *
-     * Chatwoot's `ADMIN_PASSWORD` is the exception that needs declaring rather
-     * than excusing: Chatwoot never reads it. The panel generates it, posts it to
-     * the first-run endpoint on this site's behalf, and shows it once on the
-     * first-run card. Putting it in the compose file would publish the
-     * administrator's password into a file the File Manager can open, for no
-     * reader at all.
+     * Every other generated secret is read by the app from its environment (a stored secret the
+     * template never interpolates is dead weight, an invariant the suite enforces). Chatwoot's
+     * `ADMIN_PASSWORD` is the exception: the panel posts it to the first-run endpoint and shows
+     * it once. Putting it in the compose file would expose the administrator's password to the
+     * File Manager for no reader.
      *
      * @return list<string>
      */
@@ -109,19 +88,12 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     /**
      * A first-run setup endpoint to claim, before a stranger does.
      *
-     * Null for every app whose administrator is created during install: the
-     * compose file passes the credential in as an environment variable and the
-     * app has an owner before it has ever answered a request.
+     * Null for every app whose administrator is created during install (the compose file passes
+     * the credential as an environment variable). Chatwoot's seeds create no user: they open a
+     * setup endpoint to whoever asks first, on a public URL. The installer posts to it as soon as
+     * the site is up, which creates the administrator and closes the endpoint.
      *
-     * Chatwoot cannot do that. Its production seeds create no user at all -- they
-     * set a flag that opens a setup endpoint to whoever asks first, on a public
-     * URL from the moment the container starts. So the installer posts to it the
-     * moment the site is up, which both creates the administrator and closes the
-     * endpoint. This is the shape `N8nInstaller` and `UptimeKumaInstaller`
-     * already solve for host apps.
-     *
-     * Returns the path to post to and the form fields to send, so the HTTP and
-     * the retrying stay in the installer where every other command already lives.
+     * Returns the path and form fields; the HTTP and retrying stay in the installer.
      *
      * @return array{path: string, fields: array<string, string>}|null
      */
@@ -133,19 +105,11 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     /**
      * Files this app cannot start without, as path-inside-the-container => body.
      *
-     * Glance is the reason this exists: it exits on boot with
-     * `reading /app/config/glance.yml: no such file or directory`, and a named
-     * volume starts empty. An app that needs a config file present cannot be
-     * handed an empty directory.
-     *
-     * These become a **bind mount inside the site's own directory**, not a named
-     * volume — which is better than seeding a volume would be, for three reasons:
-     * `ComposeValidator` already permits a bind whose source is inside the site
-     * root, the File Manager becomes the editor with no extra work, and the file
-     * lands somewhere a person can find it.
-     *
-     * The container path's parent directory is what gets mounted, so two files in
-     * one directory mount once.
+     * For an app that exits on boot without a config file (Glance), since a named volume starts
+     * empty. These become a **bind mount inside the site's own directory**, not a named volume:
+     * `ComposeValidator` already permits a bind inside the site root, and the File Manager becomes
+     * the editor. The container path's parent directory is what gets mounted, so two files in one
+     * directory mount once.
      *
      * @return array<string, string>
      */
@@ -157,20 +121,13 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     /**
      * The memory ceiling this app needs, or null to take the server default.
      *
-     * **Measured on a real box, because the failure is invisible.** The panel's
-     * generic default is 512m, which suits a small container and silently breaks
-     * a bigger one — and breaks it as a 502, not as anything mentioning memory:
+     * The panel's generic default (512m) suits a small container but breaks a bigger one as a
+     * 502 that mentions nothing about memory: a JVM sizes its heap at a quarter of the container
+     * limit (Metabase got ~124MB against a 1GB minimum), and NocoDB aborts with a core dump.
+     * Ghost and Wiki.js run inside 512m, so this is per-app.
      *
-     *  - Metabase reported `Maximum memory available to JVM: 123.8 MB` and wrote
-     *    an `hs_err_pid1.log`. A JVM sizes its heap at a quarter of the container
-     *    limit, so 512m leaves it ~124MB against a documented 1GB minimum.
-     *  - NocoDB exited with `Aborted (core dumped)`.
-     *
-     * Ghost and Wiki.js run inside 512m, so this is genuinely per-app rather than
-     * a default that was simply too low.
-     *
-     * A user's own `memory_limit` on the application still wins: this is the
-     * floor the app needs to start, not a policy about what it may have.
+     * A user's own `memory_limit` on the application still wins: this is the floor the app needs
+     * to start, not a policy.
      */
     public function defaultMemoryLimit(): ?string
     {
@@ -180,16 +137,9 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     /**
      * The environment key this app is told its own URL through, or null.
      *
-     * Null is a real answer and three of the first four apps give it: Metabase
-     * and Wiki.js ask for their URL in their own setup wizard and keep it in the
-     * database, so passing one would be a second source for a value the app
-     * already owns.
-     *
-     * Declared here rather than inferred from the template, because two things
-     * need it and neither should infer it from a template: `syncUrl()` has nothing
-     * to reconcile when it is null, and the tests would otherwise be guessing at
-     * a key name — which they were, and they failed on the second app, looking
-     * for `URL` in a file that never had one.
+     * Null is a real answer: Metabase and Wiki.js keep their URL in their own database, so
+     * passing one would be a second source. Declared here, not inferred from the template:
+     * `syncUrl()` has nothing to reconcile when it is null.
      */
     public function urlEnvKey(): ?string
     {
@@ -200,12 +150,8 @@ abstract class AbstractDockerAppType extends AbstractSiteType
      * No Clone: it copies served files, and a container's state is in its
      * volumes, so a clone would produce a site pointing at the original's data.
      *
-     * **Backup is kept**, as of the volume steps — `ArchiveVolumes` captures the
-     * volumes and `ArchiveFiles` the compose file beside them, which together
-     * are the whole of a container site. It was withheld while the pipeline
-     * could only archive a document root, because the honest description of that
-     * artefact was "one YAML file". The note in {@see DockerSiteType} said both
-     * types would want it at once, and they do.
+     * **Backup is kept** (as in {@see DockerSiteType}): `ArchiveVolumes` captures the volumes and
+     * `ArchiveFiles` the compose file beside them, which together are the whole of a container site.
      *
      * @return array<int, string>
      */
@@ -236,22 +182,12 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     /**
      * How big to run it, and nothing else.
      *
-     * The app decides its image, its port and its volumes — a field offering to
-     * change any of those would be offering to break the compose file the panel
-     * is about to write, which is why this returned an empty list for as long as
-     * there were one-click apps.
+     * The app decides its image, port and volumes. Size is a fact about this server and what
+     * else is on it, so only the person deploying can answer it (otherwise a one-click installs
+     * at the app's floor and must be resized on a second screen).
      *
-     * **Size is a different kind of question and it belongs here.** It is not a
-     * fact about the software the way the image is; it is a fact about this
-     * server and what else is on it, so only the person deploying can answer it.
-     * Without these, a one-click installed at the app's floor and had to be
-     * resized afterwards on a second screen — which is where they were, and where
-     * nobody looked.
-     *
-     * The declared floor is what an empty memory field resolves to, so the help
-     * text names THAT rather than the server default: telling somebody installing
-     * Metabase that an empty field means 512m would be wrong, and wrong in the
-     * direction that makes the app fail to start.
+     * The help text names the declared floor, not the server default: telling someone installing
+     * Metabase that an empty field means 512m would be wrong, and the app would fail to start.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -263,12 +199,8 @@ abstract class AbstractDockerAppType extends AbstractSiteType
         return [
             $this->field('memory_limit', 'text', extra: [
                 'placeholder' => $effective,
-                // Two sentences apart, and the difference matters: an app with a
-                // declared floor needs that figure, and somebody lowering it is
-                // overriding a measurement rather than choosing a preference.
-                // Metabase inside 512m reported 123.8 MB to the JVM and wrote a
-                // crash log; NocoDB exited with `Aborted (core dumped)`. Both
-                // failed as a 502 with nothing about memory in the panel.
+                // Two help texts: an app with a declared floor needs that figure, and lowering it
+                // overrides a measurement (the app then 502s with nothing about memory shown).
                 'help' => __(
                     $floor !== null
                         ? 'application.help.memory_limit_app_floor'
@@ -287,12 +219,9 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     }
 
     /**
-     * The same two rules the Docker card and the Container screen use.
-     *
-     * Shared deliberately: a size accepted by one form and refused by another is
-     * the panel disagreeing with itself, and the CPU bound in particular has to be
-     * here or an over-provisioned one-click is a site that installs, fails at
-     * `compose up`, and has to be deleted and made again.
+     * The same two rules the Docker card and the Container screen use, so a size accepted by one
+     * form is never refused by another. The CPU bound must be here, or an over-provisioned
+     * one-click installs and then fails at `compose up`.
      *
      * @return array<string, mixed>
      */

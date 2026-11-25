@@ -7,13 +7,9 @@ use App\Services\Server\ServerOpsResult;
 /**
  * How PHP is served on this server.
  *
- * nginx and Apache talk to PHP-FPM. OpenLiteSpeed cannot — it runs LSPHP over
- * LSAPI, with its own packages, its own paths, its own ini files and no
- * per-version service at all. Those are not variations on a theme; almost
- * every fact the panel knows about PHP is different between them.
- *
- * A server runs one web server, so it has one PHP stack. This is the thing
- * that answers "where is PHP here", so that nothing else has to assume.
+ * nginx and Apache talk to PHP-FPM. OpenLiteSpeed runs LSPHP over LSAPI, with its own packages,
+ * paths and ini files and no per-version service. A server runs one web server, so it has one
+ * PHP stack; this answers "where is PHP here" so nothing else has to assume.
  */
 interface PhpStack
 {
@@ -39,10 +35,8 @@ interface PhpStack
      * The binary the web server spawns to serve PHP, or null when it talks to
      * a daemon instead.
      *
-     * FPM is a daemon on a socket, so there is nothing here to name. LSPHP is
-     * a binary OpenLiteSpeed starts itself — and it is **not** the CLI: the
-     * LSAPI build is `bin/lsphp`, and pointing a vhost at `bin/php` gives the
-     * web server a program that does not speak its protocol.
+     * FPM is a daemon on a socket. LSPHP is a binary OpenLiteSpeed starts itself and is **not**
+     * the CLI: the LSAPI build is `bin/lsphp`, and `bin/php` does not speak its protocol.
      */
     public function handlerPath(string $version): ?string;
 
@@ -63,45 +57,32 @@ interface PhpStack
     public function reload(string $version): ServerOpsResult;
 
     /**
-     * Whether extensions can be switched on and off independently of being
-     * installed.
-     *
-     * Debian's `phpenmod` symlinks a module's ini into each SAPI's conf.d, so
-     * FPM has two states. LiteSpeed's packages drop their ini straight into a
-     * directory LSPHP loads, with no tool to unlink it — so on LSPHP an
-     * extension is enabled exactly when it is installed, and offering a toggle
-     * would be offering a control that cannot exist.
-     */
-    /**
      * Whether a site on this stack already runs as its own Linux user without
      * anything extra being configured.
      *
-     * False for PHP-FPM: a site runs as the shared web-server account until it
-     * is given a pool of its own, which is what the panel's isolation feature
-     * does. True for LSPHP, where each site's `extprocessor` block carries its
-     * own `extUser`/`extGroup` and its own socket — the isolation is a
-     * property of how the vhost is written, so there is nothing to switch on.
-     *
-     * The PHP screen used to report `runs_as: www-data` for every
-     * OpenLiteSpeed site, which was simply untrue: it named an account the
-     * site does not run as, on the screen a user checks precisely to find out
-     * which one it does.
+     * False for PHP-FPM: a site runs as the shared web-server account until it is given a pool of
+     * its own (the isolation feature). True for LSPHP, where each site's `extprocessor` block
+     * carries its own `extUser`/`extGroup` and socket.
      */
     public function isolatesByDefault(): bool;
 
+    /**
+     * Whether extensions can be switched on and off independently of being installed.
+     *
+     * Debian's `phpenmod` symlinks a module's ini into each SAPI's conf.d, so FPM has two states.
+     * LiteSpeed's packages drop their ini straight into a directory LSPHP loads, with no tool to
+     * unlink it: there an extension is enabled exactly when installed, so no toggle can exist.
+     */
     public function togglesExtensions(): bool;
 
     /**
      * Switch an extension on or off across every SAPI.
      *
-     * A command rather than a tool path: `phpenmod` is Debian's, it only knows
-     * about `/etc/php`, and on a stack whose ini tree lives elsewhere it would
-     * exit zero having changed nothing — a toggle that reports success and
-     * does nothing is worse than one that fails.
+     * A command rather than a tool path: `phpenmod` is Debian's and only knows `/etc/php`, so
+     * elsewhere it would exit zero having changed nothing.
      *
-     * Takes the package's modules, not its name: the `mysql` package is
-     * `mysqli`, `mysqlnd` and `pdo_mysql`, and `phpdismod mysql` exits 0 with
-     * "ini file doesn't exist" having changed nothing (junior re-test #11).
+     * Takes the package's modules, not its name: the `mysql` package is `mysqli`, `mysqlnd` and
+     * `pdo_mysql`, and `phpdismod mysql` exits 0 having changed nothing.
      *
      * @param  array<int, string>  $modules
      * @return array<int, string>
@@ -121,22 +102,16 @@ interface PhpStack
     /**
      * What to run so that bare `php` resolves to this version.
      *
-     * A list rather than one command, because the two stacks need different
-     * numbers of them and for different reasons.
+     * A list, because the stacks need different commands:
      *
-     * **FPM:** ondrej's `php8.x-cli` package already registered the `php`,
-     * `phar` and `phar.phar` alternative groups, so each is a plain `--set` —
-     * and `phar` has to move too, or `phar` keeps running under the version
-     * that was default before.
+     * **FPM:** ondrej's `php8.x-cli` already registered the `php`, `phar` and `phar.phar`
+     * alternative groups, so each is a plain `--set` (`phar` must move too).
      *
-     * **LSPHP:** LiteSpeed's packages never call `update-alternatives` at all,
-     * so on a box with no ondrej PHP there is no `php` group to set and
-     * `--set` fails with "no alternatives for php". The group has to be created
-     * first. There is no lsphp `phar` to register alongside it.
+     * **LSPHP:** LiteSpeed's packages never call `update-alternatives`, so the `php` group must be
+     * created first or `--set` fails with "no alternatives for php". There is no lsphp `phar`.
      *
-     * `fatal` separates "the thing the user asked for" from the rest: failing
-     * the whole operation because a secondary group is absent would report a
-     * change that did happen as a change that did not.
+     * `fatal` separates "the thing the user asked for" from the rest, so a missing secondary
+     * group does not report a change that did happen as one that did not.
      *
      * @return array<int, array{command: array<int, string>, fatal: bool}>
      */
@@ -153,12 +128,10 @@ interface PhpStack
      * The directory an uninstall should clear out afterwards, or null when the
      * stack has none.
      *
-     * `apt purge` cannot empty it on its own: the panel writes a pool file per
-     * site into `<version>/fpm/pool.d`, dpkg does not own those, and a
-     * directory with unknown files in it survives the purge. The version then
-     * stayed on the PHP screen after being removed, because detection reads
-     * these directories — and a stale pool for a site that no longer exists is
-     * left where the next install of that version will pick it up.
+     * `apt purge` cannot empty it: the panel writes a pool file per site into
+     * `<version>/fpm/pool.d`, dpkg does not own those, and a directory with unknown files survives
+     * the purge. Detection reads these directories, so the version would stay listed, and a
+     * stale pool would be picked up by the next install of that version.
      */
     public function residualDir(string $version): ?string;
 
@@ -167,9 +140,8 @@ interface PhpStack
      * may sweep once they are empty — never a file, never a folder with
      * anything in it. Null when the stack has none.
      *
-     * For what the purge leaves behind when the panel's own files (ionCube)
-     * sat in the version's tree: dpkg skips a folder that still held them,
-     * and deleting them afterwards leaves the folder.
+     * For what the purge leaves behind when the panel's own files (ionCube) sat in the version's
+     * tree: dpkg skips a folder that still held them.
      */
     public function emptyFoldersDir(string $version): ?string;
 
@@ -185,10 +157,8 @@ interface PhpStack
     /**
      * The versions in that search's output.
      *
-     * Parsing lives here rather than being a regex the caller applies, because
-     * the package name is not always the version: LiteSpeed ships `lsphp84`,
-     * which has to become `8.4` before anything can compare it with what is
-     * installed or send it back to the API.
+     * Parsing lives here because the package name is not always the version: LiteSpeed ships
+     * `lsphp84`, which has to become `8.4` before it can be compared with what is installed.
      *
      * @return array<int, string>
      */
@@ -210,17 +180,10 @@ interface PhpStack
     /**
      * The directory this PHP actually scans for extra ini files.
      *
-     * 🔴 **Not `sapiDir()."/conf.d"`.** That is the Debian layout and true only
-     * of php-fpm. LSPHP is built with
-     * `--with-config-file-scan-dir=…/etc/php/{version}/mods-available/` — read
-     * out of the shipped binary, not documentation — and its package contains
-     * no `conf.d` at all.
-     *
-     * Asked of the stack rather than composed by the caller because getting it
-     * wrong is silent in the worst direction: writing a `zend_extension` into a
-     * directory nothing scans produces an install that reports success and
-     * never loads. A missing directory at least fails loudly; an unscanned one
-     * does not. ionCube on OpenLiteSpeed did both.
+     * 🔴 **Not `sapiDir()."/conf.d"`:** that is the Debian layout, true only of php-fpm. LSPHP is
+     * built with `--with-config-file-scan-dir=…/etc/php/{version}/mods-available/` and its package
+     * has no `conf.d`. Ask the stack rather than compose the path: a `zend_extension` written into
+     * an unscanned directory reports success and never loads.
      */
     public function scanDir(string $version, string $sapi): string;
 

@@ -43,49 +43,39 @@ class DatabaseController extends Controller
     /**
      * Supported engines + their live availability (capability list).
      *
-     * `installable` says whether the panel can put this engine on the server
-     * itself — read from whether the engine's config entry names an installer,
-     * so it cannot drift from what is actually wired. Every engine has one as
-     * of MongoDB gaining `MongoDbInstaller`; the field stays because an engine
-     * can be operable without being installable, and the catalog saying so is
-     * what stops the setup page offering a button that cannot work.
+     * `installable` says whether the panel can install this engine itself (whether its config
+     * entry names an installer). An engine can be operable without being installable, and
+     * the setup page must not offer a button that cannot work.
      *
-     * `system_schemas` is the engine's own databases, which the panel never
-     * creates, drops or alters. Published because the frontend needs the same
-     * list to grey them out, and the alternative is it hardcoding one — which
-     * it had already done for PostgreSQL's three. A hardcoded copy is wrong
-     * the first time an engine is added, and nothing tells anyone.
+     * `system_schemas` is the engine's own databases, which the panel never creates, drops or
+     * alters; published so the frontend does not hardcode its own list.
      */
     public function engines(DatabaseManager $manager, EngineInstallerManager $installers): JsonResponse
     {
         $progress = app(InstallTracker::class)->versions('database')->keyBy('version');
-        // FS-C46: a version query and a package question per engine, ~0.8 s.
-        // Install progress below is read fresh; only detection is kept.
+        // Detection (a version query and a package question per engine) is cached; install
+        // progress below is read fresh.
         $capabilities = ProbeCache::remember('database-engines', fn (): array => $manager->capabilities());
         $installed = array_column($capabilities, 'installed', 'engine');
 
         $engines = array_map(function (array $engine) use ($manager, $installers, $progress, $installed) {
             $name = (string) $engine['engine'];
             $row = $progress->get($name);
-            // Read from the detection above rather than asked again: the
-            // engine list must not cost a package-manager question per row.
+            // Read from the detection above, not asked again per row.
             $unavailable = $installers->unavailableReason($name)
                 ?? $installers->conflictReason($name, $installed);
 
             return $engine + [
                 'system_schemas' => $manager->systemSchemas($name),
                 'installable' => $installers->canInstall($name) && $unavailable === null,
-                // Why not, when not — `{code, reason}`, the same shape a blocked
-                // site-type card carries, so the frontend renders both the same
-                // way. Null whenever `installable` is true.
+                // Why not, when not: `{code, reason}`, the shape a blocked site-type card
+                // carries. Null whenever `installable` is true.
                 'unavailable' => $unavailable,
-                // Only ever `installing` or `failed`: a finished install deletes
-                // its row, so "installed" is answered by detection above and
-                // there is no second copy of that fact to go stale.
+                // Only `installing` or `failed`: a finished install deletes its row, so
+                // "installed" comes from detection above.
                 'install_status' => $row?->status?->value,
                 'install_reason' => $row?->reason,
-                // The model's own message, so the engine list and the setup page
-                // cannot word the same failure differently.
+                // The model's own message, so every screen words a failure the same way.
                 'install_message' => $row?->message(),
                 'install_progress' => $row === null ? null : DatabaseInstallProgress::describe($row),
             ];
@@ -104,12 +94,9 @@ class DatabaseController extends Controller
         EngineInstallerManager $installers,
         InstallTracker $installs,
     ): JsonResponse {
-        // Refused here rather than discovered two minutes into apt. The engine's
-        // vendor publishes nothing for this Ubuntu release, so the install would
-        // write a source list and a signing key to the box and then fail on a
-        // package that was never going to be there. Its own sentence, not the
-        // generic "not installable" — the user is entitled to know it is the OS
-        // and not a missing feature.
+        // Refused here, not discovered two minutes into apt: the vendor publishes nothing for
+        // this Ubuntu release, so the install would write a source list and signing key and then
+        // fail. Its own sentence, so the user knows it is the OS, not a missing feature.
         if (($unavailable = $installers->unavailableReason($engine)) !== null) {
             abort(422, $unavailable['reason']);
         }
@@ -120,29 +107,8 @@ class DatabaseController extends Controller
 
         abort_unless($installers->canInstall($engine), 422, __('errors/database.engine_not_installable'));
 
-        // "The package is present" is not "the panel can use it".
-        //
-        // Installing the engine is two things: apt, and then provisioning the
-        // account the panel connects with. Short-circuiting on the package
-        // alone skipped the second half entirely, so on any server where the
-        // engine was already installed the panel ended up with an engine it
-        // could see and could not touch: the stored connection stayed on
-        // DatabaseManager's defaults (root, TCP, no password), and every query
-        // came back `ERROR 1698 (28000): Access denied for user 'root'@'localhost'`
-        // because Ubuntu's root authenticates over the unix socket.
-        //
-        // Worse, it returned `queued: false`, so the setup page had nothing to
-        // poll and simply sat there — the install looked like it had stopped by
-        // itself. Seen on a real box: MariaDB installed by an earlier panel,
-        // the panel reinstalled beside it, and the engine unusable for ever
-        // with no way to retry from the UI.
-        //
-        // So the check is now "installed *and* answering". A dispatch when it
-        // is not answering re-runs provisionPanelAccount(), which is exactly
-        // the repair — install() already skips apt when the package is there.
-        // FS-C14(d): a second click, or a second tab, while one is queued or
-        // running. It used to be dropped silently by the job's uniqueness,
-        // which answered 202 for an install that would never happen.
+        // A second click or tab while an install is queued or running: the job's uniqueness would
+        // drop it silently and answer 202 for an install that never happens.
         if ($installs->current('database', $engine)?->status === InstallStatus::Installing) {
             return response()->json([
                 'message' => __('errors/database.engine_install_in_progress', [
@@ -154,17 +120,17 @@ class DatabaseController extends Controller
 
         $installed = $installers->installer($engine)->installed();
 
+        // "The package is present" is not "the panel can use it": installing is apt plus
+        // provisioning the panel's own account, so the check is "installed *and* answering".
+        // Otherwise dispatch, which re-runs provisionPanelAccount() (install() skips apt when
+        // the package is there).
         if ($installed && $manager->engine($engine)->available()) {
             return response()->json(['engines' => $manager->capabilities(), 'queued' => false]);
         }
 
-        // The row is written here, before dispatch — inside the job it would
-        // leave a blind window between this response and the worker picking it
-        // up, during which the setup page would show nothing happening.
-        // The answer to "was this here before we started?" is recorded now,
-        // while it is still true. Asking again inside the job is fine on a
-        // first attempt and wrong on a retry, where a part-finished install has
-        // already put the package on disk.
+        // The row is written before dispatch (inside the job there would be a blind window).
+        // "Was this here before we started?" is recorded now: asked again in the job it would be
+        // wrong on a retry, where a part-finished install has already put the package on disk.
         $installs->start('database', $engine, initialStep: 'queued', wasAbsent: ! $installed);
 
         InstallDatabaseEngine::dispatch($engine, Auth::id());
@@ -177,23 +143,20 @@ class DatabaseController extends Controller
         $search = trim((string) $request->validated('search', ''));
         $filter = (array) $request->validated('filter', []);
 
-        // The rule validates the shape; `boolean()` reads it, because a query
-        // string carries `attached=0` as the string "0" and that is truthy.
+        // The rule validates the shape; `boolean()` reads it (`attached=0` arrives as a string).
         $attached = ($filter['attached'] ?? null) === null ? null : $request->boolean('filter.attached');
 
         $databases = Database::query()
             ->withCount('users')
-            // One query for the page, not one per row: the resource names the
-            // attached application only when this relation is loaded.
+            // One query for the page; the resource names the application only when loaded.
             ->with('application:id,name')
             ->when($filter['engine'] ?? null, fn ($query, $engine) => $query->where('engine', $engine))
             ->when(
                 ($filter['application_id'] ?? null) !== null,
                 fn ($query) => $query->where('application_id', $filter['application_id']),
             )
-            // Compared against null, not truthiness: `attached=false` is the
-            // whole point of the filter — it is what an application's attach
-            // picker lists — and would fall through a `when($attached)`.
+            // Compared against null, not truthiness: `attached=false` would fall through a
+            // `when($attached)`.
             ->when(
                 $attached !== null,
                 fn ($query) => $attached
@@ -232,10 +195,8 @@ class DatabaseController extends Controller
     /**
      * One database, with its size re-measured.
      *
-     * The list deliberately serves the stored value — querying every schema on
-     * every list request is the slow thing worth avoiding. Here it is a single
-     * database and someone is looking straight at it, so the exact figure is
-     * worth one query.
+     * The list serves the stored value (measuring every schema per request is slow); a single
+     * database is worth one query for the exact figure.
      */
     public function show(Database $database, DatabaseSizes $sizes): JsonResponse
     {
@@ -243,8 +204,8 @@ class DatabaseController extends Controller
 
         $resource = DatabaseResource::make($database->load('users'))->resolve();
 
-        // FS-C12: an engine that is down answers no size at all, and the
-        // stored one (0 for a new database) sent as a fact reads as empty.
+        // An engine that is down answers no size; the stored one (0 for a new database) would
+        // read as empty.
         if ($unmeasured !== null) {
             $resource['size_bytes'] = null;
             $resource['size_human'] = null;
@@ -258,12 +219,8 @@ class DatabaseController extends Controller
     /**
      * Attach this database to an application, move it, or detach it (null).
      *
-     * A database could previously only be linked in the request that created
-     * it, so one created on its own — or adopted from a brownfield server —
-     * was excluded from its site's backups with no way to correct that.
-     *
-     * The link is bookkeeping: see `AttachDatabaseToApplication` for what it
-     * does and does not change.
+     * The link is bookkeeping (it decides which site's backups include the database): see
+     * `AttachDatabaseToApplication` for what it does and does not change.
      */
     public function updateApplication(
         UpdateDatabaseApplicationRequest $request,
@@ -321,10 +278,8 @@ class DatabaseController extends Controller
         $engine = $manager->engine($database->engine);
         $tables = $engine->tables($database->name);
 
-        // FS-C12: a stopped engine answered `[]`, which the screen showed as
-        // "0 tables, 0 bytes" — an empty database, not an unreachable one.
-        // Asked only when the list came back empty, so a working engine pays
-        // nothing extra.
+        // A stopped engine answers `[]`, which would read as an empty database. Asked only when
+        // the list is empty, so a working engine pays nothing extra.
         if ($tables === [] && ! $engine->available()) {
             return response()->json([
                 'message' => __('errors/database.engine_unreachable', [
@@ -342,21 +297,13 @@ class DatabaseController extends Controller
     /**
      * Export (dump) a database — read-only, non-destructive.
      *
-     * `202` — the work is queued. Poll `GET /databases/exports` (or the row's
-     * own id) and drive the UI from `status`.
-     *
-     * The row is created here, before dispatch, deliberately: started inside
-     * the job instead, there is a window between the 202 and a worker picking
-     * it up where the export exists and nothing can see it — which is the
-     * blindness this table exists to remove.
+     * `202`: the work is queued. Poll `GET /databases/exports` and drive the UI from `status`.
+     * The row is created before dispatch so the export is visible while it waits for a worker.
      */
     public function export(Database $database): JsonResponse
     {
-        // Close out anything stranded first. `RunDatabaseExport::failed()`
-        // handles a job that dies politely; a worker killed outright reaches
-        // neither it nor the runner, and the row sits in flight forever. Now
-        // that an in-flight row blocks the next export, one stranded row would
-        // otherwise mean this database could never be exported again.
+        // Close out anything stranded first: a worker killed outright reaches neither
+        // `RunDatabaseExport::failed()` nor the runner, and an in-flight row blocks the next export.
         DatabaseExport::query()
             ->where('database_id', $database->id)
             ->inFlight()
@@ -364,15 +311,13 @@ class DatabaseController extends Controller
             ->filter(fn (DatabaseExport $export): bool => $export->isStale())
             ->each(fn (DatabaseExport $export) => $export->update([
                 'status' => ExportStatus::Failed,
-                // The existing code for "the worker stopped" — an abandoned run
-                // is that, noticed later. A new reason would mean a new string
-                // in eight languages saying the same thing.
+                // The existing code for "the worker stopped" (an abandoned run, noticed later).
                 'reason' => 'worker',
                 'finished_at' => now(),
             ]));
 
-        // The job is unique per database as well; this is the half that can
-        // tell the user why rather than silently dropping the dispatch.
+        // The job is unique per database too; this half tells the user why instead of
+        // silently dropping the dispatch.
         $inFlight = DatabaseExport::query()
             ->where('database_id', $database->id)
             ->inFlight()
@@ -384,8 +329,7 @@ class DatabaseController extends Controller
             ]);
         }
 
-        // A dump taken while an import drops and reloads the database would be
-        // a half-empty file that looks like a good one.
+        // A dump taken during an import would be a half-empty file that looks good.
         $importing = DatabaseImport::query()
             ->where('database_id', $database->id)
             ->inFlight()
@@ -398,7 +342,7 @@ class DatabaseController extends Controller
             ]);
         }
 
-        // Nor while a backup restore is replacing it (2026-10-16).
+        // Nor while a backup restore is replacing it.
         if (Restore::inProgressForDatabase($database->id)) {
             throw ValidationException::withMessages([
                 'database' => [__('backup.errors.restore_database_busy')],
@@ -437,34 +381,21 @@ class DatabaseController extends Controller
     /**
      * Every export, newest first.
      *
-     * Without this a dump could only be downloaded by someone who already knew
-     * its generated filename — so leaving the page lost the file for good, even
-     * though it was sitting on disk the whole time.
-     *
-     * In-flight rows are included rather than filtered out: a queued or running
-     * export is exactly what someone who has just pressed the button is looking
-     * for, and hiding it until it finishes is how a page ends up appearing to
-     * have done nothing.
+     * Lets a dump be downloaded without knowing its generated filename. In-flight rows are
+     * included so a page does not appear to have done nothing.
      */
     public function exports(): JsonResponse
     {
-        // Reaped here as well as on the way in. `export()` closes out stranded
-        // rows before starting a new one, which unblocks the database — but
-        // only for somebody who tries again. Until then the screen polls a row
-        // that says "Waiting" and never will: the job it is waiting for was
-        // dropped when its queue lock outlived the worker holding it, so
-        // nothing is coming and nothing else was ever going to say so.
-        //
-        // This is the list the screen polls, so closing them out here is what
-        // turns an indefinite spinner into a failure the reader can act on.
+        // Reaped here as well as in `export()`: this is the list the screen polls, and a job
+        // dropped when its queue lock outlived its worker would otherwise leave an endless
+        // "Waiting" row.
         DatabaseExport::query()
             ->inFlight()
             ->get()
             ->filter(fn (DatabaseExport $export): bool => $export->isStale())
             ->each(fn (DatabaseExport $export) => $export->update([
                 'status' => ExportStatus::Failed,
-                // Same code the start path uses for the same condition — an
-                // abandoned run is "the worker stopped", noticed later.
+                // Same code the start path uses for the same condition.
                 'reason' => 'worker',
                 'finished_at' => now(),
             ]));
@@ -479,15 +410,12 @@ class DatabaseController extends Controller
     /**
      * Delete an export — the row and the file it points at.
      *
-     * Keyed by id rather than filename so that queued and failed rows, which
-     * have no file, can still be cleared out. Otherwise they would sit in the
-     * list permanently with nothing able to remove them.
+     * Keyed by id, not filename, so queued and failed rows (which have no file) can be cleared.
      */
     public function destroyExport(DatabaseExport $export, ActivityLogger $log): JsonResponse
     {
-        // FS-C14(c): a queued or running export is still going to write its
-        // file — deleting the row now leaves that file with nothing pointing
-        // at it. A stale one (its worker is gone) can still be cleared.
+        // A queued or running export will still write its file; deleting the row now would
+        // orphan it. A stale one (its worker is gone) can be cleared.
         if (in_array($export->status, [ExportStatus::Queued, ExportStatus::Running], true) && ! $export->isStale()) {
             return response()->json([
                 'message' => __('errors/database.export_in_progress'),

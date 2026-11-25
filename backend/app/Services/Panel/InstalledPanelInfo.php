@@ -15,27 +15,15 @@ use Illuminate\Support\Facades\Process;
  * from HEAD when this is a development build ahead of a release. Only a clone
  * with no reachable tags falls back to the `VERSION` file.
  *
- * It used to be the file alone, on the reasoning that install.sh clones with
- * `--depth 1` and fetches no tags. True for a *fresh* install — which is why
- * the file is still the fallback — but false for the case that matters: an
- * update runs `git fetch origin refs/tags/vX` and then checks that tag out, so
- * afterwards the tag is present and HEAD is exactly on it. Verified on a real
- * shallow clone: `git describe --tags --exact-match HEAD` answers `v1.0.3`.
+ * Git is asked before the `VERSION` file: a fresh install is a `--depth 1` clone with no
+ * tags (hence the file fallback), but an update fetches and checks out its tag, so HEAD is
+ * exactly on it. The file is maintained by hand and gets forgotten, and the update's health
+ * check asserts the installed version is the one answering.
  *
- * That ordering exists because the file is maintained by hand and keeps being
- * forgotten. v1.0.2 and v1.0.3 were both tagged without bumping it, so both
- * ship `VERSION=1.0.1` — and the update's health check asserts the version it
- * installed is the version answering, which can never be true for those tags.
- * Every update to them builds for twenty minutes and then rolls back. Asking
- * git what was checked out cannot disagree with what was checked out.
+ * `APP_VERSION` in the environment still wins when set.
  *
- * `APP_VERSION` in the environment still wins when set, so an operator running
- * from a package or a pinned build can override both.
- *
- * The commit is read from `.git/HEAD` and the ref it points at, the same way
- * git resolves it, rather than by shelling out — this is read on a screen the
- * admin is looking at, and a process pipe per request would be both slower and
- * racy against the file it is reading.
+ * The commit is read from `.git/HEAD` and its ref, the way git resolves it, rather than by
+ * shelling out: it is read on a screen the admin is looking at.
  */
 class InstalledPanelInfo
 {
@@ -62,40 +50,23 @@ class InstalledPanelInfo
             'commit_short' => $commit === null ? null : substr($commit, 0, 7),
             'branch' => $this->branch(),
             'source' => $source,
-            // When the running code was committed. On a fresh install (a
-            // shallow clone with no tags) this is the only fact that says how
-            // it relates to a release: see AvailableRelease::isUpdate().
+            // When the running code was committed; on a fresh install (shallow clone, no tags)
+            // the only fact relating it to a release: see AvailableRelease::isUpdate().
             'committed_at' => $this->committedAt(),
-            // Whether an in-place update is even possible on this box. A
-            // packaged install without .git cannot be moved by git checkout.
+            // An install without .git cannot be updated in place.
             'is_git_checkout' => $this->isGitCheckout(),
             'has_local_changes' => $this->hasLocalChanges(),
         ];
     }
 
     /**
-     * The tag HEAD points at exactly, without the leading `v`.
+     * Whether the code checked out already contains release `$version`.
      *
-     * Shelling out, like {@see localChanges()} already does. Reconstructing
-     * this from .git by hand would mean resolving annotated tag objects to the
-     * commits they wrap, which is git's job and not worth reimplementing for a
-     * few milliseconds.
-     *
-     * Any failure is null, not an exception: a packaged install with no .git,
-     * a shallow clone with no tags fetched yet, or a git that refuses the
-     * directory. All of those mean "no tag here", and the file answers.
-     */
-    /**
-     * Whether the code checked out already contains release `$version`
-     * (FS-C36).
-     *
-     * The installed version is read from the server's *local* tags, so a
-     * release tagged on the very commit installed here read as an update until
-     * someone fetched tags — "Update available" on a panel that had it, ending
-     * in `target_not_newer`. Asked of git by commit instead: the release's
-     * commit is an ancestor of HEAD, or it is not. Local tag first, then the
-     * remote's. Null when git cannot tell; remembered per HEAD for an hour,
-     * as this runs on the admin dashboard.
+     * The installed version comes from local tags, so a release tagged on the very commit
+     * installed here would read as an update ("Update available", ending in
+     * `target_not_newer`). Asked of git by commit instead: the release's commit is an
+     * ancestor of HEAD or it is not (local tag first, then the remote's). Null when git
+     * cannot tell; remembered per HEAD for an hour.
      */
     public function alreadyContains(string $version, ?string $head = null): ?bool
     {
@@ -113,8 +84,8 @@ class InstalledPanelInfo
             return null;
         }
 
-        // Boxed: the cache treats a stored null as a miss, and "cannot tell"
-        // on a box with no egress must not re-run a 15 s ls-remote per load.
+        // Boxed: the cache treats a stored null as a miss, and "cannot tell" without egress
+        // must not re-run a 15 s ls-remote per load.
         return Cache::remember("panel_update.contains.{$head}.{$version}", now()->addHour(), fn (): array => ['answer' => $this->askContains($git, $version, $head)])['answer'];
     }
 
@@ -139,8 +110,7 @@ class InstalledPanelInfo
 
         $exit = $git(['merge-base', '--is-ancestor', $commit, $head])->exitCode();
 
-        // 0 contains it, 1 does not; anything else (the commit is not in
-        // this clone at all) is "cannot tell".
+        // 0 contains it, 1 does not; anything else (commit not in this clone) is "cannot tell".
         return match ($exit) {
             0 => true,
             1 => false,
@@ -148,6 +118,12 @@ class InstalledPanelInfo
         };
     }
 
+    /**
+     * The tag HEAD points at exactly, without the leading `v`.
+     *
+     * Shells out like {@see localChanges()} (resolving annotated tag objects by hand is git's
+     * job). Any failure is null ("no tag here") and the file answers.
+     */
     private function exactTag(): ?string
     {
         $path = $this->repositoryPath();
@@ -164,9 +140,7 @@ class InstalledPanelInfo
 
         $tag = ltrim(trim($result->output()), 'vV');
 
-        // Only a version-shaped tag. A `nightly` or `staging` tag is a real
-        // thing to have on a commit, and reporting it as the installed version
-        // would put a word where the update compares numbers.
+        // Only a version-shaped tag: a `nightly` tag must not be reported as a version.
         return preg_match('/^\d+(\.\d+){0,3}$/', $tag) === 1 ? $tag : null;
     }
 
@@ -189,10 +163,8 @@ class InstalledPanelInfo
     }
 
     /**
-     * One git command in the panel's own checkout, answered "could not tell"
-     * when it runs out of time (RC-13). A timeout used to throw straight out
-     * of GET /api/health and the admin's panel-update screen as a 500, so a
-     * box that was only busy — the frontend rebuilding on it — read as broken.
+     * One git command in the panel's own checkout; a timeout is answered "could not tell"
+     * rather than thrown, so a busy box does not 500 GET /api/health.
      *
      * @param  array<int, string>  $args
      */
@@ -206,8 +178,7 @@ class InstalledPanelInfo
     }
 
     /**
-     * Repository root — one level above the Laravel app, because the panel is
-     * a mono-repo (backend/ + frontend/ + install.sh + VERSION).
+     * Repository root: one level above the Laravel app (the panel is a mono-repo).
      */
     public function repositoryPath(): string
     {
@@ -215,10 +186,8 @@ class InstalledPanelInfo
     }
 
     /**
-     * Uncommitted work in the checkout. An in-place `git checkout --force`
-     * would destroy it without asking, so preflight has to know. Null when
-     * this is not a git checkout at all, or git could not be run — "unknown"
-     * and "clean" are very different answers and must not be conflated.
+     * Uncommitted work in the checkout (an in-place `git checkout --force` would destroy it).
+     * Null when this is not a git checkout or git could not be run: "unknown" is not "clean".
      */
     public function hasLocalChanges(): ?bool
     {
@@ -230,16 +199,10 @@ class InstalledPanelInfo
     /**
      * The paths git reports as changed, or null when that cannot be determined.
      *
-     * The list, not just the yes/no, because this is what blocks an update and
-     * "not ready, and I won't say why" is the worst thing a preflight can tell
-     * you. On a real server this check refused every update while the detail
-     * shown in the panel was empty — the only way to find out what was dirty
-     * was to SSH in and run `git status` by hand.
+     * The list, not just yes/no: this is what blocks an update, and the panel must show why.
      *
-     * `safe.directory` travels with the call for the same reason it does in
-     * the update script: an operator who has been root in this tree leaves
-     * ownership git refuses to work with, and answering "unknown" there fails
-     * the check closed and blocks updates for a reason nobody can see either.
+     * `safe.directory` travels with the call, as in the update script: a tree once used as
+     * root has ownership git refuses, and "unknown" would block updates for an invisible reason.
      *
      * @return array<int, string>|null
      */
@@ -265,11 +228,9 @@ class InstalledPanelInfo
     /**
      * The nearest reachable version tag, without claiming HEAD is exactly it.
      *
-     * A panel deployed from main can be several commits ahead of the latest
-     * release. Falling back to a stale VERSION file in that case made the UI
-     * offer the latest tag as an "update", then git checked out older code.
-     * The nearest ancestor tag is the version baseline for comparison; source
-     * `tag-ahead` keeps the distinction visible to API consumers.
+     * A panel deployed from main can be several commits ahead of the latest release; a stale
+     * VERSION file would make the UI offer the latest tag as an "update" and check out older
+     * code. Source `tag-ahead` keeps the distinction visible to API consumers.
      */
     private function nearestTag(): ?string
     {
@@ -311,16 +272,9 @@ class InstalledPanelInfo
             return [$env, 'env'];
         }
 
-        // The tag HEAD is on, when it is on one. After an update this is the
-        // tag that was just checked out, which is the most direct possible
-        // answer to "what is installed" — and unlike the file, it cannot have
-        // been forgotten.
-        //
-        // `--exact-match` rather than a nearest-tag describe: sitting five
-        // commits past v1.0.3 is not v1.0.3, and reporting it as such would
-        // make the health check pass against code that is not the release.
-        // A branch checkout (every fresh install) matches nothing and falls
-        // through to the file.
+        // The tag HEAD is on, when it is on one (after an update, the tag just checked out).
+        // `--exact-match`: five commits past v1.0.3 is not v1.0.3, or the health check would
+        // pass against code that is not the release. A branch checkout falls through to the file.
         $tag = $this->exactTag();
 
         if ($tag !== null) {
@@ -343,9 +297,8 @@ class InstalledPanelInfo
             }
         }
 
-        // Deliberately not '1.0.0'. config/app.php carries that as a default,
-        // and showing it as "the installed version" would be a claim with
-        // nothing behind it on a screen whose whole job is to be accurate.
+        // Deliberately not '1.0.0' (config/app.php's default): that would claim a version
+        // with nothing behind it.
         return [null, 'unknown'];
     }
 
@@ -357,9 +310,7 @@ class InstalledPanelInfo
             return null;
         }
 
-        // Detached HEAD — the file holds the hash itself. This is what a
-        // `git checkout <tag>` leaves behind, which is exactly what an
-        // in-place update does, so it is the common case here.
+        // Detached HEAD (what an in-place update leaves): the file holds the hash itself.
         if (preg_match('/^[0-9a-f]{40}$/i', $head) === 1) {
             return $head;
         }
@@ -369,11 +320,8 @@ class InstalledPanelInfo
         }
 
         $ref = trim($matches[1]);
-        // Loose first, then packed. `git gc` and `git pack-refs` — both run
-        // on their own as git housekeeping — move a branch into
-        // `.git/packed-refs` and delete its loose file, and after that this
-        // read nothing: the update screen lost the installed commit (seen on
-        // 2026-09-24 and again on 2026-09-30 in this repository).
+        // Loose first, then packed: `git gc` / `git pack-refs` move a branch into
+        // `.git/packed-refs` and delete its loose file.
         $hash = $this->readGitFile($ref) ?? $this->packedRef($ref);
 
         return $hash !== null && preg_match('/^[0-9a-f]{40}$/i', $hash) === 1 ? $hash : null;
@@ -401,8 +349,7 @@ class InstalledPanelInfo
     }
 
     /**
-     * Null on a detached HEAD (an updated panel) — there is no branch then,
-     * and inventing one would be a lie.
+     * Null on a detached HEAD (an updated panel): there is no branch then.
      */
     private function branch(): ?string
     {
@@ -427,10 +374,8 @@ class InstalledPanelInfo
     /**
      * The checkout's git directory.
      *
-     * Usually `.git` itself. In a linked worktree (and a submodule) `.git` is
-     * a file, `gitdir: <path>`, naming the real one — git's own layout, and
-     * the one a test run in a worktree sees. Read as "not a checkout", the
-     * worktree reported no commit and could not be updated.
+     * Usually `.git` itself; in a linked worktree (or submodule) `.git` is a file,
+     * `gitdir: <path>`, naming the real one.
      */
     private function gitDir(): ?string
     {

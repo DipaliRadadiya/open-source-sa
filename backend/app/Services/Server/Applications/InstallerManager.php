@@ -22,9 +22,7 @@ use Throwable;
  * Runs the marketplace installer for an application, creating its database
  * first when the app needs one.
  *
- * Site types with no installer — git, blank PHP, static — pass straight
- * through. There is nothing to install for a site whose contents the user
- * supplies.
+ * Site types with no installer (git, blank PHP, static) pass straight through.
  */
 class InstallerManager
 {
@@ -40,11 +38,9 @@ class InstallerManager
     /**
      * Whether a site type installs anything, **without building the installer**.
      *
-     * `installerForType()` resolves the class, and a PHP installer asks the
-     * container for the `PhpStack` — which on a server with no capability
-     * record yet shells out to detect one. That is fine inside a queued job and
-     * wrong in an HTTP request that only wants to know whether an installer
-     * exists.
+     * `installerForType()` resolves the class, and a PHP installer asks the container for the
+     * `PhpStack`, which shells out to detect one when there is no capability record yet. Fine in
+     * a queued job, wrong in an HTTP request that only wants to know whether an installer exists.
      */
     public function hasInstaller(string $siteType): bool
     {
@@ -134,9 +130,8 @@ class InstallerManager
     /**
      * Create the application's database and a dedicated user for it.
      *
-     * The password is generated, never asked for — one fewer weak secret, and
-     * the user never needs to see it since it only ever goes into the app's
-     * own config file.
+     * The password is generated, never asked for: one fewer weak secret, and it only ever goes
+     * into the app's own config file.
      *
      * @param  array<int, string>  $accepted  engines this application can use
      * @param  array<string, string>  $minimums  its minimum version per engine
@@ -146,50 +141,31 @@ class InstallerManager
      */
     private function provisionDatabase(Application $application, array $accepted, array $minimums = []): array
     {
-        // Retry Setup must not mint a second database.
-        //
-        // This method used to go straight to generating a name, so every retry
-        // after a failure past this point left another `shop_xqolim` beside the
-        // last one — schemas and accounts the user never asked for, on a server
-        // where nothing but the panel knows which one the site actually uses.
-        // An application has at most one database by design (see
-        // UpdateDatabaseApplicationRequest), so "it already has one" is a
-        // complete answer rather than a heuristic.
+        // Retry Setup must not mint a second database: an application has at most one by design
+        // (see UpdateDatabaseApplicationRequest), so "it already has one" is a complete answer.
         if (($attached = $application->databases()->with('users')->first()) !== null) {
             return $this->reuseDatabase($application, $attached, $accepted);
         }
 
-        // An engine the user chose was already held to the minimum by
-        // StoreApplicationRequest, so this honours a validated choice rather
-        // than re-deciding it. Only the fallback — where the panel is the one
-        // picking — consults the version.
+        // An engine the user chose was already held to the minimum by StoreApplicationRequest;
+        // only the fallback, where the panel picks, consults the version.
         $engine = $this->chosenEngine($application, $accepted)
             ?? $this->firstAvailableEngine($accepted, $minimums);
 
         if ($engine === null) {
-            // Fail here rather than half-installing: without a database the
-            // application cannot work, and the user needs to know it is the
-            // database engine that is missing, not their input.
+            // Fail here rather than half-installing, and say it is the database engine that is missing.
             throw new ProvisioningFailedException('create_database', 'no-database-engine');
         }
 
         $password = DatabasePassword::generate();
 
         try {
-            // Named from the slug, not the domain. The domain is a hostname:
-            // every dot becomes an underscore, so `shop.example.co.in` produced
-            // `shop_example_co_in_xqolim`, and a nip.io host was truncated
-            // mid-word to fit MySQL's 32-character account limit. The slug is
-            // already the short, unique, normalized name the site's own
-            // directory uses, so `/home/deploy/shop` now pairs with
-            // `shop_xqolim`. Rows predating the slug column fall back to the
-            // old behaviour rather than to the generator's 'app' placeholder.
+            // Named from the slug, not the domain: dots in a hostname became underscores and a
+            // long host was truncated mid-word for MySQL's 32-character account limit. Rows
+            // predating the slug column fall back to the domain.
             //
-            // `generateAvailable`, not `generate`: this was the only one of the
-            // three callers that never checked the name was free, on either the
-            // panel's rows or the engine. A collision surfaced from the catch
-            // below as an opaque create_database failure with no cause, and a
-            // shorter label makes collisions likelier, not rarer.
+            // `generateAvailable`, not `generate`: it checks the name is free on the panel's rows
+            // and the engine, so a collision does not surface as an opaque create_database failure.
             $name = $this->databaseIdentifiers->generateAvailable(
                 $application->slug ?: $application->domain,
                 $engine,
@@ -209,9 +185,6 @@ class InstallerManager
             throw $this->databaseFailure($application, $engine, $e);
         }
 
-        // `create_database` was in the documented step list and was never
-        // actually emitted — the only step the frontend was told to expect that
-        // could not appear.
         $this->progress->record('create_database');
 
         return $this->connectionContext($engine, $database->name, $name, $password);
@@ -220,9 +193,8 @@ class InstallerManager
     /**
      * Hand the installer the database this application already has.
      *
-     * Reachable in two ways: a retry after provisioning failed somewhere past
-     * the database step, and an application that had one attached to it
-     * deliberately. Both want the same thing — install against what is there.
+     * Reachable after a retry past the database step, and for an application that had one
+     * attached deliberately. Both install against what is there.
      *
      * @param  array<int, string>  $accepted
      * @return array<string, mixed>
@@ -231,30 +203,22 @@ class InstallerManager
      */
     private function reuseDatabase(Application $application, Database $database, array $accepted): array
     {
-        // An engine this site type cannot speak is not something to work
-        // around. Creating a second database beside it is the bug being fixed
-        // here, and installing against an engine the application has no driver
-        // for fails later, further away, in the application's own words.
+        // An engine this site type cannot speak is not worked around: a second database is the
+        // bug avoided here, and an engine with no driver fails later, in the application's words.
         if (! in_array($database->engine, $accepted, true)) {
             throw new ProvisioningFailedException(
                 'create_database',
-                // A sentinel rather than a uuid, as `no-database-engine` above:
-                // nothing shelled out, so there is no server-ops entry for a
-                // reference to point at. The reason code carries the meaning.
+                // A sentinel rather than a uuid, as `no-database-engine` above: nothing shelled
+                // out, so no server-ops entry exists for a reference to point at.
                 'attached-database-engine-mismatch',
                 'attached_database_engine_mismatch',
             );
         }
 
         try {
-            // A database attached through `PUT /databases/{database}/application`
-            // may have no user the panel knows the password of — that endpoint
-            // links an existing database, it does not create credentials. The
-            // installer needs some, so make them rather than refuse.
-            //
-            // `generateAvailable` for the name: it checks the engine's own
-            // accounts as well as the panel's rows, so this cannot collide with
-            // a user the adopted database already had.
+            // A database attached through `PUT /databases/{database}/application` may have no
+            // user the panel knows the password of (that endpoint links, it creates no
+            // credentials), so make one. `generateAvailable` also checks the engine's own accounts.
             $user = $database->users->first() ?? $this->createUser->execute($database, [
                 'username' => $this->databaseIdentifiers->generateAvailable(
                     $application->slug ?: $application->domain,
@@ -278,26 +242,18 @@ class InstallerManager
     }
 
     /**
-     * Turn whatever went wrong into the failure the user is shown.
-     *
-     * Shared by both paths — creating a database and reusing one — so a
-     * failure in either is reported the same way rather than one of them
-     * growing its own handling later.
+     * Turn whatever went wrong into the failure the user is shown, the same way for creating
+     * a database and reusing one.
      */
     private function databaseFailure(Application $application, string $engine, Throwable $e): ProvisioningFailedException
     {
-        // Keep the reference the failure already logged under. Minting a
-        // fresh uuid here handed the user an id that appears in no log,
-        // while the one the server-ops entry was written with was thrown
-        // away — the reference is only useful if it points at something.
+        // Keep the reference the failure already logged under; a fresh uuid would appear in no log.
         if ($e instanceof ServerOperationException) {
             return new ProvisioningFailedException('create_database', $e->reference);
         }
 
-        // Anything else — a bug rather than a server refusal — has written
-        // nothing, so write the entry before handing out the id for it.
-        // Otherwise the fallback keeps the same defect the branch above
-        // was fixing, only for the failures that are hardest to diagnose.
+        // Anything else (a bug, not a server refusal) has written nothing, so write the entry
+        // before handing out the id for it.
         $reference = (string) Str::uuid();
 
         Log::channel('server-ops')->error('database provisioning failed', [
@@ -316,11 +272,8 @@ class InstallerManager
     /**
      * What an installer needs to write its own config file.
      *
-     * Read the host and port off the engine's own connection record rather
-     * than assuming 127.0.0.1:3306. A server whose MySQL listens on a
-     * non-default port would otherwise have every installer write a config
-     * pointing at a port nothing is on — and the failure surfaces as the
-     * application's own "cannot connect to database", not as ours.
+     * Host and port come from the engine's own connection record, not an assumed 127.0.0.1:3306:
+     * a server with MySQL on another port would otherwise get configs pointing at nothing.
      *
      * @return array<string, mixed>
      */
@@ -335,8 +288,8 @@ class InstallerManager
             'db_host' => $connection->host ?: '127.0.0.1',
             'db_port' => (int) ($connection->port ?: config("server.databases.engines.{$engine}.default_port")),
             'db_socket' => $connection->socket,
-            // Which engine it actually is. Most applications treat MySQL and
-            // MariaDB as one thing; Moodle picks a different driver for each.
+            // Which engine it actually is: most applications treat MySQL and MariaDB as one,
+            // Moodle picks a different driver for each.
             'engine' => $engine,
         ];
     }
@@ -353,14 +306,11 @@ class InstallerManager
     /**
      * The engine the user asked for, when they were offered the choice.
      *
-     * Null whenever the request did not carry one, which is every existing
-     * client and every type with only one usable engine — so the fallback
-     * below stays the normal path rather than a legacy branch.
+     * Null whenever the request did not carry one (every existing client, and every type with a
+     * single usable engine), so the fallback stays the normal path.
      *
-     * Re-checked here rather than trusted from validation: the request was
-     * validated when it was made, and provisioning runs later in a queued job.
-     * An engine that was stopped or removed in between must fall back to one
-     * that answers, not fail the whole install on a stale choice.
+     * Re-checked here rather than trusted from validation: provisioning runs later in a queued
+     * job, and an engine stopped or removed in between must fall back to one that answers.
      *
      * @param  array<int, string>  $accepted
      */
@@ -387,11 +337,8 @@ class InstallerManager
         $installed = $this->databases->engineNames();
 
         foreach ($accepted as $engine) {
-            // Too old counts as not available here rather than as a failure:
-            // an application that accepts three engines and finds the first
-            // one below its minimum should fall through to the next, exactly
-            // as it does for one that is not installed. Only when nothing
-            // qualifies does this return null and provisioning stop.
+            // Too old counts as not available, not as a failure: fall through to the next
+            // accepted engine, as for one that is not installed.
             if (in_array($engine, $installed, true)
                 && $this->databases->engine($engine)->available()
                 && $this->versions->meets($engine, $minimums)) {

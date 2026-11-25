@@ -18,14 +18,9 @@ use RuntimeException;
 /**
  * Sites the web server is already serving that the panel has no record of.
  *
- * The hard one, and the reason people migrate at all. A database is a name
- * from `SHOW DATABASES`; a site is a config file, a directory, an owner, and a
- * type that has to be read off the disk. Only the first three are facts.
- *
- * The type is a guess and is treated as one: every inference carries the
- * evidence behind it and a confidence, and both are stored on the application
- * as well as on the sync item. A site mislabelled WordPress is not a cosmetic
- * error — it is a site that later gets `wp` commands run against it.
+ * A site is a config file, a directory, an owner (facts) and a type read off the disk (a
+ * guess). Every inference carries its evidence and a confidence, stored on the application
+ * and on the sync item: a site mislabelled WordPress later gets `wp` commands run against it.
  */
 class ApplicationDiscoverer implements Discoverable
 {
@@ -43,8 +38,7 @@ class ApplicationDiscoverer implements Discoverable
 
     public function dependsOn(): array
     {
-        // A site needs an owner. Running before users means either inventing
-        // one or attaching every site to whoever happens to exist.
+        // A site needs an owner.
         return ['system_user'];
     }
 
@@ -71,9 +65,8 @@ class ApplicationDiscoverer implements Discoverable
         $owners = SystemUser::query()->pluck('id', 'username');
         $homes = SystemUser::query()->pluck('home_path', 'username');
 
-        // In a preview, the accounts it found count as owners too: applying
-        // the same run adopts them before it gets here. No id, and none is
-        // needed, because a preview never adopts.
+        // In a preview, the accounts it found count as owners too (applying adopts them first).
+        // No id is needed: a preview never adopts.
         foreach ($run->previewedSystemUsers() as $username => $home) {
             if (! $owners->has($username)) {
                 $owners->put($username, null);
@@ -81,16 +74,11 @@ class ApplicationDiscoverer implements Discoverable
             }
         }
 
-        // Folders claimed in this run, so two vhosts serving one directory
-        // cannot both be adopted as sites that each think they own it.
+        // Folders claimed in this run, so two vhosts serving one directory are not both adopted.
         $claimed = [];
 
-        // The panel's own installation. Derived from where this code is
-        // running rather than from a configured name: install.sh writes
-        // `{PANEL_SLUG}.conf` *and* `{PANEL_SLUG}-tls.conf`, PANEL_SLUG is
-        // overridable, and the vhost is named after the slug while the panel
-        // is reached by a domain — so matching on any of those names is a
-        // guess that a custom install breaks. The document root is not.
+        // The panel's own installation, derived from where this code runs: vhost names depend
+        // on the overridable PANEL_SLUG (and a `-tls` variant), the document root does not.
         $panelRoot = rtrim(dirname(base_path()), '/');
         $homeBase = rtrim((string) config('server.home_base', '/home'), '/');
         $excludedNames = (array) config('server.sync.exclude.vhosts', []);
@@ -106,10 +94,7 @@ class ApplicationDiscoverer implements Discoverable
                 continue;
             }
 
-            // Not enabled is not served. nginx's stock `default` sits in
-            // sites-available on every fresh install without being linked, and
-            // was reported as "being served, but its config is not in a shape
-            // the panel could read" (nginx test server).
+            // Not enabled is not served (nginx's stock `default` sits unlinked in sites-available).
             if ($enabled !== null && ! in_array(basename($path), $enabled, true)) {
                 continue;
             }
@@ -136,16 +121,9 @@ class ApplicationDiscoverer implements Discoverable
                 continue;
             }
 
-            // OpenLiteSpeed's installer ships a demo vhost called `Example`,
-            // served from $VH_ROOT/html/ and registered nowhere. It was
-            // reported as "being served, but its config is not in a shape the
-            // panel could read", which was untrue twice over (2026-09-24). Not
-            // a customer's site: nothing to report.
-            //
-            // Recognised by name *and* its stock document root, not by "is it
-            // registered in httpd_config.conf": a server migrated from v7
-            // registers every site through `include /etc/<brand>-ols/*.conf`,
-            // so that test would have dropped all of them.
+            // OpenLiteSpeed's installer ships a demo vhost `Example` (docRoot $VH_ROOT/html/): not a
+            // customer's site. Recognised by name and stock document root, not by registration in
+            // httpd_config.conf (a migrated server registers every site through an `include`).
             if ($name === 'Example' && preg_match('/^\s*docRoot\s+\$VH_ROOT\/html\/?\s*$/m', $contents->output()) === 1) {
                 continue;
             }
@@ -155,9 +133,7 @@ class ApplicationDiscoverer implements Discoverable
             $parsed = $this->parser->parse($contents->output());
 
             if ($parsed['domains'] === [] || $parsed['root'] === null) {
-                // A config this cannot read is reported rather than dropped:
-                // the site is live, and a list that omits it is wrong in the
-                // direction that matters.
+                // Reported rather than dropped: the site is live.
                 $found[] = ['key' => $name, 'skip' => 'vhost_unparsed', 'evidence' => ['path' => $path]];
 
                 continue;
@@ -175,10 +151,8 @@ class ApplicationDiscoverer implements Discoverable
 
             $root = rtrim($parsed['root'], '/');
 
-            // The panel serving itself. Adopting it would put the control
-            // plane in the list of sites the user can rename, move or delete
-            // — and this catches the API vhost, the frontend vhost and the
-            // TLS variant of each, without knowing any of their names.
+            // The panel serving itself (API, frontend and TLS variants): adopting it would let the
+            // user rename, move or delete the control plane.
             if ($root === $panelRoot || str_starts_with($root.'/', $panelRoot.'/')) {
                 $found[] = [
                     'key' => $primary,
@@ -189,11 +163,8 @@ class ApplicationDiscoverer implements Discoverable
                 continue;
             }
 
-            // Every site this panel creates lives at
-            // {home_base}/{user}/{slug}/public_html. A document root anywhere
-            // else belongs to something the panel did not lay out and cannot
-            // manage without moving files — reported so the user knows it
-            // exists, rather than adopted into a shape that does not fit it.
+            // Panel sites live at {home_base}/{user}/{slug}/public_html; a root anywhere else
+            // cannot be managed without moving files, so it is reported, not adopted.
             if (! str_starts_with($root.'/', $homeBase.'/')) {
                 $found[] = [
                     'key' => $primary,
@@ -207,9 +178,7 @@ class ApplicationDiscoverer implements Discoverable
             $owner = $this->owner($parsed['root']);
 
             if ($owner === null || ! $owners->has($owner)) {
-                // The owning account is not one the panel manages. Adopting
-                // the site anyway would leave it with no user to run as, and
-                // every later operation on it would fail somewhere deeper.
+                // The owner is not managed by the panel; adopting would leave no user to run as.
                 $found[] = [
                     'key' => $primary,
                     'skip' => 'owner_not_tracked',
@@ -219,13 +188,8 @@ class ApplicationDiscoverer implements Discoverable
                 continue;
             }
 
-            // Where the site really lives, in the panel's terms. The panel
-            // addresses every site as {home}/{slug}/public_html/{web_root}, so
-            // the slug has to be the folder the files are in. It used to be
-            // made from the domain: a site in /home/brown/brownsite became
-            // `brown23-172-120-87nipio`, a folder that does not exist, and the
-            // file manager, PHP settings, workers and backups of that site all
-            // pointed at nothing. Found on a real server, 2026-09-24.
+            // The panel addresses a site as {home}/{slug}/public_html/{web_root}, so the slug must
+            // be the folder the files are in, not a name made from the domain.
             $layout = $this->layout($parsed['root'], rtrim((string) $homes->get($owner), '/'));
 
             if ($layout === null) {
@@ -250,10 +214,9 @@ class ApplicationDiscoverer implements Discoverable
                 continue;
             }
 
-            // The slug is unique across the panel, and it names files the panel
-            // writes, so a second site cannot share it. Two owners each with a
-            // `shop` folder is possible, and the second is reported rather than
-            // adopted under a different name that would not match its files.
+            // The slug is unique across the panel and names files it writes. Two owners can each
+            // have a `shop` folder; the second is reported, not adopted under a name that
+            // would not match its files.
             if (in_array(strtolower($folder), $trackedSlugs, true) || isset($claimed[strtolower($folder)])) {
                 $found[] = [
                     'key' => $primary,
@@ -306,34 +269,22 @@ class ApplicationDiscoverer implements Discoverable
         $domains = $attributes['domains'];
         $primary = $domains[0];
 
-        // The folder the files are in, never a name made up here: see
-        // layout(). Checked again because a site created between the preview
-        // and this apply could have taken it.
+        // The folder the files are in (see layout()), checked again in case a site created since
+        // the preview took it.
         //
-        // Deliberately NOT passed {@see \App\Services\Server\Applications\SlugConflict},
-        // which create, rename, clone and staging all consult. That asks "does
-        // a file at this slug's paths already exist" — and for an adopted site
-        // the answer is yes by definition: the vhost being adopted is the file
-        // it would find. Wiring it here would refuse every adoption there is.
-        //
-        // The residual case is a folder named after something the panel does
-        // not own — `~/www` adopts as slug `www` — which only bites later, if
-        // that site is then isolated and its pool written over the distro's
-        // `pool.d/www.conf`. Left alone rather than half-guarded: the pool
-        // writer takes over unowned pool files on purpose (see
-        // `PoolManager::adoptOpenBasedir()`), so a refusal here would fight a
-        // feature rather than fix a bug.
+        // Deliberately NOT passed {@see \App\Services\Server\Applications\SlugConflict}: it asks
+        // whether a file at the slug's paths exists, which for an adopted site is true by
+        // definition and would refuse every adoption. Residual case: a folder like `~/www` adopts
+        // as slug `www`; left alone because the pool writer takes over unowned pool files on
+        // purpose (see `PoolManager::adoptOpenBasedir()`).
         $slug = (string) $attributes['slug'];
 
         if (Application::query()->where('slug', $slug)->exists()) {
             throw new RuntimeException("the folder {$slug} is already a site in the panel");
         }
 
-        // `applications.app_port` is uniquely indexed, so a port already
-        // claimed by a site adopted earlier in this same run cannot be taken
-        // again. Dropped to null rather than allowed to throw: losing the port
-        // costs one site a manual correction, and a constraint violation here
-        // would fail the whole adoption.
+        // `applications.app_port` is unique: a port already claimed in this run is dropped to
+        // null rather than failing the whole adoption.
         $port = $attributes['app_port'] ?? null;
 
         if ($port !== null && Application::query()->where('app_port', $port)->exists()) {
@@ -343,27 +294,19 @@ class ApplicationDiscoverer implements Discoverable
         $application = Application::forceCreate([
             'system_user_id' => $attributes['system_user_id'],
             'name' => Application::uniqueName($primary),
-            // forceCreate and an explicit slug: `slug` is not fillable because
-            // it names the config file the panel overwrites, and mass
-            // assignment would drop it in silence.
+            // forceCreate: `slug` is not fillable (it names the config file the panel overwrites).
             'slug' => $slug,
             'domain' => $primary,
             'site_type' => $attributes['site_type'],
             'serving_profile' => $attributes['serving_profile'],
             'status' => 'active',
             'web_root' => $attributes['web_root'] ?? '/',
-            // Read off `proxy_pass`. The vhost is the only record of which
-            // port a migrated Node application answers on, and adopting the
-            // site without it means the next deploy moves the process while
-            // nginx keeps pointing at the old number.
+            // Read off `proxy_pass`: the vhost is the only record of a migrated Node app's port.
             'app_port' => $port,
-            // Deliberately null: the panel has not written a pool for this
-            // site, and claiming otherwise would make `php:isolate-all` skip
-            // the one site that most needs it.
+            // Deliberately null: no pool was written for this site, and claiming otherwise would
+            // make `php:isolate-all` skip it.
             'isolated_at' => null,
             // The guess, kept where anyone acting on this site will see it.
-            // The sync item has it too, but nobody looks up a sync run before
-            // running a command against a site.
             'settings' => [
                 'adoption' => [
                     'inferred_site_type' => $attributes['site_type'],
@@ -390,13 +333,8 @@ class ApplicationDiscoverer implements Discoverable
     /**
      * How to list this web server's per-site configs.
      *
-     * A command rather than a directory, because the layouts genuinely differ.
-     * nginx and Apache keep one file per site in one directory. OpenLiteSpeed
-     * keeps a *directory* per site, each holding a `vhconf.conf` — so a
-     * `-maxdepth 1 -type f` over its vhost root finds nothing at all, which is
-     * why sync used to return zero sites on this stack and call it a clean
-     * result. A server with sites on it reporting none is the wrong answer to
-     * give quietly.
+     * A command rather than a directory, because the layouts differ: nginx and Apache keep
+     * one file per site, OpenLiteSpeed a *directory* per site holding a `vhconf.conf`.
      *
      * @return array<int, string>|null
      */
@@ -407,22 +345,14 @@ class ApplicationDiscoverer implements Discoverable
         if ($driver === 'openlitespeed') {
             $layout = app(OlsVhostLayout::class);
 
-            // Looked for here rather than read from the record, because this
-            // is the one moment the panel is deliberately inspecting the box
-            // and the only moment the answer can change: a server acquires the
-            // old panel's directory by having had the old panel, which is true
-            // before the first sync and never becomes true afterwards. Sync is
-            // queued and already slow; two `find` calls are not what makes it
-            // so.
+            // Looked for here, not read from the record: this is the one moment the box is
+            // deliberately inspected, and a server only has the old panel's directory from
+            // before the first sync.
             $root = $layout->detect();
 
-            // Exactly two levels: <root>/<site>/<vhost file>. Deeper would pick
-            // up the per-site logs directory the templates write beside it.
-            //
-            // Both filenames, because a server migrated from the old panel has
-            // `main.conf` in a directory this panel did not choose. Matching
-            // only our own name found zero sites on exactly the servers this
-            // feature exists for, and reported it as a clean sync.
+            // Exactly two levels: <root>/<site>/<vhost file> (deeper picks up the per-site logs
+            // directory). Both filenames, because a server migrated from the old panel has
+            // `main.conf` in a directory this panel did not choose.
             return $root === '' ? null : array_merge(
                 ['find', $root, '-mindepth', '2', '-maxdepth', '2', '-type', 'f', '('],
                 $layout->nameTests(),
@@ -436,18 +366,16 @@ class ApplicationDiscoverer implements Discoverable
     }
 
     /**
-     * The vhost files the web server actually reads, by name — the entries of
-     * its sites-enabled directory — for nginx and Apache. Null where that is
-     * not how the web server works (OpenLiteSpeed) or the directory could not
-     * be listed, and then nothing is filtered: an unreadable directory must
-     * not make every site look unserved.
+     * The vhost files the web server actually reads, by name (its sites-enabled directory),
+     * for nginx and Apache. Null where that does not apply (OpenLiteSpeed) or the directory
+     * could not be listed; then nothing is filtered, so an unreadable directory does not make
+     * every site look unserved.
      *
      * @return array<int, string>|null
      */
     private function enabledVhosts(): ?array
     {
-        // The same answer listCommand() uses — the detected web server, not
-        // the configured one, which is unset on a server the installer set up.
+        // The same as listCommand(): the detected web server, not the (possibly unset) configured one.
         $driver = $this->webServers->driver()->name();
 
         if (! in_array($driver, ['nginx', 'apache'], true)) {
@@ -474,16 +402,10 @@ class ApplicationDiscoverer implements Discoverable
     /**
      * The site's name as this web server records it.
      *
-     * For nginx and Apache that is the file. For OpenLiteSpeed the file has a
-     * fixed name and the *directory* is the site, so the basename would give
-     * every site on the box the same one — and the tracked-slug and exclusion
-     * checks are both keyed on it.
-     *
-     * Checked against every name a vhost may have, not just ours. A server
-     * migrated from the old panel calls it `main.conf`, and matching only
-     * `vhconf.conf` meant those fell through to the filename branch and every
-     * site on such a box was called `main` — the exact failure the paragraph
-     * above describes, reintroduced one layout over.
+     * For nginx and Apache that is the file. For OpenLiteSpeed the file has a fixed name and the
+     * *directory* is the site (the tracked-slug and exclusion checks are keyed on it). Checked
+     * against every name a vhost may have: a server migrated from the old panel calls it
+     * `main.conf`.
      */
     private function vhostName(string $path): string
     {
@@ -530,9 +452,7 @@ class ApplicationDiscoverer implements Discoverable
     }
 
     /**
-     * Case-insensitive match against a list that may contain `*` globs, so an
-     * operator running their own stack alongside the panel can exclude it
-     * with one line rather than one line per vhost.
+     * Case-insensitive match against a list that may contain `*` globs.
      *
      * @param  array<int, string>  $patterns
      */

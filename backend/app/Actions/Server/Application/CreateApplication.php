@@ -31,9 +31,8 @@ use Illuminate\Validation\Rule;
 /**
  * Record an application the user asked for.
  *
- * P1 stops here deliberately: nothing is written to the server, so the app is
- * saved as `pending` and the UI must say "not deployed yet". Provisioning
- * arrives in P2 and will move it through `provisioning` to `active`.
+ * Nothing is written to the server here: the app is saved as `pending` and
+ * provisioning moves it on to `active`.
  */
 class CreateApplication
 {
@@ -54,36 +53,25 @@ class CreateApplication
         $servingProfile = ServingProfile::resolve($type, $data);
         $origin = DomainOrigin::tryFrom((string) ($data['domain_type'] ?? '')) ?? DomainOrigin::Custom;
 
-        // Only the *name* is settled here, and only because choosing it reads
-        // the server (`getent`) — which must not happen inside a transaction.
-        // Nothing is written to /etc/passwd: this action records what the user
-        // asked for, and every server write belongs to provisioning. Creating
-        // the account here is what the first version of this feature did, and
-        // it put a useradd in the one place the class docblock promises there
-        // is none.
-        // The name the create form chose, when it chose one (FS-B9); the
-        // request has already made sure it is free.
+        // Only the *name* is settled here (choosing it reads the server via `getent`, which must
+        // not happen inside a transaction). Nothing is written to /etc/passwd: server writes
+        // belong to provisioning. Uses the name the create form chose, which the request has
+        // already checked is free.
         $generatedUsername = ($data['generate_system_user'] ?? false)
             ? (($data['system_user']['username'] ?? null) ?: $this->usernames->forApplication((string) $data['name']))
             : null;
 
-        // Before the transaction for the same reason: it asks fnm.
+        // Before the transaction: it asks fnm.
         $data['node_version'] = $this->nodeVersion($data, $type, $servingProfile);
 
-        // And this asks Docker — only when a volume needs a name made up.
+        // Also before it: this asks Docker, and only when a volume needs a name made up.
         $takenVolumes = $this->takenVolumeNames($data);
 
         try {
-            // The application and its primary hostname are one record from the
-            // caller's point of view. If the hostname loses a uniqueness race,
-            // rolling both back avoids an invisible half-created application
-            // that then blocks the same name on retry.
+            // The application and its primary hostname are one record: if the hostname loses a
+            // uniqueness race, both roll back, so no half-created application blocks a retry.
             $application = DB::transaction(function () use ($data, $type, $servingProfile, $origin, $generatedUsername, $takenVolumes): Application {
-                // In the transaction with the application, so a site and its
-                // owner are one fact rather than two. If anything below fails,
-                // the rollback takes the account row with it and there is no
-                // orphan to tidy up — which is exactly the cleanup code this
-                // replaces.
+                // Same transaction as the application, so a failure rolls the account row back too.
                 if ($generatedUsername !== null) {
                     $data['system_user_id'] = SystemUser::create([
                         'username' => $generatedUsername,
@@ -97,85 +85,47 @@ class CreateApplication
                     ])->id;
                 }
 
-                // Derived here, not accepted from the client: it names the
-                // web-server config file, and a caller choosing that is a caller
-                // choosing which file the panel overwrites.
+                // Never accepted from the client: it names the web-server config file the panel
+                // overwrites.
                 $slug = Application::uniqueSlug((string) $data['name']);
 
-                // Allocated when the app needs a process and the user did not pick
-                // one. A port the panel chose is checked against both the database
-                // and what is actually listening; a port the user typed is checked
-                // the same way at validation.
+                // Allocated when the app needs a process and the user did not pick a port.
                 $appPort = $this->port($data, $servingProfile);
 
                 $application = Application::forceCreate([
                     'slug' => $slug,
                     'site_type' => $type->name(),
-                    // Derived, never taken from the client — from the rendering type
-                    // the user chose, or the site type where there is none. See the
-                    // resolver for why the two must not be decided separately.
+                    // Derived, never taken from the client. See ServingProfile.
                     'serving_profile' => $servingProfile,
                     'rendering_type' => $data['rendering_type'] ?? null,
                     'status' => ApplicationStatus::Pending,
                     'system_user_id' => $data['system_user_id'],
-                    // A type's declared fields that are real columns.
-                    //
-                    // `typeSettings()` deliberately skips those — a column
-                    // should be a column, not a key in a JSON blob — but the
-                    // list below sets only the fields every type shares, so a
-                    // column-backed type field was dropped by both and
-                    // vanished. Measured, not theorised: a Docker application
-                    // was created with `image`, `container_port` and `compose`
-                    // all null, and the user's pasted compose file simply did
-                    // not exist afterwards.
-                    //
-                    // Spread FIRST, so the explicit entries below win. Last
-                    // was my first attempt and it is exactly backwards: a
-                    // type declaring `deploy_script` then overwrote the
-                    // CRLF-normalised value with the raw one, and a script
-                    // pasted from Windows went back to failing with
-                    // "command not found: composer\r". The suite caught it.
+                    // A type's declared fields that are real columns (typeSettings() skips those).
+                    // Spread FIRST so the explicit entries below win: otherwise a type declaring
+                    // `deploy_script` overwrites the CRLF-normalised value with the raw one.
                     ...$this->typeColumns($type->fields(), $data),
-                    // The create form's "make a new one" fields, folded into the
-                    // columns the compose file is rendered from.
-                    //
-                    // Resolved here rather than left as separate columns, so
-                    // there is ONE place that answers "what network is this site
-                    // on" — a `docker_network_new` living alongside
-                    // `docker_network` would be a second source for the same
-                    // fact, and the compose renderer would have to know about
-                    // both. The objects themselves are created on the box at
-                    // provision time; this records the intent.
+                    // The create form's "make a new one" fields, folded into the columns the
+                    // compose file is rendered from. Objects are created at provision time.
                     ...$this->containerWiring($data, $slug, $takenVolumes),
-                    // Where the container sees the site's directory. Stored
-                    // rather than left null, because null is the `/app` every
-                    // older site was given — and `/app` is where a quarter of
-                    // popular images keep their program. Only the Docker type:
-                    // a one-click app ships its own compose file, which has no
-                    // site mount at all.
+                    // Where the container sees the site's directory. Stored, not null: null means
+                    // the legacy `/app`. Docker type only; a one-click app ships its own compose file.
                     'site_mount_path' => $type->name() === 'docker' ? ContainerMountPath::SITE_MOUNT : null,
                     'name' => $data['name'],
                     'domain' => $data['domain'],
-                    // A blank version is the server default, resolved and
-                    // stored now. Left blank it was resolved again at every
-                    // render: the API had no version to show, and a change to
-                    // the default moved the site to another PHP unasked.
+                    // A blank version is the server default, resolved and stored now so a later
+                    // change to the default does not move the site to another PHP.
                     'php_version' => $servingProfile === 'php'
                         ? (($data['php_version'] ?? null) ?: app(ServerDefaultPhp::class)->version())
                         : ($data['php_version'] ?? null),
                     'node_version' => $data['node_version'] ?? null,
                     'app_port' => $appPort,
-                    // A second port for a process that binds one more (n8n's
-                    // task broker, FS-C22 #8), never the one just picked.
+                    // A second port for a process that binds one more (n8n's task broker).
                     'internal_port' => $type?->needsInternalPort() ? $this->ports->allocate(array_filter([$appPort])) : null,
-                    // The type's own default, not a bare '/': a framework
-                    // application served from its root publishes its own source.
+                    // The type's own default, not a bare '/'.
                     'web_root' => $data['web_root'] ?? $type?->defaultWebRoot() ?? '/',
                     'build_command' => $data['build_command'] ?? null,
-                    // Normalised the same way UpdateDeploySettingsRequest does: a
-                    // script pasted from Windows carries \r, and `sh` reads it as part
-                    // of the command — "command not found: composer\r" is impossible
-                    // to see in a log.
+                    // Normalised like UpdateDeploySettingsRequest: `sh` reads a pasted Windows \r as
+                    // part of the command ("command not found: composer\r").
                     'deploy_script' => isset($data['deploy_script'])
                         ? str_replace("\r\n", "\n", (string) $data['deploy_script'])
                         : null,
@@ -187,20 +137,13 @@ class CreateApplication
                     ...$this->splitSecrets($this->typeSettings($type->fields(), $data), $this->containerEnv($data)),
                 ]);
 
-                // The domains table is the list the Domains screen reads, and until now
-                // nothing wrote to it at create time — only the migration that
-                // introduced the table backfilled the sites that existed then. So every
-                // application made since came up with an empty Domains section while
-                // plainly answering on a domain.
-                //
-                // `applications.domain` stays the mirror of whichever row is primary;
-                // this is the row it mirrors.
+                // The domains table feeds the Domains screen; `applications.domain` mirrors the
+                // primary row created here.
                 $application->domains()->create([
                     'domain' => strtolower(trim((string) $application->domain)),
                     'type' => DomainType::Primary,
-                    // Trusted from the client, but not only: a wildcard-DNS name
-                    // mislabelled as the user's own would be sent to Let's Encrypt and
-                    // spend from a weekly limit shared with the whole internet.
+                    // Not only the client's word: a wildcard-DNS name mislabelled as the user's own
+                    // would be sent to Let's Encrypt and spend its shared weekly limit.
                     'is_test' => $origin->isTemporary()
                         || ApplicationDomain::looksTemporary((string) $application->domain),
                 ]);
@@ -213,23 +156,19 @@ class CreateApplication
                 return $application;
             });
         } catch (UniqueConstraintViolationException $exception) {
-            // Validation runs before this transaction, but another request can
-            // claim the same name or domain between that check and the insert.
-            // Re-run the two user-owned unique rules after rollback so Laravel
-            // returns its normal localized 422 instead of leaking a DB error.
+            // Another request can claim the same name or domain between validation and the insert.
+            // Re-run the unique rules so the client gets a localized 422, not a DB error.
             Validator::make($data, [
                 'name' => [Rule::unique('applications', 'name')],
                 'domain' => [Rule::unique('application_domains', 'domain')],
             ])->validate();
 
-            // A different unique index (slug, port, webhook identifier) failed;
-            // do not mislabel it as a name/domain validation problem.
+            // A different unique index (slug, port, webhook identifier) failed: not a validation problem.
             throw $exception;
         }
 
-        // Provisioning is long enough that the request must not wait for it;
-        // the client polls the application's status, and Background jobs
-        // reads the install run opened here (D3).
+        // The request must not wait for provisioning; the client polls the status, and
+        // Background jobs reads the install run opened here.
         app(ApplicationRuns::class)->open($application, ApplicationRun::INSTALL, Auth::id());
 
         ProvisionApplication::queueOrFail($application->id, Auth::id());
@@ -240,9 +179,8 @@ class CreateApplication
     /**
      * Separate the installer's passwords from the rest of the answers.
      *
-     * `settings` is plain JSON and the API returns it; the passwords go to
-     * `install_secrets`, which is encrypted, never serialized, and cleared once
-     * the install succeeds.
+     * `settings` is plain JSON the API returns; passwords go to `install_secrets`, which is
+     * encrypted, never serialized, and cleared once the install succeeds.
      *
      * @param  array<string, mixed>  $settings
      * @return array{settings: array<string, mixed>, install_secrets: array<string, mixed>|null}
@@ -252,9 +190,7 @@ class CreateApplication
         $secrets = array_intersect_key($settings, array_flip(Application::INSTALL_SECRET_KEYS));
         $settings = array_diff_key($settings, $secrets);
 
-        // A container's env vars travel the same way: encrypted, never
-        // serialised, and gone once provisioning has written them to the
-        // site's env file. See ApplicationProvisioner::writeContainerEnv().
+        // A container's env vars travel the same way (see ApplicationProvisioner::writeContainerEnv()).
         if ($containerEnv !== []) {
             $secrets[Application::CONTAINER_ENV_SECRET] = $containerEnv;
         }
@@ -290,8 +226,7 @@ class CreateApplication
     }
 
     /**
-     * Docker volume names already on the box, when a mount needs a name made
-     * up — and only then, because asking is a shell-out.
+     * Docker volume names already on the box; only asked when a mount needs a name made up.
      *
      * @param  array<string, mixed>  $data
      * @return list<string>
@@ -310,7 +245,7 @@ class CreateApplication
 
     /**
      * The type-specific answers, taken strictly from the fields the site type
-     * declared — so an unexpected key in the payload cannot end up stored.
+     * declared, so an unexpected payload key cannot be stored.
      *
      * @param  array<int, array<string, mixed>>  $fields
      * @param  array<string, mixed>  $data
@@ -319,11 +254,8 @@ class CreateApplication
     /**
      * The type's declared fields that are columns on the model.
      *
-     * The mirror of {@see typeSettings()}: that one takes the fields which are
-     * NOT columns, this one takes the fields which are. Between them every
-     * declared field lands somewhere, which is the property that was missing —
-     * a field in neither list is accepted by validation and then silently
-     * discarded.
+     * The mirror of {@see typeSettings()} (the fields which are NOT columns): between them
+     * every declared field lands somewhere instead of being silently discarded.
      *
      * @param  array<int, array<string, mixed>>  $fields
      * @param  array<string, mixed>  $data
@@ -332,18 +264,10 @@ class CreateApplication
     /**
      * The network and volume a container site was created with.
      *
-     * `docker_network_new` and `docker_network` are two answers to one question,
-     * and validation refuses both at once (`prohibits`) — so whichever arrived
-     * lands in the same column and nothing downstream has to ask which field it
-     * came from.
-     *
-     * The volume pair becomes the first entry of `volume_mounts`, the same shape
-     * the Container card edits. Both halves or neither: validation makes each
-     * `required_with` the other, so a half-filled pair cannot reach here.
-     *
-     * **`docker_mode` is not resolved here and not stored at all** — see the
-     * form-only list in `typeSettings()`. It answers a question about the form, and
-     * the site already records which way it was made by having a compose file or not.
+     * `docker_network_new` and `docker_network` are refused together by validation, so
+     * whichever arrived lands in the same column. The volume pair becomes the first entry of
+     * `volume_mounts` (both halves or neither, enforced by `required_with`). `docker_mode`
+     * is form-only and not stored; see `typeSettings()`.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -368,11 +292,8 @@ class CreateApplication
             $mounts[] = ['volume' => $volume, 'path' => $path];
         }
 
-        // Any number more (DS-03), named or not. Every typed name is reserved
-        // before any is made up, so a made-up name never takes one the user
-        // typed further down the list. `sortKeys()`: validated() rebuilds the
-        // list rule by rule, so a row with a `volume` comes back ahead of rows
-        // without one.
+        // Any number more, named or not. Typed names are reserved before any is made up. `sortKeys()`:
+        // validated() rebuilds the list rule by rule, so rows with a `volume` come back first.
         $rows = collect((array) ($data['volume_mounts'] ?? []))
             ->sortKeys()
             ->filter(fn ($mount): bool => is_array($mount) && trim((string) ($mount['path'] ?? '')) !== '')
@@ -401,10 +322,8 @@ class CreateApplication
     }
 
     /**
-     * `<site>-<last path segment>`, made unique against what the box and this
-     * request already use: `memos-opt-memos` for /var/opt/memos would be
-     * clearer, but the spec asks for the short form and a suffix settles the
-     * rare clash (`jellyfin-config`, `jellyfin-config-2`).
+     * `<site>-<last path segment>`, made unique against what the box and this request already
+     * use (`jellyfin-config`, `jellyfin-config-2`).
      *
      * @param  list<string>  $taken
      */
@@ -444,34 +363,20 @@ class CreateApplication
         $columns = (new Application)->getFillable();
         $settings = [];
 
-        // Which database engine to provision, where the user was offered a
-        // choice. Carried here rather than picked up by the loop below, which
-        // reads the *type's* declared fields — and this is not one of them:
-        // the catalog adds it only on a server that has two of the engines the
-        // application accepts, because only the catalog knows what the server
-        // has. Left to the loop it would be dropped silently.
-        //
-        // A setting rather than a column because it is the *request*, not the
-        // record: what was actually provisioned is on the `databases` row,
-        // which carries its own `engine` and points at this application.
-        // Absent means "decide at provisioning time" — what every existing
-        // client already gets.
+        // Which database engine to provision, where the user was offered a choice. Not one of the
+        // type's declared fields (the catalog adds it), so the loop below would drop it. A setting,
+        // not a column: it is the request; the `databases` row records what was provisioned.
+        // Absent means "decide at provisioning time".
         if (isset($data['database_engine'])) {
             $settings['database_engine'] = (string) $data['database_engine'];
         }
 
         /*
-         * Declared fields that shape the create FORM and are never stored anywhere.
+         * Declared fields that shape the create FORM and are never stored.
          *
-         * `docker_mode` chooses whether the Docker card asks for an image and a port
-         * or for a compose file. It answers a question about the form, not about the
-         * site — and the site already records which way it was made, by having a
-         * compose file or not. Storing it would be a second source for that, free to
-         * drift, and the first person to trust the wrong one gets a surprise.
-         *
-         * Listed rather than silently dropped: the guard in ContainerSupervisorTest
-         * requires every declared field to be a column, a setting, or named as a
-         * deliberate exception, and this is where the exception lives.
+         * `docker_mode` picks image+port or compose file; the site already records which by
+         * having a compose file or not. ContainerSupervisorTest requires every declared field to
+         * be a column, a setting, or a named exception, and this is where the exception lives.
          */
         $formOnly = ['docker_mode'];
 
@@ -491,22 +396,14 @@ class CreateApplication
     }
 
     /**
-     * The Node a site served by Node runs on — the one asked for, or, when
-     * none was, one chosen now and recorded on the site.
+     * The Node a site served by Node runs on: the one asked for, or one chosen now and recorded.
      *
-     * Leaving it blank handed the installer a PATH with no Node at all:
-     * the installer resolves Node through the site's pinned version, and on a
-     * server where nothing had linked a system-wide `node` into
-     * /usr/local/bin, a Node-RED created without one died on
-     * `npm: No such file or directory` (reproduced 2026-09-23). Recording it
-     * also keeps the site where it was installed: changing the server default
-     * later must not move a running site to another Node, which is what
-     * {@see NodeRuntime::setDefault()} already promises for pinned sites.
+     * Blank would give the installer a PATH with no Node (`npm: No such file or directory`).
+     * Recording it also keeps the site on that Node when the server default changes later
+     * (see {@see NodeRuntime::setDefault()}).
      *
-     * The server default when it fits the type's own range, else the newest
-     * installed version that does. Null when nothing fits — validation has
-     * already accepted the request, and the installer reports that case
-     * rather than this guessing past it.
+     * The server default when it fits the type's range, else the newest installed version
+     * that does. Null when nothing fits; the installer reports that case.
      *
      * @param  array<string, mixed>  $data
      */
@@ -541,18 +438,10 @@ class CreateApplication
             return (int) $data['app_port'];
         }
 
-        // Only an application that runs something needs a port. Handing one to
-        // every PHP site would exhaust the range for no reason.
-        //
-        // Keyed on the serving profile rather than on the start command: a
-        // one-click Node application is never sent one — its installer writes
-        // it — so asking for the command here left Uptime Kuma and friends
-        // with no port at all, a unit with no `PORT`, and a reverse proxy
-        // pointed at nothing.
-        // Both need one, for the same reason: nginx proxies to a loopback port
-        // and something has to be listening on it. A container without an
-        // allocated port renders a vhost pointing at `127.0.0.1:` and every
-        // request to the site is a 502.
+        // Only apps that run a process need a port (PHP sites would exhaust the range). Keyed on the
+        // serving profile, not the start command: a one-click Node app's installer writes its own.
+        // Node and Docker both need one: nginx proxies to a loopback port, and without it the
+        // vhost points at `127.0.0.1:` and every request is a 502.
         return in_array($servingProfile, ['node', 'docker'], true)
             ? $this->ports->allocate()
             : null;
