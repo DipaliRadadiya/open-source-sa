@@ -7,13 +7,11 @@ use App\Models\GitAccount;
 use Illuminate\Support\Carbon;
 
 /**
- * A git hosting provider the panel can connect to with a token. Adding a
- * provider means adding one implementation and one config entry — nothing
- * else in the feature changes.
+ * A git hosting provider the panel can connect to with a token. A new provider is one
+ * implementation plus one config entry.
  *
- * Implementations must treat every upstream byte as adversarial: map only
- * allow-listed fields out of the vendor JSON, never hand a raw payload to a
- * model.
+ * Treat every upstream byte as adversarial: map only allow-listed fields out of the vendor
+ * JSON, never hand a raw payload to a model.
  */
 interface GitProvider
 {
@@ -23,9 +21,8 @@ interface GitProvider
     public function key(): string;
 
     /**
-     * The username git must pair the token with over HTTPS. Each provider
-     * expects a different fixed value, and the wrong one fails authentication
-     * even with a perfectly good token.
+     * The username git must pair the token with over HTTPS; each provider expects a different
+     * fixed value.
      */
     public function credentialUsername(): string;
 
@@ -37,12 +34,11 @@ interface GitProvider
     public function verify(GitAccount $account): array;
 
     /**
-     * Live health of the stored credential, asked of the provider right now —
-     * nothing is cached or persisted, because a token can be revoked at the
-     * provider at any moment.
+     * Live health of the stored credential, asked of the provider now (never cached: a token
+     * can be revoked at any moment).
      *
-     * Never throws: a dead token is an answer, not an error. `expires_at` is
-     * null wherever the provider does not expose one (always, for Bitbucket).
+     * Never throws: a dead token is an answer. `expires_at` is null where the provider does not
+     * expose one (always, for Bitbucket).
      *
      * @return array{status: 'valid'|'invalid'|'unknown', expires_at: ?Carbon}
      */
@@ -63,17 +59,15 @@ interface GitProvider
     public function branches(GitAccount $account, string $repository): array;
 
     /**
-     * Add a push webhook to the repository and return the provider's id for
-     * it, which is what the two methods below address it by.
+     * Add a push webhook to the repository and return the provider's id for it.
      *
      * @throws GitProviderException
      */
     public function createWebhook(GitAccount $account, string $repository, string $url, string $secret): string;
 
     /**
-     * Point an existing webhook at the URL and secret again. False when the
-     * provider no longer has it (removed by hand), so the caller can create
-     * a new one.
+     * Point an existing webhook at the URL and secret again. False when the provider no longer
+     * has it (removed by hand), so the caller can create a new one.
      *
      * @throws GitProviderException
      */

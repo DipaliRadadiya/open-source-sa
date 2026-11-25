@@ -7,37 +7,22 @@ use App\Models\FirewallRule;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Keeps the rules the panel seeded for itself out of reach while the firewall
- * is enforcing.
+ * Keeps the rules the panel seeded for itself out of reach while the firewall is enforcing.
  *
- * `DeleteFirewallRule` has refused to remove a seeded rule since the feature
- * shipped; updating one was never checked. UFW has no edit, so an update is a
- * delete and an add underneath, and switching a rule off is a delete with
- * nothing added back — which meant the guarded route (delete, `422`) and the
- * unguarded one (toggle off, `200`) had exactly the same effect on the running
- * firewall. On a server with the default deny-incoming policy, turning off the
- * seeded port-443 rule takes every site on the box offline, and the panel said
- * OK to it.
+ * UFW has no edit, so an update is a delete plus an add, and switching a rule off is a delete.
+ * Without this guard, turning off the seeded port-443 rule under the default deny-incoming
+ * policy takes every site on the box offline.
  *
- * Worse, `API_REFERENCE` tells the frontend to hide the delete action on a
- * protected rule. The guarded route was the hidden one; the only control left
- * on screen was the one nothing checked.
- *
- * Deliberately *not* an origin check bolted onto the existing
- * {@see SshLockoutGuard}: that one asks whether a way in survives, and answers
- * for one port with a rule the user may well own. This asks who the rule
- * belongs to, which is a different question with a different answer — a
- * user-made rule on port 443 stays fully editable.
+ * Not folded into {@see SshLockoutGuard}: that asks whether a way in survives, this asks who
+ * owns the rule. A user-made rule on port 443 stays fully editable.
  */
 class ProtectedRuleGuard
 {
     /**
      * Fields that lock a seeded rule.
      *
-     * Kept separate from `UpdateFirewallRule::SPEC` on purpose, and it is not
-     * the same list: that one answers "does ufw need to be told about this",
-     * this one answers "does this change what the rule lets through".
-     * `enabled` is only in the second, and it is the field that started this.
+     * Not the same list as `UpdateFirewallRule::SPEC` (does ufw need telling): this one is
+     * "does this change what the rule lets through", so it includes `enabled`.
      */
     private const LOCKED = ['port_from', 'port_to', 'protocol', 'action', 'source_ip', 'enabled'];
 
@@ -56,9 +41,8 @@ class ProtectedRuleGuard
      * Throw if `$rule` is panel-seeded and something other than its
      * description is being changed while the firewall is enforcing.
      *
-     * `$rule` is the filled-but-unsaved model, so its dirty attributes are the
-     * pending edit. Renaming a rule stays allowed: a label never reaches ufw,
-     * and refusing to let someone fix a typo would be pure obstruction.
+     * `$rule` is the filled-but-unsaved model, so its dirty attributes are the pending edit.
+     * Renaming stays allowed: a label never reaches ufw.
      */
     public function assertEditable(FirewallRule $rule): void
     {
@@ -66,10 +50,8 @@ class ProtectedRuleGuard
             return;
         }
 
-        // Switching a protected rule back ON only restores what the panel
-        // seeded — it can cut nobody off — and refusing it left no way back
-        // once the rule had been switched off with the firewall down
-        // (frontend QA FS-C3).
+        // Switching a protected rule back ON only restores what the panel seeded and cuts nobody
+        // off; refusing it would leave no way back once it was switched off.
         if (array_values(array_intersect(self::LOCKED, array_keys($rule->getDirty()))) === ['enabled'] && $rule->enabled) {
             return;
         }
@@ -79,17 +61,14 @@ class ProtectedRuleGuard
 
     private function assertUnlocked(FirewallRule $rule, string $message): void
     {
-        // The origin as stored, never as submitted. `origin` is fillable, and
-        // reading it off a filled model would let a request that renamed
-        // itself to `user` walk straight past the guard meant to stop it.
+        // The origin as stored, never as submitted: `origin` is fillable, so a request could
+        // otherwise rename itself to `user` and walk past this guard.
         if (! FirewallRule::originIsProtected($rule->getOriginal('origin') ?? $rule->origin)) {
             return;
         }
 
-        // Nothing is being enforced, so nothing can be cut off. This is the
-        // escape hatch, and the reason the lock is not permanent: without it
-        // the seeded rules could never be adjusted or removed on a server that
-        // genuinely needs port 80 shut.
+        // Nothing is enforced, so nothing can be cut off. This is the escape hatch that keeps the
+        // lock from being permanent.
         if (! $this->firewall->status()['enabled']) {
             return;
         }
@@ -100,10 +79,8 @@ class ProtectedRuleGuard
     }
 
     /**
-     * The port the rule has *now*, not the one being asked for. On an edit
-     * `$rule` is already filled, so `portSpec()` would name the port the user
-     * typed — and telling someone "port 8080 is managed by the panel" when
-     * they are editing the panel's port-443 rule points them at the wrong row.
+     * The port the rule has *now*, not the one being asked for: on an edit `$rule` is already
+     * filled, so `portSpec()` would name the port the user typed.
      */
     private function storedPortSpec(FirewallRule $rule): string
     {

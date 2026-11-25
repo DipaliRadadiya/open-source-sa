@@ -8,21 +8,12 @@ use App\Services\Recipes\RecipeRegistry;
 /**
  * How long a provision or a deploy is allowed to take.
  *
- * This exists because the two numbers have to agree and they were written in
- * different files: installers declare 900–1800s in `config/server.php`
- * (Nextcloud is a 280 MB download, `npm install` on NodeBB is worse), while the
- * job that runs them carried a flat 300. With `pcntl` loaded Laravel enforces
- * its timeout with SIGALRM, so every one of those installs was killed at five
- * minutes — mid-download, the record marked `failed` at step `worker`, and
- * whatever was running left orphaned. Nextcloud could never install at all.
+ * The job's timeout must agree with the installer timeouts in `config/server.php`, or Laravel
+ * (SIGALRM with `pcntl`) kills a slow install mid-download. So the job asks the work: the slow
+ * part's own timeout plus one overhead allowance for the steps around it.
  *
- * So the job asks the work how long it needs rather than guessing:
- * the slow part's own timeout, plus one overhead allowance for the steps
- * around it.
- *
- * The same number bounds `retry_after` in `config/queue.php` — the queue's
- * reservation window has to outlast the longest job, or a job still running
- * becomes eligible for a second worker halfway through changing the server.
+ * The same number bounds `retry_after` in `config/queue.php`: the reservation window must outlast
+ * the longest job, or a running job becomes eligible for a second worker.
  */
 class ProvisioningBudget
 {
@@ -31,9 +22,7 @@ class ProvisioningBudget
     /**
      * Provisioning: the site's own installer is the slow part.
      *
-     * Resolved from the site type rather than the Application, so the caller
-     * can be the job's constructor (which has an id) or a test asking about a
-     * card that has never been created.
+     * Takes the site type, not the Application, so a job constructor or a test can call it.
      */
     public function forSiteType(?string $siteType): int
     {
@@ -43,8 +32,7 @@ class ProvisioningBudget
     /**
      * The budget for an application by id, for a job that only has one.
      *
-     * A missing application means it was deleted between dispatch and now;
-     * the job handles that itself, and the timeout is irrelevant.
+     * A missing application was deleted since dispatch; the job handles that itself.
      */
     public function forApplication(?int $applicationId): int
     {
@@ -56,11 +44,7 @@ class ProvisioningBudget
     }
 
     /**
-     * Deploying: clone and build are the slow parts, and they run in sequence.
-     *
-     * The previous 900 was exactly `git_timeout` + `build_timeout`, which left
-     * nothing for the chown and the restart that follow — a build using its
-     * full allowance killed the job just after finishing.
+     * Deploying: clone and build run in sequence, plus the overhead for the chown and restart.
      */
     public function forDeploy(): int
     {
@@ -70,9 +54,8 @@ class ProvisioningBudget
     }
 
     /**
-     * Pull and redeploy (D5): `compose pull` and `compose up` in sequence, each
-     * under the Docker command timeout, plus the readiness check and the
-     * override write that the overhead already allows for.
+     * Pull and redeploy: `compose pull` and `compose up` in sequence, each under the Docker command
+     * timeout, plus the overhead.
      */
     public function forContainerRedeploy(): int
     {
@@ -80,10 +63,9 @@ class ProvisioningBudget
     }
 
     /**
-     * The largest budget any job can ask for, for the bound `retry_after` has
-     * to clear. Derived from the installer list, so adding a slower app raises
-     * it (and trips the test that checks the queue config) instead of silently
-     * exceeding it.
+     * The largest budget any job can ask for, which `retry_after` has to clear.
+     *
+     * Derived from the installer list, so a slower app raises it (and trips the queue config test).
      */
     public function longest(): int
     {
@@ -93,21 +75,17 @@ class ProvisioningBudget
             $timeouts[] = $this->forSiteType((string) $siteType);
         }
 
-        // Docker apps are not in the installer list — recipes are data and
-        // `docker` installs nothing — so their budget is added by name.
+        // Docker apps are not in the installer list, so their budget is added by name.
         $timeouts[] = $this->forSiteType('docker');
 
         return max($timeouts);
     }
 
     /**
-     * A site type with no installer still gets the default allowance: the
-     * steps around it are the same, and `installer_timeout` is what its
-     * `ServerOps` calls would use.
+     * A site type with no installer still gets the default allowance (`installer_timeout`).
      *
-     * Docker apps — every recipe and the Container tab's `docker` — get
-     * `server.docker.install_timeout` instead, because their first install
-     * pulls images inside this job and an image can be gigabytes (RC-20).
+     * Docker apps (every recipe and `docker`) get `server.docker.install_timeout` instead: their
+     * first install pulls images inside this job, and an image can be gigabytes.
      */
     private function installerTimeout(?string $siteType): int
     {

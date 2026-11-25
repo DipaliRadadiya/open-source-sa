@@ -7,36 +7,25 @@ use Illuminate\Http\Request;
 /**
  * How one git host proves a webhook delivery is really from it.
  *
- * A separate strategy from {@see GitProvider} on purpose: that one is bound to
- * a stored account and its token, and a webhook can arrive for an application
- * built from a **public** repository, which has no account at all. What decides
- * the scheme is the provider recorded on the application when the webhook was
- * enabled — never the request's own headers, which would let a caller choose
- * which verification runs.
+ * Separate from {@see GitProvider} because a webhook can arrive for an application built from a
+ * public repository, which has no stored account. The scheme comes from the provider recorded on
+ * the application, never from the request's headers (a caller could pick the verification).
  *
- * Implementations must treat every byte of the request as adversarial. Two
- * fields are read from the payload and nothing else: which branch was pushed,
- * and the delivery id used to reject replays.
+ * Treat every byte of the request as adversarial: only the pushed branch and the delivery id
+ * (replay check) are read from the payload.
  */
 interface GitWebhook
 {
     /**
      * Whether this delivery is authentic.
      *
-     * Verified against the **raw** body — the signature covers the exact bytes
-     * sent, so anything that re-encodes the JSON (even identically-meaning
-     * JSON) produces a different digest and a false rejection.
-     *
-     * Must compare in constant time, and must fail closed: a missing header, a
-     * malformed one, or an unparseable signature is a rejection, never a pass.
+     * Verify against the raw body: re-encoding the JSON changes the digest and causes a false
+     * rejection. Compare in constant time and fail closed (missing or malformed header = reject).
      */
     public function verify(Request $request, string $secret, string $body): bool;
 
     /**
-     * Whether this is a push — the only event that deploys anything.
-     *
-     * Providers send many event types down one URL, and a hook configured too
-     * broadly would otherwise deploy on a comment.
+     * Whether this is a push, the only event that deploys (many event types share one URL).
      */
     public function isPush(Request $request): bool;
 
@@ -50,36 +39,27 @@ interface GitWebhook
     /**
      * The provider's own id for this delivery, used to reject a replay.
      *
-     * Null when the provider sends none, in which case the delivery cannot be
-     * de-duplicated and the signature is the only protection.
+     * Null when the provider sends none: the signature is then the only protection.
      */
     public function deliveryId(Request $request): ?string;
 
     /**
      * Which direction the secret travels.
      *
-     * - `generate` — the panel mints it and the user copies it into the repo.
-     * - `either` — the user may also paste one, and the two are not equivalent.
-     *   GitLab is this: its recommended **signing token** is minted by GitLab
-     *   and shown once, so it can only be pasted in, while its legacy plaintext
-     *   **secret token** is any string and can be generated here. The UI needs
-     *   to offer both, or every GitLab user ends up on the weaker one.
+     * - `generate`: the panel mints it and the user copies it into the repo.
+     * - `either`: the user may also paste one. GitLab: its recommended signing token is minted
+     *   by GitLab (paste only), its legacy secret token can be generated here. Offer both.
      *
-     * There is deliberately no paste-only value: none of the three providers is,
-     * and an enum case nothing returns is a branch that drifts out of step with
-     * the code that claims to handle it.
+     * There is deliberately no paste-only value: no provider returns it.
      */
     public function secretSource(): string;
 
     /**
-     * Which check a given stored secret will actually get: `signature` for an
-     * HMAC over the body, `token` for a plaintext shared value.
+     * Which check a stored secret will get: `signature` (HMAC over the body) or `token` (plaintext
+     * shared value).
      *
-     * Surfaced so the panel can *say* which one is in force. GitLab is the
-     * reason: with no secret supplied the panel can only generate a legacy
-     * plaintext token, and quietly leaving someone on the scheme GitLab labels
-     * not recommended — without telling them a stronger one exists — is a worse
-     * failure than refusing.
+     * Surfaced so the panel can say which is in force, instead of silently leaving a GitLab user
+     * on the legacy plaintext token.
      */
     public function verificationMode(string $secret): string;
 }

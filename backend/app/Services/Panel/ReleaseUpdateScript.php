@@ -7,30 +7,23 @@ use App\Models\PanelUpdate;
 /**
  * The update, as a script, for an installation using release directories.
  *
- * Replaces {@see UpdateScript} — which checks out a new version **over the
- * running one** — for servers that have been migrated. Both exist on purpose:
- * every server already running is the old shape, and the runner picks by asking
- * {@see PanelLayout::isReleased()}. Rendering this for a legacy install would
- * build a layout beside a working one and point services at neither.
+ * Replaces {@see UpdateScript}, which checks out a new version **over the running one**, for
+ * servers migrated to release directories. The runner picks by {@see PanelLayout::isReleased()};
+ * rendering this for a legacy install would build a layout beside a working one.
  *
- * **The ordering is the design.** Everything that can fail happens before
- * anything that changes what is live:
+ * **The ordering is the design.** Everything that can fail happens before anything that
+ * changes what is live:
  *
  *   preflight · backup · create · link · composer · build   ← free to fail
  *   maintenance · migrate                                    ← irreversible
  *   swap · restart · verify                                  ← reversible by flip
  *   maintenance off · prune
  *
- * Steps one to six do not touch the running panel at all: they build a release
- * beside it. A failure there removes a directory and nothing else — the old
- * version is still serving, and no user ever knew. That is the property the
- * in-place update could not have, and the reason a failed update used to be
- * able to strand a server in maintenance mode with a half-checked-out tree.
+ * The first steps build a release beside the running panel, so a failure there removes a
+ * directory and nothing else; the old version keeps serving.
  *
- * Migration is the hinge, and it is deliberately as late as it can be while
- * still preceding the swap: after it, rollback restores the code but not the
- * schema. The database backup taken at step two is what covers that, and the
- * failure message says so rather than implying the rollback was complete.
+ * Migration is the hinge, as late as possible but before the swap: after it, rollback restores
+ * the code but not the schema. The database backup covers that, and the failure message says so.
  */
 class ReleaseUpdateScript
 {
@@ -56,10 +49,8 @@ class ReleaseUpdateScript
     /**
      * The last step at which nothing live has changed yet.
      *
-     * Everything through this point fails by deleting a directory. Named rather
-     * than left implicit because a step added on the wrong side of it silently
-     * gives up the property the whole design exists for — and the test asserts
-     * against this constant, so moving a step moves the test with it.
+     * Everything through this point fails by deleting a directory. A step added after it gives
+     * up the property the design exists for; the test asserts against this constant.
      */
     public const LAST_SAFE_STEP = 'frontend_build';
 
@@ -88,14 +79,12 @@ class ReleaseUpdateScript
             escapeshellarg($repository),
         );
 
-        // The *currently live* release, captured before anything moves. This is
-        // what rollback returns to, and it has to be read now: after the swap
-        // the symlink no longer knows what it used to point at.
+        // The *currently live* release, read before anything moves: it is what rollback
+        // returns to, and after the swap the symlink no longer records it.
         $previous = '$(readlink -f '.escapeshellarg($this->layout->currentLink()).')';
 
-        // Backend commands run against the NEW release from `migrate` onward —
-        // migrations belong to the version being installed, not the one being
-        // replaced. Before that, artisan is still the old release's.
+        // Backend commands run against the NEW release from `migrate` onward; before that,
+        // artisan is still the old release's.
         $newBackend = $release.'/backend';
         $liveBackend = $this->layout->currentLink().'/backend';
 
@@ -324,12 +313,8 @@ class ReleaseUpdateScript
     }
 
     /**
-     * The release path is passed in, never recomputed.
-     *
-     * An earlier version called `now()` again here to rebuild it. One second's
-     * drift between the two calls and the links would point into a directory
-     * that does not exist — the release would be built with no `.env`, and the
-     * first thing to run in it would generate an APP_KEY of its own.
+     * The release path is passed in, never recomputed: a second `now()` could drift and point
+     * the links at a missing directory, so the release would get no `.env` and a fresh APP_KEY.
      */
     private function renderLinks(string $release, bool $dryRun): string
     {
@@ -344,13 +329,9 @@ class ReleaseUpdateScript
     /**
      * The gates that decide whether the new version stays.
      *
-     * Both are retried rather than asked once: `systemctl restart` returns when
-     * a unit has been *started*, not when it is *ready*, and Next.js takes
-     * seconds to answer. Asking once turns a healthy update into a rollback.
-     *
-     * The frontend is checked at all because it never was — the old health
-     * check curled the backend only, which is why a client could be told the
-     * update succeeded and then reload into a service that was still booting.
+     * Both are retried: `systemctl restart` returns when a unit has *started*, not when it is
+     * *ready*, and Next.js takes seconds to answer. The frontend is checked too, so a client
+     * is not told the update succeeded while the frontend is still booting.
      */
     private function verify(string $baseUrl, string $version, bool $dryRun): string
     {

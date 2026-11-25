@@ -15,10 +15,8 @@ use Throwable;
 /**
  * Runs one restore, step by step, and records how far it got.
  *
- * The same shape as BackupRunner with one difference that matters: the step is
- * written to the row *before* it runs, because a restore that dies outright
- * takes live data with it, and "which stage was it in when the box rebooted?"
- * is the first question anyone will ask.
+ * Like BackupRunner, but the step is written to the row before it runs: a restore that dies
+ * outright takes live data with it, so the stage it died in must be known.
  */
 class RestoreRunner
 {
@@ -90,10 +88,9 @@ class RestoreRunner
 
             $restore->update([
                 'status' => RestoreStatus::Failed,
-                // The step that failed, as a stable key. Raw stderr stays in
-                // the ops log — it names paths and sometimes credentials.
-                // Out of disk space for the safety copy is its own reason
-                // (2026-10-29): "free some space" is something the user can do.
+                // The failed step as a stable key; raw stderr stays in the ops log (it holds paths,
+                // credentials).
+                // No space for the safety copy is its own reason: the user can free some.
                 'reason' => $e instanceof NotEnoughBackupSpace ? NotEnoughBackupSpace::REASON : ($restore->current_step ?? 'unknown'),
                 'rollback_path' => $context->rollbackPath,
                 'finished_at' => now(),
@@ -129,19 +126,12 @@ class RestoreRunner
 
         File::deleteDirectory($context->workingDirectory);
 
-        // The staging directory sits next to the live site, not under the
-        // working directory, so it needs removing explicitly — a half-unpacked
-        // copy of a site left beside it is both confusing and expensive.
-        //
-        // Through ServerOps, not File::: it lives in a tree owned by the
-        // site's Linux user, where this worker cannot delete anything.
-        // File::deleteDirectory() there returns false rather than throwing, so
-        // the failure was silent and left behind exactly the copy this is
-        // meant to remove.
+        // The staging directory sits next to the live site, not under the working directory, so
+        // remove it explicitly. Through ServerOps, not File::, which returns false silently in a
+        // tree owned by the site's Linux user.
         if ($context->stagingDirectory !== null && $context->application === null) {
-            // A database restore unpacks inside the panel's own working
-            // directory, which has no site root to unlock — but tar ran as
-            // root there, so PHP's own delete above could not finish it.
+            // A database restore unpacks in the panel's working directory (no site root to
+            // unlock), but tar ran as root there, so the delete above could not finish it.
             $this->serverOps->run(
                 ['rm', '-rf', $context->stagingDirectory],
                 ['feature' => 'backup', 'op' => 'restore_staging_cleanup'],
@@ -156,24 +146,13 @@ class RestoreRunner
     }
 
     /**
-     * Keep only the newest copy of the site a restore moved aside.
+     * Remove copies of the site that earlier restores moved aside to `.rollback-{id}`.
      *
-     * Every file restore moves the live site to `.rollback-{id}` beside it and
-     * nothing ever removed one, so each restore cost a full copy of the site on
-     * disk, for good: five restores of a 117 MB site left 585 MB (measured on
-     * a real server, 2026-09-24). Since 2026-10-29 a successful restore removes
-     * its own copy too ({@see removeOwnRollback()}); this still clears copies
-     * left by earlier restores, from before that or where the removal failed.
-     *
-     * Only paths the panel itself recorded, on earlier *successful* restores of
-     * the same site, and only where the path is exactly `.rollback-{that id}`
-     * beside the new copy. A failed restore's copy is not touched here: if
-     * moving it back failed, that copy is the site. `restores:prune-rollbacks`
-     * removes those after a week, and only when that is safe
-     * ({@see RollbackCopies::pruneFailed()}).
-     *
-     * Never fails the restore: it has already succeeded, and tidying up is not
-     * a reason to report otherwise.
+     * A successful restore removes its own copy ({@see removeOwnRollback()}); this clears the ones
+     * left by earlier restores or failed removals. Only paths the panel recorded on earlier
+     * successful restores of the same site, exactly `.rollback-{that id}` beside the new copy.
+     * A failed restore's copy is never touched: it may be the site
+     * ({@see RollbackCopies::pruneFailed()}). Never fails the restore.
      */
     private function pruneOlderRollbacks(Restore $restore, RestoreContext $context): void
     {
@@ -211,16 +190,11 @@ class RestoreRunner
     }
 
     /**
-     * This restore's own copy of the old site, once the restore has worked
-     * (2026-10-29, Dipali: the support team reads a server full of copies the
-     * user never asked for as a full server). The copy exists so that a
-     * restore failing part-way can put the site back, and that moment has
-     * passed. Going back now is the safety backup's job — the Undo — and with
-     * the safety copy turned off the user chose to have no way back.
+     * This restore's own copy of the old site, removed once the restore has worked.
      *
-     * Kept when the removal fails, with its path still recorded, so the next
-     * restore of the site removes it ({@see pruneOlderRollbacks()}). Never
-     * fails the restore.
+     * The copy only exists to put the site back if the restore fails part-way. Going back later is
+     * the safety backup's job (Undo). Kept, with its path recorded, when removal fails so the next
+     * restore removes it ({@see pruneOlderRollbacks()}). Never fails the restore.
      */
     private function removeOwnRollback(Restore $restore, RestoreContext $context): void
     {

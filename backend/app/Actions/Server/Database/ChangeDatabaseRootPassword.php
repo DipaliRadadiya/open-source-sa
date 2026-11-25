@@ -16,36 +16,26 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Set, change or reset the MySQL/MariaDB root password (v7's "change root
- * password", 2026-10-17; Adarsh: users can change or reset it).
+ * Set, change or reset the MySQL/MariaDB root password.
  *
- * The old password is normally not needed: the panel reaches root as OS root
- * over the socket, or with the stored root password where socket login is
- * gone. Where both fail — a server moved from v7 whose root has a password the
- * panel never stored — the user may give root's current password (RC-26). It
- * is tried last, only for this change, and never stored or logged: like the
- * stored one it travels in a 0600 option file (SqlRootAccess), never on argv
- * or in SQL. Without it the answer is `root_unreachable`, which is the
- * dialog's cue to ask for it.
+ * The old password is normally not needed: the panel reaches root as OS root over the socket, or
+ * with the stored root password. Where both fail (e.g. a server moved from v7), the user may give
+ * root's current password. It is tried last, only for this change, and never stored or logged:
+ * it travels in a 0600 option file (SqlRootAccess), never on argv or in SQL. Without it the answer
+ * is `root_unreachable`, the dialog's cue to ask for it.
  *
  * What it must not break:
  *
- *  - **MariaDB keeps socket login.** root@localhost there is "password OR
- *    unix_socket", and a plain `IDENTIFIED BY` replaces both with the password
- *    alone — after which OS root, Debian's maintenance and this panel's own
- *    engine installer can no longer get in. So the password slot is set and
- *    unix_socket is kept.
- *  - **MySQL cannot keep it.** It has no "OR"; root goes to
- *    caching_sha2_password and the panel reaches it with the stored password
- *    from then on (SqlRootAccess).
- *  - **Nothing is stored that the server did not accept.** The new password is
- *    proved by signing in with it as the panel's own OS user; if that fails,
- *    root's previous login — exactly as SHOW CREATE USER printed it — is put
- *    back.
+ *  - **MariaDB keeps socket login.** root@localhost is "password OR unix_socket"; a plain
+ *    `IDENTIFIED BY` drops the socket login and locks out OS root, Debian maintenance and the
+ *    engine installer. So the password is set and unix_socket is kept.
+ *  - **MySQL cannot keep it.** No "OR": root goes to caching_sha2_password and the panel uses the
+ *    stored password from then on (SqlRootAccess).
+ *  - **Nothing is stored that the server did not accept.** The new password is proved by signing
+ *    in with it as the panel's OS user; if that fails, root's previous login (as SHOW CREATE USER
+ *    printed it) is put back.
  *
- * The panel's own admin account (`panel_…`) is not touched: v7 gave it the
- * same password as root, which is how the two ended up different when one
- * half of a change failed.
+ * The panel's own admin account (`panel_...`) is not touched.
  */
 class ChangeDatabaseRootPassword
 {
@@ -93,8 +83,7 @@ class ChangeDatabaseRootPassword
         $version = $this->query($engine, 'SELECT VERSION();', 'root_version', $current);
 
         if ($version->failed()) {
-            // Not a refusal — the server did not answer, or the client did not
-            // run. No password would help, so none is asked for.
+            // Not a refusal (server down or client missing): no password would help.
             if (! $this->refused($version)) {
                 throw ValidationException::withMessages([
                     'engine' => [__('errors/database.root_server_unreachable', ['engine' => $this->label($engine)])],
@@ -108,8 +97,8 @@ class ChangeDatabaseRootPassword
 
         $mariadb = stripos($version->output(), 'mariadb') !== false;
 
-        // Root's login as it is now, so a change that does not take can be
-        // undone exactly. MySQL prints binary hashes; ask for hex.
+        // Root's login as it is now, so a failed change can be undone exactly. MySQL prints binary
+        // hashes; ask for hex.
         $snapshot = $this->query(
             $engine,
             ($mariadb ? '' : 'SET SESSION print_identified_with_as_hex = ON; ')."SHOW CREATE USER 'root'@'localhost';",
@@ -130,8 +119,7 @@ class ChangeDatabaseRootPassword
         $applied = $this->query($engine, $alter, 'root_password', $current);
 
         if ($applied->failed()) {
-            // MySQL's validate_password component, when someone installed it.
-            // Nothing changed; the message is the server's own rule.
+            // MySQL's validate_password component, if installed. Nothing changed.
             if (str_contains($applied->errorOutput(), 'does not satisfy the current policy')) {
                 throw ValidationException::withMessages([
                     'password' => [__('errors/database.root_password_policy')],
@@ -193,9 +181,7 @@ class ChangeDatabaseRootPassword
     }
 
     /**
-     * Did the server answer "no" (SQLSTATE 28000, access denied)? That is the
-     * one failure a password can fix; "can't connect" and a missing client are
-     * not.
+     * Did the server answer "no" (SQLSTATE 28000, access denied)? The one failure a password can fix.
      */
     private function refused(ServerOpsResult $result): bool
     {

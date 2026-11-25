@@ -9,41 +9,16 @@ use App\Services\Server\ServerOps;
 /**
  * Is Docker installed, running, and usable by the panel?
  *
- * Four separate questions that fail in four different ways, and the Services
- * screen can only answer the second. A daemon that is `active` still refuses
- * every command if the panel may not reach its socket, and that refusal
- * arrives as a permission error on a feature the user has just been shown as
- * working.
+ * Uses `docker info`, not `docker --version`: the version reads off the client binary and
+ * succeeds with the daemon stopped, while `info` talks to the daemon.
  *
- * Deliberately `docker info` rather than `docker --version`: the version reads
- * straight off the client binary and succeeds with the daemon stopped, so it
- * answers "is the package installed" while appearing to answer "does Docker
- * work". `info` talks to the daemon.
+ * Presence is asked first, and without sudo. `ServerOps` puts `sudo -n` in front of `docker`,
+ * and sudo matches NOPASSWD rules on the resolved path, so with no Docker installed sudo
+ * answers "a password is required", the same string as a stale sudo grant. Only after presence
+ * is known is the structured `$denied` flag read.
  *
- * **Presence is asked first, and without sudo.** That ordering is the whole
- * correctness of this check, not a tidy-up. `ServerOps` puts `sudo -n` in front
- * of `docker`, and sudo matches its NOPASSWD rules on the resolved absolute
- * path — so on a box with no Docker there is nothing to resolve, no rule
- * matches, and sudo answers
- *
- *     sudo: a password is required
- *
- * An absent binary and a stale sudo grant are therefore the *same string*.
- * Matching on "not found" could never see the first one, so every lemp, lamp,
- * mern and ols install ended with a red
- *
- *     ✗ Docker   docker is installed but the daemon did not answer
- *
- * on a server that had never had Docker on it — install.sh runs `panel:doctor`
- * last, so that was the final thing every install printed. The structured
- * `$denied` flag is read instead of the prose, and only after presence is
- * known, so the two causes can no longer be confused.
- *
- * Docker missing is reported as a **pass** on every other stack. It is not a
- * warning: nothing is wrong, nothing is degraded, and nothing needs doing.
- * `DockerExposureCheck` already answers "no reachable daemon — nothing to
- * expose" the same way. A yellow line on four stacks out of five is how an
- * operator learns to stop reading this report.
+ * Docker missing is a pass on every stack except `docker`: nothing is wrong, and a warning on
+ * most installs teaches operators to stop reading this report.
  */
 class DockerCheck implements DoctorCheck
 {
@@ -77,12 +52,9 @@ class DockerCheck implements DoctorCheck
             ];
         }
 
-        // Read before any stderr matching. `denied` is sudo's own refusal,
-        // structured, and it is the one failure where nothing on the server is
-        // broken — the panel is missing a line in /etc/sudoers.d, which
-        // `panel:sudoers` writes in full. Reported apart from the socket
-        // refusal below because the two fixes are unrelated and the socket one
-        // tells people to touch the `docker` group, which is root on this box.
+        // Read before any stderr matching. `denied` is sudo's own refusal: the panel is missing
+        // a line in /etc/sudoers.d (`panel:sudoers` writes it). Kept apart from the socket
+        // refusal below, whose fix touches the `docker` group, which is root-equivalent.
         if ($result->denied) {
             return [
                 'status' => 'fail',
@@ -95,9 +67,7 @@ class DockerCheck implements DoctorCheck
 
         $stderr = strtolower($result->errorOutput());
 
-        // Distinguished because the advice is completely different, and the
-        // generic "Docker is not working" sends people to reinstall a daemon
-        // that is running perfectly well.
+        // Separate message: the generic "not working" sends people to reinstall a healthy daemon.
         if (str_contains($stderr, 'permission denied')) {
             return [
                 'status' => 'fail',
@@ -106,16 +76,12 @@ class DockerCheck implements DoctorCheck
             ];
         }
 
-        // Reachable only by a race — the package was removed between the
-        // presence probe above and this call. Kept because the alternative is
-        // reporting a uninstall-in-progress as a dead daemon.
+        // Reachable only by a race: the package was removed after the presence probe.
         if (str_contains($stderr, 'not found')) {
             return $this->notInstalled();
         }
 
-        // Installed, not answering. Almost always a stopped daemon; reported
-        // as a failure rather than a warning because nothing containerised can
-        // run and the panel would otherwise show containers as merely absent.
+        // Installed, not answering: almost always a stopped daemon, so a failure, not a warning.
         return [
             'status' => 'fail',
             'detail' => $result->reference !== ''
@@ -128,10 +94,8 @@ class DockerCheck implements DoctorCheck
     /**
      * Docker is not on this box.
      *
-     * Only a finding when the installer recorded the `docker` stack, where it is
-     * the one component the box exists to run. An un-recorded stack (null) takes
-     * the benign branch deliberately: a box nobody told us about is far more
-     * likely to be one this panel did not build than a Docker host.
+     * Only a finding when the installer recorded the `docker` stack. An unrecorded stack (null)
+     * takes the benign branch on purpose.
      *
      * @return array{status: string, detail: string, fix: string|null}
      */

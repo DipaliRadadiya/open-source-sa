@@ -10,12 +10,9 @@ use App\Services\Server\ServerOps;
 use RuntimeException;
 
 /**
- * Archives the application's files, and the database dumps alongside them, into
- * one compressed artefact.
+ * Archives the application's files and its database dumps into one compressed artefact.
  *
- * One artefact rather than one per part: a backup that is several objects can
- * be half-uploaded, and half a backup restores to a broken site. A single
- * tarball either arrives or does not.
+ * One artefact, not one per part: a half-uploaded backup restores to a broken site.
  */
 class ArchiveFiles implements BackupStep
 {
@@ -32,8 +29,7 @@ class ArchiveFiles implements BackupStep
 
     public function appliesTo(BackupContext $context): bool
     {
-        // Runs even for a database-only target: the dumps still need packing
-        // into the single artefact that gets uploaded.
+        // Runs for database-only targets too: the dumps still need packing.
         return true;
     }
 
@@ -41,26 +37,16 @@ class ArchiveFiles implements BackupStep
     {
         $archive = $context->track($context->workingDirectory.'/backup.tar.gz');
 
-        // `--use-compress-program` rather than `-z`, so the compressor and its
-        // level are ours to choose. `-z` hardcodes gzip at level 6 on one core,
-        // which on a 103 GB site measured 67 minutes with seven of eight cores
-        // idle — for a 0.54% saving. See `server.backups.compressor`.
-        //
-        // The artefact is unchanged: pigz emits ordinary gzip, so `tar -tzf`,
-        // the verify step and every archive already in a bucket keep working.
-        // Confirmed against GNU tar 1.35 before shipping.
+        // `--use-compress-program`, not `-z`: `-z` is single-core gzip level 6, far too slow on
+        // big sites. See `server.backups.compressor`. The output stays ordinary gzip, so
+        // `tar -tzf`, the verify step and existing archives keep working.
         $command = ['tar', '--use-compress-program='.$this->compressor->program('server.backups'), '-cf', $archive];
 
-        // `wantsConfig()` too: a container site's compose files and `.env` live
-        // in its document root, so "back up the config" is the same tar of the
-        // same directory — there is no second place to read them from. Only
-        // which sites ask for it differs.
+        // `wantsConfig()` too: a container site's compose files and `.env` live in its root,
+        // so "back up the config" is the same tar of the same directory.
         if (! $context->isDatabaseTarget() && ($context->wantsFiles() || $context->wantsConfig())) {
-            // The application's own directory, not the served one — see
-            // {@see BackupRoot}. The kind is recorded in the same breath,
-            // because the restore reads it back to know what this archive
-            // holds, and an archive whose manifest disagrees with its contents
-            // unpacks over the wrong directory.
+            // The application's own directory, not the served one: {@see BackupRoot}. The kind
+            // goes in the manifest because restore uses it; a mismatch unpacks over the wrong directory.
             ['path' => $siteRoot, 'kind' => $kind] = $this->roots->toArchive($context->application());
 
             if (! is_dir($siteRoot)) {
@@ -69,41 +55,30 @@ class ArchiveFiles implements BackupStep
 
             $context->manifest['root_kind'] = $kind;
 
-            // The excludes apply to the site's files only, never to the
-            // database dumps packed beside them. tar applies every --exclude to
-            // every member, so a "*.sql" meant for stray dumps in the web root
-            // also dropped the backup's own database dump, and the backup still
-            // finished as complete (bug #77: "Files and database" with no
-            // database). Anchored under the site's own directory -- at its top
-            // or at any depth below it, since tar's `*` crosses `/` -- they
-            // cannot reach the dumps, which sit at the archive's root.
+            // Excludes must not reach the database dumps: tar applies every --exclude to every
+            // member, so an unanchored "*.sql" would drop the backup's own dump. Anchoring under
+            // the site directory (tar's `*` crosses `/`) keeps them off the dumps at the archive root.
             $excludes = self::excludes($context);
             if ($excludes !== []) {
                 $command[] = '--anchored';
                 foreach ($excludes as $exclude) {
-                    // Each its own argv element: a space or a shell
-                    // metacharacter in a pattern is data, not syntax.
+                    // One argv element each: spaces or shell metacharacters stay data.
                     $command[] = '--exclude='.basename($siteRoot).'/'.$exclude;
                     $command[] = '--exclude='.basename($siteRoot).'/*/'.$exclude;
                 }
                 $command[] = '--no-anchored';
             }
 
-            // Kept with the backup, so a restore knows what this archive
-            // deliberately left out and does not delete it from the site
-            // (bug #78).
+            // Stored so a restore knows what was left out and does not delete it from the site.
             $context->manifest['file_excludes'] = $excludes;
 
-            // -C so the archive holds relative paths. An archive of absolute
-            // paths restores over the original location no matter where you
-            // unpack it, which is precisely what a restore must not do.
+            // -C keeps paths relative; absolute paths would restore over the original location.
             $command[] = '-C';
             $command[] = dirname($siteRoot);
             $command[] = basename($siteRoot);
         }
 
-        // Database dumps ride in the same archive, under a fixed directory the
-        // restore knows to look in.
+        // Database dumps ride in the same archive.
         foreach ($context->localArtifacts as $artifact) {
             if (str_ends_with($artifact, '.sql')) {
                 $command[] = '-C';
@@ -112,12 +87,8 @@ class ArchiveFiles implements BackupStep
             }
         }
 
-        // Volume tars the same way, as one directory rather than one member
-        // each: `ArchiveVolumes` already named them, and adding the directory
-        // preserves the `volumes/<name>.tar` paths its manifest entries point
-        // at. One artefact stays the rule — half a backup restores to a broken
-        // site, and volumes that uploaded without their compose file is exactly
-        // that.
+        // Volume tars go in as one directory, which preserves the `volumes/<name>.tar` paths
+        // that `ArchiveVolumes` wrote into the manifest.
         if (is_dir($context->workingDirectory.'/volumes')) {
             $command[] = '-C';
             $command[] = $context->workingDirectory;
@@ -127,12 +98,8 @@ class ArchiveFiles implements BackupStep
         $result = $this->serverOps->run(
             $command,
             ['feature' => 'backup', 'op' => 'archive', ...$context->logSubject()],
-            // The job's own ceiling, not a second hardcoded hour. This was
-            // `3600`, and it is a trap the raised job timeout does not cover:
-            // a 103 GB site takes ~67 minutes to archive with plain gzip, so
-            // the *step* was killed at the hour mark even once the *job* was
-            // allowed six. Two independent hours, and fixing one left the
-            // other to fail the same backup a minute later.
+            // The job's own ceiling: a separate, shorter step timeout would kill a long archive
+            // even though the job is allowed to run longer.
             timeout: (int) config('server.backups.job_timeout', 21600),
         );
 

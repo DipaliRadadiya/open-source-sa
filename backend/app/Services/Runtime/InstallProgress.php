@@ -7,56 +7,36 @@ use App\Models\RuntimeInstall;
 /**
  * Turns apt's output into a step and a tail, as it arrives.
  *
- * The steps are **read out of the output**, not invented. That distinction is
- * the whole design: an install is one `apt-get install` call and the panel
- * cannot see inside it, so a bar advancing on a timer would be telling the
- * operator a story nothing is checking — and would keep moving while apt sat
- * blocked on a dpkg lock, which is precisely when someone is watching it.
- *
- * apt does announce its phases, so there is no need to guess:
+ * Steps are read out of the output, not invented: a timer-driven bar would keep moving while
+ * apt sits blocked on a dpkg lock.
  *
  *   Get:3 http://... php8.4-fpm      -> downloading
  *   Unpacking php8.4-fpm ...         -> unpacking
  *   Setting up php8.4-fpm ...        -> configuring
  *
- * A step therefore only ever moves because the server said so. When apt says
- * nothing recognisable the step stays where it was, which is the honest
- * answer to "what is it doing" rather than a number that keeps climbing.
- *
- * The raw tail is kept alongside, because the step tells you where it stopped
- * and only apt's own words tell you why.
+ * When apt says nothing recognisable the step stays where it was. The raw tail is kept too,
+ * because only apt's own words say why an install stopped.
  */
 class InstallProgress
 {
     /**
-     * Kept from the end, not the start: the last thing apt said before it
-     * stopped is the part that explains a failure, and the first 8 KB of a
-     * package list explains nothing.
+     * Kept from the end: the last output before a stop is what explains a failure.
      */
     public const MAX_OUTPUT_BYTES = 8192;
 
     /**
-     * Ordered, so a step can never go backwards — apt interleaves unpacking
-     * and setting up across packages, and a display that flickered between
-     * them would look broken.
+     * Ordered, so a step never goes backwards (apt interleaves unpacking and setting up).
      *
      * @var array<int, string>
      */
     public const STEPS = ['preparing', 'downloading', 'unpacking', 'configuring'];
 
     /**
-     * The phrases each installer announces its phases with.
+     * The phrases each installer announces its phases with: apt (PHP, extensions, database
+     * engines) and fnm (Node).
      *
-     * Two vocabularies, because two tools do the installing: apt for PHP,
-     * extensions and database engines, and fnm for Node. Both are matched
-     * here rather than in per-runtime subclasses — the phases genuinely are
-     * the same three, and the alternative is three classes differing by a
-     * regex.
-     *
-     * Anchored at the start of a line wherever the tool puts them there, so a
-     * package *named* "unpacking-tools" scrolling past in a list cannot move
-     * the step. `Downloading` is fnm's and appears mid-line, so it is matched
-     * as a word rather than anchored.
+     * Anchored at line start where the tool allows, so a package *named* "unpacking-tools"
+     * cannot move the step. fnm's `Downloading` appears mid-line, so it is matched as a word.
      *
      * @var array<string, string>
      */
@@ -73,9 +53,8 @@ class InstallProgress
     public function __construct(private RuntimeInstall $install) {}
 
     /**
-     * Fold one chunk in. Returns true when the step changed, so the caller can
-     * persist on a transition rather than on every read — apt emits hundreds
-     * of chunks and each one is a database write otherwise.
+     * Fold one chunk in. Returns true when the step changed, so the caller persists on a
+     * transition, not on every chunk.
      */
     public function push(string $chunk): bool
     {
@@ -84,8 +63,7 @@ class InstallProgress
         $before = $this->step;
 
         foreach (self::MARKERS as $step => $pattern) {
-            // Later steps win: one chunk can carry both "Unpacking" and
-            // "Setting up", and the second is the truer answer.
+            // Later steps win: one chunk can carry both "Unpacking" and "Setting up".
             if (preg_match($pattern, $chunk) === 1 && $this->isAfter($step, $this->step)) {
                 $this->step = $step;
             }
@@ -124,10 +102,7 @@ class InstallProgress
         return array_search($candidate, self::STEPS, true) > array_search($current, self::STEPS, true);
     }
 
-    /**
-     * Trimmed on a line boundary where possible, so the first line shown is
-     * not half a sentence.
-     */
+    /** Trimmed on a line boundary where possible, so the first line is not cut mid-sentence. */
     private function tail(string $text): string
     {
         if (strlen($text) <= self::MAX_OUTPUT_BYTES) {

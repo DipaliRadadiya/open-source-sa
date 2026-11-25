@@ -9,21 +9,10 @@ use Illuminate\Database\Eloquent\Model;
 class FirewallRule extends Model
 {
     /**
-     * The port range a rule may name, stated once so create and update cannot
-     * disagree about it.
+     * The port range a rule may name, stated once so create and update agree.
      *
-     * They did. Creating a rule capped both ends at **65534**, while editing
-     * one allowed `port_to` up to 65535 — so "allow everything from 9000 up",
-     * the natural way to write an open upper range, was refused on the way in
-     * and accepted on the way through the edit screen. Nothing in the codebase
-     * justified 65534: every other port field in this application uses 65535,
-     * and `ufw --dry-run allow 9000:65535/tcp` was measured on a real server
-     * and accepted. 65535 is a port like any other.
-     *
-     * The floor is 1 because 0 is not a port ufw will take — measured too:
-     * `ufw --dry-run allow 0/tcp` answers `ERROR: Bad port`. Refusing it here
-     * means the user is told why, instead of the rule being stored and failing
-     * later against ufw where nobody is watching.
+     * The floor is 1 because ufw rejects port 0 ("Bad port"); refusing it here tells the user
+     * instead of failing later against ufw.
      */
     public const PORT_MIN = 1;
 
@@ -43,21 +32,10 @@ class FirewallRule extends Model
     public const ORIGIN_DATABASE = 'db_user';
 
     /**
-     * Mirrors the `enabled` column default so a freshly created rule says the
-     * same thing as the row behind it.
+     * Mirrors the `enabled` column default so a freshly created rule matches its row.
      *
-     * A database default applies in the database. The model Eloquent hands
-     * back from `create()` never learns it, so `enabled` is null there, casts
-     * to false, and the created rule serialises as **off while ufw already has
-     * the port open** — the panel reporting a closed port that is open, which
-     * is the 2026-09-08 divergence in miniature.
-     *
-     * Stated here rather than at each call site because that was already tried:
-     * `RecordDefaultRules` spells `enabled` out for exactly this reason, and
-     * `CreateFirewallRule` — written later — did not, because nothing made it.
-     * `WorkerController` solved the same trap a third way, with `refresh()`.
-     * Three workarounds for one missing default; a default the model owns
-     * cannot be forgotten by the next caller.
+     * Eloquent's model from `create()` never learns a database default, so `enabled` would be
+     * null, cast to false, and serialise as off while ufw already has the port open.
      *
      * @var array<string, mixed>
      */
@@ -88,11 +66,8 @@ class FirewallRule extends Model
     /**
      * The whole rule in a sentence — "Deny 80/tcp from 1.2.3.4".
      *
-     * Shown on the rule row, and since FW-09 in the activity log too: that said
-     * "Added a firewall rule (80/tcp)", so a deny read the same as an allow and
-     * the source was nowhere. Written into the log's existing `:ports` value
-     * rather than a new placeholder, so older entries, which only have the
-     * ports, still read correctly.
+     * Shown on the rule row and in the activity log, where it goes into the existing `:ports`
+     * value so older entries, which only have the ports, still read correctly.
      */
     public function summary(): string
     {

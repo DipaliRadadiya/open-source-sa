@@ -5,14 +5,10 @@ namespace App\Services\Applications\Types;
 use App\Services\Runtime\AppPackageCatalog;
 
 /**
- * n8n — workflow automation.
+ * n8n, workflow automation.
  *
- * No admin fields: n8n's owner account is created by the first person to open
- * the site, the same as Uptime Kuma.
- *
- * Fair-code under the Sustainable Use License, not open source. Self-hosting
- * for your own use is what it permits; redistributing it as part of a hosted
- * offering is not. The tagline says so.
+ * Fair-code under the Sustainable Use License, not open source: self-hosting for your own use is
+ * allowed, redistributing it as part of a hosted offering is not.
  */
 class N8nSiteType extends AbstractSiteType
 {
@@ -55,10 +51,8 @@ class N8nSiteType extends AbstractSiteType
     }
 
     /**
-     * n8n's own documented minimum is 2 GB of RAM. Under the server's 512M
-     * default the unit is killed on startup, restarts, hits its start limit
-     * and stops — which reaches the browser as a 502 on a site that installed
-     * without complaint.
+     * n8n documents a 2 GB RAM minimum. Under the 512M default the unit is killed on startup, hits
+     * its start limit and the site answers 502.
      */
     public function defaultMemoryMax(): ?string
     {
@@ -68,19 +62,9 @@ class N8nSiteType extends AbstractSiteType
     /**
      * What the release being installed says it runs on.
      *
-     * Read from the package rather than written down here. The installer
-     * resolves `latest`, so a range typed into this file is a transcription
-     * that ages: it read `20.19`-`24` while n8n 1.x declared
-     * `>=20.19 <= 24.x`, and stayed there after 2.x moved to `>=24.0.0` with
-     * no ceiling at all. The two facts have to agree and nothing checked that
-     * they did, because the failure arrives later and somewhere else - a site
-     * that installs without complaint and then refuses to start.
-     *
-     * The literal below is the fallback, not the answer: it is what a server
-     * with no egress or an unrefreshed catalog offers. Deliberately the narrow
-     * reading of the release current when it was written - being too strict
-     * costs somebody a version in a dropdown, being too loose hands them a site
-     * that will not boot.
+     * Read from the package, since the installer resolves `latest` and a hard-coded range goes
+     * stale. The literal is only the fallback (no egress or unrefreshed catalog), kept narrow on
+     * purpose: too strict costs a dropdown entry, too loose gives a site that will not boot.
      */
     public function supportedNodeRange(): ?array
     {
@@ -89,8 +73,8 @@ class N8nSiteType extends AbstractSiteType
     }
 
     /**
-     * The task-runner broker, which n8n binds on 127.0.0.1:5679 unless told
-     * otherwise. A second n8n found it taken and exited on start (FS-C22 #8).
+     * The task-runner broker, which n8n binds on 127.0.0.1:5679 by default. A second n8n finds it
+     * taken and exits on start.
      */
     public function needsInternalPort(): bool
     {
@@ -106,11 +90,8 @@ class N8nSiteType extends AbstractSiteType
     }
 
     /**
-     * Written by N8nInstaller from the site's own record: the vhost proxies to
-     * `app_port`, the task broker has the site's `internal_port`, the data
-     * lives in the site folder, and loopback keeps n8n
-     * behind its vhost. Edited here, each one broke the site at the next
-     * restart instead of on save.
+     * Written by N8nInstaller from the site's own record (ports, data folder, loopback address).
+     * Edited by hand, each one breaks the site at the next restart instead of on save.
      */
     public function panelManagedEnvironmentKeys(): array
     {
@@ -118,8 +99,7 @@ class N8nSiteType extends AbstractSiteType
     }
 
     /**
-     * The npm package this site type installs, so the catalog knows what to
-     * ask the registry about.
+     * The npm package this site type installs; the catalog asks the registry about it.
      */
     public function npmPackage(): ?string
     {
@@ -129,9 +109,7 @@ class N8nSiteType extends AbstractSiteType
     public function fields(): array
     {
         return array_merge($this->commonFields(), [
-            // The panel creates the first administrator itself, after the
-            // application starts. Left to the first-run page, it was whoever
-            // opened the URL first.
+            // The panel creates the first administrator itself, after the application starts.
             $this->field('admin_email', 'email', required: true, extra: ['placeholder' => __('application.placeholders.admin_email')]),
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
         ], $this->nodeFields());

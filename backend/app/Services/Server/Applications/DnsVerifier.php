@@ -11,17 +11,9 @@ use Illuminate\Support\Facades\Cache;
 /**
  * Does this name actually point at this server?
  *
- * Asked before a certificate is ever requested, and the answer is a gate rather
- * than a warning. Let's Encrypt allows **five authorisation failures per
- * hostname per hour**; a user whose DNS is wrong and who presses the button a
- * few times is locked out for an hour with nothing to show for it. One DNS
- * lookup we do ourselves costs nothing and turns that into a sentence.
- *
- * It also answers the question behind the most common SSL support ticket on
- * panels of this kind: the domain resolves fine, it just resolves to
- * Cloudflare. HTTP validation then hits Cloudflare rather than this server and
- * fails for a reason the error message never mentions. Naming it up front is
- * most of the value of this class.
+ * Asked before a certificate is requested, as a gate rather than a warning: Let's Encrypt
+ * allows five authorisation failures per hostname per hour. Also detects a name that resolves
+ * to Cloudflare, where HTTP validation would hit Cloudflare instead of this server.
  */
 class DnsVerifier
 {
@@ -30,16 +22,12 @@ class DnsVerifier
     /**
      * Resolve the name and record what was found.
      *
-     * Always returns the row — a name that does not resolve is a fact to
-     * display, not an error to throw.
+     * Always returns the row: a name that does not resolve is a fact, not an error.
      */
     public function verify(ApplicationDomain $domain): ApplicationDomain
     {
-        // A panel-issued nip.io name encodes the address it resolves to, so it
-        // is correct by construction and there is nothing to look up. The
-        // address is read from the name, not from `serverIp()`: behind NAT
-        // (AWS, GCP, Azure) that is null, and the certificate check answered
-        // "does not resolve at all" for a name that resolves by definition.
+        // A panel-issued nip.io name encodes its own address, so there is nothing to look up. Read
+        // the address from the name, not `serverIp()`, which is null behind NAT.
         if ($domain->is_test) {
             return tap($domain)->update([
                 'dns_verified_at' => now(),
@@ -55,8 +43,7 @@ class DnsVerifier
         $domain->update([
             'dns_resolved_ip' => $resolved,
             'behind_proxy' => $resolved !== null && $this->isCloudflare($resolved),
-            // Verified only when it points *here*. Pointing at Cloudflare is
-            // resolvable but not verified, because HTTP-01 will not reach us.
+            // Verified only when it points here; Cloudflare is resolvable but HTTP-01 won't reach us.
             'dns_verified_at' => ($resolved !== null && $server !== null && $resolved === $server)
                 ? now()
                 : null,
@@ -98,8 +85,7 @@ class DnsVerifier
     /**
      * The first A record, or null when the name does not resolve.
      *
-     * `dns_get_record` rather than shelling out to `dig`: it needs no
-     * privileges and no package, and this runs in a request.
+     * `dns_get_record` rather than `dig`: no privileges or package needed, and it runs in a request.
      */
     public function resolve(string $domain): ?string
     {
@@ -115,9 +101,8 @@ class DnsVerifier
     /**
      * This server's own public address.
      *
-     * Cached: it is asked once per domain check and does not change between
-     * them. The local route is used rather than an external lookup service so
-     * that verification keeps working on a box with no outbound access.
+     * Cached for an hour. Uses the local route, not an external lookup service, so it works with
+     * no outbound access.
      */
     public function serverIp(): ?string
     {
@@ -135,16 +120,8 @@ class DnsVerifier
                 return null;
             }
 
-            // `src` is the address on the outbound interface, which on a NAT'd
-            // cloud instance — most of AWS, GCP, Azure, and anything with a
-            // floating IP — is a private one, while the public address the
-            // world reaches lives on a gateway this machine cannot see. Saying
-            // "the server's IP is 10.0.0.5" there is not a smaller truth, it is
-            // a wrong one, and callers compare it against DNS.
-            //
-            // Null means "cannot be determined from here", which is what a
-            // caller has to handle anyway, rather than an answer that reads as
-            // certain and is not.
+            // `src` on a NAT'd cloud instance is a private address, not the public one. Return
+            // null ("cannot tell from here") rather than a wrong IP that callers compare to DNS.
             return IpRange::isPrivate($match[1]) ? null : $match[1];
         });
     }
@@ -152,9 +129,8 @@ class DnsVerifier
     /**
      * Whether an address belongs to Cloudflare.
      *
-     * The ranges live in config rather than being fetched: a network call in
-     * the middle of a form submission is a worse failure mode than a list that
-     * is a few months stale, and Cloudflare's ranges change rarely.
+     * Ranges live in config, not fetched: a network call during a form submission is worse than a
+     * slightly stale list.
      */
     public function isCloudflare(string $ip): bool
     {

@@ -12,17 +12,12 @@ use Illuminate\Http\Request;
 /**
  * Docker's networks and volumes.
  *
- * The refusals live here rather than in the service, because they are about
- * what the panel is willing to do rather than about how to do it — and each
- * one exists because Docker's own answer is worse than nothing:
+ * The refusals live here, not in the service: they are about what the panel is willing to do.
  *
- *  - A network with containers on it: `docker network rm` says "has active
- *    endpoints" and names neither the network nor what is on it, leaving the
- *    user to go and run docker themselves to find out.
- *  - A volume in use: `docker volume rm` refuses, but `-f` does not, and the
- *    panel must never be the thing that deletes a running database.
- *  - `bridge`, `host`, `none`: Docker recreates them on restart, so a delete
- *    is a control that either fails or does damage.
+ *  - A network with containers on it: Docker's "has active endpoints" names nothing.
+ *  - A volume in use: `docker volume rm -f` would delete it; the panel must never delete a
+ *    running database.
+ *  - `bridge`, `host`, `none`: Docker recreates them on restart, so a delete only fails or harms.
  */
 class DockerResourceController extends Controller
 {
@@ -37,24 +32,14 @@ class DockerResourceController extends Controller
     }
 
     /**
-     * What this machine can be asked for, so a limit field can say so.
+     * What this machine can be asked for, so a limit field can show real values.
      *
-     * Exists because the alternative is a form that describes the rule instead of
-     * the server: "up to the number of CPUs this server has" is a sentence nobody
-     * can act on without leaving the page, and a hardcoded ceiling would be wrong
-     * on every box but the one it was written on. The CPU field is bounded by this
-     * number server-side, so a hint that stated anything else would be a hint that
-     * disagrees with the validator.
+     * The CPU field is bounded server-side by this count, so the hint must match it.
      *
-     * Its own endpoint rather than a field on `/basic-info`, which is
-     * **unauthenticated** — the size of the box is not something to hand to
-     * anonymous visitors. Gated on `docker` (view) with the rest of this file.
+     * Its own endpoint, not a field on the **unauthenticated** `/basic-info`: the size of
+     * the server is not for anonymous visitors. Gated on `docker` (view).
      *
-     * The defaults come with it so the placeholders can show what a site gets when
-     * the field is left empty, which is the other half of "clear instruction": the
-     * memory field's empty state is 512m, and the CPU field's empty state is no
-     * limit at all. Those are different answers and the UI has to be able to say
-     * which is which without hardcoding either.
+     * Defaults come with it: an empty memory field means 512m, an empty CPU field means no limit.
      */
     public function limits(HostCpus $cpus): JsonResponse
     {
@@ -73,16 +58,13 @@ class DockerResourceController extends Controller
 
         abort_unless(DockerResources::validName($name), 422, __('errors/docker.invalid_name'));
 
-        // The `sv-app-<id>_*` namespace is how a site's private network is
-        // recognised (RC-28); one made here under that name is one Compose
-        // finds already there, without its labels, when that site is created.
+        // The `sv-app-<id>_*` namespace marks a site's private network; one created here under
+        // that name would be found by Compose without its labels.
         $reserved = NetworkIsolation::reservedName($name);
 
         abort_if($reserved !== null, 422, (string) $reserved);
 
-        // Asked before creating rather than reading Docker's error after:
-        // "network with name X already exists" is fine for a terminal and
-        // wrong for a form, which wants to say which field is at fault.
+        // Checked first, so the form can name the field at fault instead of showing Docker's error.
         $existing = collect($docker->networks())->firstWhere('name', $name);
 
         abort_if($existing !== null, 422, __('errors/docker.network_exists', ['name' => $name]));
@@ -108,8 +90,7 @@ class DockerResourceController extends Controller
             __('errors/docker.network_built_in', ['name' => $name]),
         );
 
-        // Named, not counted. "It is in use" sends someone to the terminal;
-        // "uptime-kuma-1 is on it" tells them what to stop.
+        // Name the containers so the user knows what to stop.
         abort_if(
             $network['containers'] !== [],
             409,
@@ -119,11 +100,8 @@ class DockerResourceController extends Controller
             ]),
         );
 
-        // The second refusal, and the one the container check cannot make: a
-        // site whose container is STOPPED is attached to nothing, so everything
-        // above passes and the delete succeeds — then the site's compose file
-        // still names this network with `external: true` and it will not start
-        // again. Nothing would connect the failure to this click.
+        // A STOPPED site is attached to nothing, so the checks above pass, yet its compose file
+        // still names this network as `external: true` and the site would not start again.
         abort_if(
             $network['sites'] !== [],
             409,
@@ -167,14 +145,9 @@ class DockerResourceController extends Controller
 
         abort_if($volume === null, 404);
 
-        // The one that matters. `docker volume rm -f` would do this happily,
-        // and a volume is where a container's data lives — deleting one that
-        // is attached is deleting a running database.
-        // Named when the panel could name them, counted when it could not.
-        // The two are different facts and must not read the same: an empty list
-        // beside a non-zero `Links` means `docker inspect` did not answer, which
-        // is not the same as "nothing is using it" — and the delete is refused
-        // either way, because `in_use` reads the stricter source.
+        // A volume holds a container's data; deleting an attached one deletes a running database.
+        // Named when the panel could name the containers, counted when it could not (empty names
+        // beside a non-zero `Links` means `docker inspect` did not answer). Refused either way.
         abort_if(
             $volume['in_use'],
             409,
@@ -189,11 +162,8 @@ class DockerResourceController extends Controller
                 ]),
         );
 
-        // The guard `in_use` cannot make, and the one that matters most on this
-        // screen: a STOPPED site has no container, so `Links` is 0 and every
-        // check above passes — while the volume still holds that site's data.
-        // Deleting a network out from under a stopped site breaks a start;
-        // deleting its volume destroys the database.
+        // A STOPPED site has no container, so `Links` is 0 and the checks above pass while the
+        // volume still holds its data. Deleting it would destroy the site's database.
         abort_if(
             $volume['sites'] !== [],
             409,

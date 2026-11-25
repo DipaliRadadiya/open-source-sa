@@ -6,22 +6,16 @@ use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Str;
 
 /**
- * Empties (truncates, never deletes) current log files found in a set of
- * directories, and — when the category has its own rotated copies and a keep
- * choice is given — deletes the copies older than that choice.
+ * Empties (truncates, never deletes) current log files found in a set of directories, and, when
+ * the category has its own rotated copies and a keep choice is given, deletes older copies.
  *
- * The files are found through the server, not with PHP's glob(): glob runs as
- * the panel account, and the logs that grow largest are the ones it cannot
- * list — /usr/local/lsws/logs is root:nogroup 0750, and every site's own
- * `logs/` is root:{site user} 0750. Found on a live OpenLiteSpeed server
- * (2026-09-23): the scan offered 2.8 MB of Redis/UFW/fail2ban logs and none of
- * the 4 MB of OpenLiteSpeed logs or any site's access log.
+ * Files are found through the server, not PHP's glob(): glob runs as the panel account, which
+ * cannot list the biggest logs (`/usr/local/lsws/logs` is root:nogroup 0750, a site's `logs/`
+ * is root:{site user} 0750).
  *
- * `-type f` without -L does not follow symlinks, so a link is never listed and
- * never emptied; `truncate --no-create` does not create a file that vanished
- * between the listing and the clean. Truncate rather than delete: a writer
- * holding an unlinked file keeps its space until it restarts, while a
- * truncated one keeps appending to the same file.
+ * `-type f` without -L does not follow symlinks, so a link is never listed or emptied;
+ * `truncate --no-create` does not recreate a file that vanished. Truncate rather than delete:
+ * a writer holding an unlinked file keeps its space, a truncated one keeps appending.
  */
 abstract class TruncateLogsTarget extends AbstractCleanupTarget
 {
@@ -58,10 +52,8 @@ abstract class TruncateLogsTarget extends AbstractCleanupTarget
     }
 
     /**
-     * Rotated copies beside the current files that this category also removes
-     * once a keep choice is given, or null when another category owns them
-     * (the server's own archives are under /var/log, which `rotated_logs`
-     * covers).
+     * Rotated copies beside the current files that this category also removes once a keep
+     * choice is given, or null when another category owns them (`rotated_logs` for /var/log).
      */
     protected function archivePattern(): ?string
     {
@@ -69,8 +61,7 @@ abstract class TruncateLogsTarget extends AbstractCleanupTarget
     }
 
     /**
-     * `null` is the request from before the keep choice existed: every
-     * current file emptied and nothing else, exactly as it was.
+     * `null` means no keep choice: every current file is emptied and nothing else.
      */
     public function estimate(?int $keepDays = null): int
     {
@@ -91,12 +82,9 @@ abstract class TruncateLogsTarget extends AbstractCleanupTarget
     }
 
     /**
-     * A current file is emptied only when nothing has been written to it for
-     * the whole window — then every line in it is older than the choice. One
-     * still being written holds today's lines, and keeping N days of a file
-     * means keeping it: there is no safe way to cut the old lines out of a
-     * file a web server is appending to. Its older days are in the rotated
-     * copies, which is where the choice does its work.
+     * A current file is emptied only when nothing was written to it for the whole window.
+     * One still being written is kept: old lines cannot be cut out of a file a web server is
+     * appending to. Its older days are in the rotated copies.
      */
     public function clean(?int $keepDays = null): ServerOpsResult
     {
@@ -113,9 +101,8 @@ abstract class TruncateLogsTarget extends AbstractCleanupTarget
             $result = $this->serverOps->run(['truncate', '--no-create', '-s', '0', ...$files], $context, 60);
         }
 
-        // Deleted, not truncated: nothing holds a rotated copy open. Listed
-        // with `-type f`, so a path is a regular file, and `rm` on a path that
-        // has since been swapped for a link removes the link, never its target.
+        // Deleted, not truncated: nothing holds a rotated copy open. `rm` on a path swapped for
+        // a link removes the link, never its target.
         foreach (array_chunk($archives, 200) as $chunk) {
             if ($result->failed()) {
                 break;
@@ -138,8 +125,7 @@ abstract class TruncateLogsTarget extends AbstractCleanupTarget
     }
 
     /**
-     * Rotated copies, keyed by path: [size, modified]. Empty when this
-     * category has none of its own.
+     * Rotated copies, keyed by path: [size, modified]. Empty when the category has none.
      *
      * @return array<string, array{0: int, 1: int}>
      */
@@ -163,8 +149,7 @@ abstract class TruncateLogsTarget extends AbstractCleanupTarget
                 ['find', $directory, '-maxdepth', '1', '-type', 'f', '-name', $override ?? $pattern, '-printf', "%s\t%T@\t%p\n"],
                 ['feature' => 'disk_cleaner', 'op' => 'list', 'target' => $this->key()],
                 timeout: 30,
-                // A directory that does not exist on this stack (no Apache on
-                // an nginx box) is an ordinary answer, not a failure.
+                // A directory missing on this stack (no Apache on nginx) is not a failure.
                 expectedExitCodes: [1],
             );
 

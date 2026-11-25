@@ -8,14 +8,9 @@ use App\Services\Server\ServerOps;
 /**
  * What framework is actually deployed in a site's directory.
  *
- * Detected from files on disk, never inferred from the site-type record: a git
- * site is whatever the repository contains, and that changes without telling
- * us. Same detect-don't-trust rule the rest of the panel follows.
- *
- * This exists for one concrete reason. A Laravel site with a cached config
- * ignores `.env` entirely — you save, the panel says "saved", and nothing
- * happens, with no error anywhere to explain it. Knowing the framework is what
- * lets the save actually take effect.
+ * Detected from files on disk, never from the site-type record: a git site is whatever the
+ * repository contains. Needed because a Laravel site with a cached config ignores `.env`
+ * silently, so saving must know the framework to take effect.
  */
 class FrameworkDetector
 {
@@ -32,10 +27,8 @@ class FrameworkDetector
     public const NODE = 'node';
 
     /**
-     * Mautic, and a Symfony application deployed from git. Its marker,
-     * `bin/console`, is asked before `package.json`: Mautic ships one for
-     * its asset build, and was reported as a Node.js application — with the
-     * stricter checks a systemd-read `.env` gets (bug #69).
+     * Mautic, and a Symfony application deployed from git. Its marker, `bin/console`, is checked
+     * before `package.json`, which Mautic ships for its asset build.
      */
     public const SYMFONY = 'symfony';
 
@@ -47,9 +40,8 @@ class FrameworkDetector
     ) {}
 
     /**
-     * Ordered most-specific first: Statamic and Craft are Laravel underneath
-     * and both ship an `artisan`, so checking for Laravel first would label
-     * every Statamic site "Laravel" and offer the wrong apply command.
+     * Ordered most-specific first: Statamic and Craft ship an `artisan` too, so checking Laravel
+     * first would mislabel them.
      */
     public function detect(Application $application): string
     {
@@ -59,11 +51,8 @@ class FrameworkDetector
     /**
      * The directory that actually contains the deployed framework's CLI.
      *
-     * `codePath()` is authoritative for panel-installed layouts such as Craft
-     * and Statamic. The document-root parent is also inspected for migrated
-     * git applications that already use the conventional `project/public`
-     * layout; current flat git deployments remain supported because their
-     * framework marker is found in the document root first.
+     * `codePath()` is authoritative for panel-installed layouts. The document-root parent is also
+     * inspected for migrated git applications using the `project/public` layout.
      */
     public function root(Application $application): string
     {
@@ -73,9 +62,7 @@ class FrameworkDetector
     /**
      * Whether a saved `.env` needs an extra step to be read.
      *
-     * Only true for a framework that caches its configuration AND has a cache
-     * sitting there right now. Reporting it unconditionally would train people
-     * to ignore it.
+     * Only true for a framework that caches its configuration and has a cache right now.
      */
     public function requiresApply(Application $application, string $framework): bool
     {
@@ -155,8 +142,7 @@ class FrameworkDetector
         $documentRoot = $this->provisioner->documentRoot($application);
         $roots = [$application->codePath(), $documentRoot];
 
-        // A non-root web root may describe a conventional project layout that
-        // predates this panel: `artisan` beside `public/`, not inside it.
+        // A non-root web root may be a conventional layout: `artisan` beside `public/`.
         if (trim((string) $application->web_root, '/') !== '') {
             $roots[] = dirname($documentRoot);
         }
@@ -166,10 +152,8 @@ class FrameworkDetector
 
     private function exists(Application $application, string $path): bool
     {
-        // Through ServerOps rather than PHP's is_file(): the site directory is
-        // owned by the site's system user and is not readable by the panel's
-        // own unprivileged account. Exit 1 is the expected "not found" answer,
-        // not an error for the admin dashboard.
+        // Through ServerOps, not is_file(): the site directory is not readable by the panel's own
+        // account. Exit 1 is the expected "not found" answer.
         return $this->serverOps->probe(
             ['test', '-e', $path],
             ['feature' => 'application', 'op' => 'detect_framework', 'application' => $application->id],

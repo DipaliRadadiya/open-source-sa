@@ -38,21 +38,12 @@ class CentralTokenManager
     /**
      * Store a token that was chosen elsewhere.
      *
-     * The central panel mints the token before this server exists, hands it to
-     * `install.sh`, and registers the same value at its end — so unlike
-     * `enable()` the value is an input, not something to generate.
+     * The central panel mints the token before this server exists and hands it to `install.sh`,
+     * so unlike `enable()` the value is an input. Idempotent: re-running the installer with the
+     * same token does not rotate the credential. Clears `central_token_used_at`.
      *
-     * Idempotent by construction: it writes the value it is given, so a re-run
-     * of the installer with the same token converges rather than rotating the
-     * credential out from under central. It does clear `central_token_used_at`,
-     * which is right — "central has used this key" is not a claim to carry
-     * across a reinstall.
-     *
-     * @throws \InvalidArgumentException when the token is blank. A silent no-op
-     *                                   would leave central management off while
-     *                                   the installer reported the token stored,
-     *                                   which is exactly what the old installer
-     *                                   did for every install it ran.
+     * @throws \InvalidArgumentException when the token is blank; a silent no-op would leave
+     *                                   central management off while the installer reports success.
      */
     public function store(string $token): void
     {
@@ -71,16 +62,11 @@ class CentralTokenManager
     /**
      * Upsert the token into the settings singleton.
      *
-     * Shared by `enable()` and `store()` rather than written twice. The row may
-     * not exist yet — a fresh install stores a token before anything has ever
-     * saved settings — so both paths need the insert branch, and a second copy
-     * of it is a second place to get the `id = 1` singleton wrong.
+     * Shared by `enable()` and `store()`. The row may not exist yet: a fresh install stores a
+     * token before anything has saved settings.
      *
-     * Note that `central_token_used_at` is cleared twice over: once by the
-     * `disable()` call and again in the update branch. Neither is load-bearing
-     * on its own — removing either leaves the behaviour intact, which a revert
-     * check confirmed — so do not read one as the guard and delete the other
-     * thinking it is dead.
+     * `central_token_used_at` is cleared both by `disable()` and in the update branch; neither
+     * is load-bearing alone, so do not delete one as dead.
      */
     private function persist(string $token): void
     {
@@ -130,7 +116,7 @@ class CentralTokenManager
         return [
             'enabled' => true,
             'masked' => $this->mask($row->central_token),
-            // Bug #49: a key is not a connection until Central has used it.
+            // A key is not a connection until Central has used it.
             'last_used_at' => $row->central_token_used_at,
         ];
     }
@@ -153,9 +139,7 @@ class CentralTokenManager
     }
 
     /**
-     * Note that Central used the key. At most once a minute: Central calls
-     * on every request, and a write per request buys nothing the screen can
-     * show.
+     * Note that Central used the key, at most once a minute (Central calls on every request).
      */
     private function recordUse(): void
     {

@@ -5,72 +5,51 @@ namespace App\Contracts;
 use App\Models\Application;
 
 /**
- * The type-specific 20% of staging — everything else (creating the
- * `Application` row, provisioning its vhost, the maintenance-mode window,
- * the mandatory pre-push backup, copying files) is identical no matter what
- * is being staged and lives in `StagingManager`. Only "does this need a
- * database, and how do I make it point at the right one" differs per type,
- * which is exactly what this contract asks a site type to answer.
+ * The type-specific part of staging. Everything else (the `Application` row, vhost,
+ * maintenance window, pre-push backup, file copy) lives in `StagingManager`; only the database
+ * handling differs per site type.
  */
 interface StagingStrategy
 {
     /**
-     * Files are already copied and the staging site is already provisioned
-     * (real vhost, real document root) by the time this runs — this is only
-     * the database half: clone it, point the app's own config at the new
-     * one, and do whatever URL rewriting the app's storage format needs.
+     * Runs after files are copied and staging is provisioned: only the database half. Clone it,
+     * point the app's config at the clone, and rewrite URLs as the app's storage needs.
      */
     public function create(Application $production, Application $staging): void;
 
     /**
-     * Files are already pushed back to production by the time this runs —
-     * `full` also needs the database pushed and the URL rewrite reversed;
-     * `files` needs nothing here at all.
+     * Runs after files are pushed to production. `full` also pushes the database and reverses
+     * the URL rewrite; `files` needs nothing here.
      */
     public function push(Application $production, Application $staging, string $mode): void;
 
     /**
-     * The reverse: live's files are already copied onto staging by the time
-     * this runs. `database`/`full` copy live's database into staging's and
-     * rewrite the URLs the other way; every mode must leave staging still
-     * staging (its own config, hidden from search engines, mail trapped) and
-     * throw if it does not, so the manager rolls staging back.
+     * The reverse: runs after live's files are copied onto staging. `database`/`full` copy live's
+     * database into staging and rewrite URLs the other way. Every mode must leave staging still
+     * staging (own config, hidden from search engines, mail trapped) or throw, so the manager
+     * rolls staging back.
      */
     public function pull(Application $production, Application $staging, string $mode): void;
 
     /**
-     * Paths rsync must never carry between the two sites, in either
-     * direction.
+     * Paths rsync must never carry between the two sites, in either direction.
      *
-     * This lives on the strategy rather than in `StagingManager` because the
-     * answer is entirely type-specific: which file holds the database
-     * credentials, which file pins the site's own URL, and which files the
-     * panel wrote onto staging *because* it is staging. The manager cannot
-     * know any of that, and when it tried, the WordPress answers were absent
-     * — a push copied staging's `wp-config.php` onto production, pointing the
-     * live site at the staging database and overriding its URL with staging's.
+     * Type-specific: the files holding database credentials, pinning the site's URL, or written
+     * onto staging because it is staging. Missing one makes a push copy staging's config (e.g.
+     * `wp-config.php`) onto production.
      *
      * @return array<int, string> rsync `--exclude` patterns
      */
     public function syncExcludes(): array;
 
     /**
-     * Paths rsync must carry between the two sites *additively* — copied
-     * across, never deleted from the destination.
+     * Paths rsync must carry between the two sites *additively*: copied across, never deleted
+     * from the destination.
      *
-     * These are the paths that are excluded from the main sync above for a
-     * reason that is only half true. Uploaded media is the case that named
-     * this method: it must not ride in a `--delete` pass, because a photo
-     * added on production while somebody worked in staging would be erased by
-     * a push that has no copy of it. But excluding it outright means the file
-     * never crosses at all — so a push carried the `attachment` rows in the
-     * database and left the files behind, and every image 404'd from a Media
-     * Library that listed it. A second pass without `--delete` is what makes
-     * both true at once.
-     *
-     * The consequence, stated where the next person will read it: deleting a
-     * file in staging does not delete it on production. That is the trade this
-     * method exists to make.
+     * Uploaded media is the case: in a `--delete` pass, a photo added on production meanwhile
+     * would be erased, but excluding it outright leaves database rows pointing at files that never
+     * crossed. A second pass without `--delete` does both. Consequence: deleting a file in
+     * staging does not delete it on production.
      *
      * @return array<int, string> paths relative to the document root
      */

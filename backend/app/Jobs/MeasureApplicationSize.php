@@ -15,17 +15,12 @@ use Throwable;
 /**
  * Re-measure a site after something changed its contents.
  *
- * Queued and delayed rather than done inline, because `du` walks every inode:
- * on a WordPress install that is forty thousand of them, and doing it in the
- * request would make deleting one file as slow as counting the whole site.
+ * Queued, not inline: `du` walks every inode, which would make deleting one file as slow as
+ * counting the whole site.
  *
- * Unique per application *and* delayed, which together are the debounce.
- * Deleting fifty files raises fifty of these; the first one takes the lock and
- * the other forty-nine are dropped, so the site is walked once, shortly after
- * the person stops working, rather than once per click.
- *
- * The delay is the point, not an accident of scheduling — running immediately
- * would measure a directory somebody is still in the middle of changing.
+ * Unique per application *and* delayed, which together are the debounce: fifty deletes raise
+ * fifty jobs, the first takes the lock, the rest are dropped, and the site is walked once
+ * after the user stops. The delay also avoids measuring a directory mid-change.
  */
 class MeasureApplicationSize implements ShouldBeUnique, ShouldQueue
 {
@@ -37,20 +32,12 @@ class MeasureApplicationSize implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 1;
 
-    /**
-     * A site large enough to take longer than this to count is one where the
-     * number matters least and the disk cost matters most.
-     */
+    /** A site too big to count in this time is one where the number matters least. */
     public int $timeout = 300;
 
     /**
-     * How many never-measured sites one page view may queue.
-     *
-     * The cap is the whole point. Opening the sites list on a server with
-     * three hundred sites would otherwise queue three hundred directory walks
-     * off a single request, on the machine those sites are served from. At
-     * this rate a large server fills in over a few visits instead, which is
-     * the correct trade: nobody is waiting on the number.
+     * How many never-measured sites one page view may queue. Without the cap, opening the list
+     * on a large server would queue one directory walk per site from a single request.
      */
     public const BACKFILL_LIMIT = 25;
 
@@ -62,15 +49,10 @@ class MeasureApplicationSize implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * Queue a measurement for sites that have never had one.
+     * Queue a measurement for sites that have never had one, so sites created before sizes
+     * were recorded fill in as the list is used.
      *
-     * A size is written when a site is provisioned, deployed, or browsed —
-     * which leaves every site created before that was true showing "Not
-     * measured" forever. Rather than a migration nobody can run twice or a
-     * command nobody remembers, the list backfills itself as it is used.
-     *
-     * Safe to call on every request: the job is unique per application, so a
-     * hundred page views raise one walk per site rather than a hundred.
+     * Safe to call on every request: the job is unique per application.
      *
      * @param  iterable<Application>  $applications
      * @return int how many were queued
@@ -81,10 +63,8 @@ class MeasureApplicationSize implements ShouldBeUnique, ShouldQueue
         $skipped = 0;
 
         foreach ($applications as $application) {
-            // Both, not either. The list prints "Not measured" from the bytes
-            // being null, so a row carrying a date but no figure — which the
-            // deploy path used to produce before it wrote the two together —
-            // would be skipped here forever while displaying as unmeasured.
+            // Both, not either: the list shows "Not measured" when bytes are null, so a row
+            // with a date but no figure must not be skipped.
             if ($application->directory_size_bytes !== null
                 && $application->directory_size_updated_at !== null) {
                 continue;
@@ -100,8 +80,7 @@ class MeasureApplicationSize implements ShouldBeUnique, ShouldQueue
             $queued++;
         }
 
-        // Said out loud rather than truncated in silence — a capped sweep that
-        // reports nothing reads as "everything is measured" when it is not.
+        // Logged so a capped sweep is not mistaken for "everything is measured".
         if ($skipped > 0) {
             Log::channel('server-ops')->info('application size backfill capped', [
                 'feature' => 'application',
@@ -125,25 +104,16 @@ class MeasureApplicationSize implements ShouldBeUnique, ShouldQueue
         try {
             $files->applicationSize($application, refresh: true);
         } catch (Throwable $e) {
-            // A size that could not be measured is not worth failing a job
-            // over, and never worth interrupting whatever the user is doing.
-            // The previous figure and its date stay as they were, which is
-            // honest: it says when it was last actually true.
+            // Not worth failing the job over; the previous figure and its date stay as they were.
             //
-            // The class and the reference, not just the message. Every failure
-            // that reaches here is a ServerOperationException, and those are
-            // built with no message at all — they carry a reference and let
-            // the server-ops log hold the stderr. Logging `getMessage()` alone
-            // therefore recorded `"detail":""` on a real, reproducible
-            // failure: it said something broke and gave no way to find out
-            // what, which is worse than not logging it.
+            // Log the class and reference, not just the message: ServerOperationException has
+            // no message, only a reference into the server-ops log.
             Log::channel('server-ops')->warning('could not measure application size', [
                 'feature' => 'application',
                 'op' => 'measure_size',
                 'application' => $this->applicationId,
                 'exception' => $e::class,
-                // The id to grep the server-ops log for; the failing command,
-                // its exit code and its stderr are already there under it.
+                // Grep the server-ops log for this id to find the command and stderr.
                 'reference' => $e instanceof ServerOperationException ? $e->reference : null,
                 'detail' => $e->getMessage(),
             ]);

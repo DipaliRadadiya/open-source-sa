@@ -12,29 +12,17 @@ use Illuminate\Support\Collection;
 /**
  * Applications a migrated server is already running under the old panel's PM2.
  *
- * The other discoverers find things the panel has no record of. This one finds
- * something about records it already has: an application discovered from its
- * vhost looks like any other site, and nothing on disk says that a PM2 daemon
- * is what keeps it alive. Getting that wrong is not cosmetic — the panel would
- * write a systemd unit for a port something else is already bound to, and the
- * first deploy would fail on a site that was working.
+ * Unlike the other discoverers this marks records the panel already has: nothing on disk says
+ * that a PM2 daemon keeps a vhost-discovered application alive. Without the mark the panel
+ * would write a systemd unit for a port PM2 already holds. Runs after `application`; marked
+ * applications route start, stop, restart, deploy and status through {@see LegacyPm2Driver}.
  *
- * So this runs after `application` and marks the ones it finds, which is what
- * routes every later start, stop, restart, deploy and status through
- * {@see LegacyPm2Driver} instead of `systemctl`.
+ * **It changes nothing on the server, and neither does adopting.** These are running customer
+ * sites that must not restart. Stopping the old agent, repairing boot persistence and log
+ * rotation are server writes behind an explicit user action, not Sync.
  *
- * **It changes nothing on the server, and neither does adopting.** That is the
- * contract every discoverer keeps, and here it also happens to be the only safe
- * option: these are the customer's running sites, and the whole reason the
- * panel tolerates PM2 at all is that taking a server over must not restart
- * them. Three things the migration still needs — stopping the old agent,
- * repairing boot persistence, giving `~/.pm2/logs` a rotation policy it has
- * never had — are server writes and belong to an explicit action the user
- * triggers, not to pressing Sync.
- *
- * Matching is by working directory, longest root first, the same rule
- * {@see WorkerDiscoverer} uses: a process whose `pm_cwd` is inside a site is
- * that site's, and a site nested inside another claims its own.
+ * Matching is by working directory, longest root first, as in {@see WorkerDiscoverer}: a
+ * process whose `pm_cwd` is inside a site is that site's; a nested site claims its own.
  */
 class Pm2Discoverer implements Discoverable
 {
@@ -48,7 +36,6 @@ class Pm2Discoverer implements Discoverable
     public function dependsOn(): array
     {
         // A PM2 process is attributed to a site by its working directory.
-        // Before applications have run there is nothing to attribute one to.
         return ['application'];
     }
 
@@ -56,11 +43,8 @@ class Pm2Discoverer implements Discoverable
     {
         $applications = Application::query()->with('systemUser')->get()
             ->filter(fn (Application $a): bool => $a->systemUser !== null)
-            // A row with no slug has no directory of its own: `rootPath()`
-            // falls back to the system user's home, so *every* process under
-            // that account would look like it belongs to this one site. Left
-            // out rather than allowed to swallow its neighbours — a site the
-            // panel cannot locate is a site it cannot attribute anything to.
+            // No slug means `rootPath()` falls back to the user's home, so every process of
+            // that account would match this one site. Left out to avoid swallowing neighbours.
             ->reject(fn (Application $a): bool => rtrim($a->rootPath(), '/') === rtrim((string) $a->systemUser->home_path, '/'))
             ->sortByDesc(fn (Application $a): int => strlen($a->rootPath()))
             ->values();
@@ -74,9 +58,7 @@ class Pm2Discoverer implements Discoverable
         foreach ($applications->groupBy('system_user_id') as $owned) {
             $user = $owned->first()->systemUser;
 
-            // One `jlist` per OS user, not per application: PM2's state is per
-            // user, and asking once per site would run the same command five
-            // times on a server with five sites under one account.
+            // One `jlist` per OS user, not per application: PM2's state is per user.
             $processes = $this->pm2->processesFor($user->username, (string) $user->home_path);
 
             if ($processes === null) {
@@ -92,11 +74,7 @@ class Pm2Discoverer implements Discoverable
     }
 
     /**
-     * Create nothing; mark what is already there.
-     *
-     * Unlike the other discoverers this adopts *into* an existing row. The
-     * application was found from its vhost; what was missing was the knowledge
-     * that a daemon rather than a unit is running it.
+     * Create nothing; mark the existing application as PM2-supervised.
      */
     public function adopt(array $item): ?object
     {
@@ -111,8 +89,7 @@ class Pm2Discoverer implements Discoverable
         $application->forceFill([
             'supervisor_mode' => SupervisorMode::Pm2,
             'pm2_process_name' => $attributes['process_name'],
-            // What the daemon is actually running, so the panel reports the
-            // truth rather than the one process it would have assumed.
+            // What the daemon is actually running, not an assumed single process.
             'process_instances' => $attributes['instances'] > 1 ? $attributes['instances'] : null,
         ])->save();
 
@@ -155,9 +132,8 @@ class Pm2Discoverer implements Discoverable
             fn (Application $a): bool => str_starts_with($cwd.'/', rtrim($a->rootPath(), '/').'/'),
         );
 
-        // A process the panel cannot attribute to a site it knows about. Left
-        // alone and reported rather than guessed at: the old panel's agent runs
-        // its own things, and so do customers.
+        // Not attributable to a known site: reported, never guessed at (the old agent and
+        // customers run their own processes).
         if ($application === null) {
             return [
                 'key' => $key,
@@ -174,8 +150,7 @@ class Pm2Discoverer implements Discoverable
         return [
             'key' => $key,
             'label' => $application->name.' ('.$name.')',
-            // The working directory is a fact, not an inference — either the
-            // process runs inside the site or it does not.
+            // The working directory is a fact, not an inference.
             'confidence' => 100,
             'evidence' => [
                 'user' => $username,

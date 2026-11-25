@@ -10,22 +10,15 @@ use Illuminate\Validation\ValidationException;
 /**
  * A Linux account name for a site the user has just named.
  *
- * Derived from the application's own name rather than generated at random,
- * because this string is what somebody reads in `ps`, in `ls -l` and in the
- * file manager when they are trying to work out which site an account belongs
- * to. `sv-a1b2c3d4` answers that question with nothing.
- *
- * Everything the name has to survive is enforced here rather than left to
- * `useradd` to reject: a failure at that point comes back as a shell error in
- * the middle of creating an application, which is both unreadable and too late.
+ * Derived from the application's name, not random, so `ps` and `ls -l` show which site an
+ * account belongs to. Validity is enforced here rather than left to `useradd`, whose failure
+ * would surface as an unreadable shell error mid-creation.
  */
 class SystemUsernameGenerator
 {
     /**
-     * useradd's own ceiling on most distributions. The suffix has to fit
-     * inside it too, which is why the base is trimmed before one is added
-     * rather than the whole thing being truncated afterwards — truncating
-     * afterwards is how two different sites end up with the same name.
+     * useradd's ceiling on most distributions. The base is trimmed before a suffix is added;
+     * truncating afterwards could give two sites the same name.
      */
     private const MAX_LENGTH = 32;
 
@@ -44,8 +37,7 @@ class SystemUsernameGenerator
             return $base;
         }
 
-        // Room for `-` plus the suffix, taken off the base rather than off the
-        // finished name.
+        // Room for `-` plus the suffix, taken off the base.
         $trimmed = rtrim(
             Str::limit($base, self::MAX_LENGTH - self::SUFFIX_LENGTH - 1, ''),
             '-',
@@ -61,10 +53,8 @@ class SystemUsernameGenerator
             }
         }
 
-        // Reached when every candidate reads as taken — in practice, when the
-        // probe itself cannot answer, because a dozen random suffixes do not
-        // collide by chance. A ValidationException rather than a raw throw:
-        // the user asked for a site and needs a sentence, not a 500.
+        // Every candidate read as taken, in practice because the probe cannot answer. A
+        // ValidationException gives the user a message instead of a 500.
         throw ValidationException::withMessages([
             'generate_system_user' => [__('errors/application.system_user_name_unavailable')],
         ]);
@@ -75,27 +65,21 @@ class SystemUsernameGenerator
      */
     private function base(string $applicationName): string
     {
-        // Str::slug transliterates first, so "Café Blog" becomes "cafe-blog"
-        // rather than losing the word entirely.
+        // Str::slug transliterates first: "Café Blog" becomes "cafe-blog".
         $slug = Str::slug($applicationName, '-');
 
-        // useradd wants a letter or underscore first. A site called "2024
-        // Campaign" slugs to "2024-campaign", which it refuses.
+        // useradd wants a letter or underscore first ("2024-campaign" is refused).
         $slug = ltrim($slug, '0123456789-');
 
         $slug = Str::limit($slug, self::MAX_LENGTH, '');
         $slug = rtrim($slug, '-');
 
-        // Nothing usable survived — a name written entirely in a script slug
-        // cannot transliterate, or in emoji. A generated name is the honest
-        // answer here; refusing to create the application would be worse.
+        // Nothing usable survived (untransliterable script, emoji): fall back to a generated name.
         if ($slug === '') {
             return 'app-'.Str::lower(Str::random(self::SUFFIX_LENGTH));
         }
 
-        // A reserved name is not a collision to suffix around — `root` and
-        // `root-a1b2` are different accounts and only one of them is refused,
-        // so prefixing keeps the site's name readable instead.
+        // A reserved name is prefixed, not suffixed: `root-a1b2` would be a different, valid account.
         if (in_array($slug, StoreSystemUserRequest::RESERVED, true)) {
             return Str::limit('app-'.$slug, self::MAX_LENGTH, '');
         }
@@ -106,10 +90,8 @@ class SystemUsernameGenerator
     /**
      * Free in the panel's records *and* on the box.
      *
-     * Both, because they can disagree: an account created by hand, or by
-     * another tool, exists in /etc/passwd without a row here. Checking only the
-     * table would hand out a name `useradd` then refuses, turning a solvable
-     * collision into a failed application.
+     * Both, because an account created by hand or another tool exists in /etc/passwd without a
+     * row here.
      */
     public function available(string $username): bool
     {
@@ -117,20 +99,14 @@ class SystemUsernameGenerator
             return false;
         }
 
-        // `getent passwd`, not `id -u`. Both answer the question, but `id`
-        // writes "no such user" to stderr on the miss, and ServerOps only
-        // counts an expected non-zero exit as an *answer* when stderr is
-        // empty — so `id` would report every absent user as an unreadable
-        // failure. `getent` exits 2 and says nothing, which is the shape
-        // ServerOps is built to read. Verified on the box rather than assumed.
+        // `getent passwd`, not `id -u`: `id` writes to stderr on a miss, and ServerOps only
+        // accepts an expected non-zero exit as an answer when stderr is empty.
         //
-        // A group counts too: useradd makes one of the same name, so a name
-        // that is only a group (`docker`) fails just like a user (RC-27).
+        // A group counts too: useradd makes one of the same name, so a name that is only a
+        // group (`docker`) fails just like a user.
         //
-        // A command that could not run at all — sudo refusing, getent missing
-        // — must not read as "the name is free", because the next step would
-        // be a useradd that fails for a reason nobody can see. Unanswerable is
-        // treated as taken, so the caller tries another name.
+        // A command that could not run (sudo refusing, getent missing) must not read as "free":
+        // unanswerable is treated as taken, so the caller tries another name.
         return $this->names->taken($username) === false;
     }
 }

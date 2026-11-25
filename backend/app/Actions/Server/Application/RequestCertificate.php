@@ -18,20 +18,14 @@ use Illuminate\Validation\ValidationException;
 /**
  * Records the intent to have a certificate and hands the work to a queue.
  *
- * Two decisions live here rather than in the job, because both are worth more
- * as an immediate answer than as something the user has to poll for.
+ * Two decisions live here, not in the job, so the user gets an immediate answer:
  *
- * **The pre-check runs first.** Not a DNS lookup — a real dry run of the
- * challenge Let's Encrypt is about to perform. DNS pointing here says nothing
- * about whether the token will be served, and five failed authorisations per
- * hostname per hour means a doomed attempt locks the user out of their own fix.
+ * **The pre-check runs first.** A real dry run of the Let's Encrypt challenge, not a DNS
+ * lookup. Let's Encrypt allows five failed authorisations per hostname per hour, so a
+ * doomed attempt would lock the user out of their own fix.
  *
- * **Names are taken one at a time.** If three domains are attached and two are
- * ready, the certificate is issued for those two rather than refusing all
- * three. The common case is a site whose apex resolves and whose `www` record
- * has not propagated yet; blocking the whole thing over the slower of two DNS
- * records helps nobody, and `missing_domains` already tells the user what is
- * left to add.
+ * **Names are taken one at a time.** If only some attached domains are ready (apex resolves,
+ * `www` not yet), the certificate is issued for those; `missing_domains` lists the rest.
  */
 class RequestCertificate
 {
@@ -56,19 +50,15 @@ class RequestCertificate
             ]);
         }
 
-        // Captured before the row is overwritten. certbot names a lineage after
-        // the first domain (`--cert-name`), so reissuing after the primary
-        // domain changed creates a *second* lineage under the new name and
-        // leaves the old one renewing itself forever — spending rate limit and
-        // eventually mailing the user about a name nothing serves. The job
-        // removes it once the replacement is actually working.
+        // Captured before the row is overwritten. certbot names a lineage after the first domain
+        // (`--cert-name`), so a changed primary domain creates a second lineage and the old one
+        // keeps renewing. The job removes it once the replacement works.
         $existing = Certificate::where('application_id', $application->id)->first();
 
         $previousCertName = $existing?->lineageName();
         $previousUrl = $application->fresh(['certificate'])->url();
 
-        // Same reasoning for an uploaded or self-signed pair: the job removes
-        // it once the replacement is serving.
+        // Same for an uploaded or self-signed pair: the job removes it once the replacement serves.
         $previousFiles = $existing !== null && $existing->type !== CertificateType::LetsEncrypt
             ? array_values(array_filter([
                 $existing->certificate_path,
@@ -77,9 +67,8 @@ class RequestCertificate
             ]))
             : [];
 
-        // A self-signed pair goes into the server's own /etc/ssl tree (v7's
-        // layout). Refused here, while nothing has changed, when either file
-        // is already something else's — the job checks again before writing.
+        // A self-signed pair goes into /etc/ssl. Refused here, before anything changes, when a
+        // file already belongs to something else; the job checks again before writing.
         if ($type === CertificateType::SelfSigned
             && ($taken = $this->files->conflict($application->slug, $previousFiles, $application->domainNames())) !== null) {
             throw ValidationException::withMessages([
@@ -96,9 +85,7 @@ class RequestCertificate
                 'auto_renew' => $type->renewable(),
                 'reason' => null,
                 'reference' => null,
-                // `force_https` is deliberately not reset: turning it off
-                // because a reissue is in flight would silently change how the
-                // site behaves for a reason the user never asked for.
+                // `force_https` is deliberately not reset: a reissue must not change site behaviour.
             ],
         );
 
@@ -122,9 +109,7 @@ class RequestCertificate
      */
     private function reachableNames(Application $application, bool $force): array
     {
-        // Every name the site has, in the order the certificate should list
-        // them. No kind of hostname is excluded here: a name either passes the
-        // dry run below or it does not, and that is the only question that
+        // Every name the site has, primary first. None is excluded here: the dry run below
         // decides whether Let's Encrypt can issue for it.
         $candidates = $application->domains
             ->sortBy(fn ($domain) => $domain->type === DomainType::Primary ? 0 : 1)
@@ -134,12 +119,8 @@ class RequestCertificate
             return [];
         }
 
-        // An escape hatch for one real case: a box behind NAT whose public
-        // address does not answer to itself. The dry run fails there while the
-        // real challenge, which arrives from outside, would succeed. Refusing
-        // outright would make the feature unusable on those servers, so the
-        // user is allowed to override — Let's Encrypt's own limit is still
-        // there to stop them doing it repeatedly.
+        // Escape hatch for a server behind NAT whose public address does not answer to itself:
+        // the dry run fails there although the real challenge, arriving from outside, would pass.
         if ($force) {
             return $candidates->pluck('domain')->all();
         }
@@ -152,9 +133,7 @@ class RequestCertificate
         ));
 
         if ($passed === []) {
-            // Nothing to issue, so say precisely why for each name. A single
-            // "SSL failed" here would leave the user guessing between DNS, a
-            // firewall and their own rewrite rules.
+            // Nothing to issue: say why for each name (DNS, firewall, rewrite rules).
             throw ValidationException::withMessages([
                 'domain' => array_map(
                     fn (array $result) => $this->reachability->describe($result),
@@ -167,9 +146,8 @@ class RequestCertificate
     }
 
     /**
-     * Self-signed is the one case where an unresolvable name is the point — an
-     * internal or staging hostname Let's Encrypt could never validate. Running
-     * the dry run here would refuse the only situation it exists for.
+     * Self-signed exists for names Let's Encrypt cannot validate (internal, staging), so the
+     * dry run is skipped.
      *
      * @return array<int, string>
      */

@@ -24,13 +24,10 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Fetches the application's code. Same shape as provisioning: queued, one
- * attempt, explicit retry.
+ * Fetches the application's code. Same shape as provisioning: queued, one attempt, explicit retry.
  *
- * A failed deploy leaves the site serving whatever it was serving before —
- * the clone/reset either completes or it doesn't, and the web server config is
- * untouched either way. That matters: a broken build must not take a working
- * site offline.
+ * A failed deploy leaves the site serving what it served before: the web server config is never
+ * touched, so a broken build cannot take a working site offline.
  */
 class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -41,14 +38,10 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
     public int $tries = 1;
 
     /**
-     * One queued deploy per application.
+     * One queued deploy per application, so a burst of pushes does not queue identical deploys.
      *
-     * A webhook fires per push, and pushes arrive in bursts — ten commits to a
-     * branch would otherwise queue ten identical deploys, each fetching the
-     * same tip. Unique **until processing** rather than until finished, so a
-     * push that lands while a deploy is running still queues one behind it:
-     * that deploy started before the new commit existed, so dropping the second
-     * would leave the newest code undeployed with nothing to say so.
+     * Unique until processing, not until finished: a push landing during a running deploy still
+     * queues one behind it, since that deploy started before the new commit existed.
      */
     public function uniqueId(): string
     {
@@ -56,17 +49,13 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
     }
 
     /**
-     * Clone plus build plus the steps around them — see
-     * {@see ProvisioningBudget::forDeploy()}. The old flat 900 was exactly
-     * `git_timeout` + `build_timeout`, leaving nothing for the chown and the
-     * restart that follow it.
+     * Clone plus build plus the steps around them, see {@see ProvisioningBudget::forDeploy()}.
      */
     public int $timeout;
 
     /**
-     * The row is opened by whoever queues the job, not here, so the screen can
-     * show `queued` in the seconds before a worker picks it up. Null only for a
-     * deploy queued by something that predates this — the job still runs.
+     * The deployment row is opened by whoever queues the job, so the screen shows `queued` before a
+     * worker picks it up. Null for older queued jobs; they still run.
      */
     public function __construct(
         public int $applicationId,
@@ -96,9 +85,7 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
 
         $previousStatus = $application->status;
 
-        // `failed_reason` cleared with the rest of them. It was not, so a site
-        // that once failed for a nameable reason carried that sentence on its
-        // screen through every later deploy — including the successful ones.
+        // Clear `failed_reason` too, or an old failure shows through every later deploy.
         $application->update([
             'status' => ApplicationStatus::Provisioning,
             'failed_step' => null,
@@ -107,13 +94,8 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
         ]);
 
         try {
-            // The code root, not the document root. A checkout always lands at
-            // `public_html`; `web_root` selects what the web server serves
-            // *inside* it. Passing the document root here moved the checkout
-            // down with the web root, so a repository whose front controller
-            // lives in `public/` had no working configuration at all — empty
-            // web root and the served directory has no index, `/public` and
-            // the application's own `public/` lands one level too deep.
+            // The code root, not the document root: the checkout always lands at `public_html`;
+            // `web_root` only selects what is served inside it.
             $result = $deployer->deploy($application, $application->codePath());
 
             $application->update([
@@ -133,19 +115,12 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
             ], actor: $this->actor());
         } catch (ProvisioningFailedException $e) {
             $application->update([
-                // Back to what it was: if the site was already live, a failed
-                // redeploy has not changed that. Not after the first deploy
-                // (RC-2): provisioning marks the site active before its code
-                // arrives, so "what it was" is a site that has never run —
-                // and it was shown active while answering 502.
+                // Back to what it was if the site was live. Not after the first deploy:
+                // provisioning marks the site active before its code arrives.
                 'status' => $previousStatus === ApplicationStatus::Active && $deployment?->trigger !== DeploymentTrigger::Initial
                     ? ApplicationStatus::Active
                     : ApplicationStatus::Failed,
                 'failed_step' => $e->step,
-                // Dropped on the floor until now: the provisioning job has
-                // always persisted this, the deploy job never did, so every
-                // classification the panel can make was thrown away on exactly
-                // the path a user hits most — redeploying an existing site.
                 'failed_reason' => $e->reason,
                 'reference' => $e->reference,
             ]);
@@ -165,8 +140,7 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
             ->where('status', ApplicationStatus::Provisioning->value)
             ->update(['status' => ApplicationStatus::Failed->value, 'failed_step' => 'worker']);
 
-        // A crash still has to close the row. Left running, the screen shows a
-        // spinner that never stops on a deploy that is not happening.
+        // A crash must still close the row, or the screen spins forever.
         if ($this->deploymentId !== null) {
             Deployment::whereKey($this->deploymentId)
                 ->whereIn('status', [DeploymentStatus::Queued->value, DeploymentStatus::Running->value])
@@ -179,17 +153,11 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
     }
 
     /**
-     * Serve `public/` for a Laravel or Symfony repository (bug #43).
+     * Serve `public/` for a Laravel or Symfony repository.
      *
-     * A Git PHP site starts on web root `/`, and these frameworks keep their
-     * front controller in `public/` with `.env`, the source and `vendor/`
-     * beside it — so `/` served the secrets (`/.env`) and no application.
-     * Only while the web root is still the default: one the user chose is
-     * theirs. Recognised by the front controller plus the framework's own
-     * console, and no `index.php` at the top that `/` could be meant for.
-     *
-     * Never fails the deploy: the code is live, and the user can still set
-     * the web root by hand.
+     * Web root `/` would serve `.env` and the source. Only while the web root is still the default;
+     * recognised by `public/index.php` plus the framework console and no top-level `index.php`.
+     * Never fails the deploy: the user can set the web root by hand.
      */
     private function servePublicDirectory(Application $application): void
     {

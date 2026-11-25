@@ -6,52 +6,39 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Deleting a site, and optionally the two things that outlive it: its files
- * and its databases.
+ * Deleting a site, and optionally the things that outlive it: its files, databases, Docker
+ * resources and system user.
  *
- * Both flags default to false and both have to be asked for. Deleting a panel
- * record must not silently destroy someone's code, and it must not silently
- * destroy their data either.
- *
- * Until now `destroy()` took a bare `Request` and read `remove_files` straight
- * off it, so the one destructive flag the endpoint had was never validated at
- * all — `remove_files=maybe` was as good as `true`, because `boolean()` treats
- * anything it does not recognise as false and nothing said so.
+ * Every flag defaults to false and has to be asked for: deleting a panel record must not
+ * silently destroy someone's code or data. Each flag is validated, so `remove_files=maybe` is a
+ * 422, not a silent "keep".
  */
 class DestroyApplicationRequest extends FormRequest
 {
     /**
-     * The route already requires `application,manage`; this adds the second
-     * permission the second flag needs.
+     * The route already requires `application,manage`; this adds the permission each extra
+     * flag needs.
      *
-     * Dropping a database is not a consequence of deleting a site, it is a
-     * separate destructive act on a separate resource — the same act the
-     * `database` permission exists to gate. Someone who may remove a site but
-     * may not touch databases would otherwise reach every database on the
-     * server through the one relationship the panel lets them create.
-     *
-     * Checked here rather than mid-deletion so the refusal arrives before
-     * anything is removed: a 403 means the site is still there.
+     * Dropping a database is a separate destructive act on a separate resource, gated by the
+     * `database` permission; without the check, someone who may remove a site could reach
+     * every database on the server. Checked here, before anything is removed: a 403 means the
+     * site is still there.
      */
     public function authorize(): bool
     {
-        // A Docker network or volume is a server-level object with its own
-        // permission, exactly as a database is. Someone who may delete a site
-        // must not thereby reach the volume holding another site's data — the
-        // guard against that is `docker,manage`, and the same argument that put
-        // `remove_databases` behind `database` puts this behind it.
+        // A Docker network or volume is a server-level object with its own permission, as a
+        // database is: deleting a site must not reach the volume holding another site's data.
         if ($this->boolean('remove_docker_resources') && ! ($this->user()?->canManage('docker') ?? false)) {
             return false;
         }
 
-        // Asked for outright: the same permission. Left out, it only
-        // defaults to on for someone who has it ({@see removeDockerImages()}).
+        // Same permission. Left out, it defaults to on only for someone who has it
+        // ({@see removeDockerImages()}).
         if ($this->boolean('remove_docker_images') && ! ($this->user()?->canManage('docker') ?? false)) {
             return false;
         }
 
-        // OLD-20: removing the site's Linux account is the System Users
-        // permission's to grant, not the site's.
+        // Removing the site's Linux account needs the System Users permission.
         if ($this->boolean('remove_system_user') && ! ($this->user()?->canManage('system_user') ?? false)) {
             return false;
         }
@@ -64,8 +51,7 @@ class DestroyApplicationRequest extends FormRequest
     }
 
     /**
-     * The default 403 says "This action is unauthorized", which here would
-     * describe deleting the site — the thing this caller is allowed to do.
+     * The default 403 "This action is unauthorized" would wrongly describe deleting the site.
      */
     protected function failedAuthorization(): void
     {
@@ -79,14 +65,9 @@ class DestroyApplicationRequest extends FormRequest
     }
 
     /**
-     * Both flags arrive as query parameters — `?remove_files=true` — and
-     * Laravel's `boolean` rule does not accept the strings `"true"`/`"false"`,
-     * only `1`/`0`/`"1"`/`"0"`. Validating without this would have rejected
-     * the exact request the panel has been sending since `remove_files`
-     * shipped, which is a contract this endpoint does not get to change.
-     *
-     * Anything `filter_var` cannot read stays untouched and fails `boolean`
-     * below, so a typo is still a 422 rather than a silent "keep".
+     * The flags arrive as query parameters (`?remove_files=true`), but Laravel's `boolean` rule
+     * rejects `"true"`/`"false"`. Anything `filter_var` cannot read stays untouched and fails
+     * `boolean`, so a typo is a 422, not a silent "keep".
      */
     protected function prepareForValidation(): void
     {
@@ -113,17 +94,15 @@ class DestroyApplicationRequest extends FormRequest
             'remove_files' => ['sometimes', 'boolean'],
             'remove_databases' => ['sometimes', 'boolean'],
             'remove_docker_resources' => ['sometimes', 'boolean'],
-            // A Docker site's images, once nothing else uses them (2026-10-29).
+            // A Docker site's images, once nothing else uses them.
             'remove_docker_images' => ['sometimes', 'boolean'],
             'remove_system_user' => ['sometimes', 'boolean'],
         ];
     }
 
     /**
-     * Whether to remove a Docker site's images with it (2026-10-29, Dipali).
-     * On unless turned off — they are re-downloadable and were piling up by
-     * the gigabyte — but only for someone who may manage Docker: a site
-     * manager without it keeps deleting sites exactly as before.
+     * Whether to remove a Docker site's images with it. On unless turned off (they are
+     * re-downloadable), but only for someone who may manage Docker.
      */
     public function removeDockerImages(): bool
     {

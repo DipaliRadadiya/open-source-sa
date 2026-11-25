@@ -14,15 +14,11 @@ use Throwable;
 /**
  * Reads the server and records what is on it, one line at a time.
  *
- * The registry is ordered by dependency rather than by importance: an ssh key
- * belongs to a user, a worker to an application. Running a discoverer before
- * its parent means inventing the parent, so `dependsOn()` is checked rather
- * than trusted to the array order.
+ * Discoverers run in dependency order (an ssh key belongs to a user, a worker to an
+ * application), so `dependsOn()` is checked rather than trusted to the array order.
  *
- * Every item is written as it is decided, not collected and saved at the end.
- * That is what makes the screen a live feed instead of several silent minutes
- * followed by a number, and it means a run that dies halfway still shows
- * everything it managed to do.
+ * Every item is written as it is decided: the screen is a live feed, and a run that dies
+ * halfway still shows what it did.
  */
 class ServerSync
 {
@@ -50,8 +46,7 @@ class ServerSync
     {
         $run->forceFill(['status' => SyncStatus::Running, 'started_at' => now()])->save();
 
-        // Loaded once. Asking the database per discovered item would be a
-        // query per vhost on a box with two hundred of them.
+        // Loaded once, not a query per discovered item.
         $this->ignored = $run->includesIgnored() ? [] : SyncIgnore::keys();
 
         $totals = [];
@@ -65,9 +60,8 @@ class ServerSync
                     continue;
                 }
 
-                // A discoverer whose parent did not run would be reading half
-                // a picture — every ssh key would look ownerless. Skipped
-                // loudly rather than silently producing nothing.
+                // Without its parent a discoverer sees half a picture (every ssh key would look
+                // ownerless), so it is recorded as skipped.
                 $missing = array_diff($discoverer->dependsOn(), $completed);
 
                 if ($missing !== []) {
@@ -81,11 +75,8 @@ class ServerSync
                 $totals[$type] = $this->runOne($run, $discoverer);
                 $completed[] = $type;
 
-                // A preview adopts no sites, so the workers, certificates and
-                // PHP settings of the sites it found have nothing to belong to
-                // and are not listed. Said once per type rather than left out
-                // in silence: an apply adopts the sites first and reads these
-                // after, so the preview would otherwise under-report it.
+                // A preview adopts no sites, so their workers, certificates and PHP settings have
+                // nothing to belong to. Recorded once per type so the preview does not under-report.
                 if (! $run->mode->writes()
                     && in_array('application', $discoverer->dependsOn(), true)
                     && $run->items()->where('resource_type', 'application')->where('action', SyncAction::Found)->exists()) {
@@ -99,9 +90,7 @@ class ServerSync
                 'finished_at' => now(),
             ])->save();
         } catch (Throwable $e) {
-            // The items written so far stay. A run that failed after adopting
-            // nine users is not the same as one that did nothing, and the
-            // screen has to be able to tell those apart.
+            // The items written so far stay, so the screen can tell a partial run from an empty one.
             Log::channel('server-ops')->error('server sync failed', [
                 'feature' => 'sync',
                 'op' => 'run',
@@ -130,8 +119,7 @@ class ServerSync
         try {
             $items = $discoverer->discover($run);
         } catch (Throwable $e) {
-            // One resource type failing to read must not end the run: a box
-            // with no `ufw` installed should still get its users imported.
+            // One type failing to read must not end the run (no `ufw` should not block users).
             $this->record($run, $type, $type, SyncAction::Failed, ['reason' => 'discovery_failed']);
             $counts['failed']++;
 
@@ -141,10 +129,7 @@ class ServerSync
         foreach ($items as $item) {
             $key = (string) $item['key'];
 
-            // Already answered. Not even recorded as skipped: the point of
-            // ignoring something is that it stops appearing, and a list where
-            // the same twenty-one lines show up every run is one nobody
-            // reads.
+            // Ignored items are not recorded at all: ignoring means it stops appearing.
             if (in_array($type.':'.$key, $this->ignored, true)) {
                 continue;
             }
@@ -169,8 +154,7 @@ class ServerSync
                 $this->record($run, $type, $key, SyncAction::Adopted, $item, $model);
                 $counts['adopted']++;
             } catch (Throwable $e) {
-                // Named, not swallowed. A site the panel could not take on is
-                // the one thing the user most needs to see in this list.
+                // Recorded, not swallowed: a site the panel could not adopt must show in the list.
                 $this->record($run, $type, $key, SyncAction::Failed, $item + [
                     'reason' => 'adopt_failed',
                 ]);
@@ -206,8 +190,7 @@ class ServerSync
     }
 
     /**
-     * Registered order, but with dependencies honoured — a discoverer added
-     * to the registry in the wrong place should still run in the right one.
+     * Registered order, with dependencies honoured.
      *
      * @return array<int, Discoverable>
      */
@@ -217,9 +200,7 @@ class ServerSync
         $ordered = [];
         $done = [];
 
-        // Bounded rather than `while (true)`: a dependency cycle, or a
-        // dependency on a type that is not registered, would otherwise hang
-        // the queue worker instead of producing a result.
+        // Bounded: a dependency cycle or an unregistered dependency must not hang the queue worker.
         for ($pass = 0; $pass < count($this->discoverers) + 1 && $remaining !== []; $pass++) {
             foreach ($remaining as $index => $discoverer) {
                 if (array_diff($discoverer->dependsOn(), $done) !== []) {
@@ -232,8 +213,7 @@ class ServerSync
             }
         }
 
-        // Anything still unresolved goes last and will record its own skip
-        // with the dependency it wanted.
+        // Unresolved ones go last and record their own skip.
         return array_merge($ordered, array_values($remaining));
     }
 }

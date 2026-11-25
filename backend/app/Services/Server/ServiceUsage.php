@@ -6,27 +6,18 @@ use Illuminate\Support\Facades\Cache;
 
 /**
  * Resource usage for a systemd unit, built from properties the service list
- * already fetches — so showing usage costs no extra process.
+ * already fetches, so it costs no extra process.
  *
- * Memory is a live number and needs nothing clever. CPU is not: systemd
- * reports `CPUUsageNSec`, the total CPU consumed since the unit started, which
- * on a long-running service is a number in the hundreds of thousands of
- * seconds. Dividing it by uptime gives a lifetime average, which is not what
- * anyone means by "how busy is nginx right now".
- *
- * A real percentage needs two samples. Sleeping inside the request to take
- * them would block a worker on every page load, so instead each read stores
- * its sample and the next one measures against it — the frontend is polling
- * anyway, and the answer becomes "CPU used since you last looked". The first
- * read after a restart has nothing to compare against and reports null rather
- * than a number that would be wrong.
+ * `CPUUsageNSec` is CPU used since the unit started, so dividing it by uptime gives a lifetime
+ * average, not current load. A real percentage needs two samples: instead of sleeping in the
+ * request, each read stores its sample and the next one measures against it ("CPU used since
+ * you last looked"). The first read has nothing to compare against and reports null.
  */
 class ServiceUsage
 {
     /**
-     * Usage for one unit, or null when it can't be measured — the unit is
-     * stopped, or systemd accounting is off for it. A missing measurement is
-     * reported as missing; it is not rendered as zero.
+     * Usage for one unit, or null when it can't be measured (stopped, or accounting off).
+     * A missing measurement is never rendered as zero.
      *
      * @param  array<string, string|null>  $properties  raw `systemctl show` values
      * @return array<string, mixed>|null
@@ -50,21 +41,15 @@ class ServiceUsage
     }
 
     /**
-     * Fill in the memory and task figures systemd declined to report, from
-     * the kernel counters it would have read them from.
+     * Fill in the memory and task figures systemd declined to report, from the kernel cgroup
+     * counters it would have read them from.
      *
-     * OpenLiteSpeed ships `lshttpd.service` with `MemoryAccounting=false` and
-     * `TasksAccounting=false` ("do not want to be limited in anyway"), so
-     * `systemctl show` answers `[not set]` and the Services screen showed "—"
-     * for OLS forever. The kernel still counts: systemd's MemoryCurrent *is*
-     * the unit cgroup's `memory.current` (measured identical, byte for byte,
-     * on MariaDB/Redis/fail2ban), and the file exists because other units
-     * enable the controller. Read-only — the vendor's unit is not ours to
-     * edit, and an OLS update could overwrite it.
+     * OpenLiteSpeed's `lshttpd.service` disables Memory/TasksAccounting, so `systemctl show`
+     * answers `[not set]`. MemoryCurrent is the cgroup's `memory.current`, so reading it is
+     * equivalent. Read-only: the vendor's unit is not ours to edit.
      *
-     * A figure systemd does report always wins. A counter that is missing,
-     * unreadable or not a plain number is still reported as missing, never
-     * as zero.
+     * A figure systemd does report always wins. A missing, unreadable or non-numeric counter
+     * stays missing, never zero.
      *
      * @param  array<string, string|null>  $properties  raw `systemctl show` values, incl. ControlGroup
      * @return array<string, string|null>
@@ -84,8 +69,7 @@ class ServiceUsage
                 continue;
             }
 
-            // Not validated here: build() reads it through number(), which
-            // reports anything but a plain count as missing, as for systemd.
+            // Not validated here: build() reads it through number().
             $properties[$property] = trim((string) file_get_contents("{$dir}/{$file}"));
         }
 
@@ -93,9 +77,8 @@ class ServiceUsage
     }
 
     /**
-     * The unit's directory under the cgroup mount, or null when systemd gave
-     * no usable path. `ControlGroup` is empty for a stopped unit; anything that
-     * could step outside the mount is refused rather than resolved.
+     * The unit's directory under the cgroup mount, or null when systemd gave no usable path
+     * (empty for a stopped unit). Anything that could step outside the mount is refused.
      */
     private function cgroupDir(?string $controlGroup): ?string
     {
@@ -127,9 +110,8 @@ class ServiceUsage
 
         $elapsed = $now - (float) $previous['at'];
 
-        // Too close together to measure, or so far apart that the average
-        // would describe a window nobody is looking at any more. A restart
-        // resets the counter, so a negative delta means a new lifetime.
+        // Too close together to measure, or too far apart to mean anything. A negative delta
+        // means the unit restarted (counter reset).
         $window = (int) config('server.usage_sample_window', 60);
 
         if ($elapsed < 0.5 || $elapsed > $window || $cpuNsec < (int) $previous['nsec']) {
