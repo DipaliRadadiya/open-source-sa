@@ -16,33 +16,21 @@ use Illuminate\Validation\Validator;
  * Only the things that are safe to change while nothing is provisioned. The
  * site type is not editable — a different type is a different application.
  *
- * **Neither is the name.** It becomes the slug, and the slug is the filename
- * of six things: the vhost, the PHP-FPM pool and its socket, the site's
- * directory, its logs, its fail2ban jail and its worker units. A rename moved
- * exactly one of them — the vhost — so the site came back pointing at a
- * socket no pool listens on (502) and a directory that had just been created
- * empty beside its real one (404, files orphaned). Measured on a test server,
- * not reasoned about.
+ * Neither is the name: it becomes the slug, which names the vhost, PHP-FPM pool and socket, site
+ * directory, logs, fail2ban jail and worker units. A rename would move only the vhost and break
+ * the site (502/404), so the name is fixed. The slug is never regenerated on rename, see
+ * {@see Application::uniqueSlug()} and
+ * {@see Worker::uniqueSlug()}.
  *
- * Moving all six atomically under a live site is a great deal of machinery for
- * a label, so the label is fixed instead. That is also what
- * {@see Application::uniqueSlug()} has always claimed — stored
- * "so the panel can always address the file it wrote, including when the name
- * has since changed" — and what {@see Worker::uniqueSlug()}
- * states outright: "Never regenerated on rename."
- *
- * Same shape as {@see UpdateApplicationDomainRequest}, which omits `domain`
- * for its own reasons.
+ * Same shape as {@see UpdateApplicationDomainRequest}, which omits `domain` for its own reasons.
  */
 class UpdateApplicationRequest extends FormRequest
 {
     /**
      * The most workers one application may ask for.
      *
-     * A ceiling rather than the host's core count. `MemoryMax` is enforced per
-     * unit and divided across the workers inside it, so an unbounded number
-     * turns a memory limit into a number of very small workers, and the box has
-     * other applications on it.
+     * A fixed ceiling, not the host's core count: `MemoryMax` is divided across the workers in a
+     * unit, so an unbounded number leaves each one tiny.
      */
     public const MAX_INSTANCES = 16;
 
@@ -67,17 +55,14 @@ class UpdateApplicationRequest extends FormRequest
      * Clustering needs a script PM2 can fork, and the start command may be
      * changing in this same request.
      *
-     * Checked here rather than in a rule on `process_instances`, because the
-     * answer depends on another field — and on the stored value when that field
-     * is absent. Refused rather than silently ignored: PM2 pointed at something
-     * it cannot fork runs one process and reports success, which is exactly how
-     * the old panel's users chose four instances and got one.
+     * Checked here, not in a rule on `process_instances`, because it depends on another field (or
+     * the stored value). Refused, not ignored: PM2 given something it cannot fork runs one process.
      */
     public function after(): array
     {
         return [
-            // Re-rendering a git site as something this server does not serve
-            // (PHP on MERN) — the same refusal as creating it that way.
+            // Re-rendering a git site as something this server does not serve gets the same
+            // refusal as creating it that way.
             function (Validator $validator): void {
                 $application = $this->route('application');
 
@@ -124,36 +109,25 @@ class UpdateApplicationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Refused outright, never quietly dropped, so a caller who was
-            // told this endpoint renames a site finds out that it does not.
-            // {@see UpdateApplication} for what a rename used to do.
+            // Refused outright, never quietly dropped, so callers learn this does not rename.
+            // {@see UpdateApplication}
             'name' => ['prohibited'],
-            // Was silently dropped with a 200 (junior re-test #12), so callers
-            // believed the switch had happened. It is a restart and a check
-            // now: PUT /applications/{application}/node-version.
+            // Use PUT /applications/{application}/node-version (restart and check).
             'node_version' => ['prohibited'],
-            // Refused too (2026-11-07). It wrote the column and nothing else:
-            // the domain rows, the vhost and the certificate stayed on the old
-            // name, nothing checked another site already had it, and it needed
-            // `application` manage instead of `app_domain` manage. The Domains
-            // endpoints do all of that; our own UI never sent it here.
+            // Use the Domains endpoints: they handle domain rows, vhost, certificate, uniqueness
+            // and the `app_domain` permission; this only wrote the column.
             'domain' => ['prohibited'],
             // See StoreApplicationRequest: this becomes a path used by root.
             'web_root' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._\-\/]+$/', 'not_regex:/(^|\/)\.\.(\/|$)/'],
             'build_command' => ['sometimes', 'nullable', 'string', 'max:500'],
-            // Rebuilding the same repository a different way is an ordinary
-            // change of mind, so this is editable — unlike the site type.
+            // Editable, unlike the site type: the same repository can be rebuilt another way.
             'rendering_type' => ['sometimes', 'string', Rule::in(['php', 'static', 'csr', 'ssr'])],
             // Becomes systemd's ExecStart, which is not a shell — see the rule.
             'start_command' => ['sometimes', 'nullable', 'string', 'max:500', new StartCommand],
-            // More than one means the unit runs `pm2-runtime` and forks that
-            // many workers. Bounded rather than open: the old panel used PM2's
-            // `-i max`, which reads the host's core count, so every application
-            // on the box claimed every core and the per-application MemoryMax
-            // stopped describing anything.
+            // More than one runs `pm2-runtime` and forks that many workers. Bounded, not `-i max`,
+            // which would make every application claim every core.
             'process_instances' => ['sometimes', 'nullable', 'integer', 'between:1,'.self::MAX_INSTANCES],
-            // Excluding this application, so saving an unchanged form does
-            // not report the port as taken by itself.
+            // Excludes this application, so an unchanged form does not clash with itself.
             'app_port' => ['sometimes', 'nullable', 'integer', 'between:1024,65535', new AvailablePort($this->route('application'))],
             'branch' => ['sometimes', 'nullable', 'string', 'max:255'],
             'settings' => ['sometimes', 'array'],

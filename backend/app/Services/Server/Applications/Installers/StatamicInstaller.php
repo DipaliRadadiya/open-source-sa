@@ -9,24 +9,14 @@ use App\Services\Server\Applications\Installers\Concerns\ResolvesUpdates;
 /**
  * Statamic — flat-file CMS.
  *
- * Two things set it apart from everything else in the marketplace. It stores
- * its content in files rather than a database, so it asks for none. And it is
- * a Laravel application, so it serves from `public/` — pointing the web server
- * at the project root would publish its source and its `.env`.
+ * It stores content in files (no database) and is a Laravel application, so it serves from
+ * `public/`: pointing the web server at the project root would publish its source and `.env`.
  *
- * It is also the one installer that puts a password on a command line, and
- * the reason is worth stating rather than hiding. `make:user` has two modes:
- * given an email argument it runs non-interactively and takes `--password`;
- * given none it prompts through Laravel Prompts, which — unlike Symfony's
- * question helper, and unlike Yii's — refuses to read a pipe and throws. That
- * was measured, not assumed. So there is no stdin path here.
- *
- * The alternative was writing Statamic's user file ourselves: a YAML file with
- * a bcrypt hash, plus a companion under `storage/`. That is another project's
- * private storage format, and getting it subtly wrong on their next release
- * means a login that fails with no clue why. A password visible in `ps` for
- * the second the command takes, on a machine whose only other accounts are the
- * site users this panel created, is the smaller risk of the two.
+ * It is the one installer that puts a password on a command line. `make:user` only takes
+ * `--password` when given an email argument; without one it prompts through Laravel Prompts,
+ * which refuses to read a pipe, so there is no stdin path. Writing Statamic's user file ourselves
+ * would depend on its private storage format; a password visible in `ps` for a second is the
+ * smaller risk.
  */
 class StatamicInstaller extends AbstractPhpInstaller implements ApplicationUpdater
 {
@@ -37,10 +27,7 @@ class StatamicInstaller extends AbstractPhpInstaller implements ApplicationUpdat
         return 'statamic';
     }
 
-    /**
-     * Content lives in files. A database would sit empty and its credentials
-     * would be a secret nobody needs.
-     */
+    /** Content lives in files; a database would sit empty. */
     public function needsDatabase(): bool
     {
         return false;
@@ -59,26 +46,18 @@ class StatamicInstaller extends AbstractPhpInstaller implements ApplicationUpdat
             '--no-interaction', '--no-progress',
         ]);
 
-        // `composer create-project` copies Statamic's `.env.example`, which
-        // ships `APP_URL=http://localhost:8000`. Left alone it stays there: it
-        // is the one value in that file only the panel knows, and Laravel
-        // builds password resets, queued mail, sitemaps and Statamic's own
-        // asset and control-panel URLs from it — all pointing at a port on the
-        // visitor's own machine.
-        //
-        // Before `make:user`, so the first login lands on the real site.
+        // `.env.example` ships `APP_URL=http://localhost:8000`, which Laravel builds password
+        // resets, mail, sitemaps and Statamic's URLs from. Set it before `make:user`, so the
+        // first login lands on the real site.
         $this->setEnvValue($application, $application->envPath(), 'APP_URL', $application->url());
 
-        // The same file ships APP_ENV=local and APP_DEBUG=true, and a live
-        // site in debug mode prints stack traces, paths and config values to
-        // any visitor who triggers an error (bug #68). v7 installs it in
-        // production mode.
+        // The same file ships APP_ENV=local and APP_DEBUG=true; debug mode on a live site shows
+        // stack traces, paths and config values to visitors.
         $this->setEnvValue($application, $application->envPath(), 'APP_ENV', 'production');
         $this->setEnvValue($application, $application->envPath(), 'APP_DEBUG', 'false');
 
-        // The email argument selects the non-interactive path. `--password` is
-        // on the command line because Statamic offers no other way in — see
-        // the class note.
+        // The email argument selects the non-interactive path; `--password` is on the command line
+        // because there is no other way in (see the class note).
         $this->runAsSiteUser('install_app', $application, array_filter([
             ...$this->phpCommand($application), 'please', 'make:user',
             (string) ($settings['admin_email'] ?? ''),
@@ -90,15 +69,9 @@ class StatamicInstaller extends AbstractPhpInstaller implements ApplicationUpdat
     /**
      * Keep `APP_URL` on the domain the site is actually reached at.
      *
-     * Called when the primary domain changes and when a certificate makes the
-     * site `https` — the same two events Craft's own sync answers. Without it
-     * the file is right once, at install, and wrong from the first domain
-     * change onwards.
-     *
-     * The config cache is cleared afterwards and only when something changed:
-     * a compiled `bootstrap/cache/config.php` is read *instead of* `.env`, so
-     * a site with one would go on serving the old URL from a file that no
-     * longer says it.
+     * Called when the primary domain changes or a certificate makes the site `https`. The config
+     * cache is cleared only when something changed: a compiled `bootstrap/cache/config.php` is
+     * read instead of `.env`, so the old URL would keep being served.
      */
     public function syncUrl(Application $application, string $url): void
     {
@@ -126,12 +99,8 @@ class StatamicInstaller extends AbstractPhpInstaller implements ApplicationUpdat
     }
 
     /**
-     * `composer update statamic/cms`, which keeps the project's own constraint
-     * (`^6.0`) and so stays inside the major. Statamic's update scripts run
-     * from its Composer hooks.
-     *
-     * v7 ran only `statamic:updates:run`, which runs those scripts and never
-     * updates the package — nothing changed version.
+     * `composer update statamic/cms`, which keeps the project's own constraint (`^6.0`) and so
+     * stays inside the major. Statamic's update scripts run from its Composer hooks.
      */
     public function update(Application $application, string $from, string $to): void
     {

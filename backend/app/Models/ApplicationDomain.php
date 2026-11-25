@@ -20,24 +20,16 @@ class ApplicationDomain extends Model
     /**
      * What a redirect target may contain: a scheme, a host and a path.
      *
-     * The target is written verbatim into the vhost, and Laravel's `url` rule
-     * lets through characters that mean something there: `;` ends an nginx
-     * directive and `#` comments out the rest of the line, so
-     * `https://x.com/;internal;#` added a directive of the user's choosing to
-     * the server block (found in code review 2026-09-29). `$` is a variable in
-     * nginx and a back-reference in Apache, and `&`, `'`, `"` come out
-     * HTML-escaped by Blade. A query string or fragment has no use here
-     * anyway: every template appends the request path to the target.
+     * The target is written verbatim into the vhost, so characters with meaning there are
+     * rejected: `;` and `#` (nginx directive injection), `$` (nginx variable / Apache
+     * back-reference), and `&`, `'`, `"` (HTML-escaped by Blade). No query string or fragment:
+     * every template appends the request path.
      */
     public const REDIRECT_TARGET_PATTERN = '/^https?:\/\/[^\s;#$&?"\'`\\\\{}<>]+$/i';
 
     /**
-     * The target as the vhost uses it: without a trailing slash (DOM-01).
-     *
-     * Every template appends the request path, which starts with `/`, so a
-     * target saved as `https://new.example/` sent visitors to
-     * `https://new.example//page`. Saves strip it now; this covers the rows
-     * saved before that, the next time their vhost is written.
+     * The target as the vhost uses it: without a trailing slash, because every template
+     * appends the request path (which starts with `/`).
      */
     public function redirectTarget(): ?string
     {
@@ -64,16 +56,8 @@ class ApplicationDomain extends Model
     /**
      * Resolve `{domain}` in a route from either the id or the hostname.
      *
-     * The parameter is called `domain` and the model has a `domain` column, so
-     * passing the hostname is the obvious reading — and it used to fail with
-     * "No query results for model [App\Models\ApplicationDomain]
-     * blog.example.com", a 404 that says nothing about what was actually
-     * wrong. Accepting both is cheaper than a parameter that means something
-     * other than its name.
-     *
-     * Unambiguous: `application_domains.domain` is unique across the table, so
-     * a hostname identifies exactly one row. Ownership is still checked by the
-     * controller — resolving a name is not authorising access to it.
+     * `application_domains.domain` is unique, so a hostname identifies one row. Ownership is
+     * still checked by the controller: resolving a name is not authorising access to it.
      */
     public function resolveRouteBinding($value, $field = null)
     {
@@ -83,10 +67,8 @@ class ApplicationDomain extends Model
 
         $value = trim((string) $value);
 
-        // Numeric goes to the id, so a hostname that happens to be all digits
-        // cannot shadow a row id — and a non-numeric value never reaches an
-        // `id = 'blog.example.com'` comparison, which some drivers treat as a
-        // type error rather than simply no match.
+        // Numeric goes to the id, so an all-digit hostname cannot shadow a row id, and a hostname
+        // never reaches an `id = '...'` comparison (a type error on some drivers).
         return is_numeric($value)
             ? parent::resolveRouteBinding($value)
             : static::query()->where('domain', mb_strtolower($value))->first();
@@ -96,11 +78,8 @@ class ApplicationDomain extends Model
      * Whether a hostname is one of the wildcard-DNS services that resolve any
      * name to an address encoded in it.
      *
-     * Used to flag a domain as temporary even when the caller said otherwise.
-     * The client tells us which kind it is, but a `nip.io` name mislabelled as
-     * the user's own would go on a certificate request and spend from a weekly
-     * limit shared with the entire internet — a claim worth checking rather
-     * than taking on trust.
+     * Flags a domain as temporary even when the caller said otherwise: a mislabelled `nip.io`
+     * name would spend a certificate rate limit shared with the whole internet.
      */
     public static function looksTemporary(string $domain): bool
     {
@@ -118,20 +97,12 @@ class ApplicationDomain extends Model
     /**
      * Whether a certificate can be requested for this name.
      *
-     * One condition, and it is the one that decides whether the ACME challenge
-     * can succeed: does this name resolve to this server. A wildcard-DNS
-     * hostname does — that is what it is for — and {@see DnsVerifier}
-     * marks it verified by construction.
+     * Only DNS decides: does the name resolve to this server (the ACME challenge needs it).
+     * {@see DnsVerifier} marks wildcard-DNS hostnames verified by construction; `is_test` does
+     * not matter here.
      *
-     * `is_test` used to disqualify a name here as well, which made a second
-     * class of domain the panel would refuse to protect. It is a fact about the
-     * hostname, not a verdict on it.
-     *
-     * A redirect *is* certifiable, which is not obvious. `http://old` →
-     * `https://new` looks like it needs no certificate of its own, but any
-     * browser that has seen HSTS for `old` refuses the plaintext hop and never
-     * reaches the redirect at all. The old name has to answer on HTTPS to be
-     * able to send anyone anywhere.
+     * A redirect is certifiable too: browsers with HSTS for the old name refuse the plaintext
+     * hop, so it must answer on HTTPS to redirect anyone.
      */
     public function certifiable(): bool
     {

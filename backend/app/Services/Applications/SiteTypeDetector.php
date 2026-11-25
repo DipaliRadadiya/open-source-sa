@@ -9,33 +9,21 @@ use App\Services\Server\ServerOps;
 /**
  * What is actually installed in a site's directory, read off the disk.
  *
- * Extracted from `ApplicationDiscoverer`, which inferred a site type for
- * brownfield sync and kept the signature table private. A second caller now
- * needs the same answer — a user who created a Custom PHP site, installed
- * WordPress into it by hand, and wants the panel to notice — and the one
- * thing that must not happen is a second copy of the table. Every privilege
- * bug this panel has had came from exactly that: a list maintained in two
- * places, edited in one.
+ * Shared by the brownfield sync discoverer and the "re-detect site type" flow, so the signature
+ * table lives in one place.
  *
- * Same detect-don't-trust rule as {@see FrameworkDetector},
- * which answers the neighbouring question (which *framework* is deployed, for
- * `.env` handling). The two are deliberately separate: a framework is what the
- * code is written in, a site type is which screens the panel offers, and
- * `wordpress` is one of those and not the other.
+ * Same detect-don't-trust rule as {@see FrameworkDetector}, which answers a different question:
+ * a framework is what the code is written in, a site type is which screens the panel offers.
  */
 class SiteTypeDetector
 {
     /**
      * file => [site_type, serving_profile, confidence]
      *
-     * Ordered most specific first: a Laravel repository has a `package.json`
-     * too, and a WordPress install has PHP files everywhere. The first match
-     * that is actually distinguishing wins.
+     * Ordered most specific first; the first distinguishing match wins.
      *
-     * Moved here verbatim from the sync discoverer. Note that not every entry
-     * is something the panel may *offer* to relabel a site as — `artisan`
-     * resolves to `git`, which describes a checkout the panel owns and cannot
-     * be conjured from files on disk. That filtering is the caller's job; see
+     * Not every entry may be offered as a relabel: `artisan` resolves to `git`, which a checkout
+     * the panel owns cannot be conjured from files. The caller filters; see
      * `server.site_type_detection.suggestable`.
      */
     private const SIGNATURES = [
@@ -54,24 +42,16 @@ class SiteTypeDetector
     /**
      * Inspect one directory.
      *
-     * The entry point the sync discoverer uses, because at discovery time
-     * there is no application yet — only a document root parsed out of a
-     * vhost file.
+     * Used by the sync discoverer, where there is no application yet, only a document root.
      */
     public function detectAt(string $documentRoot, array $context = []): SiteTypeVerdict
     {
         $context = $context + ['feature' => 'application', 'op' => 'detect_site_type'];
 
         foreach (self::SIGNATURES as $file => [$siteType, $profile, $confidence]) {
-            // `test -f` rather than reading the directory: a listing of a site
-            // with 40,000 files to answer one yes/no question is not a trade
-            // worth making on a box that is also serving traffic.
-            //
-            // `probe()` rather than `run()`, which is what the discoverer used
-            // and a small wart it carried: exit 1 here means "not installed",
-            // the expected answer for five of the six signatures on any given
-            // site, and logging each one as a failed operation made the
-            // server-ops log unreadable for the one case that was real.
+            // `test -f`, not a directory listing: a site can have tens of thousands of files.
+            // `probe()`, not `run()`: exit 1 means "not installed", the normal answer for most
+            // signatures, and must not be logged as a failed operation.
             $result = $this->serverOps->probe(
                 ['test', '-f', rtrim($documentRoot, '/').'/'.$file],
                 $context,
@@ -89,22 +69,11 @@ class SiteTypeDetector
     /**
      * Inspect an application, trying the directories its marker could be in.
      *
-     * More than the document root, because the most valuable signature is the
-     * one most likely to sit outside it. Moving `wp-config.php` one level
-     * above the web root is long-standing WordPress hardening advice and
-     * common in real installs — so a detector that only ever looked at the
-     * document root would fail on precisely the sites whose owners know what
-     * they are doing.
+     * Not only the document root: `wp-config.php` is often moved one level above it.
+     * Candidate order follows {@see FrameworkDetector::candidateRoots()}: the marker may sit
+     * beside `public/` rather than inside it.
      *
-     * Candidate order follows {@see FrameworkDetector::candidateRoots()}
-     * for the same reason it gives: a non-root web root may describe a
-     * conventional project layout, with the marker beside `public/` rather
-     * than inside it.
-     *
-     * The first directory with a match wins, and the fallback is the
-     * document root's own verdict — not a merge. Two directories disagreeing
-     * is not a case to average; it is a case to report the most specific
-     * finding for.
+     * The highest-confidence verdict wins; verdicts are never merged.
      */
     public function detect(Application $application): SiteTypeVerdict
     {
@@ -115,8 +84,7 @@ class SiteTypeDetector
         foreach ($this->candidateRoots($application) as $root) {
             $verdict = $this->detectAt($root, $context);
 
-            // An unknown verdict carries no evidence, so it cannot beat a
-            // directory we have not looked in yet.
+            // An unknown verdict carries no evidence and cannot beat a later directory.
             if ($verdict->matched === null) {
                 $best ??= $verdict;
 

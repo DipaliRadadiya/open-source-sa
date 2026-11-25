@@ -10,15 +10,10 @@ use App\Services\Server\ServerOps;
 /**
  * Firewall rules already on the box.
  *
- * Opt-in, and the only resource that is. Every other kind of adoption leaves
- * the server exactly as it was; this one populates the screen someone will
- * later use to *change* the firewall, and a half-imported rule list is a
- * worse starting point for that than an empty one — it looks complete.
- *
- * So it runs only when asked for, and anything it cannot represent faithfully
- * is reported as skipped rather than approximated. A rule recorded as
- * narrower or wider than the one actually in force is the failure mode here,
- * and it is not one anybody notices until the wrong thing is reachable.
+ * Opt-in, and the only resource that is: it populates the screen used to *change* the
+ * firewall, and a half-imported rule list looks complete. Anything it cannot represent
+ * faithfully is skipped, never approximated: a rule recorded narrower or wider than the one in
+ * force is the failure mode.
  */
 class FirewallRuleDiscoverer implements Discoverable
 {
@@ -36,8 +31,7 @@ class FirewallRuleDiscoverer implements Discoverable
 
     public function discover(SyncRun $run): array
     {
-        // Not an omission — the caller chose not to ask. Reporting a line
-        // every run to say so would be noise on the screen that matters.
+        // Opt-in: the caller chose not to ask, so report nothing.
         if (! $run->includesFirewall()) {
             return [];
         }
@@ -46,13 +40,11 @@ class FirewallRuleDiscoverer implements Discoverable
     }
 
     /**
-     * Rules ufw enforces that the panel has no row for — the same reading
-     * Server Sync adopts from, also shown on the Firewall screen (FW-08):
-     * a rule added with the ufw CLI was invisible there. Null when ufw could
-     * not be read, so "none" is never confused with "could not ask".
+     * Rules ufw enforces that the panel has no row for; also shown on the Firewall screen.
+     * Null when ufw could not be read, so "none" is never confused with "could not ask".
      *
-     * Each item carries `attributes` when the panel can hold it, or a
-     * `reason` (LIMIT, outbound, an application profile) when it cannot.
+     * Each item carries `attributes` when the panel can hold it, or a `reason` (LIMIT,
+     * outbound, an application profile) when it cannot.
      *
      * @return array<int, array<string, mixed>>|null
      */
@@ -83,16 +75,13 @@ class FirewallRuleDiscoverer implements Discoverable
             $to = trim($to);
             [$from, $comment] = $this->splitComment($from);
 
-            // ufw lists the v6 half of a rule as its own numbered entry. The
-            // panel stores one row per rule, so adopting both would double
-            // every rule on the box.
+            // ufw lists the v6 half of a rule as its own entry; adopting both would double it.
             if (str_contains($to, '(v6)') || str_contains($from, '(v6)')) {
                 continue;
             }
 
             if (strtoupper($direction) !== 'IN') {
-                // The panel's rules are inbound only. An outbound rule
-                // recorded here would be applied as an inbound one.
+                // The panel's rules are inbound only; an outbound one would be applied as inbound.
                 $found[] = $this->skip($to, $from, 'firewall_direction_unsupported');
 
                 continue;
@@ -101,9 +90,8 @@ class FirewallRuleDiscoverer implements Discoverable
             $normalisedAction = match (strtoupper($action)) {
                 'ALLOW' => 'allow',
                 'DENY' => 'deny',
-                // LIMIT and REJECT behave differently from both — rate
-                // limiting and an active refusal. Recording either as a plain
-                // allow or deny would misstate what the server does.
+                // LIMIT (rate limiting) and REJECT differ from allow/deny; recording them as
+                // either would misstate what the server does.
                 default => null,
             };
 
@@ -116,10 +104,8 @@ class FirewallRuleDiscoverer implements Discoverable
             $port = $this->parsePort($to);
 
             if ($port === null) {
-                // An application profile — `OpenSSH`, `Nginx Full`. The ports
-                // behind it live in /etc/ufw/applications.d and can change
-                // when the package updates, so storing today's numbers would
-                // be a snapshot pretending to be the rule.
+                // An application profile (`OpenSSH`, `Nginx Full`): its ports live in
+                // /etc/ufw/applications.d and change with the package, so do not snapshot them.
                 $found[] = $this->skip($to, $from, 'firewall_app_profile');
 
                 continue;
@@ -146,8 +132,7 @@ class FirewallRuleDiscoverer implements Discoverable
                     $sourceIp ?? 'any',
                 ),
                 'label' => trim($to.' '.strtolower($action).' from '.$from),
-                // Read verbatim from ufw. Nothing here is inferred, which is
-                // why anything that cannot be read verbatim is skipped above.
+                // Read verbatim from ufw; anything that cannot be is skipped above.
                 'confidence' => 100,
                 'evidence' => [
                     'to' => $to,
@@ -160,10 +145,8 @@ class FirewallRuleDiscoverer implements Discoverable
                     'protocol' => $port['protocol'],
                     'action' => $normalisedAction,
                     'source_ip' => $sourceIp,
-                    // The rule's own comment where it has one. It used to be
-                    // left on the end of the source (`Anywhere  # note`), which
-                    // stored a source ufw cannot read, so the rule could never
-                    // be edited or deleted from the panel (2026-09-24).
+                    // The rule's own comment, kept out of the source (`Anywhere  # note`) so the
+                    // stored source stays something ufw can read.
                     'description' => $comment !== null ? mb_substr($comment, 0, 255) : 'Imported from ufw',
                 ],
             ];
@@ -177,12 +160,10 @@ class FirewallRuleDiscoverer implements Discoverable
         $attributes = $item['attributes'] ?? [];
 
         return FirewallRule::create($attributes + [
-            // `user`, not `default`: these were made by hand on the server
-            // and are not the panel's seeded set. The badge and the delete
-            // protection both key off this.
+            // `user`, not `default`: made by hand, not the seeded set. The badge and the delete
+            // protection key off this.
             'origin' => 'user',
-            // True, because the rule is in force. Recording it disabled would
-            // describe a firewall with holes it does not have.
+            // The rule is in force; recording it disabled would misdescribe the firewall.
             'enabled' => true,
         ]);
     }
@@ -190,8 +171,7 @@ class FirewallRuleDiscoverer implements Discoverable
     /**
      * `80/tcp`, `8000:9000/tcp`, `3306` → ports and protocol.
      *
-     * Null for anything else, which is how an application profile is told
-     * apart from a port.
+     * Null for anything else (an application profile).
      *
      * @return array{from: int, to: int|null, protocol: string}|null
      */
@@ -210,8 +190,8 @@ class FirewallRuleDiscoverer implements Discoverable
     }
 
     /**
-     * The source column and the rule's comment, which `ufw status` prints on
-     * the same line after a `#`: `Anywhere                   # brownfield test`.
+     * The source column and the rule's comment, printed on the same line after a `#`:
+     * `Anywhere                   # note`.
      *
      * @return array{0: string, 1: string|null}
      */

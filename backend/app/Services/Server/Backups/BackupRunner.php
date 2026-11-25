@@ -19,9 +19,7 @@ use Throwable;
 /**
  * Runs one backup, step by step, and records how far it got.
  *
- * The row is updated as it goes rather than only at the end, so a run that
- * dies outright — worker killed, box rebooted — leaves evidence of the stage
- * it reached instead of a row that says `running` forever with no clue why.
+ * The row is updated as it goes, so a run that dies outright leaves the stage it reached.
  */
 class BackupRunner
 {
@@ -38,7 +36,7 @@ class BackupRunner
 
     /**
      * @param  bool  $isSafety  Whether this run is a restore's way back.
-     *                          Stamped at creation, never afterwards — see below.
+     *                          Stamped at creation, never afterwards.
      */
     public function run(BackupTarget $target, ?int $actorId = null, bool $isSafety = false): Backup
     {
@@ -47,44 +45,23 @@ class BackupRunner
         $backup = Backup::create([
             'backup_target_id' => $target->id,
             'application_id' => $target->application_id,
-            // A database's backup records what it was taken from, so it still
-            // says so — and can be restored elsewhere — after the database is
-            // deleted (archived).
+            // Records the source, so the backup stays restorable after the database is archived.
             'database_id' => $target->database_id,
             'subject_name' => $target->isDatabaseTarget() ? $target->database?->name : null,
             'subject_engine' => $target->isDatabaseTarget() ? $target->database?->engine : null,
             'user_id' => $actorId,
             'type' => $target->type->value,
 
-            // **Born flagged, not flagged afterwards.**
-            //
-            // `SafetyBackup` used to call this method and then set
-            // `is_safety = true` on the row it got back. Everything in between
-            // — a multi-gigabyte archive and an upload that can run for an hour
-            // — was a window in which the flag was false, and a worker that
-            // died anywhere in it left a safety backup recorded as an ordinary
-            // one.
-            //
-            // That is not cosmetic. `PruneOldBackups` protects these rows with
-            // `where('is_safety', false)`, precisely so retention cannot
-            // "remove the parachute at exactly the wrong moment" — and a
-            // mis-flagged row loses that protection, so a later retention pass
-            // deletes both the row and the archive in the bucket.
-            //
-            // It has already happened here: on 2026-09-22 an OOM killed the
-            // worker mid-run and left restore 5's safety backup reading
-            // `is_safety = 0`, with the restore's `safety_backup_id` still
-            // null. The same argument the model makes for `uid` and
-            // `storage_destination_id` applies — a value that exists because of
-            // *where it is assigned* rather than because someone remembered.
+            // Born flagged, never flagged afterwards: a worker that died in between would leave a
+            // safety backup marked ordinary, and `PruneOldBackups` (which skips safety rows)
+            // would later delete it and its archive.
             'is_safety' => $isSafety,
 
             'status' => BackupStatus::Running,
             'reference' => (string) Str::uuid(),
             'log_key' => $logKey,
             'started_at' => now(),
-            // So a run whose worker was killed can be cleared once it is
-            // dead, not after the 65-minute guess (StaleBackupReaper).
+            // Lets StaleBackupReaper clear a run as soon as its worker is dead.
             'worker_pid' => WorkerProcess::pid(),
             'worker_started' => WorkerProcess::startTime(),
         ]);
@@ -99,8 +76,7 @@ class BackupRunner
                     continue;
                 }
 
-                // Recorded before running, not after: if the step never
-                // returns, this is the only record of where it stopped.
+                // Recorded before running: if the step never returns, this shows where it stopped.
                 $backup->update(['reason' => $step->key()]);
 
                 $ran[] = $step;
@@ -115,8 +91,7 @@ class BackupRunner
                 'status' => BackupStatus::Verified,
                 'manifest' => $context->manifest,
                 'size_bytes' => $context->sizeBytes,
-                // Cleared on success — it only ever held progress, and leaving
-                // the last step name in a `reason` column reads as a failure.
+                // Cleared on success: it only held progress, and would read as a failure.
                 'reason' => null,
                 'finished_at' => now(),
                 'verified_at' => now(),
@@ -139,19 +114,10 @@ class BackupRunner
             $backup->update([
                 'status' => BackupStatus::Failed,
                 'manifest' => $context->manifest,
-                // A stall replaces the step name, which would otherwise say
-                // only `upload_artifact` — true, and the least useful half of
-                // the truth. The step is implied by the reason; the reason is
-                // not implied by the step, and it is the part that tells an
-                // operator whether to go and fix something or to wait for the
-                // next run.
-                // Likewise a volumes backup of a site with none (S-02).
+                // These reasons replace the step name: they tell the user what to do next.
                 'reason' => match (true) {
                     $e instanceof UploadStalled => UploadStalled::REASON,
                     $e instanceof NoVolumesToBackUp => NoVolumesToBackUp::REASON,
-                    // A backup to this server's own disk that would have left
-                    // it too full (#14). Wherever it was caught, this is the
-                    // reason that tells the user what to do.
                     $e instanceof NotEnoughBackupSpace => NotEnoughBackupSpace::REASON,
                     default => $backup->reason,
                 },
@@ -159,9 +125,7 @@ class BackupRunner
                 'finished_at' => now(),
             ]);
 
-            // A failed scheduled run still counts as an attempt. Without this
-            // the target stays due and retries every single tick, turning one
-            // broken backup into a loop that fills the disk.
+            // A failed run still counts as an attempt, or the target retries every tick.
             $target->update(['last_run_at' => now()]);
 
             return $backup->refresh();
@@ -171,12 +135,10 @@ class BackupRunner
     }
 
     /**
-     * Why the storage refused, when a storage step is what failed (FS-C33):
-     * `invalid_credentials`, `bucket_not_found`, `unreachable`… — the
-     * categories the destination test reports, from the same driver.
+     * Why the storage refused, when a storage step is what failed
+     * (`invalid_credentials`, `bucket_not_found`, `unreachable`…, as the destination test reports).
      *
-     * Only for the steps that talk to the storage. The classifier's honest
-     * default is "unreachable", and a database dump that failed is not that.
+     * Only for steps that talk to the storage: the classifier defaults to "unreachable".
      */
     private function storageErrorClass(Backup $backup, Throwable $e): ?string
     {
@@ -184,9 +146,7 @@ class BackupRunner
             return null;
         }
 
-        // This server's disk, whatever the destination (2026-10-29): a backup
-        // to S3 refused for space here is not "the bucket is unreachable",
-        // which is what that driver's classifier would call it.
+        // This server's disk, whatever the destination: not "the bucket is unreachable".
         if ($e instanceof NotEnoughBackupSpace) {
             return 'local_no_space';
         }
@@ -221,9 +181,7 @@ class BackupRunner
             }
         }
 
-        // Local artefacts go whatever happened. A dump and an archive left
-        // behind after a failure fill the disk the next attempt needs — and
-        // the next attempt is usually minutes away.
+        // Local artefacts go whatever happened, or they fill the disk the next attempt needs.
         foreach ($context->localArtifacts as $path) {
             @unlink($path);
         }

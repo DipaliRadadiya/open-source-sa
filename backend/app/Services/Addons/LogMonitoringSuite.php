@@ -14,14 +14,12 @@ use Throwable;
  * srvrsoorg/log-monitoring-suite): access-log analytics read from its own SQLite
  * database.
  *
- * Sites are known to it by its own id, which `register()` stores on the
- * application. Its `--key` is the panel's reference (`v8-<id>`), so a lost
- * answer to `applications:add` is recovered rather than added twice.
+ * Sites are known to it by its own id, which `register()` stores on the application. Its `--key` is
+ * the panel's reference (`v8-<id>`), so a lost answer to `applications:add` is recovered, not
+ * added twice.
  *
- * Unlike wp-toolkit it is more than a binary: a `.env` in its working
- * directory, a SQLite database, and two systemd timer pairs that ingest and
- * prune access logs (its docs/INTEGRATION.md §2, §7a). The layout is described
- * here; AddonInstaller writes and removes it.
+ * More than a binary: a `.env` in its working directory, a SQLite database and two systemd timer
+ * pairs that ingest and prune access logs. AddonInstaller writes and removes them.
  */
 class LogMonitoringSuite extends AddonCli
 {
@@ -29,11 +27,7 @@ class LogMonitoringSuite extends AddonCli
 
     public const PRUNE_UNIT = 'log-monitoring-suite-prune';
 
-    /**
-     * Goravel will not boot without a 32-character APP_KEY, and this addon
-     * signs and encrypts nothing with it. Fixed, so rewriting the .env on an
-     * update changes nothing.
-     */
+    /** Goravel needs a 32-character APP_KEY to boot; nothing is signed with it. Fixed, so a rewrite changes nothing. */
     private const APP_KEY = 'log-monitoring-suite-unused-key!';
 
     public function __construct(ServerOps $serverOps, private WebServerManager $webServers)
@@ -111,12 +105,9 @@ class LogMonitoringSuite extends AddonCli
     /**
      * The four unit files, path => contents.
      *
-     * Wall-clock timers rather than the OnBootSec/OnUnitActiveSec pair in the
-     * addon's own docs: those count from the service's last run, and a timer
-     * enabled long after boot on a service that has never run has nothing to
-     * count from. RandomizedDelaySec keeps a fleet from ingesting on the same
-     * second. WorkingDirectory is what finds the .env; without it the unit
-     * starts in / and the binary refuses to boot.
+     * Wall-clock timers, not OnBootSec/OnUnitActiveSec: those count from the service's last run,
+     * and a service that never ran has nothing to count from. WorkingDirectory is what finds the
+     * .env; without it the binary refuses to boot.
      *
      * @return array<string, string>
      */
@@ -163,10 +154,7 @@ class LogMonitoringSuite extends AddonCli
         ];
     }
 
-    /**
-     * Read back from the prune unit, which is what actually decides it — not
-     * a copy kept somewhere that could disagree with it.
-     */
+    /** Read back from the prune unit, which is what actually decides it. */
     public function retentionDays(): ?int
     {
         $unit = @file_get_contents($this->unitPath(self::PRUNE_UNIT.'.service'));
@@ -175,10 +163,8 @@ class LogMonitoringSuite extends AddonCli
     }
 
     /**
-     * Is ingestion actually happening: both timers active, when the fetch
-     * last finished, how much the database holds. Two cheap commands —
-     * `systemctl show` and `du` — and never the binary itself, which would
-     * also ask the licence API.
+     * Is ingestion happening: both timers active, when the fetch last finished, database size.
+     * Uses `systemctl show` and `du`, never the binary itself, which would also ask the licence API.
      *
      * @return array{timers_active: bool, last_fetch_at: string|null, data_bytes: int|null, retention_days: int|null}
      */
@@ -222,8 +208,7 @@ class LogMonitoringSuite extends AddonCli
     }
 
     /**
-     * `systemctl show` for several units: one block per unit, blank-line
-     * separated, in the order asked — keyed here by each block's own Id.
+     * `systemctl show` for several units: one blank-line-separated block per unit, keyed by its Id.
      *
      * @return array<string, array<string, string>>
      */
@@ -290,9 +275,8 @@ class LogMonitoringSuite extends AddonCli
                 '--monitoring=true',
             ], $timeout, ['application' => $application->id]);
         } catch (AddonException $e) {
-            // Already registered under this site's own key — a retry after a
-            // lost answer. Anything else holding the name or domain is a real
-            // conflict and is reported as one.
+            // Already registered under this site's key (a retry after a lost answer); any other
+            // conflict on name or domain is real.
             if (($e->details['code'] ?? null) === 'conflict' && ($e->details['field'] ?? null) === 'key') {
                 $application->forceFill(['log_monitoring_suite_id' => (int) $e->details['application_id']])->save();
 

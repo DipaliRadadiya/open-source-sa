@@ -20,40 +20,17 @@ class ApplicationPhpSettings extends Model
     /** @var list<string> */
     public const PM_TYPES = ['ondemand', 'dynamic', 'static'];
 
-    /**
-     * Functions worth disabling by default. Every one of them is a way to run
-     * a program from inside PHP, which is what a web shell needs and what a
-     * normal application almost never does.
-     */
+    /** Disabled by default: each one runs a program from PHP, which a web shell needs and apps rarely do. */
     public const SAFE_DISABLED_FUNCTIONS = 'exec,passthru,shell_exec,system,proc_open,popen,pcntl_exec';
 
     /**
-     * The cPanel/WHM-style hardening list: everything in SAFE, plus the
-     * process, user and socket introspection an attacker uses *after* getting
-     * code running. Opt-in, because that extra reach costs compatibility.
+     * The cPanel/WHM-style hardening list: SAFE plus the process, user and socket introspection
+     * used after code is already running. Opt-in, because it costs compatibility.
      *
-     * Cleaned rather than copied verbatim from the list that circulates on
-     * hosting forums, which contains:
-     *
-     *   - `posix,_getppid` — a stray comma splitting one name into two
-     *     non-functions, so `posix_getppid` was never actually disabled.
-     *   - `ini_alter` and `posix_geteuid` listed twice.
-     *   - `leak` (gone since PHP 5.4), `source` and `listen` (never PHP
-     *     functions), `virtual` (Apache mod_php only — a no-op under FPM).
-     *
-     * Deliberately NOT included, because each breaks working sites for very
-     * little gain:
-     *
-     *   - `symlink` / `link` — Laravel's `storage:link`, Composer path repos.
-     *   - `tmpfile` / `fpassthru` — PHPMailer, Guzzle streams, file downloads.
-     *   - `diskfreespace` — WordPress Site Health, upload pre-checks.
-     *   - `escapeshellcmd` — a *defensive* function; disabling it breaks the
-     *     libraries that sanitise without preventing anything.
-     *   - `stream_socket_server` — needed by the realtime layer.
-     *
-     * `ini_set` is not here either: disabling it breaks most applications, and
-     * it could not undo this list anyway — the pool writes these as
-     * `php_admin_value`, which a script cannot override at runtime.
+     * Deliberately NOT included (each breaks working sites): `symlink`/`link` (storage:link,
+     * Composer path repos), `tmpfile`/`fpassthru` (mailers, streams, downloads), `diskfreespace`,
+     * `escapeshellcmd` (a defensive function), `stream_socket_server` (realtime layer), `ini_set`
+     * (the pool writes these as `php_admin_value`, which a script cannot override anyway).
      */
     public const STRICT_DISABLED_FUNCTIONS = 'getmyuid,passthru,shell_exec,dl,exec,system,highlight_file,show_source,'
         .'posix_ctermid,posix_getcwd,posix_getegid,posix_geteuid,posix_getgid,posix_getgrgid,posix_getgrnam,'
@@ -64,11 +41,7 @@ class ApplicationPhpSettings extends Model
         .'socket_accept,socket_bind,socket_clear_error,socket_close,socket_connect,socket_listen,'
         .'socket_create_listen,socket_read,socket_create_pair';
 
-    /**
-     * The strict list for one site type: Nextcloud needs `posix_getuid` and
-     * `posix_getpwuid` (its cron and occ compare the running user with the
-     * data directory's owner), so — as v7 does — they are left out for it.
-     */
+    /** The strict list for one site type. Nextcloud's cron and occ need `posix_getuid`/`posix_getpwuid`. */
     public static function strictDisabledFunctionsFor(string $siteType): string
     {
         $functions = explode(',', self::STRICT_DISABLED_FUNCTIONS);
@@ -112,18 +85,14 @@ class ApplicationPhpSettings extends Model
     /**
      * The values a site gets before anyone has chosen anything.
      *
-     * Modest on purpose. A pool that is too small shows up as a slow site and
-     * someone raises it; a pool that is too large shows up as the OOM killer
-     * taking out a different site at 3am, and nobody connects the two.
+     * Modest on purpose: an oversized pool ends in the OOM killer taking out a different site.
      *
      * @return array<string, mixed>
      */
     public static function defaults(): array
     {
         return [
-            // v7's defaults (operator, 2026-10-07): v8 follows v7 so a site
-            // behaves the same on either, and a migrated one is not suddenly
-            // capped lower than it was.
+            // Same as v7, so a migrated site is not capped lower than it was.
             'memory_limit' => '256M',
             'upload_max_filesize' => '128M',
             'post_max_size' => '128M',
@@ -133,8 +102,7 @@ class ApplicationPhpSettings extends Model
             'session_gc_maxlifetime' => 1440,
             'pm_type' => 'ondemand',
             'pm_max_children' => 20,
-            // Without this a slow leak grows a worker until the kernel kills
-            // something. With it, the leak is bounded to 500 requests.
+            // Bounds a slow worker memory leak to 500 requests.
             'pm_max_requests' => 500,
             // Null: derived from pm_max_children when the pool is written
             // (PoolManager). Set only for a site that brought its own (v7).
@@ -143,8 +111,7 @@ class ApplicationPhpSettings extends Model
             'pm_max_spare_servers' => null,
             'pm_process_idle_timeout' => null,
             'pm_max_spawn_rate' => null,
-            // On by default, as v7 has it: the site's own folder, its sessions
-            // and /tmp ({@see PoolManager::openBasedir()}).
+            // On by default (as v7): the site folder, its sessions and /tmp ({@see PoolManager::openBasedir()}).
             'open_basedir_enabled' => true,
             'open_basedir_paths' => null,
             'disable_functions' => null,
@@ -175,13 +142,7 @@ class ApplicationPhpSettings extends Model
         return $values;
     }
 
-    /**
-     * Worst-case memory for this site: every worker running at its limit.
-     *
-     * The number every panel lets you set and none of them show you. It is an
-     * upper bound rather than a prediction — but the upper bound is what the
-     * OOM killer reacts to.
-     */
+    /** Worst-case memory for this site: every worker running at its limit (what the OOM killer reacts to). */
     public function memoryCeilingBytes(): int
     {
         $effective = $this->effective();
@@ -195,8 +156,7 @@ class ApplicationPhpSettings extends Model
         $value = trim($value);
 
         if ($value === '-1') {
-            // Unlimited cannot be budgeted, and treating it as zero would
-            // report a server with unlimited pools as comfortably empty.
+            // Unlimited cannot be budgeted; zero would report the server as comfortably empty.
             return 128 * 1024 * 1024;
         }
 

@@ -13,16 +13,12 @@ use Illuminate\Support\Str;
 /**
  * Create a containerised database and start it.
  *
- * Credentials are generated here and never asked for. A password somebody types
- * into a create form is a password that reaches the panel's logs, their shell
- * history and their clipboard, and the init-only rule means it can never be
- * changed afterwards anyway — so the panel generates one and shows it.
+ * Credentials are generated here and never asked for, so a typed password cannot reach the
+ * panel's logs or shell history.
  *
- * **Every value here is init-only.** The engine images read `*_PASSWORD`,
- * `*_USER` and `*_DB` when the data directory is empty and ignore them
- * afterwards. That is why the row is written before the container starts and is
- * never regenerated: a rewritten file would disagree with the running engine while
- * looking perfectly correct.
+ * Every value is init-only: the engine images read `*_PASSWORD`, `*_USER` and `*_DB` only when the
+ * data directory is empty. So the row is written before the container starts and never
+ * regenerated: a rewritten value would disagree with the running engine.
  */
 class CreateDockerDatabase
 {
@@ -46,9 +42,8 @@ class CreateDockerDatabase
             'version' => $data['version'],
             'port' => $this->ports->allocate(),
             'docker_network' => $data['docker_network'] ?? null,
-            // The instance's size. Null for either means "the configured default"
-            // for memory and "no quota" for CPU — the two are not symmetric, and
-            // `DatabaseContainerManager` is the one place that resolves them.
+            // Null means the configured default for memory and no quota for CPU;
+            // `DatabaseContainerManager` resolves both.
             'cpu_limit' => $data['cpu_limit'] ?? null,
             'memory_limit' => $data['memory_limit'] ?? null,
             'credentials' => $this->credentials($data['engine'], $data['name']),
@@ -57,35 +52,17 @@ class CreateDockerDatabase
         try {
             $this->containers->apply($database);
         } catch (DatabaseContainerFailedException $e) {
-            // The row goes with it. A database row whose container never started
-            // is a set of connection details that connect to nothing, and it
-            // holds a port the allocator would keep reserving.
-            //
-            // remove() refuses when `down` fails over a container that is still
-            // there. Here the failure being reported is the create's, so that is
-            // the one that is thrown; the cleanup stays best-effort, as it was.
+            // The row goes with it: a row whose container never started connects to nothing and
+            // holds a port. The create's failure is the one thrown, so the cleanup is best-effort.
             try {
                 $this->containers->remove($database);
             } catch (DatabaseContainerFailedException) {
             }
 
-            // 🔴 **And the volume**, which this did not do. Two failed creates on
-            // the test box — Postgres 18 before its mount point was fixed, and
-            // MongoDB 8 on a kernel it refuses to run on — left `sv-db-8_data` and
-            // `sv-db-10_data` behind with nothing pointing at them. The API was
-            // meanwhile answering "Nothing was left behind — no row, no container
-            // and no port held", which was a true list and the wrong one.
-            //
-            // Safe to remove unconditionally HERE, unlike on delete, where it is an
-            // opt-in: this volume was created seconds ago by this call, for a
-            // database that never started, so there is nothing in it that could be
-            // wanted. The opt-in on delete exists because that volume may hold
-            // years of data.
-            //
-            // After `remove()`, never before: `docker volume rm` refuses a volume a
-            // container still references, and the container is what `compose down`
-            // has just taken away. The site path learned the same ordering on a
-            // real box.
+            // The volume too, or a failed create leaves it behind. Safe to remove unconditionally
+            // here (unlike on delete, where it is opt-in): it was created seconds ago and never
+            // held data. Always after `remove()`: `docker volume rm` refuses a volume a container
+            // still references.
             $this->docker->removeVolume($database->volume());
 
             $database->delete();
@@ -93,16 +70,13 @@ class CreateDockerDatabase
             throw $e;
         }
 
-        // Names and the engine, never a credential. The activity log is readable
-        // by a wider audience than the people who may manage Docker.
+        // Never a credential: the activity log is readable by more people than may manage Docker.
         $this->activityLogger->log('docker_database.created', $database, [
             'name' => $database->name,
             'engine' => $database->engine,
             'version' => $database->version,
             'port' => $database->port,
             'network' => $database->docker_network,
-            // The size it was created at, because a database that was always slow
-            // and one that was made smaller are different events.
             'cpu_limit' => $database->cpu_limit,
             'memory_limit' => $database->memory_limit,
         ]);
@@ -113,13 +87,8 @@ class CreateDockerDatabase
     /**
      * The credential set for an engine.
      *
-     * Redis and Valkey have no users and no databases — a password is the whole of
-     * their auth — so they get one, and the connection details show only what
-     * exists rather than empty fields for concepts the engine does not have.
-     *
-     * The application user is never root. MySQL and MariaDB need root to create
-     * the schema, so root's password is stored separately and shown separately;
-     * nothing else should use it.
+     * Redis and Valkey have no users or databases, only a password. The application user is never
+     * root: MySQL and MariaDB's root password is stored separately and nothing else should use it.
      *
      * @return array<string, string>
      */
@@ -131,10 +100,8 @@ class CreateDockerDatabase
             return ['password' => $password];
         }
 
-        // A database and user named after the object, so connection details read
-        // like something a person chose. Sanitised because an identifier is not a
-        // display name: MySQL forbids a hyphen in an unquoted one, and a name is
-        // free text.
+        // Database and user are named after the object, sanitised: the name is free text and
+        // MySQL forbids a hyphen in an unquoted identifier.
         $identifier = Str::of($name)->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->limit(24, '')->toString();
         $identifier = $identifier === '' ? 'app' : $identifier;
 

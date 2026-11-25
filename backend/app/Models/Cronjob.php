@@ -29,14 +29,11 @@ class Cronjob extends Model
     }
 
     /**
-     * A stable, unique slug from the name — the key for the cron.d filename.
-     * Suffixes `-2`, `-3`, … on collision. Migration-safe (stored, not derived
-     * from the auto-increment id).
+     * A stable, unique slug from the name, used as the cron.d filename. Suffixes `-2`, `-3`, … on
+     * collision. Stored, not derived from the id, so it survives migration.
      *
-     * Never longer than {@see MAX_SLUG_LENGTH}, suffix included. The name may
-     * be 255 characters, and a cron.d file named after all of it crashed cron
-     * itself (measured on Ubuntu 26.04: 251 → core dump, every job on the
-     * server stopped; 140 was still read fine).
+     * Never longer than {@see MAX_SLUG_LENGTH}, suffix included: a very long cron.d file name
+     * (251 characters) crashes cron itself and stops every job on the server.
      */
     public static function uniqueSlug(string $name, ?int $ignoreId = null): string
     {
@@ -57,10 +54,7 @@ class Cronjob extends Model
         return $slug;
     }
 
-    /**
-     * The longest cron.d file name (and log name) a job is given. Well under
-     * the length that crashed cron, and short enough to read in a listing.
-     */
+    /** The longest cron.d file name (and log name) a job is given; well under what crashes cron. */
     public const MAX_SLUG_LENGTH = 64;
 
     /** `$base` cut so that `$base.$suffix` fits, without a dangling hyphen. */
@@ -71,19 +65,14 @@ class Cronjob extends Model
         return (rtrim(substr($base, 0, $room), '-') ?: 'cronjob').$suffix;
     }
 
-    /**
-     * How many names {@see uniqueSlug()} asks the disk about. Past it only the
-     * database decides, so a cron.d full of `x`, `x-2`, … cannot hang a request.
-     */
+    /** How many names {@see uniqueSlug()} checks on disk; past it only the database decides. */
     private const MAX_SLUG_PROBES = 50;
 
     /**
      * Whether cron.d already holds a file of that name that no job owns.
      *
-     * The slug *is* the filename, and the reserved-name list only knows the
-     * OS's files. A job named "panel-scheduler" overwrote the panel's own
-     * scheduler and deleting the job deleted it (bug #17). Asking the disk
-     * covers the panel's files, the OS's and anything installed later — a
+     * The slug is the filename, and the reserved-name list only knows the OS's files. Asking the disk
+     * also covers the panel's own files (a job named "panel-scheduler" would overwrite it), so a
      * clash gets a suffix instead of somebody else's file.
      */
     private static function foreignFileAt(string $slug, ?self $own): bool
@@ -101,10 +90,8 @@ class Cronjob extends Model
     /**
      * When cron will next run this job.
      *
-     * Computed in the SERVER's timezone, not the app's — cron interprets
-     * schedules against the OS clock, so computing in UTC would be wrong by
-     * the offset. Null for an inactive job, because an inactive job has no
-     * next run.
+     * Computed in the SERVER's timezone, not the app's: cron reads schedules against the OS clock.
+     * Null for an inactive job.
      */
     public function nextRunAt(): ?Carbon
     {
@@ -114,11 +101,8 @@ class Cronjob extends Model
 
         $timezone = ServerTimezone::get();
 
-        // Carbon::now() rather than the string 'now': the string is resolved
-        // by the cron library against the real clock, which ignores a frozen
-        // test time — so a test that appeared to pin the date was really
-        // asserting against whatever day it ran on, and passed until it
-        // didn't.
+        // Carbon::now(), not the string 'now': the cron library resolves the string against the
+        // real clock, which ignores a frozen test time.
         $date = (new CronExpression((string) $this->expression))
             ->getNextRunDate(Carbon::now(), 0, false, $timezone);
 
@@ -137,9 +121,8 @@ class Cronjob extends Model
     }
 
     /**
-     * The latest run, read from the log by {@see CronjobHistory}
-     * — set only where it was read, so the resource can tell "never ran"
-     * (null) from "not asked" (unset).
+     * The latest run, read from the log by {@see CronjobHistory}; set only where it was read, so
+     * the resource can tell "never ran" (null) from "not asked" (unset).
      *
      * @var array<string, mixed>|null
      */
@@ -159,13 +142,10 @@ class Cronjob extends Model
     }
 
     /**
-     * This job's key in the Logs feature, or null when no output has been
-     * captured yet.
+     * This job's key in the Logs feature, or null when no output has been captured yet.
      *
-     * Gated on the file existing rather than on a stored flag: the log is
-     * created when the panel writes the job's cron.d entry, so its presence is
-     * the honest answer to "is there anything to show?" — and a job whose
-     * entry predates output capture correctly reports nothing.
+     * Gated on the log file existing, not a stored flag: a job whose entry predates output capture
+     * correctly reports nothing.
      */
     public function logKey(): ?string
     {

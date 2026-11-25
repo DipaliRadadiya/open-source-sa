@@ -16,17 +16,12 @@ use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 /**
- * The 8G Firewall (query string / request URI / user agent / referrer /
- * cookie / method — six independently switchable categories, plus a
- * per-app exceptions and custom-rules list). Same apply → test → reload →
- * rollback shape as Basic Auth and the AI Bot Blocker, with one addition:
- * the ruleset is declared once, server-wide, rather than per vhost — see
- * `ensureSharedMaps()`.
+ * The 8G Firewall: six switchable categories plus per-app exceptions and custom rules. Same
+ * apply → test → reload → rollback shape as Basic Auth and the AI Bot Blocker, but the ruleset
+ * is declared once server-wide, not per vhost (see `ensureSharedMaps()`).
  *
- * Rules (exceptions/custom blocks) are rendered from an in-memory
- * collection, not saved to the database, until the config test proves the
- * new state is safe — a failed test must leave the database exactly as it
- * was, the same guarantee every other apply-then-test feature here makes.
+ * Rules are rendered from an in-memory collection and saved only after the config test passes,
+ * so a failed test leaves the database untouched.
  */
 class Waf8GManager
 {
@@ -51,15 +46,9 @@ class Waf8GManager
         ?array $exceptions = null,
         ?array $customRules = null,
     ): void {
-        // Refused before anything is written. Turning the firewall on where it
-        // cannot be enforced used to answer 200 and store `waf_enabled: true`,
-        // so the screen showed protection that inspected nothing. A 422 naming
-        // the web server is the honest answer, and the frontend can hide the
-        // control entirely using `waf_supported`.
-        //
-        // Only enabling is blocked: disabling, and editing rules on a site that
-        // was enabled before this guard existed, must stay possible — otherwise
-        // an OLS site that got switched on could never be switched back off.
+        // Refused before anything is written: enabling where it cannot be enforced would show
+        // protection that inspects nothing. Only enabling is blocked, so a site enabled earlier
+        // can still be switched off or edited.
         if ($enabled && ! $this->webServers->driver()->supportsWaf()) {
             throw ValidationException::withMessages([
                 'enabled' => __('errors/application.waf_unsupported', [
@@ -76,9 +65,8 @@ class Waf8GManager
         $previousMode = $application->waf_mode;
         $previousCategories = $application->waf_categories;
 
-        // A partial update must not decide anything it did not mention. Absent
-        // once meant "all six on", which silently re-enabled the category a
-        // user had switched off to fix a false positive.
+        // A partial update must not decide anything it did not mention (absent categories once
+        // meant "all six on").
         $rulesChange = $exceptions !== null || $customRules !== null;
         $exceptions ??= $application->wafRules->where('type', 'exception')->pluck('value')->all();
         $customRules ??= $application->wafRules->where('type', 'block')->pluck('value')->all();
@@ -87,24 +75,20 @@ class Waf8GManager
         $application->waf_mode = $mode;
         $application->waf_categories = $categories ?? $application->waf_categories;
 
-        // Rendered against the new rules before either is ever written to
-        // the database — see class docblock.
+        // Rendered against the new rules before they reach the database (see class docblock).
         $application->setRelation('wafRules', $this->pendingRules($exceptions, $customRules));
 
-        // v7's own files for this setting go first: they sit at the names v8
-        // writes to, and v8 never writes over a file it did not write. Put
-        // back with everything else if the change does not hold.
+        // v7's files for this setting go first: v8 never writes over a file it did not write.
+        // Put back if the change does not hold.
         $moved = $this->leftovers->remove($application, 'firewall');
 
         $applied = $this->applyVhost($application);
 
-        // Refused with v7's files gone: something may still lean on them (an
-        // nginx conf.d map another vhost reads), so they go back first and
-        // the change is kept if that is enough.
+        // Refused with v7's files gone: something may lean on them (an nginx conf.d map another
+        // vhost reads), so they go back first and the change is kept if that is enough.
         $refused = $applied->failed() || $this->webServers->driver()->test()->failed();
 
-        // Only the ones elsewhere: one at a name the panel now writes would go
-        // back over the panel's own file and hide the refusal.
+        // Only the ones elsewhere: one at a name the panel writes would overwrite its own file.
         $elsewhere = $refused && $applied->ok ? $this->leftovers->outsideSiteConf($application, $moved) : [];
 
         if ($elsewhere !== []) {
@@ -125,8 +109,7 @@ class Waf8GManager
             throw new WafOperationException($applied->failed() ? $applied->reference : $restored->reference);
         }
 
-        // Saved either way: the tested config is on disk, and the row has to
-        // say what the disk says. A failed reload is reported at the end.
+        // Saved either way: the tested config is on disk. A failed reload is reported at the end.
         $reload = $this->webServers->driver()->reload();
 
         $application->save();
@@ -138,10 +121,9 @@ class Waf8GManager
             ]);
         }
 
-        // Switched off: its log is emptied (bug #84). Kept, it came back the
-        // next time the firewall went on, full of hits against rules that
-        // were no longer there. `-c`: nothing to empty is not an error. OLS
-        // marks lines in the site's own access log instead, which stays.
+        // Switched off: empty its log, or old hits against removed rules reappear when it goes
+        // back on. `-c`: nothing to empty is not an error. OLS marks the site's own access log
+        // instead, which stays.
         if ($previousEnabled && ! $enabled && $this->webServers->driver()->name() !== 'openlitespeed') {
             $this->serverOps->run(
                 ['truncate', '-c', '-s', '0', $application->wafDetectLogPath()],
@@ -149,10 +131,8 @@ class Waf8GManager
             );
         }
 
-        // Only when the request actually carried a list. Rewriting the rows to
-        // the same values on every save would churn the table and, worse,
-        // reset their timestamps so "when did this rule appear" stops being
-        // answerable.
+        // Only when the request carried a list: rewriting identical rows would reset their
+        // timestamps.
         if ($rulesChange) {
             $application->wafRules()->delete();
 
@@ -167,19 +147,12 @@ class Waf8GManager
     }
 
     /**
-     * Declares the ruleset once, server-wide, in whatever shape the active
-     * driver needs it: nginx `map` blocks (nginx only allows `map` in the
-     * `http` context, so a per-site copy is not an option) or the Apache
-     * `SetEnvIfExpr`/`SetEnvIfNoCase` file every WAF-enabled site `Include`s
-     * (not required by Apache the way it is by nginx, but one shared file
-     * avoids duplicating ~15KB of regex into every site's own vhost).
-     * OpenLiteSpeed needs neither — its templates embed the pattern list
-     * directly, best-effort, the same as everywhere else OLS shows up.
+     * Declares the ruleset once, server-wide, in the shape the active driver needs: nginx `map`
+     * blocks (only allowed in the `http` context) or an Apache `SetEnvIf*` file that every
+     * WAF-enabled site includes. OpenLiteSpeed needs neither; its templates embed the patterns.
      *
-     * Static content, safe to overwrite unconditionally on every call — the
-     * only way an already-configured site picks up a newer ruleset shipped
-     * in a future panel update, the same accepted limitation the AI Bot
-     * Blocker has for its own list.
+     * Static content, overwritten on every call: that is how existing sites pick up a newer
+     * ruleset from a panel update.
      */
     private function ensureSharedMaps(): void
     {

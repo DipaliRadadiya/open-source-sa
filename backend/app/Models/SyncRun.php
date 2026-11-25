@@ -32,9 +32,8 @@ class SyncRun extends Model
     }
 
     /**
-     * How long after it should have finished a run is treated as dead. The
-     * job's own timeout plus a minute, so a run that is merely slow is never
-     * declared stale while it is still working.
+     * How long a run may stay unfinished before it is treated as dead: the job's timeout plus a
+     * minute, so a slow run is never declared stale while working.
      */
     public const STALE_AFTER = RunServerSync::TIMEOUT + 60;
 
@@ -44,22 +43,18 @@ class SyncRun extends Model
     }
 
     /**
-     * Accounts this preview found and an apply would adopt, username => home
-     * path. Always empty for an apply, which has adopted them for real by the
-     * time anything that belongs to them is read.
+     * Accounts this preview found and an apply would adopt, username => home path. Always empty
+     * for an apply, which has already adopted them.
      *
-     * A preview writes nothing, so the site, key and cron discoverers looked
-     * for their owner in the panel, did not find one, and said "skipped until
-     * users are synced" about things the same run applied would adopt
-     * (2026-09-24). Read back from this run's own items, so it is exactly the
-     * list the user is looking at: an ignored or skipped account is not in it.
+     * A preview writes nothing, so site, key and cron discoverers cannot find their owner in the
+     * panel; this lets them see the accounts the run would adopt. Read from this run's own
+     * items, so an ignored or skipped account is not in it.
      *
      * @return Collection<string, string|null>
      */
     public function previewedSystemUsers(): Collection
     {
-        // Null on a run created without a mode and not read back: the column
-        // defaults to preview, and so does this.
+        // Null mode (column default) means preview.
         if ($this->mode?->writes() === true) {
             return new Collection;
         }
@@ -74,15 +69,9 @@ class SyncRun extends Model
     /**
      * Unfinished, and old enough that nothing is going to finish it.
      *
-     * `RunServerSync::failed()` handles the ordinary death — a timeout, an
-     * exception — but it only runs if a worker picked the job up and lived long
-     * enough to report. It never fires when the queue worker is not running at
-     * all (the run stays `pending` forever) or when the worker is killed
-     * outright by the OOM killer or a reboot (`running` forever).
-     *
-     * That matters because the guard on starting a run reads this state: a run
-     * stuck here refused every later sync, permanently, with no way to clear it
-     * from any screen. A guard that cannot be cleared is worse than no guard.
+     * `RunServerSync::failed()` never fires when no queue worker runs (`pending` forever) or the
+     * worker is killed outright (`running` forever). The start-a-run guard reads this state, so
+     * a stuck run would refuse every later sync with no way to clear it.
      */
     public function isStale(): bool
     {
@@ -109,9 +98,7 @@ class SyncRun extends Model
             'op' => 'reap_stale',
             'sync_run' => $this->id,
             'status' => $this->status->value,
-            // `pending` here means the job was never picked up at all, which is
-            // a queue worker that is not running — and that breaks far more
-            // than this feature.
+            // `pending` means the job was never picked up: the queue worker is not running.
             'detail' => 'unfinished for longer than the job could run',
         ]);
 
@@ -124,8 +111,7 @@ class SyncRun extends Model
     }
 
     /**
-     * Fail every run that is stale, and report whether any genuinely live run
-     * is left.
+     * Fail every stale run, and report whether any live run is left.
      */
     public static function hasLiveRun(): bool
     {
@@ -144,8 +130,7 @@ class SyncRun extends Model
     /**
      * The resource types this run was asked to cover, or all of them.
      *
-     * Not `only()` — that is Eloquent's own method for picking attributes, and
-     * overriding it with a different signature is a fatal error at load time.
+     * Not named `only()`: that is Eloquent's own method and overriding it is a fatal error.
      *
      * @return array<int, string>
      */
@@ -155,22 +140,18 @@ class SyncRun extends Model
     }
 
     /**
-     * Firewall rules are opt-in. Adopting a rule means a later sync could
-     * decide it is the panel's to remove, and that is the one mistake here
-     * that cannot be undone from the panel.
-     */
-    /**
-     * Whether this run should show things the user has already dismissed.
-     *
-     * Off by default — that is what makes ignoring worth doing — but a run
-     * has to be able to show them, or an ignore made by mistake is
-     * unreachable from the screen that made it.
+     * Whether this run should show things the user has already dismissed. Off by default, but a
+     * run must be able to show them or a mistaken ignore cannot be undone.
      */
     public function includesIgnored(): bool
     {
         return (bool) ($this->options['include_ignored'] ?? false);
     }
 
+    /**
+     * Firewall rules are opt-in: adopting one lets a later sync decide it is the panel's to
+     * remove, which cannot be undone from the panel.
+     */
     public function includesFirewall(): bool
     {
         return (bool) ($this->options['include_firewall'] ?? false);

@@ -10,14 +10,8 @@ use Illuminate\Support\Facades\Log;
 /**
  * Starts the update and reads back what it did.
  *
- * The runner is launched detached — `setsid` puts it in its own session, so
- * reloading php-fpm and restarting the queue partway through does not take it
- * with them. Nothing waits on it: the request that started the update returns
- * immediately, and progress is read from the state file afterwards.
- *
- * That is also why the row is never advanced by the process that started it.
- * The only source of truth for a finished update is the file the script wrote,
- * because by then the PHP process that dispatched it is gone.
+ * The script runs detached and nothing waits on it: progress is read from its state file, which
+ * is the only source of truth for a finished update (the process that started it is long gone).
  */
 class PanelUpdateRunner
 {
@@ -44,7 +38,7 @@ class PanelUpdateRunner
             return false;
         }
 
-        // Legacy or release — asked of the layout. See UpdateFlow.
+        // Legacy or release layout: see UpdateFlow.
         $flow = $this->flow->script();
         $path = $this->script->scriptPath($update);
 
@@ -60,9 +54,8 @@ class PanelUpdateRunner
 
         @chmod($path, 0700);
 
-        // Detached and fully redirected. Without closing all three streams the
-        // child keeps the php-fpm request's pipes open and the response never
-        // finishes flushing.
+        // Fully redirected: otherwise the child keeps the php-fpm request's pipes open and the
+        // response never finishes.
         $log = $dir.'/update-'.$update->getKey().'.log';
 
         if (config('panel_update.launch', true)) {
@@ -73,25 +66,13 @@ class PanelUpdateRunner
     }
 
     /**
-     * Start the script somewhere it will survive the update restarting the
-     * services the panel runs under.
+     * Start the script so it survives the update restarting the panel's own services.
      *
-     * `setsid` alone is not enough, and neither is `nohup`. Both deal with
-     * signals — a new session has no controlling terminal, so SIGHUP is never
-     * delivered — but this script is started from an HTTP request and so
-     * inherits the panel's **php-fpm cgroup**. systemd's default
-     * `KillMode=control-group` kills every process in a unit's cgroup when it
-     * restarts, whatever session or process group they are in. A transient
-     * unit is the only thing that actually escapes that.
+     * `setsid` and `nohup` are not enough: the script inherits the panel's php-fpm cgroup, and
+     * systemd's `KillMode=control-group` kills the whole cgroup on restart. Only a transient unit
+     * escapes it. A script killed mid-step leaves the UI polling a run that never advances.
      *
-     * It matters because the update restarts the panel's own services partway
-     * through, and the run has to outlive them: the state file it writes is
-     * the only thing the progress screen has to read, so a script killed
-     * mid-step leaves the UI polling a run that will never advance again.
-     *
-     * Falls back to the old `setsid` form when systemd-run is unavailable or
-     * not permitted — a server whose sudoers predates this must keep updating,
-     * and today's behaviour is what it gets.
+     * Falls back to `setsid` when systemd-run is unavailable or not permitted (old sudoers).
      */
     private function launch(string $path, string $log, string $key): void
     {
@@ -113,19 +94,14 @@ class PanelUpdateRunner
     }
 
     /**
-     * The script in a transient systemd unit of its own.
-     *
-     * Built separately from running it so the shape of the command is
-     * testable: `start()` shells out for real, so nothing else here can be
-     * exercised without spawning units on the machine running the suite.
+     * The script in a transient systemd unit of its own. Built apart from running it so tests
+     * can check the command without spawning units.
      */
     public static function transientCommand(string $path, string $log, string $key): string
     {
-        // OOMPolicy=continue: the default (stop) makes systemd stop the whole
-        // unit the moment the kernel OOM-kills any process in it. The frontend
-        // build is the one most likely to be killed, and the script itself has
-        // to survive that to roll back and record `frontend_build_out_of_memory`
-        // instead of leaving the screen on a run that never finishes.
+        // OOMPolicy=continue: by default systemd stops the whole unit when the kernel OOM-kills
+        // any process in it. The script must survive a killed frontend build to roll back and
+        // record `frontend_build_out_of_memory`.
         return sprintf(
             'sudo -n systemd-run --collect --quiet -p OOMPolicy=continue --unit=%s /bin/sh -c %s',
             escapeshellarg('panel-update-'.$key),
@@ -145,11 +121,8 @@ class PanelUpdateRunner
     }
 
     /**
-     * Bring the row in line with the state file.
-     *
-     * Called whenever an update is read. This is what makes a success that
-     * completed *after* the panel restarted show up as a success rather than
-     * a row stuck at `running` forever.
+     * Bring the row in line with the state file, so a run that finished after the panel
+     * restarted does not stay `running` forever.
      */
     public function reconcile(PanelUpdate $update): PanelUpdate
     {
@@ -180,13 +153,8 @@ class PanelUpdateRunner
             $attributes['finished_at'] = now();
             $attributes['to_commit'] = $state['commit'] ?? null;
 
-            // This is the only place the outcome of a run is ever recorded
-            // anywhere other than the row itself. The script that produced it
-            // runs detached, outside any request — by the time anyone is here
-            // to read the state file, the original request that started the
-            // update is long gone, so this is the sole opportunity to put the
-            // result somewhere a person can find it without knowing to query
-            // the panel_updates table directly.
+            // The only place a run's outcome reaches the activity log: the script runs detached,
+            // outside any request.
             $this->activity->log($update->dry_run ? 'panel_update.dry_run_succeeded' : 'panel_update.succeeded', $update, [
                 'from_version' => $update->from_version,
                 'to_version' => $update->to_version,
@@ -196,12 +164,10 @@ class PanelUpdateRunner
         if ($state['status'] === 'failed') {
             $attributes['status'] = PanelUpdateStatus::Failed;
             $attributes['finished_at'] = now();
-            // The step that failed is the reason code — a stable key the UI
-            // can translate, never raw stderr.
+            // The failed step is the reason code: a stable key the UI translates, never raw stderr.
             $attributes['reason'] = (string) ($state['reason'] ?: 'unknown');
-            // New scripts say whether anything had to be restored. Older
-            // state files predate the field and only wrote failures after the
-            // rollback trap, so true is the compatible fallback.
+            // Older state files lack the field and only wrote failures after the rollback trap,
+            // so true is the compatible fallback.
             $attributes['rolled_back'] = (bool) ($state['rolled_back'] ?? true);
 
             $this->activity->log($update->dry_run ? 'panel_update.dry_run_failed' : 'panel_update.failed', $update, [

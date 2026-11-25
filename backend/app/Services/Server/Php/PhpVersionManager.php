@@ -10,15 +10,11 @@ use App\Services\Server\ServerOpsResult;
 /**
  * The PHP versions installed on this server, and their FPM configuration.
  *
- * Versions are detected from the same directory the Services feature reads, so
- * the two lists can never disagree about what exists.
+ * Versions come from the same directory the Services feature reads, so the two lists agree.
  *
- * Editing an ini is a raw file edit, which is deliberate: whoever holds the
- * `service` permission on a single-tenant panel is the server administrator
- * and could edit the file over SSH regardless. What the panel adds is not
- * power — it is a safety net: the previous file is kept, the new one is
- * validated, and a configuration that fails its own test is rolled back
- * before anything reloads.
+ * Editing an ini is a raw file edit on purpose: the `service` permission holder is the server
+ * administrator anyway. The panel adds a safety net: the previous file is kept and a
+ * configuration that fails its own test is rolled back before anything reloads.
  */
 class PhpVersionManager
 {
@@ -45,8 +41,8 @@ class PhpVersionManager
     /**
      * Absolute path of a version's FPM php.ini.
      *
-     * The version is checked against the detected list first, so a client
-     * string can never be interpolated into a path we then write to.
+     * The version is checked against the detected list first, so a client string is never
+     * interpolated into a path we write to.
      */
     public function iniPath(string $version): string
     {
@@ -74,15 +70,11 @@ class PhpVersionManager
     /**
      * Replace a version's php.ini, validating before anything reloads.
      *
-     * A bad ini is worse than a bad vhost: PHP-FPM may refuse to start at all,
-     * taking every site on that version down with no obvious cause. So the old
-     * file is kept and restored the moment the test fails, and the reload only
-     * happens on a configuration that has already proven valid.
+     * A bad ini can stop PHP-FPM from starting and take every site on that version down, so
+     * the old file is restored the moment the test fails and the reload only follows a valid one.
      *
-     * `$keepCopy` false (2026-10-29, the user's choice): no `.panel-bak` is
-     * written. The old text is held here instead, for the few seconds of the
-     * test, and written back from memory if PHP refuses the new one — so a
-     * broken ini still never survives, but nothing is left on the disk.
+     * With `$keepCopy` false no `.panel-bak` is written; the old text is held in memory and
+     * written back if PHP refuses the new one.
      */
     public function writeIni(string $version, string $contents, bool $keepCopy = true): void
     {
@@ -109,8 +101,7 @@ class PhpVersionManager
         $test = $this->test($version);
 
         if ($test->failed()) {
-            // Put the working file back before the next reload — by us or by
-            // anything else — can pick up the broken one.
+            // Restore before any later reload can pick up the broken file.
             $this->serverOps->run(
                 $original === null ? ['cp', '-f', $backup, $path] : ['tee', $path],
                 ['feature' => 'php', 'op' => 'restore_ini', 'version' => $version],
@@ -124,18 +115,15 @@ class PhpVersionManager
     }
 
     /**
-     * Refuse an extension loaded from anywhere but PHP's own directory
-     * (bug #28).
+     * Refuse an extension loaded from anywhere but PHP's own directory.
      *
-     * The PHP-FPM master runs as root and loads every `extension` and
-     * `zend_extension` at start, so a path to any `.so` is code run as root.
-     * A bare name, or an absolute path straight inside the directory (where
-     * v7 copies the ionCube loader), is fine. `..` cannot pass the
-     * directory comparison; also closed: environment variables, and moving
-     * `extension_dir` itself.
+     * The PHP-FPM master runs as root and loads every `extension` and `zend_extension` at
+     * start, so a path to any `.so` is code run as root. A bare name, or an absolute path
+     * straight inside the directory, is fine. `..`, environment variables and moving
+     * `extension_dir` itself are refused.
      *
-     * The directory comes from the binary's compiled-in PHP_EXTENSION_DIR,
-     * with `-n`: the ini being saved cannot move it.
+     * The directory comes from the binary's compiled-in PHP_EXTENSION_DIR, run with `-n` so
+     * the ini being saved cannot move it.
      */
     private function assertExtensionsStayHome(string $version, string $contents): void
     {
@@ -155,8 +143,7 @@ class PhpVersionManager
             }
 
             $directory ??= $this->extensionDirectory($version);
-            // `$`: PHP expands `${VAR}` in ini values when it reads them, so a
-            // path that looks like it is inside the directory may not be.
+            // `$`: PHP expands `${VAR}` in ini values, so a path may not be where it looks.
             $allowed = ! str_contains($value, '$') && match ($key) {
                 'extension_dir' => rtrim($value, '/') === $directory,
                 default => str_starts_with($value, '/') && dirname($value) === $directory,
@@ -204,9 +191,8 @@ class PhpVersionManager
     }
 
     /**
-     * What PHP said about the file: its error and warning lines, at most ten.
-     * `PHP:  syntax error, unexpected '=' in /etc/php/8.3/fpm/php.ini on line
-     * 912` is the line that lets someone fix it.
+     * What PHP said about the file: its error and warning lines, at most ten (e.g.
+     * `PHP:  syntax error, unexpected '=' in /etc/php/8.3/fpm/php.ini on line 912`).
      *
      * @return array<int, string>
      */

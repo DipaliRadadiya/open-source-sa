@@ -7,24 +7,12 @@ use App\Console\Commands\PanelSudoers;
 /**
  * The panel's sudoers grant, rendered from the one list that defines it.
  *
- * There used to be two lists: `bins` in install.sh's configure_sudoers(), and
- * `server.privilege.binaries`. They had to agree and nothing made them. Every
- * privilege bug this panel has shipped came from that — `touch`, `certbot`,
- * `openssl`, `crontab`, `stat`, `mysqldump` were each added to one copy and
- * not the other, and each broke a feature that looked configured, with sudo
- * reporting only "a password is required".
+ * One list feeds both consumers: install.sh calls `panel:sudoers --print` and the update writes
+ * the file, so a binary added to the config cannot be missing from one of them.
  *
- * Now both consumers render from here: install.sh calls `panel:sudoers
- * --print`, and the update writes the file. Adding a binary to the config is
- * sufficient, and cannot be half-done.
- *
- * **Paths only — this class does not touch the disk.** Writing a sudoers file
- * is the single most dangerous thing the panel does to a server: a malformed
- * one breaks `sudo` for every account on the box, including the operator's.
- * Keeping the rendering pure is what lets the content be asserted, diffed
- * against a real server's file, and validated by `visudo` before anything is
- * installed. {@see PanelSudoers} owns the write, and
- * does it via a temporary file so the existing grant survives a bad render.
+ * This class never touches the disk: a malformed sudoers file breaks `sudo` for every account.
+ * {@see PanelSudoers} owns the write, validates with `visudo` and installs via a temporary file,
+ * so the existing grant survives a bad render.
  */
 class SudoersFile
 {
@@ -40,10 +28,7 @@ class SudoersFile
         $entries = [];
 
         foreach ((array) config('server.privilege.binaries', []) as $binary) {
-            // Anything without an entry in `paths` lives in /usr/bin. That is
-            // the default rather than a lookup failure: the exception map only
-            // carries the binaries that are somewhere else, so that the list
-            // of *what* the panel may elevate stays readable on its own.
+            // Binaries without an entry in `paths` live in /usr/bin.
             foreach ($paths[$binary] ?? ['/usr/bin/'.$binary] as $path) {
                 $entries[] = $path;
             }
@@ -59,9 +44,8 @@ class SudoersFile
     /**
      * The account the grant is written for.
      *
-     * php-fpm and the queue worker run as this user, so it is the only account
-     * whose sudo access matters. Taken from the update's config because that
-     * is where install.sh already records it.
+     * php-fpm and the queue worker run as this user. Taken from the update's config, where
+     * install.sh records it.
      */
     public function user(): string
     {
@@ -71,9 +55,8 @@ class SudoersFile
     /**
      * The file to write.
      *
-     * install.sh names it from PANEL_SLUG, which also defaults APP_USER — so
-     * the account name is the correct derivation for every default install,
-     * and the config override covers an operator who set the two apart.
+     * Defaults to the account name, as install.sh names it from PANEL_SLUG (which also defaults
+     * APP_USER); the config override covers installs that set the two apart.
      */
     public function path(): string
     {
@@ -87,24 +70,9 @@ class SudoersFile
     /**
      * The complete file content, newline-terminated.
      *
-     * **One grant line and nothing else — no `Defaults`.** This file used to
-     * open with `Defaults:<user> !requiretty`, on the reasoning that php-fpm
-     * has no terminal and would be refused where `requiretty` is on. Both
-     * halves of that were wrong for this panel:
-     *
-     * - `requiretty` is a Red Hat default. Ubuntu has never set it, and
-     *   install.sh installs on Ubuntu only. So the line was inert on every
-     *   platform it ever shipped to.
-     * - sudo has since removed the option outright (gone by 1.9.17, which
-     *   Ubuntu 26.04 ships). An unknown `Defaults` setting is a parse error,
-     *   not a warning, so the line turned the whole file invalid and every
-     *   26.04 install died at `visudo -cqf` with the grant refused.
-     *
-     * The lesson generalises past this one keyword: a `Defaults` entry is
-     * matched against the sudo build on the *target* server, which is newer
-     * than ours as often as not. Anything added here has to be a setting we
-     * positively need, not one added defensively — a defensive line cannot
-     * help on a platform that never had the problem, and can still break it.
+     * One grant line and no `Defaults`. An unknown `Defaults` setting (e.g. `!requiretty`, removed
+     * in sudo 1.9.17) is a parse error that invalidates the whole file at `visudo -cqf`, and the
+     * target server's sudo may be newer than ours. Add only settings we positively need.
      */
     public function render(): string
     {

@@ -12,35 +12,19 @@ use App\Services\Server\ServerOps;
 /**
  * Resets a site's ownership and modes back to the panel's defaults.
  *
- * The button people actually reach for: "my site says permission denied"
- * happens far more often than anything a file browser would fix, and it is
- * newly relevant now that sites run under their own Linux user rather than
- * the shared `www-data` (see the app_php isolation work).
- *
- * Directories 0755 / files 0644, not something tighter — nginx serves static
- * assets straight off disk as its own user (see the vhost templates'
- * `try_files`), and it is not a member of the site's group. Locking the tree
- * down to 0750/0640 would make every image and script on the site
- * unreadable. Ownership is the isolation boundary here, not read access.
+ * Directories 0755 / files 0644, not tighter: nginx serves static assets as its own user (see
+ * the vhost templates' `try_files`) and is not in the site's group, so 0750/0640 would make
+ * them unreadable. Ownership is the isolation boundary, not read access.
  */
 class PermissionFixer
 {
     /**
-     * Profiles for which the panel retains its established permission reset.
+     * Profiles the reset is safe for. Node and container trees need executable files, and the
+     * bulk `chmod 0644` below would strip their executable bit, so those profiles are refused.
      *
-     * PHP source and static assets are read by their serving runtimes. A Node
-     * process or a container also needs executable files in its tree, and the
-     * bulk `chmod 0644` below can strip their executable bit (FS-C22 #18).
-     * Refuse those profiles rather than breaking their runtime.
-     *
-     * This deliberately preserves the existing PHP/static behaviour; it is
-     * not a runtime-aware reset. Build-time executables in node_modules or
-     * vendor/bin can still need repair after a reset on those profiles.
-     *
-     * Read from the row's `serving_profile`, not `site_type`: a git site is
-     * php, node or static by the rendering type the user picked (see
-     * `ServingProfile::resolve()`). An allowlist, so a profile added later is
-     * refused until someone decides this reset is safe for it.
+     * Read from `serving_profile`, not `site_type` (see `ServingProfile::resolve()`). An
+     * allowlist: a profile added later is refused until someone decides the reset is safe for it.
+     * Not runtime-aware: executables in node_modules or vendor/bin can still need repair.
      */
     private const RESETTABLE_PROFILES = ['php', 'static'];
 
@@ -54,8 +38,7 @@ class PermissionFixer
 
     public function fix(Application $application): void
     {
-        // First, before anything is asked of the server: a refusal that ran
-        // the chown first would already have done the damage.
+        // First, before anything touches the server: refusing after the chown would be too late.
         if (! in_array($application->serving_profile, self::RESETTABLE_PROFILES, true)) {
             throw FileRefusedException::because('application', 'unsupported_runtime', 'errors/application.permissions_fix_unsupported_runtime');
         }
@@ -64,40 +47,25 @@ class PermissionFixer
         $user = $application->systemUser->username;
 
         $this->run(['chown', '-R', "{$user}:{$user}", $root], $application, 'chown');
-        // The chown stays root's — it is the one step the user cannot do — and
-        // is safe as it is: `chown -R` without -H/-L follows no link, and the
-        // document root cannot itself be replaced (its parent is immutable,
-        // SiteRootLock). The modes are the user's to set once they own
-        // everything, and as the user a link swapped in between `find` seeing
-        // a directory and `chmod` touching it reaches nothing new.
+        // The chown stays root's (the user cannot do it) and is safe: `chown -R` without -H/-L
+        // follows no link, and the document root's parent is immutable (SiteRootLock). The modes
+        // run as the user, so a link swapped in between `find` and `chmod` reaches nothing new.
         $this->run($this->asUser($application, ['find', $root, '-type', 'd', '-exec', 'chmod', '0755', '{}', '+']), $application, 'chmod_dirs');
         $this->run($this->asUser($application, ['find', $root, '-type', 'f', '-exec', 'chmod', '0644', '{}', '+']), $application, 'chmod_files');
 
-        // Re-tighten what the bulk pass above just loosened. Sourced from the
-        // services that own each path, not duplicated here — a second copy of
-        // ".env is 0600" is how it drifts, and it did: a flat 0600 here took
-        // the `.env` away from a site whose PHP runs as the web server's
-        // account. SecretFilePrivacy knows the mode and group per site, and
-        // covers every secret file — the bulk pass left `wp-config.php` 0644.
-        //
-        // As the site user, apart from the one chown the user cannot do (with
-        // `-h`). GNU chmod follows a link named on its command line — a user
-        // who replaced `.env` with a link had root chmod whatever it pointed
-        // at (reproduced live 2026-09-29 on a canary outside the site).
+        // Re-tighten what the bulk pass just loosened. SecretFilePrivacy owns the mode and group
+        // per site and covers every secret file (a flat 0600 here broke `.env` for sites whose PHP
+        // runs as the web server's account). Never chmod these as root: GNU chmod follows a link
+        // named on its command line, so a user-planted link would get root to chmod its target.
         $failure = $this->secrets->reset($application);
 
         if ($failure !== null) {
             throw new FixPermissionsFailedException($failure->reference, busy: $failure->busy, staleLock: $failure->staleLock, denied: $failure->denied, timedOut: $failure->timedOut);
         }
 
-        // Every site that runs as its own user has a session directory of its
-        // own, not just the ones with a pool. Read from `isolated_at`, this
-        // skipped every OpenLiteSpeed site — leaving session files at whatever
-        // the bulk chmod above left them, which is not private.
-        //
-        // Only where that directory exists. A static or Node site runs as its
-        // own user and has no PHP sessions at all, and chmod on the missing
-        // path failed the whole reset with a 500 (bug #96).
+        // Every site that runs as its own user has its own session directory, pool or not (do not
+        // key this on `isolated_at`: it skips OpenLiteSpeed sites). Only where it exists: a static
+        // or Node site has no PHP sessions, and chmod on the missing path would fail the reset.
         $sessions = $this->pool->sessionPath($application);
 
         if ($this->ownership->runsAsOwnUser($application) && $this->isDirectory($application, $sessions)) {
@@ -114,10 +82,7 @@ class PermissionFixer
         return ['runuser', '-u', $application->systemUser->username, '--', ...$command];
     }
 
-    /**
-     * Asked as the site user, like the chmod it guards: a path the user
-     * cannot see is not one this reset should be touching either.
-     */
+    /** Asked as the site user, like the chmod it guards. */
     private function isDirectory(Application $application, string $path): bool
     {
         return $this->serverOps->probe(

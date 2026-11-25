@@ -7,30 +7,15 @@ use App\Services\Server\ServerOps;
 /**
  * Is the old panel's agent still running on this server?
  *
- * This has to be answered before a server is adopted, because the two panels
- * would otherwise both be managing the same applications. That is not a race
- * in the millisecond sense — PM2 serialises commands through its daemon — it is
- * two control planes with different opinions about the same state, and the old
- * agent acts on its own without being asked.
+ * Must be answered before a server is adopted: two panels would manage the same applications,
+ * and the old agent acts on its own. It runs `pm2 cleardump` when any application of a system
+ * user is deleted, which empties that user's dump file and removes boot persistence for every
+ * adopted `pm2`-mode application they own.
  *
- * The specific loss, which is not hypothetical: the old agent runs
- * `pm2 cleardump` when *any* application belonging to a system user is deleted,
- * and `cleardump` empties that user's entire dump file. Adopted applications in
- * `pm2` mode depend on that dump to come back at boot. So a customer deleting
- * one unrelated site in the old panel, weeks after migrating, silently removes
- * boot persistence for every adopted application that user owns — discovered at
- * the next reboot, when the sites do not come back.
- *
- * Found by port, and only by port. The agent's HTTPS listener is hardcoded to
- * 43210 in its `main.go`; its unit name is a build-time variable
- * (`-X main.ServiceName=…`). An early version matched unit names against a
- * pattern and a real white-labelled server disproved it immediately — there the
- * agent is `sureshcloud.service` running `/sureshcloud/sureshcloud-agent`, which
- * no list of names would have caught.
- *
- * So the port finds the process, and the process names its own unit via
- * `/proc/<pid>/cgroup`. The binary path is still reported, because "installed
- * but stopped" and "never installed" call for different advice.
+ * Found by port only: the agent's HTTPS listener is hardcoded to 43210, but its unit name is a
+ * build-time variable (white-labelled builds), so names cannot be matched. The port finds the
+ * process and `/proc/<pid>/cgroup` names its unit. The binary path is still reported, because
+ * "installed but stopped" and "never installed" need different advice.
  */
 class LegacyAgentDetector
 {
@@ -45,11 +30,7 @@ class LegacyAgentDetector
     }
 
     /**
-     * Everything found, for a message that tells someone what to actually do.
-     *
-     * A refusal that says only "the old agent is running" leaves the operator
-     * hunting for a service whose name they may not know, on a box they may
-     * have inherited.
+     * Everything found, so a refusal can say which service to stop.
      *
      * @return array{running: bool, port: bool, unit: ?string, binary: ?string}
      */
@@ -68,8 +49,7 @@ class LegacyAgentDetector
     /**
      * Anything bound to the agent's port.
      *
-     * Same `ss -ltnH` parse {@see PortAllocator} uses, for the same reason:
-     * it answers about the machine rather than about our records.
+     * Same `ss -ltnH` parse as {@see PortAllocator}: it reads the machine, not our records.
      */
     private function listening(): bool
     {
@@ -97,18 +77,11 @@ class LegacyAgentDetector
     /**
      * The unit that owns the process holding the agent's port.
      *
-     * Derived, not guessed. The first version matched unit names against a
-     * pattern, and a real white-labelled v7 server proved that wrong within a
-     * minute: its agent runs as `sureshcloud.service`, from
-     * `/sureshcloud/sureshcloud-agent`. The name comes from a build-time
-     * `-X main.ServiceName=…` and can be anything a reseller chose, so no list
-     * of names can be complete — but the listener is hardcoded to 43210 in the
-     * agent's own source, and systemd will say which unit a PID belongs to.
+     * Derived, not guessed: the unit name is a build-time value any reseller can change, so no
+     * list of names is complete, but systemd knows which unit a PID belongs to.
      *
-     * `/proc/<pid>/cgroup` rather than `systemctl status <pid>`: one file read
-     * with a stable format (`0::/system.slice/<unit>`) instead of parsing a
-     * human-facing status page. Verified against both the agent and an
-     * unrelated unit on a live box.
+     * `/proc/<pid>/cgroup` rather than `systemctl status <pid>`: a stable format
+     * (`0::/system.slice/<unit>`) instead of parsing a human-facing status page.
      */
     private function activeUnit(): ?string
     {
@@ -133,9 +106,8 @@ class LegacyAgentDetector
 
         $unit = $matches[1];
 
-        // A last guard rather than a way of finding it: whatever owns that
-        // port, it must never be PM2's own boot unit. Stopping `pm2-<user>`
-        // would take out the boot hook every adopted application depends on.
+        // Never PM2's own boot unit: stopping `pm2-<user>` would remove the boot hook every
+        // adopted application depends on.
         return str_starts_with($unit, 'pm2-') ? null : $unit;
     }
 

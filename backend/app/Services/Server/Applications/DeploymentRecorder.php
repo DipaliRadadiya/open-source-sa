@@ -11,13 +11,8 @@ use App\Services\Server\ServerOpsResult;
 /**
  * Writes the record of one deploy while it happens.
  *
- * Opened before the job is dispatched so the screen can show `queued` in the
- * seconds before a worker picks it up — without that a user who clicks Deploy
- * sees nothing and clicks again.
- *
- * Output is accumulated step by step rather than at the end, so a deploy that
- * dies halfway still leaves everything it managed to say. A crash that erases
- * the evidence of itself is the worst possible outcome for this feature.
+ * Opened before the job is dispatched so the screen can show `queued` until a worker picks it up.
+ * Output is accumulated step by step, so a deploy that dies halfway still leaves what it said.
  */
 class DeploymentRecorder
 {
@@ -43,10 +38,7 @@ class DeploymentRecorder
         return $this->deployment;
     }
 
-    /**
-     * Attach to a row somebody else opened — the job runs in a worker, and the
-     * row was written in the request that queued it.
-     */
+    /** Attach to a row the queuing request opened (the job runs in a worker). */
     public function resume(Deployment $deployment): void
     {
         $this->deployment = $deployment;
@@ -58,9 +50,7 @@ class DeploymentRecorder
         ]);
     }
 
-    /**
-     * Record a finished step and whatever it printed.
-     */
+    /** Record a finished step and whatever it printed. */
     public function step(string $step, ?ServerOpsResult $result = null): void
     {
         if ($this->deployment === null) {
@@ -69,8 +59,7 @@ class DeploymentRecorder
 
         $steps = $this->deployment->steps ?? [];
 
-        // One stage can take more than one command (`init` is git init and
-        // then the remote), and the list is the stages, not the commands.
+        // One stage can take more than one command; the list is the stages, not the commands.
         if (end($steps) !== $step) {
             $steps[] = $step;
         }
@@ -90,15 +79,10 @@ class DeploymentRecorder
     }
 
     /**
-     * Record which commit is now checked out, as soon as that is known.
+     * Record which commit is now checked out, as soon as the working tree is at it.
      *
-     * Called from the deploy the moment the working tree is at the new
-     * revision — before ownership, the deploy script, the restarts and the
-     * verify. Those are exactly the steps that fail, and a deploy that failed
-     * at one of them has the commit sitting on disk. Writing it only on
-     * success meant every failed deploy showed "No commit message" for code
-     * that had definitely been pulled, which is the moment somebody most needs
-     * to know which revision they are looking at.
+     * Called before ownership, the deploy script, restarts and verify: those steps can fail, and
+     * the commit is already on disk by then.
      */
     public function commit(?string $commit, ?string $message, ?string $author): void
     {
@@ -121,13 +105,8 @@ class DeploymentRecorder
     }
 
     /**
-     * The commit is deliberately not touched here.
-     *
-     * Whatever {@see commit()} recorded stands: a failure after checkout keeps
-     * the revision it was working on, and a failure *before* checkout — bad
-     * credentials, an unreachable remote, a branch that does not exist — has
-     * no commit to name and correctly shows none. Clearing it here would throw
-     * away the more useful of the two answers to make them look alike.
+     * The commit is deliberately not touched here: whatever {@see commit()} recorded stands, and
+     * a failure before checkout has none to show.
      */
     public function fail(string $step, ?string $reference, ?string $reason = null): void
     {
@@ -146,30 +125,20 @@ class DeploymentRecorder
     }
 
     /**
-     * Strip anything that looks like a credential.
-     *
-     * Not optional. A failed `git clone` echoes the URL it tried, which for a
-     * private repository carries the token; npm and composer print registry
-     * credentials on an auth failure. Everything else in this codebase keeps
-     * secrets out of logs — writing raw output to a column the API then renders
-     * in a browser would undo all of it in one place.
-     *
-     * Patterns rather than a list of known secrets, because the interesting
-     * case is the one nobody thought of.
+     * Strip anything that looks like a credential. Not optional: a failed `git clone` echoes a
+     * private repository's URL with its token, and npm and composer print registry credentials
+     * on auth failures. Patterns, not a list of known secrets.
      */
     public function redact(string $output): string
     {
         $patterns = [
-            // https://user:token@host — the shape a git remote takes when a
-            // credential leaks into it.
+            // https://user:token@host
             '#(https?://)[^/\s:@]+:[^/\s@]+@#i' => '$1***:***@',
 
-            // Bearer / token / password / secret / api_key followed by a value,
-            // in any of the punctuation styles these tools print.
+            // Bearer / token / password / secret / api_key followed by a value.
             '#\b(authorization|bearer|token|password|passwd|secret|api[_-]?key)\b(\s*[:=]\s*|\s+)(\S+)#i' => '$1$2***',
 
-            // Long opaque strings that look like credentials in their own
-            // right: GitHub, GitLab and npm all use recognisable prefixes.
+            // GitHub, GitLab and npm tokens have recognisable prefixes.
             '#\b(gh[pousr]_|glpat-|npm_)[A-Za-z0-9_\-]{8,}#' => '$1***',
         ];
 
@@ -177,11 +146,8 @@ class DeploymentRecorder
     }
 
     /**
-     * Keep the newest N and delete the rest.
-     *
-     * Bounded on write rather than by a scheduled command: the growth is caused
-     * by deploying, so the fix belongs where the growth happens and cannot be
-     * left un-run on a box whose scheduler was never set up.
+     * Keep the newest N and delete the rest. Done on write, not by a scheduled command, so it
+     * runs even where the scheduler was never set up.
      */
     private function prune(Application $application): void
     {

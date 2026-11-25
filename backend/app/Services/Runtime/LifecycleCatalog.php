@@ -9,28 +9,15 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Which runtime versions are supported, which are security-only, and which
- * are dead — sourced upstream, cached, and never fetched inside a request.
+ * Which runtime versions are supported, security-only or dead, sourced upstream and never
+ * fetched inside a request.
  *
- * Two things this deliberately does not do:
- *
- * It does not infer Node LTS from an even major number. That is a convention,
- * not a rule — v23 and v25 never become LTS, and the day the project changes
- * its mind the panel would be confidently wrong. nodejs/Release/schedule.json
- * is the project's own file and says so directly.
- *
- * It does not give PHP an `lts` flag. PHP has no LTS releases; it has active
- * support then security-only. Inventing the field would mean showing users a
- * badge that does not correspond to anything upstream.
- *
- * Reads come from the database only. A self-hosted panel behind a firewall
- * must not hang or fail because github is unreachable, so a miss returns null
- * and the frontend shows no badge — an absent badge is honest, a guessed one
- * is not.
- *
- * Stored in a table rather than the cache because it is not a cache: `php
- * artisan optimize:clear` runs on deploy and would blank every badge until
- * the next daily refresh. Reference data that vanishes on deploy is a bug.
+ * - Node LTS is read from nodejs/Release/schedule.json, never inferred from an even major.
+ * - PHP gets no `lts` flag: it has active support, then security-only.
+ * - Reads come from the database only, so a firewalled panel never hangs on github. A miss
+ *   returns null and the frontend shows no badge.
+ * - Stored in a table, not the cache: `optimize:clear` on deploy would blank every badge until
+ *   the next daily refresh.
  */
 class LifecycleCatalog
 {
@@ -58,11 +45,8 @@ class LifecycleCatalog
                 $row->version => [
                     'status' => $row->status,
                     'eol_date' => $row->eol_date?->toDateString(),
-                    // Present for Node, absent for PHP — keyed on the runtime
-                    // rather than on whether the value happens to be null. An
-                    // odd-numbered Node major has no codename and still has
-                    // the concept; PHP has no LTS at all, and showing the key
-                    // would imply otherwise.
+                    // Keyed on the runtime, not on null: an odd Node major has no codename but
+                    // still has the concept; PHP has no LTS at all.
                     ...($runtime === 'node' ? ['lts_name' => $row->lts_name] : []),
                 ],
             ])->all())
@@ -70,9 +54,8 @@ class LifecycleCatalog
     }
 
     /**
-     * True when there is no data at all — a box with no egress, or one that
-     * has not run the refresh yet. The API reports this so the frontend can
-     * hide the badges entirely rather than showing every version as unknown.
+     * True when there is no data at all (no egress, or refresh not run yet), so the frontend
+     * hides the badges instead of showing every version as unknown.
      */
     public function isStale(): bool
     {
@@ -80,8 +63,7 @@ class LifecycleCatalog
     }
 
     /**
-     * Fetch upstream and replace the cache. Called by a scheduled command,
-     * never by a request.
+     * Fetch upstream and replace the stored data. Called by a scheduled command, never a request.
      *
      * @return array{node: int, php: int}
      */
@@ -93,8 +75,7 @@ class LifecycleCatalog
             try {
                 $fresh = $fetch();
             } catch (Throwable $e) {
-                // Keep what is stored. A network blip must not blank out
-                // badges that were correct yesterday.
+                // Keep what is stored: a network blip must not blank the badges.
                 Log::warning('runtime lifecycle refresh failed', ['runtime' => $runtime, 'error' => $e->getMessage()]);
                 $counts[$runtime] = RuntimeLifecycle::query()->where('runtime', $runtime)->count();
 
@@ -138,8 +119,7 @@ class LifecycleCatalog
             $major = ltrim((string) $major, 'v');
             $end = $this->date($row['end'] ?? null);
 
-            // `lts` is the date the line entered LTS. Absent means it never
-            // will — the odd-numbered lines.
+            // `lts` is the date the line entered LTS; absent means it never will (odd lines).
             $ltsFrom = $this->date($row['lts'] ?? null);
             $maintenanceFrom = $this->date($row['maintenance'] ?? null);
 
@@ -198,8 +178,7 @@ class LifecycleCatalog
     }
 
     /**
-     * Node lifecycle is per major (`22`); PHP's is per minor (`8.4`), because
-     * that is the unit each project actually supports.
+     * Node lifecycle is per major (`22`); PHP's is per minor (`8.4`).
      */
     private function major(string $runtime, string $version): string
     {
@@ -212,8 +191,7 @@ class LifecycleCatalog
 
     private function date(mixed $value): ?CarbonImmutable
     {
-        // endoflife.date uses `true`/`false` for "supported indefinitely" and
-        // "already unsupported" on some cycles.
+        // endoflife.date uses `true`/`false` instead of a date on some cycles.
         if (! is_string($value) || $value === '') {
             return null;
         }

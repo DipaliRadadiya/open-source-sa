@@ -9,22 +9,10 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * A database engine running as a container, for the container sites to use.
  *
- * **Why this is not an Application.** Every site in this panel is an HTTP site:
- * `domain` is required, provisioning always writes a vhost, and the container
- * vhost is `proxy_pass http://127.0.0.1:<port>`. A database speaks its own wire
- * protocol, so as a "site" it would hold a domain, be issued a certificate no
- * browser can use, and answer 502 for ever. It is a server-level object like a
- * network or a volume — something sites connect to — which is why it lives on the
- * Docker page and not in the applications list.
+ * Not an Application: every site is an HTTP site (domain, vhost, certificate), and a database
+ * speaks its own wire protocol. It is a server-level object like a network or a volume.
  *
- * **It exists because a Docker box manages no engine.** That is the stack's own
- * decision: an application that wants a database brings one as a container. Which
- * is fine until two sites want the same database, or an app needs Redis as well —
- * the point at which "bring your own" means pasting the same service into every
- * compose file and having no idea which volume belongs to whom.
- *
- * The credentials are `encrypted:array`, like a registry's token and a storage
- * destination's keys, and read in one place.
+ * The credentials are `encrypted:array`, like a registry's token and a storage destination's keys.
  */
 #[Fillable(['name', 'engine', 'version', 'port', 'credentials', 'docker_network', 'cpu_limit', 'memory_limit'])]
 class DockerDatabase extends Model
@@ -40,9 +28,7 @@ class DockerDatabase extends Model
     /**
      * The compose project, which is also the container name prefix.
      *
-     * Derived from the id and not the name, for the reason a site's project is:
-     * a name can be renamed and a compose project cannot follow it — the old
-     * project would be orphaned, still running, still holding the port.
+     * Derived from the id, not the name: a renamed project would be orphaned, still holding the port.
      */
     public function project(): string
     {
@@ -58,10 +44,8 @@ class DockerDatabase extends Model
     /**
      * One value out of the credential set, or the default when it cannot be read.
      *
-     * The `try` is not defensive noise: reading an `encrypted:array` attribute
-     * whose ciphertext does not belong to this `APP_KEY` throws, so a database
-     * restored under a different key would turn the listing — which only wants a
-     * name and an engine — into a 500.
+     * Reading an `encrypted:array` attribute encrypted under another `APP_KEY` throws; without the
+     * `try`, one such row would turn the whole listing into a 500.
      */
     public function credential(string $key, mixed $default = null): mixed
     {
@@ -77,9 +61,8 @@ class DockerDatabase extends Model
     /**
      * The names of the credentials this database has, and nothing else.
      *
-     * Exists so a resource can say which FIELDS an engine uses — Redis has no
-     * user and no database — without a caller reaching into the decrypted array
-     * and accidentally serialising a value out of it.
+     * Lets a resource say which fields an engine uses (Redis has no user) without touching the
+     * decrypted values.
      *
      * @return array<string, true>
      */
@@ -97,9 +80,7 @@ class DockerDatabase extends Model
     /**
      * The catalog entry for this engine, or null when the engine is unknown.
      *
-     * Unknown is reachable: the catalog is config, so an operator can remove an
-     * engine a row still refers to. Callers get null rather than an exception,
-     * because a listing should still show the row that needs attention.
+     * Unknown is reachable (the catalog is config), and the listing should still show that row.
      *
      * @return array<string, mixed>|null
      */
@@ -121,25 +102,16 @@ class DockerDatabase extends Model
     /**
      * Where this image keeps its data, which is not always the engine's default.
      *
-     * 🔴 Postgres 18 moved `PGDATA` to `/var/lib/postgresql/18/docker` and declares
-     * its volume at `/var/lib/postgresql`; 16 and 17 both use
-     * `/var/lib/postgresql/data`. Mounting the old path at 18 does not merely put
-     * the data somewhere unexpected — the container **refuses to start** and prints
-     * the correct configuration in its own log.
-     *
-     * A per-version override on the engine rather than a second engine entry,
-     * because it is the same engine and splitting it would show the versions list
-     * twice in the UI.
+     * Postgres 18 moved `PGDATA` to `/var/lib/postgresql/18/docker` (volume at `/var/lib/postgresql`);
+     * 16 and 17 use `/var/lib/postgresql/data`. Mounting the old path at 18 makes the container
+     * refuse to start. A per-version override, not a second engine entry, to keep one versions list.
      */
     public function dataPath(): string
     {
         $engine = (array) $this->engineConfig();
         $overrides = (array) ($engine['data_path_overrides'] ?? []);
 
-        // Keyed by the version string, and read with a cast because PHP turns a
-        // numeric array key into an int — `'18' => …` keys as 18, so a lookup with
-        // the string '18' misses unless both sides agree. The same trap the engine
-        // catalog hit when it returned 18 as a number and '8.4' as a string.
+        // Compare as strings: PHP turns the numeric key `'18'` into the int 18.
         foreach ($overrides as $version => $path) {
             if ((string) $version === (string) $this->version) {
                 return (string) $path;

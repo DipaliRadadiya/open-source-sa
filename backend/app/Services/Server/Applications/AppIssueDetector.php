@@ -23,14 +23,9 @@ class AppIssueDetector
     public function __construct(
         private ProcessSupervisor $processSupervisor,
         private ServerOps $serverOps,
-        // The document root is derived from the slug and the system user's
-        // home, which is the provisioner's job — the model has never had a
-        // `documentRoot()` of its own.
+        // The document root comes from the provisioner; the model has no `documentRoot()`.
         private ApplicationProvisioner $provisioner,
-        // Resolution goes through the same service the domain screen uses,
-        // rather than a bare `gethostbyname()` here: one DNS mechanism with
-        // one set of semantics, and a seam a test can replace instead of
-        // reaching the real network.
+        // Same DNS service as the domain screen: one mechanism, and a seam tests can replace.
         private DnsVerifier $dns,
     ) {}
 
@@ -60,13 +55,8 @@ class AppIssueDetector
             return null;
         }
 
-        // Only a certificate that is actually on disk and being served can be
-        // near expiry. A row in any other state has no `expires_at` yet, and a
-        // pending one exists from the moment the application is created —
-        // auto-issue inserts it before certbot has run. Reading a countdown off
-        // that row is how a brand new site came to announce, critically, that
-        // its certificate expired today. A failed issue is a real problem, but
-        // it is `reason`'s to report, not an expiry warning's.
+        // Only an active certificate can be near expiry. A pending row exists from the moment
+        // the application is created and has no `expires_at`; a failed issue is `reason`'s to report.
         if ($cert->status !== CertificateStatus::Active) {
             return null;
         }
@@ -88,9 +78,7 @@ class AppIssueDetector
             return [
                 'type' => 'certificate',
                 'severity' => $days <= 7 ? 'critical' : 'warning',
-                // `trans_choice`, because `ceil()` above guarantees a live
-                // certificate reports at least one day and "expires in 1 days"
-                // is the sentence that produces.
+                // `trans_choice` so one day reads "1 day", not "1 days".
                 'message' => trans_choice('app_dashboard.issues.certificate.expiring', $days, ['days' => $days]),
                 'meta' => [
                     'expires_at' => $cert->expires_at?->format('d-m-Y H:i:s'),
@@ -113,12 +101,8 @@ class AppIssueDetector
 
         $status = $this->processSupervisor->status($app);
 
-        // Read the state. status() runs `systemctl show`, which exits 0 for
-        // a stopped or crashed unit too — it only fails when it cannot ask at
-        // all — so "any status means running" meant this never fired: a Node
-        // app that had died showed a healthy dashboard (found live
-        // 2026-09-29). Only the states that mean "down" count; a state we
-        // could not read is not evidence of anything.
+        // status() runs `systemctl show`, which exits 0 for a stopped or crashed unit too, so
+        // read the state. Only "down" states count; an unreadable state is not evidence.
         if ($status !== null && ! in_array($status['state'], ['inactive', 'failed', 'deactivating'], true)) {
             return null;
         }
@@ -153,8 +137,7 @@ class AppIssueDetector
         $currentIp = $this->dns->resolve($domain->domain);
 
         if ($currentIp === null) {
-            // DNS lookup failed — domain may not be pointing to this server yet.
-            // Flag as an issue but with no current IP to compare.
+            // Lookup failed: the domain may not point here yet. Flag it without a current IP.
             return [
                 'type' => 'dns',
                 'severity' => 'warning',
@@ -221,8 +204,7 @@ class AppIssueDetector
     {
         $documentRoot = $this->provisioner->documentRoot($app->loadMissing('systemUser'));
 
-        // Run df on the document root's mount point, not on every subdirectory.
-        // Using `-k` (1K blocks) keeps the output stable across systems.
+        // `-k` (1K blocks) keeps the output stable across systems.
         $result = $this->serverOps->run(
             ['df', '-k', dirname($documentRoot)],
             ['feature' => 'app_dashboard', 'op' => 'disk_usage'],
@@ -232,7 +214,7 @@ class AppIssueDetector
             return null; // Cannot determine — do not flag.
         }
 
-        // Parse the last line of df output (the filesystem row).
+        // Last line of df output is the filesystem row.
         $lines = array_filter(array_map('trim', explode("\n", $result->output())));
         $lastLine = end($lines);
 
@@ -281,13 +263,9 @@ class AppIssueDetector
     }
 
     /**
-     * PHP EOL dates — December 1 of each EOL year (standard PHP schedule).
+     * PHP EOL dates: December 1 of each EOL year.
      *
-     * Plain strings, not `DateTimeImmutable` instances: PHP allows `new` in a
-     * parameter default or an attribute argument, but *not* in a class
-     * constant. Written that way, this file could not be loaded at all — the
-     * detector fatal'd on `New expressions are not supported in this context`
-     * before a single issue was ever checked.
+     * Plain strings: `new` is not allowed in a class constant.
      *
      * @var array<string, string>
      */

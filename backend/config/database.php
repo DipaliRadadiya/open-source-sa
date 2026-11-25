@@ -39,70 +39,32 @@ return [
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             /*
-             * SQLite defaults to the rollback journal, where a writer takes
-             * an exclusive lock on the whole file and readers block writers.
-             * Every API request writes — the rate limiter alone bumps a
-             * counter in the cache table — so two concurrent requests are
-             * enough to produce "database is locked", and the frontend fires
-             * several on every page load.
+             * The default rollback journal lets a writer lock the whole file, and every API request
+             * writes, so concurrent requests give "database is locked". WAL lets readers and one
+             * writer proceed together, which also makes the busy timeout meaningful: SQLite returns
+             * BUSY at once, without waiting, when waiting would deadlock.
              *
-             * The busy timeout does not rescue that on its own: SQLite
-             * returns BUSY immediately, without invoking the busy handler,
-             * when waiting would deadlock — which is exactly the shape of a
-             * request that reads and then writes while another holds a
-             * shared lock. WAL removes the deadlock by letting readers and
-             * one writer proceed together, which is also what makes the
-             * timeout meaningful for the contention that remains.
-             *
-             * NORMAL synchronous is the documented safe pairing with WAL: it
-             * can lose the last transactions to a power cut, but never
-             * corrupts the database.
+             * NORMAL synchronous is the safe pairing with WAL: it can lose the last transactions
+             * to a power cut, but never corrupts the database.
              */
-            // 15s rather than 5s. A cushion, not a fix: the real cost is a
-            // writer holding the single write lock for seconds at a time, and
-            // 5s was short enough that an ordinary `ufw` reload could outlast
-            // it and fail an unrelated request with "database is locked".
+            // A cushion, not a fix: the real cost is a writer holding the write lock for seconds.
             'busy_timeout' => env('DB_BUSY_TIMEOUT', 15000),
             'journal_mode' => env('DB_JOURNAL_MODE', 'WAL'),
             'synchronous' => env('DB_SYNCHRONOUS', 'NORMAL'),
 
             /*
-             * IMMEDIATE, not the DEFERRED that both SQLite and Laravel default
-             * to. This is what finally makes `busy_timeout` above do its job.
+             * IMMEDIATE, not the DEFERRED default. A deferred transaction reads first and upgrades
+             * to a write lock later; if another connection wrote in between, SQLite returns BUSY
+             * at once without consulting `busy_timeout`. IMMEDIATE takes the write lock up front,
+             * so a contended write queues for the timeout instead of failing.
              *
-             * A deferred transaction takes a *read* lock on its first read and
-             * only tries to upgrade to a write lock on its first write. If
-             * another connection wrote in between, SQLite cannot wait for that
-             * upgrade — two readers both waiting to upgrade would deadlock —
-             * so it returns BUSY *immediately*, without ever calling the busy
-             * handler. That is the case the comment above describes, and it is
-             * why a 15-second timeout still produced instant "database is
-             * locked" errors: the timeout was never consulted.
-             *
-             * IMMEDIATE takes the write lock up front. There is no upgrade, so
-             * there is no deadlock to avoid, so SQLite is free to wait — and
-             * the busy timeout applies. A contended write now queues for up to
-             * 15s instead of failing on the spot.
-             *
-             * The cost is real but small: a write transaction blocks other
-             * writers from its first statement rather than its first write.
-             * On a panel whose transactions are a handful of row writes, that
-             * is a few milliseconds of extra exclusivity in exchange for the
-             * error class disappearing.
-             *
-             * Requires PHP 8.4+ — SQLiteConnection only honours this setting
-             * there, and falls back to PDO's own BEGIN otherwise. This project
-             * runs 8.4.
+             * Requires PHP 8.4+ (SQLiteConnection ignores this setting on older versions).
              */
             'transaction_mode' => 'IMMEDIATE',
 
             /*
-             * Note for anyone tuning further: Laravel's SQLite connector only
-             * applies three pragmas — busy_timeout, journal_mode and
-             * synchronous. Adding `journal_size_limit`, `wal_autocheckpoint`,
-             * `cache_size` or `temp_store` here does nothing at all; they are
-             * read by no one. Setting those needs a connection hook, not a
-             * config key, so nothing should be added here expecting it to work.
+             * Laravel's SQLite connector applies only busy_timeout, journal_mode and synchronous.
+             * Other pragmas (`journal_size_limit`, `cache_size`, ...) added here do nothing.
              */
         ],
 

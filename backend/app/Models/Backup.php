@@ -33,19 +33,11 @@ class Backup extends Model
     }
 
     /**
-     * The archive's name on the storage destination.
+     * Assigns the archive's name (uid) on the storage destination.
      *
-     * Set here rather than by the caller, for the reason {@see Worker::booted()}
-     * gives: leaving it to callers means every creation site has to remember,
-     * and the one that forgets fails at the database instead of anywhere
-     * useful. There is only one creation site today; a uid that exists because
-     * of where it is assigned rather than because someone remembered is the
-     * point.
-     *
-     * Not fillable, deliberately. This is what stops one backup's archive from
-     * overwriting another's, so nothing outside this model gets to choose it —
-     * an id would do, right up until the panel is reinstalled and the counter
-     * starts again over a bucket that still holds the old archives.
+     * Set here, as in {@see Worker::booted()}, so no creation site can forget it. Not fillable:
+     * it keeps one backup's archive from overwriting another's, and a counter id would collide
+     * after a panel reinstall over a bucket that still holds old archives.
      */
     protected static function booted(): void
     {
@@ -54,11 +46,8 @@ class Backup extends Model
                 $backup->uid = (string) Str::uuid();
             }
 
-            // Stamped here for the same reason as the uid above, and not left
-            // fillable: a target's destination is editable, so a backup that
-            // reads it back later reads *today's* answer about where a months
-            // old archive was written. There is one creation site today; this
-            // is what stops the second one from having to remember.
+            // Stamped here, not fillable: a target's destination is editable, so reading it back
+            // later would give today's answer about where an old archive was written.
             if ($backup->storage_destination_id === null && $backup->backup_target_id !== null) {
                 $backup->storage_destination_id = BackupTarget::query()
                     ->whereKey($backup->backup_target_id)
@@ -66,12 +55,9 @@ class Backup extends Model
             }
         });
 
-        // The local copy a prepared download left (SFTP/FTP). Its row goes
-        // with the backup by cascade, but a cascade cannot remove a file, and
-        // an hour-long copy of a deleted backup is exactly the archive the
-        // user just asked to be rid of. Every Eloquent delete passes here —
-        // `DeleteBackup` and retention alike; a delete by cascade from
-        // further up is swept by `backups:prune-downloads`.
+        // Remove the local copy a prepared download left (SFTP/FTP): a cascade deletes the row
+        // but not the file. A delete by cascade from further up is swept by
+        // `backups:prune-downloads`.
         static::deleting(function (self $backup): void {
             app(PreparedDownloads::class)->forget($backup);
         });
@@ -90,16 +76,9 @@ class Backup extends Model
     /**
      * Where this archive actually lives.
      *
-     * Recorded on the row when the upload happens, because a target's
-     * destination is editable and reaching it through the target moved
-     * *history*: repoint a target and every older backup started resolving to
-     * a bucket its archive was never in — download said "missing", delete
-     * removed the row and orphaned the object, and the list named the wrong
-     * provider.
-     *
-     * The fallback covers a row written before that column existed and never
-     * backfilled (its target or destination had already gone). It is the old
-     * behaviour, kept only where there is nothing better to answer with.
+     * Recorded on the row at upload time: a target's destination is editable, so resolving it
+     * through the target would point older backups at a bucket their archive is not in. The
+     * fallback covers rows written before that column existed.
      */
     public function destination(): ?StorageDestination
     {
@@ -117,19 +96,10 @@ class Backup extends Model
     }
 
     /**
-     * A backup of a database on its own — still attached, or archived after
-     * the database was deleted. `subject_engine` is written for every one of
-     * them and for nothing else, so it survives the database going.
-     */
-    /**
      * Does the archive hold a database dump?
      *
-     * Not the same as the type. A site with no database still gets a `full`
-     * backup when that is what its target says, and the dump step records the
-     * truth in the manifest (`databases: []`) — which nothing read, so a full
-     * restore of it got as far as "Restoring the database" and failed, after
-     * taking a safety backup and putting the files back (2026-10-18). A row
-     * from before the manifest recorded it answers by type, as before.
+     * Not the same as the type: a `full` backup of a site with no database records
+     * `databases: []` in the manifest. A row from before the manifest recorded it answers by type.
      */
     public function holdsDatabase(): bool
     {
@@ -142,6 +112,10 @@ class Backup extends Model
         return ! array_key_exists('databases', $manifest) || $manifest['databases'] !== [];
     }
 
+    /**
+     * A backup of a database on its own, still attached or archived after the database was
+     * deleted. `subject_engine` is written for these only, so it survives the database going.
+     */
     public function isDatabaseBackup(): bool
     {
         return $this->database_id !== null || ($this->application_id === null && $this->subject_engine !== null);
@@ -154,8 +128,7 @@ class Backup extends Model
      */
     public function isArchived(): bool
     {
-        // Both owners gone only ever happens by archiving — a database's on
-        // its delete (2026-10-16), a site's on its delete (the follow-up).
+        // Both owners gone only ever happens by archiving (the database or site was deleted).
         return $this->database_id === null && $this->application_id === null;
     }
 
@@ -178,12 +151,8 @@ class Backup extends Model
     }
 
     /**
-     * A name that means something in a downloads folder.
-     *
-     * The object key is a uuid — fine on the destination, useless once four
-     * of them are sitting side by side on someone's laptop. Here rather than
-     * in the controller so the link and the prepared copy name a file the
-     * same way.
+     * A readable file name for the download (the object key is a uuid). Here so the link and the
+     * prepared copy name a file the same way.
      */
     public function downloadFilename(): string
     {
@@ -195,9 +164,7 @@ class Backup extends Model
         };
         $stamp = $this->created_at?->format('Y-m-d-His') ?? 'unknown';
 
-        // Dots become hyphens before slugging — Str::slug strips them, which
-        // turns shop.example.com into "shopexamplecom" and makes the one
-        // part of the name the user recognises unreadable.
+        // Dots become hyphens first: Str::slug strips them (shop.example.com -> "shopexamplecom").
         return Str::slug(str_replace('.', '-', $site)).'-'.$stamp.'-'.$this->type->value.'.tar.gz';
     }
 }

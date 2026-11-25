@@ -14,13 +14,11 @@ use Illuminate\Support\Facades\Log;
 /**
  * Decides whether a webhook delivery deploys anything.
  *
- * The shape of the answer matters as much as the answer. A provider disables a
- * hook that keeps failing — GitLab after four consecutive failures — so
- * "authentic, but nothing to do here" must be a success, not an error. Only an
- * unauthentic delivery gets a 4xx.
+ * "Authentic, but nothing to do here" must be a success: providers disable a hook that keeps
+ * failing. Only an unauthentic delivery gets a 4xx.
  *
- * Order is deliberate: identity, then authenticity, then relevance. Nothing is
- * read out of the payload before the signature over it has been checked.
+ * Order is deliberate: identity, then authenticity, then relevance. Nothing is read from the
+ * payload before its signature has been checked.
  */
 class ReceiveDeployWebhook
 {
@@ -30,13 +28,11 @@ class ReceiveDeployWebhook
     ) {}
 
     /**
-     * Whether this delivery really comes from the provider the site's webhook
-     * was set up with: signed (or, for GitLab's legacy scheme, tokened) with
-     * the stored secret.
+     * Whether this delivery really comes from the site's webhook provider: signed (or, for
+     * GitLab's legacy scheme, tokened) with the stored secret.
      *
-     * Also asked of a site whose deploy-on-push is switched off — the secret
-     * is kept when it is switched off, so an authentic delivery can be told
-     * "this is off" while anyone else still gets the plain 404.
+     * Also asked when deploy-on-push is off: the secret is kept, so an authentic delivery can be
+     * told "this is off" while anyone else still gets the plain 404.
      */
     public function authentic(Request $request, Application $application): bool
     {
@@ -56,17 +52,12 @@ class ReceiveDeployWebhook
     public function execute(Request $request, Application $application): array
     {
         $driver = $this->webhooks->driver((string) $application->webhook_provider);
-        // The raw body, before Laravel has looked at it. The signature covers
-        // the exact bytes sent, so re-encoding the parsed array — even into
-        // JSON that means the same thing — produces a different digest.
+        // The raw body: the signature covers the exact bytes sent, so re-encoding the parsed
+        // array would give a different digest.
         $body = $request->getContent();
 
         if (! $this->authentic($request, $application)) {
-            // Deliberately not written to the activity log. A rejected delivery
-            // is the one thing an unauthenticated caller can cause at will, and
-            // a row per attempt would let them flood the user's own history.
-            // The provider's delivery log shows them the refusal, and the `code`
-            // in the response says why.
+            // Not written to the activity log: an unauthenticated caller could flood it at will.
             Log::warning('Rejected a deploy webhook with an invalid signature.', [
                 'application' => $application->id,
                 'provider' => $application->webhook_provider,
@@ -78,20 +69,14 @@ class ReceiveDeployWebhook
 
         $application->forceFill(['webhook_last_delivered_at' => now()])->save();
 
-        // Belt to the braces on the configuration endpoint's site-type check.
-        // The manual deploy endpoint has always refused a non-git application;
-        // this path never did, so a webhook enabled on a site with no
-        // repository — which the old permission gating allowed — would queue a
-        // deploy that could only fail. Checked after the signature so an
-        // unauthenticated caller still cannot learn anything about the site.
+        // A site with no repository would queue a deploy that can only fail. Checked after the
+        // signature so an unauthenticated caller learns nothing about the site.
         if ($application->site_type !== 'git') {
             return ['deployed' => false, 'reason' => 'not_a_git_application'];
         }
 
-        // Its account was disconnected: a deploy would have no credential and
-        // no URL. Authentic, just nothing we can do — so a success, like the
-        // checks around it, or the provider disables the hook and it stays
-        // off after the account is reconnected.
+        // Account disconnected: no credential or URL to deploy with. A success, not an error,
+        // or the provider disables the hook.
         if ($application->gitAccountMissing()) {
             return ['deployed' => false, 'reason' => 'git_account_missing'];
         }
@@ -100,10 +85,8 @@ class ReceiveDeployWebhook
             return ['deployed' => false, 'reason' => 'not_a_push'];
         }
 
-        // A retried delivery is normal — providers retry on a timeout, and the
-        // first attempt may well have succeeded. `Cache::add` is the atomic
-        // test-and-set; a get-then-put would let two concurrent retries both
-        // pass.
+        // Providers retry on a timeout. `Cache::add` is atomic; get-then-put would let two
+        // concurrent retries both pass.
         $delivery = $driver->deliveryId($request);
 
         if ($delivery !== null && ! Cache::add(
@@ -116,23 +99,13 @@ class ReceiveDeployWebhook
 
         $branch = $driver->pushedBranch($this->payload($body));
 
-        // Null is not a wildcard: a tag push, a branch deletion or a payload we
-        // could not read all land here, and none of them should deploy.
+        // Null is not a wildcard: a tag push, branch deletion or unreadable payload must not deploy.
         if ($branch === null || $branch !== ($application->branch ?: 'main')) {
             return ['deployed' => false, 'reason' => 'other_branch'];
         }
 
-        // Unique-until-processing: a burst of pushes leaves at most one deploy
-        // queued behind the one running, rather than twenty.
-        //
-        // No actor, on purpose. A git push is not a panel user, and every other
-        // dispatch site now passes one — so a null here reads as "the system did
-        // this", which is true, rather than "we lost track of who did".
-        // A row with no actor: nobody pressed anything. It reads as System,
-        // the same rule the activity log follows for webhook deploys.
-        //
-        // A push that lands while a deploy is still waiting joins it instead
-        // (see DeployQueue) — that deploy fetches the tip, this commit included.
+        // No actor on purpose: a git push is not a panel user, so it reads as System.
+        // A push that lands while a deploy is still waiting joins it (see DeployQueue).
         app(DeployQueue::class)->queue($application, DeploymentTrigger::Webhook, null);
 
         $this->activityLogger->log('application.webhook_deployed', $application, [
@@ -144,11 +117,8 @@ class ReceiveDeployWebhook
     }
 
     /**
-     * The payload, as an array, or empty when it is not JSON we can read.
-     *
-     * Parsed here rather than trusted from `$request->json()` so that a body
-     * which failed to decode is an empty array — the branch check then refuses
-     * it — instead of an exception on a route anyone can reach.
+     * The payload as an array, or empty when it is not readable JSON. Not `$request->json()`: a
+     * body that fails to decode must be refused by the branch check, not throw on a public route.
      *
      * @return array<string, mixed>
      */

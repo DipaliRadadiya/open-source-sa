@@ -8,25 +8,13 @@ use App\Models\User;
 use App\Services\Server\Capabilities\ServerCapabilities;
 
 /**
- * The permissions a user can actually see, resolved in one place.
- *
- * Extracted because there were two implementations: this one, and a copy in
- * the application sidebar that called `$user->permissions()` — a relation
- * removed when direct per-user grants were dropped in favour of roles. The
- * copy had been a 500 on every sidebar request ever since, which is what
- * having two answers to one question buys.
+ * The permissions a user can actually see, resolved in one place (sidebar and `/permissions`).
  */
 class VisiblePermissions
 {
     /**
-     * Screens with nothing for a view-only role to do.
-     *
-     * `app_environment`: operator decision 2026-09-29 — the `.env` screen is
-     * shown only to who may edit it (a viewer already got no file contents
-     * since 77661c7b, only variable names). `app_magic_login`: its routes were
-     * manage-only from the start, so a viewer was shown a menu entry that
-     * could only answer 403. The routes enforce the same rule; this is what
-     * the sidebar and `/permissions` say about it.
+     * Screens with nothing for a view-only role to do: `app_environment` (the `.env` screen) and
+     * `app_magic_login` (its routes are manage-only, so a viewer would only get a 403).
      */
     public const MANAGE_ONLY = ['app_environment', 'app_magic_login'];
 
@@ -40,15 +28,9 @@ class VisiblePermissions
 
         $permissions = $query->get();
 
-        // The second filter. Granting `app_deployment` gives it on every site,
-        // but a WordPress install has no repository — the screen would be about
-        // nothing. Applied here rather than in the frontend so a new site type
-        // costs one class and no frontend change, and so there is one answer
-        // rather than fourteen special cases spread across screens.
-        //
-        // Hide rather than grey: there is nothing the user could do to enable
-        // PHP settings on a static site, so a disabled row is only noise.
-        // Greying is for things they can fix.
+        // Second filter: hide screens the site type does not have (e.g. deployment on WordPress).
+        // Done here, not in the frontend, so a new site type needs no frontend change. Hidden
+        // rather than greyed: the user could not enable it anyway.
         if ($application !== null) {
             $features = $application->features();
 
@@ -58,49 +40,24 @@ class VisiblePermissions
             );
         }
 
-        // The third filter, and the server-level counterpart of the one above: a
-        // feature the STACK cannot do is a screen about nothing.
+        // Third filter: hide server screens the STACK cannot do. The answers come from
+        // `ServerCapabilities`, the same rule the middleware uses to refuse those endpoints, so the
+        // tab and the routes cannot disagree.
         //
-        // A map rather than a chain of ifs, because each entry is one fact and the
-        // next stack should add a line rather than a branch. Each answer comes from
-        // `ServerCapabilities`, which is where the rule lives for the middleware
-        // that refuses the same endpoints — a screen hidden here whose routes still
-        // answer is the worse state, so the two must agree by construction rather
-        // than by both being remembered.
-        //
-        // `php` asks `hosts('php')` and never `can('php')`: PHP is installed on a
-        // Docker box because the panel is a Laravel application, so the latter
-        // would hide it nowhere. A server with no recorded stack answers true to
-        // both by design — refusing a working migrated box its screens because
-        // nobody wrote a capability row is far worse than an extra tab.
-        //
-        // Docker was deliberately absent here until somebody asked for that tab to
-        // go. They have. It was the one entry whose omission was visible rather
-        // than merely untidy: `EnsureServerHostsContainers` already answers 409 on
-        // all seventeen Docker routes off a container stack, so the menu offered a
-        // page whose every request failed — a button whose only outcome is an
-        // error, which is worse than no button.
+        // `php` asks `hosts('php')`, never `can('php')`: PHP is installed on a Docker box too
+        // (the panel is Laravel). A server with no recorded stack answers true to both by design.
         if ($level === 'server' || $level === null) {
             $capabilities = app(ServerCapabilities::class);
 
             $unavailable = array_keys(array_filter([
                 'php' => ! $capabilities->hosts('php'),
-                // Both of these ask whether anything runs on the HOST, not
-                // whether the matching runtime is hosted. For databases that is
-                // the rule the middleware already used; for Node it is the
-                // deliberate difference — see `runsHostApplications()` for why
-                // `hosts('node')` would take the screen away from every LEMP box
-                // whose sites build their assets with npm.
+                // These two ask whether anything runs on the HOST, not whether the runtime is hosted;
+                // see `runsHostApplications()` for why `hosts('node')` would hide Node on LEMP boxes.
                 'node' => ! $capabilities->runsHostApplications(),
                 'database' => ! $capabilities->managesDatabases(),
-                // Networks, volumes and containerised databases — all of it is
-                // about containers, and a box that serves none has none to show.
-                // Same capability the middleware refuses on, so the tab and the
-                // routes cannot disagree.
+                // Networks, volumes and containerised databases: all about containers.
                 'docker' => ! $capabilities->hosts('docker'),
-                // The mirror of the three above: a credential for pulling container
-                // images is nothing on a box that runs no containers. Its endpoints
-                // are gated on the same capability, so the tab and the routes agree.
+                // Registry credentials are for pulling container images.
                 'registry' => ! $capabilities->hosts('docker'),
             ]));
 
@@ -112,8 +69,7 @@ class VisiblePermissions
             }
         }
 
-        // Build effective {view, manage} per permission id, merged across
-        // direct grants + every role the user holds (dedup by OR).
+        // Effective {view, manage} per permission id, merged across every role the user holds (OR).
         $effective = [];
         $merge = function ($grants) use (&$effective) {
             foreach ($grants as $grant) {
@@ -131,10 +87,7 @@ class VisiblePermissions
             ->map(function (Permission $permission) use ($effective) {
                 $grant = $effective[$permission->id] ?? ['view' => false, 'manage' => false];
 
-                // A screen that is only for changing things is only shown to
-                // someone who may change them: a view grant alone counts for
-                // nothing, so it leaves both the sidebar and the frontend's
-                // own `can(view)` guard. See MANAGE_ONLY.
+                // Manage-only screens: a view grant alone counts for nothing. See MANAGE_ONLY.
                 if (in_array($permission->name, self::MANAGE_ONLY, true)) {
                     $grant['view'] = $grant['manage'];
                 }

@@ -20,9 +20,7 @@ use Illuminate\Support\Facades\Auth;
 
 class DeploymentController extends Controller
 {
-    /**
-     * Newest first — the only order this list is ever read in.
-     */
+    /** Newest first. */
     public function index(Application $application): JsonResponse
     {
         $deployments = $application->deployments()
@@ -37,15 +35,11 @@ class DeploymentController extends Controller
     }
 
     /**
-     * The newest deploy only, or null — what the Deployment screen polls
-     * while it is open.
+     * The newest deploy only, or null — what the Deployment screen polls.
      *
-     * A deploy started by a push runs behind the page: the screen only
-     * polled after its own Deploy button, so the history stayed stale until a
-     * reload. Asking the full list every few seconds would re-send every row
-     * and the settings; this is one indexed row, the same shape as a history
-     * row (no build output — that stays on `show`), so the screen can compare
-     * its `id` and `status` with its top row and reload only on a change.
+     * One indexed row in the history-row shape (no build output; that stays on `show`), so the
+     * screen can compare `id` and `status` with its top row and reload only on a change. This
+     * picks up deploys started by a push.
      */
     public function latest(Application $application): JsonResponse
     {
@@ -56,11 +50,7 @@ class DeploymentController extends Controller
         ]);
     }
 
-    /**
-     * One deploy, with its output. Its own endpoint because the output is the
-     * expensive part — a list of fifty carrying full build logs is a response
-     * nobody asked for.
-     */
+    /** One deploy, with its output (its own endpoint: build logs are too heavy for the list). */
     public function show(Application $application, Deployment $deployment): JsonResponse
     {
         abort_unless($deployment->application_id === $application->id, 404);
@@ -70,10 +60,7 @@ class DeploymentController extends Controller
         ]);
     }
 
-    /**
-     * Start a deploy. Returns 202 with the row already created, so the screen
-     * has something to show and poll before a worker picks the job up.
-     */
+    /** Start a deploy. Returns 202 with the row already created, so the screen can poll it. */
     public function store(Application $application, DeployQueue $deploys): JsonResponse
     {
         $this->refuseWithoutAccount($application);
@@ -86,12 +73,8 @@ class DeploymentController extends Controller
     }
 
     /**
-     * Run it again.
-     *
-     * Deliberately *not* a rollback. Deploys are in place — the working tree is
-     * reset to the branch tip — so there is no earlier release to return to.
-     * This re-runs the current branch, which is what fixes a deploy that failed
-     * on a transient error, and it says so rather than implying time travel.
+     * Run it again. Deliberately *not* a rollback: deploys are in place (the working tree is
+     * reset to the branch tip), so there is no earlier release. This re-runs the current branch.
      */
     public function redeploy(Application $application, Deployment $deployment, DeployQueue $deploys): JsonResponse
     {
@@ -108,11 +91,8 @@ class DeploymentController extends Controller
     /**
      * Re-point the application at a different account, repository or URL.
      *
-     * Its own endpoint rather than a field on the generic update, for the same
-     * reason the web root has one: this is not a column write. The candidate
-     * credential is asked whether it can actually reach the repository, and a
-     * rejection has to be a 422 the user can act on rather than a deployment
-     * that fails tomorrow.
+     * Not a plain column write: the candidate credential is checked against the repository, and
+     * a rejection is a 422 the user can act on.
      */
     public function updateGitAccount(
         Application $application,
@@ -132,9 +112,7 @@ class DeploymentController extends Controller
 
         $application->update($validated);
 
-        // The script gets its own verb. It is the one setting here that changes
-        // what runs on the server, so "settings updated" would bury it among
-        // branch changes and a toggle.
+        // The script gets its own verb: it is the one setting that changes what runs on the server.
         $activityLogger->log(
             array_key_exists('deploy_script', $validated)
                 ? 'application.deploy_script_updated'
@@ -155,32 +133,25 @@ class DeploymentController extends Controller
             'branch' => $application->branch ?: 'main',
             'repository' => $application->repository,
 
-            // What will actually run, whether the user wrote it or it is still
-            // falling back to the old single build command.
+            // What will actually run: the user's script or the fallback build command.
             'deploy_script' => app(GitDeployer::class)->script($application),
-            // Whether they have written one, so the screen can offer the
-            // default rather than presenting the fallback as their own text.
-            // A saved copy of the default, line endings and trailing space
-            // aside, is not one: it still says "default" after saving.
+            // Whether the user wrote one. A saved copy of the default (ignoring line endings and
+            // trailing space) does not count.
             'deploy_script_customised' => filled($application->deploy_script)
                 && $this->normalised($application->deploy_script) !== $this->normalised($this->defaultScript($application)),
             'default_deploy_script' => $this->defaultScript($application),
 
             'auto_deploy' => (bool) $application->webhook_enabled,
             'last_commit' => $application->last_commit,
-            // What is on disk, which differs from `last_commit` after a deploy
-            // that failed once it had checked out. See Application::codeOnDisk().
+            // Differs from `last_commit` after a deploy that failed once checked out.
+            // See Application::codeOnDisk().
             'code_on_disk' => $application->codeOnDisk(),
             'last_deployed_at' => $application->last_deployed_at?->format('d-m-Y H:i:s'),
             'last_deployed_at_human' => $application->last_deployed_at?->diffForHumans(),
 
-            // The placeholders a script may use. Sent rather than hardcoded in
-            // the frontend, the same way the cron command presets are.
-            // Plus v7's `{PHP84}`-style variable for every installed version.
+            // Placeholders a script may use, plus a `{PHP84}`-style variable per installed version.
             'placeholders' => ['{path}', '{branch}', '{domain}', '{php}', ...array_keys(app(DeployScriptPhp::class)->aliases())],
-            // What each one becomes for this site, from the code that does the
-            // substituting — the screen showed computed guesses, and none at
-            // all for the {PHPxx} variables.
+            // What each one becomes for this site, from the code that does the substituting.
             'placeholder_values' => app(GitDeployer::class)->placeholderValues($application),
         ];
     }
@@ -192,9 +163,7 @@ class DeploymentController extends Controller
 
     private function defaultScript(Application $application): string
     {
-        // A Node application with a recorded package manager gets that
-        // tool's own install+build, not the npm-only fallback below — the
-        // whole point of recording the choice at deploy time.
+        // A Node app with a recorded package manager gets that tool's own install+build.
         if ($application->package_manager) {
             $perManager = (array) config('server.deployments.package_manager_scripts', []);
 
@@ -209,11 +178,8 @@ class DeploymentController extends Controller
     }
 
     /**
-     * A site whose git account was disconnected has no credential and no URL
-     * to fetch from, so its deploy could only fail on `git remote add origin
-     * ""`. Refused here, before a row and a job are made, with the one thing
-     * the user can do about it. The Deployment screen disables the button too;
-     * this is for every caller that is not the screen.
+     * Refuse before a row and a job are made: a site whose git account was disconnected has no
+     * credential or URL, so its deploy could only fail. The screen disables the button too.
      */
     private function refuseWithoutAccount(Application $application): void
     {

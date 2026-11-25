@@ -13,19 +13,15 @@ use Throwable;
 /**
  * The only thing that writes `runtime_installs`.
  *
- * One writer because the table's whole value is being trustworthy about what
- * is happening right now: a second writer with slightly different rules is how
- * a row gets stranded at `installing` and a screen spins forever.
+ * One writer, so rows follow one set of rules and none is stranded at `installing`.
  */
 class InstallTracker
 {
     /**
      * Record that an install has been queued.
      *
-     * Called from the controller *before* dispatch, deliberately. Started
-     * inside the job instead, there is a window between the 202 and the worker
-     * picking the job up where the install exists but nothing can see it —
-     * which is the exact blindness this table is here to remove.
+     * Called from the controller *before* dispatch, so the install is visible
+     * between the 202 and the worker picking the job up.
      */
     public function start(
         string $runtime,
@@ -37,9 +33,7 @@ class InstallTracker
         $identity = ['runtime' => $runtime, 'version' => $version, 'extension' => (string) $extension];
         $now = now();
 
-        // `updateOrCreate()` reads first, so two simultaneous requests can
-        // both try to insert and one loses to the unique index. Upsert lets
-        // the database make that decision atomically on every supported DB.
+        // Upsert, not `updateOrCreate()`: two simultaneous requests would race on the unique index.
         RuntimeInstall::query()->upsert(
             [[
                 ...$identity,
@@ -47,15 +41,12 @@ class InstallTracker
                 // A retry clears the last failure rather than stacking on it.
                 'reason' => null,
                 'reference' => null,
-                // Likewise the last run's progress: showing the previous
-                // attempt's output under a fresh spinner would have the
-                // operator reading a failure that has already been retried.
+                // Likewise the last run's progress, so a retry does not show old output.
                 'current_step' => $initialStep,
                 'output' => null,
                 'started_at' => $now,
-                // Null until a worker picks the job up (FS-B1): one worker runs
-                // installs and site setups in turn, and an install waiting its
-                // turn read as "installing" for ten minutes. begin() stamps it.
+                // Null until a worker picks the job up, so a queued install is not
+                // shown as running. begin() stamps it.
                 'picked_up_at' => null,
                 'finished_at' => null,
                 'was_absent' => $wasAbsent,
@@ -63,23 +54,17 @@ class InstallTracker
                 'updated_at' => $now,
             ]],
             ['runtime', 'version', 'extension'],
-            // `was_absent` is deliberately absent from this list. Everything
-            // else is per-attempt and a retry should overwrite it; that one
-            // records what was true when the install was first *asked for*,
-            // and a retry asking the box again is exactly the mistake it
-            // exists to prevent — by then the half-installed package is there.
+            // `was_absent` is deliberately not updated: it records what was true when the
+            // install was first asked for, and a retry would see the half-installed package.
             ['status', 'reason', 'reference', 'current_step', 'output', 'started_at', 'picked_up_at', 'finished_at', 'updated_at'],
         );
 
         $row = $this->query($runtime, $version, $extension)->firstOrFail();
 
-        // Installs change what the cached server screens report (FS-C46).
+        // Installs change what the cached server screens report.
         ProbeCache::flush();
 
-        // An upsert that updated an existing row skipped the column above, so
-        // a row from before this existed — or one whose first attempt never
-        // recorded an answer — still gets one rather than staying unknown
-        // forever.
+        // The upsert skips `was_absent` on an existing row; fill it if it was never recorded.
         if ($row->was_absent === null && $wasAbsent !== null) {
             $row->forceFill(['was_absent' => $wasAbsent])->save();
         }
@@ -90,10 +75,7 @@ class InstallTracker
     /**
      * The same row, for a purge rather than an install.
      *
-     * Shares the table deliberately: the screen asks one question — "is
-     * anything happening to this version?" — and two tables would mean two
-     * answers, free to disagree about a version being installed and removed
-     * at once.
+     * Shares the table so one row answers "is anything happening to this version?".
      */
     public function startRemoval(string $runtime, string $version): RuntimeInstall
     {
@@ -103,7 +85,7 @@ class InstallTracker
     }
 
     /**
-     * A worker has picked the job up: the install leaves the queue (FS-B1).
+     * A worker has picked the job up: the install leaves the queue.
      * Returns the row, as current() does, for the job to report progress to.
      */
     public function begin(string $runtime, string $version, ?string $extension = null): ?RuntimeInstall
@@ -123,8 +105,7 @@ class InstallTracker
     }
 
     /**
-     * Success removes the row: the runtime can now be seen on disk, and that
-     * is the answer everything else already reads.
+     * Success removes the row: the runtime is now visible on disk.
      */
     public function succeed(string $runtime, string $version, ?string $extension = null): void
     {
@@ -147,9 +128,7 @@ class InstallTracker
     /**
      * Mark a stranded row failed because the worker itself died.
      *
-     * Only touches rows still at `installing`: by the time a `failed()` hook
-     * runs the job may already have recorded a real reason, and "the worker
-     * died" would overwrite the more useful one.
+     * Only touches rows still at `installing`, so a reason the job already recorded is kept.
      */
     public function abandon(string $runtime, string $version, ?string $extension = null, ?Throwable $why = null): void
     {
@@ -157,9 +136,8 @@ class InstallTracker
     }
 
     /**
-     * The job ran out of time, as opposed to the worker dying (FS-A8): an
-     * apt mirror that never answers holds the job until its timeout, and
-     * that read as "the worker stopped".
+     * The job ran out of time, as opposed to the worker dying (e.g. an apt mirror
+     * that never answers).
      */
     private static function timedOut(?Throwable $why): bool
     {

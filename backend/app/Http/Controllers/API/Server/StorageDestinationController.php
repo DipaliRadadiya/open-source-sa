@@ -24,12 +24,8 @@ use Illuminate\Validation\ValidationException;
 class StorageDestinationController extends Controller
 {
     /**
-     * Hand back the Google consent URL to send the operator to.
-     *
-     * The panel does not redirect here — it returns the URL and the browser
-     * navigates. An API that answered with a 302 would be followed by the
-     * frontend's fetch layer, which would then try to parse Google's sign-in
-     * page as JSON.
+     * Hand back the Google consent URL to send the operator to. No 302: the frontend's fetch
+     * layer would follow it and try to parse Google's sign-in page as JSON.
      */
     public function oauthStart(StorageDestination $storageDestination, ConnectGoogleDrive $action): JsonResponse
     {
@@ -39,10 +35,8 @@ class StorageDestinationController extends Controller
     /**
      * Finish the round trip Google sent back to the callback page.
      *
-     * Takes no destination in the route: which destination this was for is
-     * sealed inside `state` and read from there, because the page forwarding
-     * this holds query parameters anybody could have written. See
-     * `GoogleOauthState`.
+     * No destination in the route: it is sealed inside `state`, because the forwarding page's
+     * query parameters could be written by anybody. See `GoogleOauthState`.
      */
     public function oauthCallback(OauthCallbackRequest $request, ConnectGoogleDrive $action): JsonResponse
     {
@@ -54,13 +48,10 @@ class StorageDestinationController extends Controller
         return response()->json([
             'oauth' => [
                 'status' => $result['status'],
-                // A finished sentence in the *viewer's* locale, built on read.
-                // The action stores and returns a code, never prose.
+                // Built on read in the viewer's locale; the action returns a code, never prose.
                 'message' => $result['reason'] ? __($result['reason']) : null,
             ],
-            // Null when `state` never resolved to a destination — there is
-            // genuinely nothing to show, and inventing an empty resource would
-            // make the page render a connected-looking row for no row.
+            // Null when `state` never resolved to a destination.
             'storage_destination' => $result['destination']
                 ? StorageDestinationResource::make($result['destination']->fresh())->resolve()
                 : null,
@@ -74,17 +65,11 @@ class StorageDestinationController extends Controller
         return response()->json([
             'storage_destinations' => StorageDestinationResource::collection($destinations)->resolve(),
 
-            // Panel-wide, and deliberately not hung off a destination. An
-            // operator needs this string *before* any destination exists: it
-            // goes into the Google OAuth client at creation time, which is
-            // before they have a client id to paste into the form here. A
-            // per-destination endpoint would only hand it over after the setup
-            // step that needs it.
+            // Panel-wide, not per destination: it is needed before any destination exists, when
+            // creating the Google OAuth client.
             'google_oauth_redirect_uri' => $redirect->redirectUri(),
 
-            // Where a "this server" destination may live, and what the form
-            // starts with (RC-39). The rule is the panel's, so the form reads
-            // it from here instead of keeping a copy that drifts from it.
+            // Where a "this server" destination may live; the form reads the rule from here.
             'local' => [
                 'allowed_roots' => $local->roots(),
                 'default_path' => (string) config('server.backups.local.default_path', '/var/backups/panel'),
@@ -94,9 +79,7 @@ class StorageDestinationController extends Controller
 
     public function store(StoreStorageDestinationRequest $request, CreateStorageDestination $action): JsonResponse
     {
-        // Exactly this credential is a destination already: that one, not a
-        // second, and nothing about it changes — not its name, not its folder
-        // (Dipali, 2026-10-28). The central panel uses the id either way.
+        // This exact credential is already a destination: return it unchanged, not a second one.
         if (($existing = $request->existingRecord()) !== null) {
             return response()->json([
                 'storage_destination' => StorageDestinationResource::make($existing)->resolve(),
@@ -107,8 +90,8 @@ class StorageDestinationController extends Controller
 
         $data = $request->validated();
 
-        // "This server" (#14): the folder is made before the row exists, so a
-        // folder that cannot be made leaves no destination pointing at it.
+        // "This server": the folder is made before the row exists, so a failure leaves no
+        // destination pointing at it.
         $folder = $data['provider'] === StorageProvider::Local->value
             ? $this->prepareLocalFolder((string) $data['config']['path'])
             : null;
@@ -127,8 +110,7 @@ class StorageDestinationController extends Controller
     }
 
     /**
-     * Create the folder, or take over an empty one, and say which — "created"
-     * and "found" are different news to the person who typed the path.
+     * Create the folder, or take over an empty one, and say which.
      *
      * @return array{path: string, status: string, message: string}
      */
@@ -165,9 +147,7 @@ class StorageDestinationController extends Controller
         $data = $request->validated();
         $folder = null;
 
-        // A moved folder is prepared like a new one. Backups already in the
-        // old folder stay there; retention and restore of those read the
-        // destination as it is now, as with every other provider.
+        // A moved folder is prepared like a new one; backups in the old folder stay there.
         if ($storageDestination->provider === StorageProvider::Local && isset($data['config']['path'])) {
             $folder = $this->prepareLocalFolder((string) $data['config']['path']);
             $data['config']['path'] = $folder['path'];
@@ -189,10 +169,8 @@ class StorageDestinationController extends Controller
     }
 
     /**
-     * Probe an existing destination's credentials and reachability by
-     * uploading/reading/deleting a sentinel object. Heavy and external, so
-     * throttled — a slow S3-compatible endpoint must not become a way to
-     * occupy the panel's request workers.
+     * Probe an existing destination's credentials and reachability by uploading, reading and
+     * deleting a sentinel object. Throttled: a slow endpoint must not tie up request workers.
      */
     public function test(
         StorageDestination $storageDestination,
@@ -200,10 +178,8 @@ class StorageDestinationController extends Controller
     ): JsonResponse {
         $result = $prober->probe($storageDestination);
 
-        // Persist the verdict so it outlives the tab that asked for it. The
-        // stable `error_class` category is stored, never `message` — that is
-        // prose in the tester's locale, and a viewer in another language
-        // would be shown someone else's language forever.
+        // Persist the verdict. Store the stable `error_class`, never `message` (prose in the
+        // tester's locale).
         $storageDestination->forceFill([
             'last_tested_at' => now(),
             'last_test_success' => $result['success'],
@@ -211,24 +187,17 @@ class StorageDestinationController extends Controller
         ])->save();
 
         return response()->json([
-            // Use a verb-named wrapper (`test`) rather than the resource
-            // shape — the resource describes stored config, this result
-            // describes a live network probe.
+            // Not the resource shape: that describes stored config, this is a live probe.
             'test' => [
                 'success' => $result['success'],
                 'latency_ms' => $result['latency_ms'],
                 'message' => $result['message'],
                 'error_class' => $result['error_class'],
-                // Local timestamp so the UI can show "Tested 3s ago"
-                // even after the page is closed.
+                // Local timestamp for the UI's "Tested 3s ago".
                 'tested_at' => now()->format('d-m-Y H:i:s'),
             ],
-            // Always 200. The request itself succeeded — we asked the panel
-            // to probe a destination and it did, then told us what it found.
-            // A 5xx here would make the frontend's error interceptor treat a
-            // perfectly good answer as a server fault, and the body is not
-            // the `code`-bearing error envelope the rest of the API returns
-            // for real failures. `test.success` carries the verdict.
+            // Always 200: the probe ran. A 5xx would make the frontend treat a good answer as a
+            // server fault. `test.success` carries the verdict.
         ]);
     }
 }

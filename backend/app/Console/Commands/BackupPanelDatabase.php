@@ -10,16 +10,12 @@ use Illuminate\Support\Facades\Process;
 /**
  * Dump the panel's own database before an update migrates it.
  *
- * Called by the update script rather than implemented inside it, because the
- * panel's database can be sqlite, mysql, mariadb or postgres and only Laravel
- * knows which one this install actually uses. Encoding that choice into
- * generated bash would mean guessing at render time about state that can
- * change.
+ * Called by the update script because only Laravel knows which driver (sqlite, mysql,
+ * mariadb, postgres) this install uses.
  *
- * Every driver `config/database.php` offers and the panel documents must have
- * an arm here. `UpdateScript` runs this step unguarded under `set -e` with a
- * rollback trap, so a driver that falls through to `unsupported()` does not
- * skip its backup — it makes every update fail and roll back.
+ * Every supported driver must have an arm here: `UpdateScript` runs this step under `set -e`
+ * with a rollback trap, so a driver that falls through to `unsupported()` makes every update
+ * fail and roll back.
  */
 class BackupPanelDatabase extends Command
 {
@@ -56,20 +52,17 @@ class BackupPanelDatabase extends Command
         return $code;
     }
 
-    /** Days an older dump is kept. Operator's call, 2026-10-18. */
+    /** Days an older dump is kept. */
     public const KEEP_DAYS = 7;
 
     /**
      * Remove dumps older than {@see KEEP_DAYS}, always keeping the newest.
      *
-     * One is written before every update and nothing removed any, so each
-     * update cost a full copy of the panel's database, for good. The newest is
-     * the one an update's rollback reads, and is kept however old it is.
+     * The newest is the one an update's rollback reads, so it is kept however old it is.
      *
-     * Only names this command writes, aged by the stamp in the name — a file
-     * someone put here by hand is not this command's to remove. Prints
-     * nothing: the update script takes the last line of output as the path of
-     * the dump it just made.
+     * Only names this command writes, aged by the stamp in the name; files put here by hand
+     * are left alone. Prints nothing: the update script takes the last output line as the path
+     * of the dump just made.
      */
     private function pruneOld(string $dir): void
     {
@@ -95,9 +88,8 @@ class BackupPanelDatabase extends Command
     }
 
     /**
-     * A sqlite database is one file. Copying it is the whole backup — but it
-     * must be copied through the sqlite backup API rather than `cp`, because
-     * a plain copy of a file being written to can capture a torn page.
+     * A sqlite database is one file, but it must not be copied with `cp`: a plain copy of a
+     * file being written to can capture a torn page.
      */
     private function dumpSqlite(string $dir, string $stamp): int
     {
@@ -164,23 +156,13 @@ class BackupPanelDatabase extends Command
     }
 
     /**
-     * PostgreSQL. Missing until 2026-09-14, and not a cosmetic gap.
+     * PostgreSQL.
      *
-     * `config/database.php` carries a `pgsql` connection and the panel documents
-     * its own database as configurable to PostgreSQL — but this command fell
-     * through to `unsupported()`, and `UpdateScript`'s `backup_database` step is
-     * unguarded under `set -e` with a rollback trap. So a panel running on
-     * PostgreSQL did not merely skip its backup: **every update failed at that
-     * step and rolled back**, with nothing in the message about the database
-     * driver being the reason.
+     * Credentials go in a 0600 `PGPASSFILE`, like {@see PgsqlEngine}: a pgpass file with group
+     * or world access is ignored, so the mode decides whether authentication works. Never
+     * `PGPASSWORD`, never on argv.
      *
-     * Credentials go in a 0600 `PGPASSFILE`, matching {@see PgsqlEngine}
-     * and for the same measured reason: a pgpass file with group or world access
-     * is warned about and then *ignored*, so the mode is the difference between
-     * authenticating and not. Never `PGPASSWORD`, and never on argv.
-     *
-     * No `--single-transaction`: `pg_dump` already runs in one repeatable-read
-     * snapshot, so the flag mysqldump needs has no counterpart to add here.
+     * No `--single-transaction`: `pg_dump` already runs in one repeatable-read snapshot.
      */
     private function dumpPostgres(string $connection, string $dir, string $stamp): int
     {
@@ -188,9 +170,8 @@ class BackupPanelDatabase extends Command
         $target = $dir.'/panel-'.$stamp.'.sql';
         $passFile = $dir.'/.pg-'.$stamp.'.pgpass';
 
-        // A literal colon or backslash in a field has to be escaped or it is
-        // read as a separator — which silently shifts every field after it and
-        // authenticates as somebody else, or nobody.
+        // Escape a literal colon or backslash, or it is read as a separator and shifts every
+        // later field.
         $fields = array_map(
             fn (string $value): string => str_replace(['\\', ':'], ['\\\\', '\\:'], $value),
             [
@@ -211,8 +192,7 @@ class BackupPanelDatabase extends Command
                 '--host='.($config['host'] ?? '127.0.0.1'),
                 '--port='.($config['port'] ?? 5432),
                 '--username='.($config['username'] ?? ''),
-                // Fail rather than block on a prompt nothing will ever answer:
-                // an update hanging invisibly reads as a stalled queue.
+                // Fail instead of blocking on a prompt nothing will answer.
                 '--no-password',
                 '--file='.$target,
                 (string) $config['database'],
@@ -234,8 +214,7 @@ class BackupPanelDatabase extends Command
     }
 
     /**
-     * Fail loudly. An update that silently skips its backup is an update with
-     * no rollback, and the operator would not find out until they needed it.
+     * Fail loudly: an update that silently skips its backup has no rollback.
      */
     private function unsupported(?string $driver): int
     {

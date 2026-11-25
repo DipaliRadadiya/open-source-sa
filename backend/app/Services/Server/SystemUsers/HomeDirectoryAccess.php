@@ -11,24 +11,14 @@ use Throwable;
 /**
  * Who may enter a system user's home.
  *
- * Homes used to be `751`: the web server needs to pass through one to serve
- * the sites inside it, and `chmod o+x` let it — along with every other local
- * account. Applications write most files `644`, so any other site user could
- * read another site's database password, `.env` and session files by path
- * (measured on the test servers: PrestaShop, Joomla, Akaunting, Statamic).
+ * A plain `chmod o+x` lets the web server pass through, but also every other local account, and
+ * apps write most files `644`: any site user could read another site's `.env` and database
+ * password by path. Closing the home with `o-rwx` and a group for the web server breaks the
+ * panel's own account (every installer, deploy, backup and certificate job starts in a site
+ * directory), and a supplementary group is not seen by the already-running queue worker.
  *
- * A first fix closed the home with `chmod o-rwx` and let the web server in by
- * group. It broke the panel: the panel's own account passes through every
- * home too — every installer, deploy, backup, restore and certificate job
- * starts in a site directory, and PHP checks that directory exists as the
- * panel before handing anything to sudo. Groups had a second problem: a
- * supplementary group is read when a process starts, so the long-running
- * queue worker would not see one added for a new site user until restarted.
- *
- * So the home gets an ACL instead: pass-through (`--x`, no listing) for
- * exactly the panel's account and the web server's, nothing for anyone else.
- * ACL entries are checked by user id on every access, so they take effect
- * at once for processes already running.
+ * So the home gets an ACL: pass-through (`--x`, no listing) for exactly the panel's account and
+ * the web server's, nothing for anyone else. ACLs apply at once to running processes.
  */
 class HomeDirectoryAccess
 {
@@ -52,9 +42,8 @@ class HomeDirectoryAccess
     ) {}
 
     /**
-     * Close a home `useradd` has just made. Never throws and never leaves the
-     * web server locked out: without setfacl, or when the ACL does not take,
-     * the home gets what it always had (`o+x`), and the Doctor says so.
+     * Close a home `useradd` has just made. Never throws and never locks the web server out:
+     * without setfacl, or when the ACL does not take, the home gets `o+x` and the Doctor says so.
      * Null when the home was closed; otherwise the fallback's result.
      */
     public function closeNewHome(string $username, string $home): ?ServerOpsResult
@@ -73,9 +62,8 @@ class HomeDirectoryAccess
     }
 
     /**
-     * Close an existing user's home. Only a real directory directly under the
-     * home base, named after and owned by the user — anything else (a link, a
-     * shared path, a directory somebody else owns) is left alone.
+     * Close an existing user's home. Only a real directory directly under the home base, named
+     * after and owned by the user; anything else (a link, a shared path) is left alone.
      */
     public function secure(SystemUser $user): string
     {
@@ -99,14 +87,12 @@ class HomeDirectoryAccess
             return self::ALREADY;
         }
 
-        // Read back, not taken from the exit code: a home is reported closed
-        // only when it is.
+        // Read back, not taken from the exit code.
         return $this->apply($home, $context) && $this->verify($home, $context) ? self::SECURED : self::FAILED;
     }
 
     /**
-     * Undo it: drop the ACL and give the home back its old `o+x`. The one-step
-     * rollback behind `homes:open`.
+     * Undo it: drop the ACL and restore `o+x` (the rollback behind `homes:open`).
      */
     public function open(SystemUser $user): bool
     {
@@ -126,8 +112,7 @@ class HomeDirectoryAccess
     }
 
     /**
-     * Whether other local accounts can still enter this home. Null when it
-     * could not be found out.
+     * Whether other local accounts can enter this home; null when unknown.
      */
     public function isOpen(SystemUser $user): ?bool
     {
@@ -145,8 +130,8 @@ class HomeDirectoryAccess
     }
 
     /**
-     * Install the `acl` package when setfacl is missing — Ubuntu 26.04 does
-     * not ship it. Non-fatal: the caller reports NO_ACL and homes stay open.
+     * Install the `acl` package when setfacl is missing (Ubuntu 26.04 lacks it). Non-fatal: the
+     * caller reports NO_ACL and homes stay open.
      */
     public function ensureTools(): bool
     {
@@ -164,9 +149,8 @@ class HomeDirectoryAccess
     }
 
     /**
-     * The ACL a closed home carries, or null when the web server's account is
-     * unknown — closing a home it cannot then enter would be every site of
-     * that user answering 403.
+     * The ACL a closed home carries, or null when the web server's account is unknown (closing
+     * the home would make every site of that user answer 403).
      *
      * @return array<int, string>|null
      */

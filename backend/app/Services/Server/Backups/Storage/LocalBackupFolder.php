@@ -7,24 +7,17 @@ use App\Services\Server\ServerOps;
 use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 
 /**
- * The folder a "This server" backup destination writes to (#14).
+ * The folder a "This server" backup destination writes to.
  *
- * Backups hold every file of a site and a dump of its database, so the folder
- * is the panel's own and private (0700) — a site user must never be able to
- * read another site's database out of it. Three rules follow from that:
+ * Backups hold every file of a site and a database dump, so the folder is the panel's own and
+ * private (0700): a site user must never read another site's database out of it.
  *
- * - **Only under the configured roots** (`/var/backups`, `/mnt`, `/media`), and
- *   strictly below one. `/`, `/home`, `/var/www`, `/etc` and the panel's own
- *   tree are never reachable, and no symlink anywhere on the path can make
- *   them reachable.
- * - **Never somebody else's folder.** A missing folder is created; an existing
- *   one is used if it is already the panel's or is empty. A folder with
- *   another account's files in it is refused, not taken over.
- * - **Created one level deep, never recreated later.** `/mnt/disk2/backups`
- *   is made only when `/mnt/disk2` exists. With `mkdir -p`, a disk that was
- *   not mounted would get its mount point invented on the system disk, and
- *   backups meant for the big disk would quietly fill the small one. For the
- *   same reason a folder that later disappears is reported, not recreated.
+ * - Only strictly below a configured root (`/var/backups`, `/mnt`, `/media`); no symlink on the
+ *   path may lead elsewhere.
+ * - Never somebody else's folder: a missing one is created, an existing one is used only if it
+ *   is the panel's or empty. One holding another account's files is refused.
+ * - Created one level deep, never recreated later. With `mkdir -p` an unmounted disk would get
+ *   its mount point invented on the system disk, and backups would quietly fill it.
  */
 class LocalBackupFolder
 {
@@ -34,8 +27,7 @@ class LocalBackupFolder
     ) {}
 
     /**
-     * The path, tidied: no trailing slash. Null for anything that is not a
-     * plain absolute path (relative, `..`, `.`, empty segments, odd bytes).
+     * The path without a trailing slash; null unless it is a plain absolute path.
      */
     public function normalise(string $path): ?string
     {
@@ -55,8 +47,7 @@ class LocalBackupFolder
     }
 
     /**
-     * Why this path may not be used at all, as a `storage.local.*` key, or null.
-     * Asks the disk only about links — nothing is created or changed.
+     * Why this path may not be used, as a `storage.local.*` key, or null. Only checks for links.
      */
     public function pathProblem(string $raw): ?string
     {
@@ -77,8 +68,7 @@ class LocalBackupFolder
             return 'storage.local.path_not_allowed';
         }
 
-        // Every component, the folder itself included: a link anywhere can
-        // point the "backup folder" at a site's home or at /etc.
+        // Every component, the folder included: a link anywhere could point it at /etc.
         $walk = '';
         foreach (explode('/', substr($path, 1)) as $segment) {
             $walk .= '/'.$segment;
@@ -92,12 +82,10 @@ class LocalBackupFolder
     }
 
     /**
-     * What is at the path right now, for the panel's purposes:
-     * `missing`, `parent_missing`, `ours`, `empty` (someone else's but empty),
-     * `foreign` (someone else's, with something in it) or `not_folder`.
+     * What is at the path: `missing`, `parent_missing`, `ours`, `empty` (someone else's but empty),
+     * `foreign` (someone else's, not empty) or `not_folder`.
      *
-     * Asked with elevation: the folder may belong to another account and be
-     * closed to the panel, and "I could not look" must not read as "missing".
+     * Asked with elevation: "could not look" must not read as "missing".
      */
     public function state(string $path): string
     {
@@ -140,8 +128,8 @@ class LocalBackupFolder
     }
 
     /**
-     * Make the folder ready on save: create it, or take over an empty one,
-     * and close it to everyone but the panel. Returns `created` or `existing`.
+     * Make the folder ready on save: create it or take over an empty one, closed to everyone
+     * but the panel. Returns `created` or `existing`.
      *
      * @throws LocalBackupFolderException naming why not
      */
@@ -178,8 +166,7 @@ class LocalBackupFolder
     }
 
     /**
-     * Why a saved folder cannot be used now, as a `storage.test.*` key, or
-     * null. For the connection test and every backup — never creates.
+     * Why a saved folder cannot be used now, as a `storage.test.*` key, or null. Never creates.
      */
     public function problem(string $raw): ?string
     {
@@ -195,8 +182,7 @@ class LocalBackupFolder
     }
 
     /**
-     * Free and total bytes on the disk the folder is on; nulls when it cannot
-     * be told (the folder is gone).
+     * Free and total bytes of the folder's disk; nulls when the folder is gone.
      *
      * @return array{free: int|null, total: int|null}
      */
@@ -212,8 +198,7 @@ class LocalBackupFolder
     }
 
     /**
-     * Bytes the backups in the folder use. The folder is the panel's, so it
-     * is read directly.
+     * Bytes the backups in the folder use.
      */
     public function used(string $path): ?int
     {
@@ -239,8 +224,7 @@ class LocalBackupFolder
     }
 
     /**
-     * Whether two paths are on the same filesystem, so a rename can move a
-     * file between them without copying a byte.
+     * Whether two paths are on the same filesystem, so a rename moves a file without copying.
      */
     public function sameDisk(string $a, string $b): bool
     {
@@ -251,9 +235,8 @@ class LocalBackupFolder
     }
 
     /**
-     * Hand a file the panel moved in to the panel, private. An archive is
-     * written by a root `tar`, and a root-owned file in the folder could not
-     * be hard-linked for a restore (protected_hardlinks).
+     * Hand a moved-in file to the panel, private: a root-owned archive cannot be hard-linked
+     * for a restore (protected_hardlinks).
      */
     public function adopt(string $file): void
     {

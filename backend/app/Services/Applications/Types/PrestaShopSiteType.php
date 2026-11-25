@@ -13,9 +13,7 @@ use Illuminate\Validation\Rule;
  */
 class PrestaShopSiteType extends AbstractSiteType
 {
-    /**
-     * PrestaShop 8.x, from its own `install_version.php` (7.2.5 – 8.1).
-     */
+    /** PrestaShop 8.x, from its own `install_version.php` (7.2.5 – 8.1). */
     public const PRESTASHOP_8_RANGE = ['min' => '7.2', 'max' => '8.1'];
 
     public function name(): string
@@ -49,26 +47,15 @@ class PrestaShopSiteType extends AbstractSiteType
     }
 
     /**
-     * The union of the releases the installer can choose from, measured from
-     * each release's own `install/install_version.php` on 2026-09-26:
+     * The union of the PHP ranges of the releases the installer can choose from:
      *
      *   9.1.5 (Classic, current stable)  PHP 8.1   – 8.5
      *   8.2.8 (open source, last 8.x)    PHP 7.2.5 – 8.1
      *
-     * The installer picks the newest stable release whose range holds the
-     * site's PHP ({@see PrestaShopInstaller::release()}), so an 8.4 shop
-     * gets 9.1 and a 7.4 shop gets 8.2 — this range is simply what at least
-     * one of them accepts.
-     *
-     * Until 2026-09-26 it was 7.2 – 8.1, because the panel followed the old
-     * `channel.xml` feed, which still names 8.2.1 as current and carries no
-     * 9.x. That ceiling was not pedantry: on 2026-09-08 a shop installed on
-     * PHP 8.5 died in `ProxyCacheWarmer->warmUp()` — PrestaShop 8 vendors the
-     * monolithic `symfony/symfony`. It is safe to raise now only because the
-     * release is chosen by PHP version: 8.5 gets PrestaShop 9, never 8.
-     *
-     * The floor stays theirs (7.2.5, compared here as 7.2), not something
-     * tidier: refusing a version PrestaShop supports is not this rule's job.
+     * The installer picks the newest stable release whose range holds the site's PHP
+     * ({@see PrestaShopInstaller::release()}); this range is what at least one accepts.
+     * PrestaShop 8 crashes on PHP 8.5 (`ProxyCacheWarmer->warmUp()`), so the ceiling is only safe
+     * because 8.5 always gets PrestaShop 9. The floor is PrestaShop's own (7.2.5, compared as 7.2).
      */
     public function supportedPhpRange(): ?array
     {
@@ -78,10 +65,8 @@ class PrestaShopSiteType extends AbstractSiteType
     /**
      * What this shop's own release runs on, recorded by the installer.
      *
-     * A shop with no record was installed before releases were chosen by PHP,
-     * from the old feed — so it is PrestaShop 8, and 8's ceiling of 8.1 still
-     * holds. Widening the type's range must not let the PHP screen move one of
-     * those onto 8.4: that is the 2026-09-08 crash again, on a live shop.
+     * A shop with no record predates PHP-based release choice, so it is PrestaShop 8 and keeps
+     * 8's ceiling of 8.1: widening the type's range must not move it onto a PHP it cannot run.
      */
     public function supportedPhpRangeFor(Application $application): ?array
     {
@@ -115,9 +100,7 @@ class PrestaShopSiteType extends AbstractSiteType
                 'default' => 'en',
                 'options' => FieldOptions::languageOptions(FieldOptions::languages()),
             ]),
-            // Timezones come from the server, not a static list: the value has
-            // to be one this machine actually has, and Timezones already reads
-            // it from timedatectl for exactly that reason.
+            // From the server, not a static list: the value must be one this machine has.
             $this->field('timezone', 'select', advanced: true, extra: [
                 'default' => 'UTC',
                 'options' => FieldOptions::asOptions(app(Timezones::class)->identifiers()),
@@ -129,9 +112,8 @@ class PrestaShopSiteType extends AbstractSiteType
     public function rules(): array
     {
         return [
-            // PR-01: `< > = { }` fail PrestaShop's own isGenericName, and its
-            // CLI parser drops any value holding `=`, `|` or a backtick, so the
-            // shop would be named "PrestaShop" without a word said about it.
+            // `< > = { }` fail PrestaShop's own isGenericName, and its CLI parser drops any value
+            // holding `=`, `|` or a backtick, so the shop would silently be named "PrestaShop".
             'shop_name' => ['required', 'string', 'max:64', function (string $attribute, mixed $value, \Closure $fail): void {
                 if (is_string($value) && preg_match(PrestaShopInstaller::SHOP_NAME_FORBIDDEN, $value) === 1) {
                     $fail(__('errors/application.shop_name_characters'));
@@ -144,23 +126,18 @@ class PrestaShopSiteType extends AbstractSiteType
             'admin_password' => ['required', 'string', 'min:10'],
             'country' => ['nullable', 'string', Rule::in(FieldOptions::countries())],
             'language' => ['nullable', 'string', Rule::in(FieldOptions::languages())],
-            // Not the `timezone` rule: it validates against PHP's list, which
-            // omits the 78 backward-compatible zones that timedatectl offers
-            // and a fresh Ubuntu box can actually be set to. Validating
-            // against the same list the field offers is the only way the two
-            // cannot disagree.
+            // Not the `timezone` rule: PHP's list omits backward-compatible zones that timedatectl
+            // offers. Validate against the same list the field offers.
             'timezone' => ['nullable', Rule::in(app(Timezones::class)->identifiers())],
             'table_prefix' => ['nullable', 'string', 'max:10', 'regex:/^[a-z0-9_]+$/'],
         ];
     }
 
     /**
-     * PrestaShop's own nginx configuration, as published in its developer
-     * documentation (devdocs.prestashop-project.org, "Configure Nginx"):
-     * source folders — `var/` holds the logs, cache and sessions — vendor
-     * code inside modules, template and log files, and no PHP from the two
-     * upload folders. On Apache the same comes from the `.htaccess` it ships
-     * in each of those folders.
+     * Paths PrestaShop's own nginx configuration denies (devdocs.prestashop-project.org,
+     * "Configure Nginx"): source folders (`var/` holds logs, cache, sessions), module vendor code,
+     * template and log files, and PHP in the upload folders. Apache gets the same from its
+     * shipped `.htaccess` files.
      *
      * @return array<int, string>
      */
@@ -171,22 +148,17 @@ class PrestaShopSiteType extends AbstractSiteType
             '^/modules/.*/vendor/',
             '\\.(log|tpl|twig|sass|yml)$',
             '^/(img|upload)/.*\\.php',
-            // Not in the nginx sample, but in the root `.htaccess` PrestaShop
-            // ships: the exact version of every dependency, for anyone
-            // matching them against published vulnerabilities.
+            // Not in the nginx sample, but in PrestaShop's root `.htaccess`: it lists the exact
+            // version of every dependency.
             '^/composer\\.lock$',
         ];
     }
 
     /**
-     * The back office is its own Symfony application in `admin<random>/`,
-     * and its `.htaccess` sends every path there to that folder's
-     * `index.php`. Without it, nginx and OpenLiteSpeed handed
-     * `/admin…/login` — where `/admin…/` redirects — to the shop's front
-     * controller, which answered 404: the back office only opened by typing
-     * `index.php` (measured on both). The folder name is random and the panel
-     * does not record it, so it is matched; PrestaShop 9's `admin-api` has a
-     * hyphen and is left alone.
+     * The back office is its own Symfony application in `admin<random>/`, and its `.htaccess`
+     * sends every path there to that folder's `index.php`. Without this, nginx and OpenLiteSpeed
+     * hand `/admin…/login` to the shop's front controller, which answers 404. The folder name is
+     * random and not recorded, so it is matched; PrestaShop 9's `admin-api` (hyphen) is left alone.
      *
      * @return array<int, array{directory: string, script: string}>
      */
