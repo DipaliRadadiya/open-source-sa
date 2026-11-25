@@ -7,15 +7,13 @@ use InvalidArgumentException;
 /**
  * Every wp-toolkit command Central can reach, and nothing else.
  *
- * One entry per route: the validation its input gets (applied by
- * WordPressAddonRequest), the exact argument list it becomes, whether it runs
- * in the request or is queued, and whether it changes the site (and so is
- * written to the activity log). Kept as a table rather than forty controller
- * methods because the forty would be the same five lines, and the table is
- * what a reviewer needs to answer "what can Central make this server run".
+ * One entry per route: the validation its input gets (applied by WordPressAddonRequest), the exact
+ * argument list it becomes, whether it runs in the request or is queued, and whether it changes
+ * the site (and so is written to the activity log). A table, so a reviewer can answer "what can
+ * Central make this server run".
  *
- * `async` commands can outlast a request — downloads, updates, whole-database
- * scans — and answer 202 with an AddonRun to poll.
+ * `async` commands can outlast a request (downloads, updates, whole-database scans) and answer 202
+ * with an AddonRun to poll.
  */
 final class WpToolkitCommands
 {
@@ -85,12 +83,10 @@ final class WpToolkitCommands
                     'dry_run' => ['sometimes', 'boolean'],
                     'include_guid' => ['sometimes', 'boolean'],
                 ],
-                // Flags first, then `--`: after it the toolkit reads both values
-                // as values, so a search term that begins with a dash cannot be
-                // taken for a flag.
+                // Flags first, then `--`: after it both values are values, so a search term
+                // starting with a dash cannot be taken for a flag.
                 'argv' => fn ($in) => ['search-replace', ...$flag((bool) ($in['dry_run'] ?? false), '--dry-run'), ...$flag((bool) ($in['include_guid'] ?? false), '--include-guid'), '--', $in['search'], (string) ($in['replace'] ?? '')],
-                // A dry run still reads every table; on a large site that is
-                // as slow as the real thing.
+                // A dry run still reads every table, so it is as slow as the real thing.
                 'async' => true, 'mutates' => true,
             ],
             'rewrite.flush' => [
@@ -119,8 +115,7 @@ final class WpToolkitCommands
             ],
             'settings.get' => self::read(fn () => ['settings', 'get']),
             'settings.set' => [
-                // Shape only; the toolkit checks each value against what the
-                // setting can hold and refuses the whole change on any error.
+                // Shape only; the toolkit checks each value and refuses the whole change on error.
                 'rules' => [
                     'site_language' => ['sometimes', 'string', 'max:32'],
                     'timezone' => ['sometimes', 'string', 'max:64'],
@@ -142,9 +137,8 @@ final class WpToolkitCommands
             ],
 
             // ── blueprint ────────────────────────────────────────────────────
-            // The blueprint is saved in Central (it was v7's
-            // wordpress_blueprints table) and sent whole; it goes to the
-            // toolkit on stdin, script and all, never on a command line.
+            // The blueprint is saved in Central and sent whole; it goes to the toolkit on stdin,
+            // script and all, never on a command line.
             'blueprint.apply' => [
                 'rules' => [
                     'selected_plugins' => ['sometimes', 'array', 'max:100'],
@@ -180,7 +174,7 @@ final class WpToolkitCommands
                 ],
                 'argv' => fn () => ['blueprint', 'apply'],
                 'input' => fn ($in) => json_encode(self::blueprint($in), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
-                // Downloads and installs; and the script may take minutes.
+                // Downloads and installs, and the script may take minutes.
                 'async' => true, 'mutates' => true,
             ],
 
@@ -201,8 +195,8 @@ final class WpToolkitCommands
     }
 
     /**
-     * Only the settings that were sent become flags — an absent key leaves
-     * the setting alone, and an empty permalink is a deliberate "plain links".
+     * Only the settings that were sent become flags: an absent key leaves the setting alone, and
+     * an empty permalink is a deliberate "plain links".
      *
      * @param  array<string, mixed>  $in
      * @return array<int, string>
@@ -219,8 +213,7 @@ final class WpToolkitCommands
             $value = $in[$key];
             $value = is_bool($value) ? ($value ? 'true' : 'false') : (string) $value;
 
-            // `--flag=value` as one element, so a value starting with a dash
-            // can never be read as the next flag.
+            // `--flag=value` as one element, so a leading dash in the value is never a flag.
             $flags[] = '--'.str_replace('_', '-', $key).'='.$value;
         }
 
@@ -228,8 +221,8 @@ final class WpToolkitCommands
     }
 
     /**
-     * The blueprint as the toolkit reads it: only the fields it knows (it
-     * refuses unknown ones), with nulls dropped.
+     * The blueprint as the toolkit reads it: only the fields it knows (it refuses unknown ones),
+     * with nulls dropped.
      *
      * @param  array<string, mixed>  $in
      * @return array<string, mixed>

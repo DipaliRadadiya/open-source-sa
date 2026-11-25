@@ -15,15 +15,12 @@ use App\Services\Server\ServerOps;
 /**
  * Let's Encrypt certificates already issued on the box.
  *
- * Without these an adopted site reads as having no TLS while it is serving
- * HTTPS perfectly well — and the panel would offer to issue a certificate for
- * a name that already has one, spending a weekly rate limit to replace
- * something that was working.
+ * Without these an adopted site reads as having no TLS while it serves HTTPS, and the panel
+ * would offer to issue a certificate for a name that already has one, spending a weekly rate
+ * limit to replace a working one.
  *
- * certbot's own `live` directory, plus one uploaded pair per site at the
- * paths v7 used (and the panel uses): v7's custom certificates. Nothing else
- * on disk is read — a key sitting somewhere else is not one the panel knows
- * belongs to a site.
+ * Reads certbot's own `live` directory, plus one uploaded pair per site at the paths v7 used
+ * (and the panel uses). Nothing else on disk is read.
  */
 class CertificateDiscoverer implements Discoverable
 {
@@ -67,9 +64,8 @@ class CertificateDiscoverer implements Discoverable
                 continue;
             }
 
-            // certbot names the directory after the certificate's first name,
-            // sometimes with a `-0001` suffix when it has been re-issued under
-            // a changed set of names.
+            // certbot names the directory after the first name, with a `-0001` suffix when
+            // re-issued under a changed set of names.
             $name = preg_replace('/-\d{4}$/', '', basename($path)) ?? basename($path);
 
             $domain = ApplicationDomain::query()
@@ -81,10 +77,8 @@ class CertificateDiscoverer implements Discoverable
             $certificatePath = $path.'/fullchain.pem';
             $domains = [$name];
 
-            // v7 named the lineage after the application (`--cert-name
-            // {app}`), and so does the panel since 63c204e0 — a name that is
-            // no domain at all. Taken only when the certificate really covers
-            // one of that site's names.
+            // v7 and the panel name the lineage after the application (`--cert-name {app}`),
+            // which is no domain. Taken only when the certificate covers one of the site's names.
             if ($application === null && ($bySlug = Application::query()->with('domains')->where('slug', basename($path))->first()) !== null) {
                 $pem = $this->serverOps->probe(['cat', '--', $certificatePath], ['feature' => 'sync', 'op' => 'read_certificate']);
                 $names = $pem->ok ? $this->files->subjectNames($pem->output()) : [];
@@ -96,16 +90,13 @@ class CertificateDiscoverer implements Discoverable
             }
 
             if ($application === null) {
-                // A certificate for a name the panel does not serve. Left
-                // alone rather than attached to the nearest site — a
-                // certificate on the wrong application is worse than one the
-                // panel simply does not know about.
+                // A name the panel does not serve. Never attached to the nearest site: a
+                // certificate on the wrong application is worse than an unknown one.
                 continue;
             }
 
-            // One certificate per application, enforced by the schema. A site
-            // that already has one — or got one earlier in this listing — has
-            // already been answered for.
+            // One certificate per application (schema). Skip a site that already has one,
+            // including one found earlier in this listing.
             if (Certificate::query()->where('application_id', $application->id)->exists()
                 || in_array($application->id, array_column(array_column($found, 'attributes'), 'application_id'), true)) {
                 continue;
@@ -121,8 +112,7 @@ class CertificateDiscoverer implements Discoverable
                     'path' => $path,
                     'application' => $application->domain,
                     'expires_at' => $expiresAt?->toDateString(),
-                    // An expired certificate is still worth adopting: the
-                    // panel can then say so, which is the whole point.
+                    // An expired certificate is still adopted, so the panel can say so.
                     'expired' => $expiresAt !== null && $expiresAt->isPast(),
                 ],
                 'attributes' => [
@@ -140,11 +130,10 @@ class CertificateDiscoverer implements Discoverable
     }
 
     /**
-     * Certificates v7 installed from an upload, at `/etc/ssl/certs/{app}.crt`
-     * and `/etc/ssl/private/{app}.key` — the same paths the panel writes
-     * since 2026-10-08. Adopted as uploaded certificates, with v7's separate
-     * chain file when there is one, and only when CertificateFiles::v7Pair()
-     * agrees the pair is this site's own.
+     * Certificates v7 installed from an upload, at `/etc/ssl/certs/{app}.crt` and
+     * `/etc/ssl/private/{app}.key` (the paths the panel writes too). Adopted as uploaded
+     * certificates, with v7's separate chain file when there is one, and only when
+     * CertificateFiles::v7Pair() agrees the pair is this site's own.
      *
      * @param  array<int, array<string, mixed>>  $found  Let's Encrypt certificates already found
      * @return array<int, array<string, mixed>>
@@ -224,14 +213,10 @@ class CertificateDiscoverer implements Discoverable
             'private_key_path' => $attributes['private_key_path'],
             'chain_path' => $attributes['chain_path'],
             'expires_at' => $attributes['expires_at'],
-            // certbot's own timer renews these, and it was renewing them
-            // before the panel arrived. Recording auto_renew as false would
-            // describe a certificate that expires when it does not.
+            // certbot's own timer already renews these.
             'auto_renew' => true,
-            // Not inferred from the certificate existing: whether the site
-            // redirects to HTTPS is a vhost decision, and the panel has not
-            // read the vhost for it. Claiming it here would be a guess about
-            // a setting the user can see for themselves.
+            // Not inferred from the certificate: the HTTPS redirect is a vhost decision the
+            // panel has not read.
             'force_https' => false,
         ]);
     }

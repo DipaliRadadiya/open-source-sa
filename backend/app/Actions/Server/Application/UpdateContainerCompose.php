@@ -13,20 +13,13 @@ use App\Services\Server\WebServers\WebServerManager;
 /**
  * Replace a container site's compose file and bring it up on the new one.
  *
- * **Why this rolls back.** Every other apply path in the panel changes one field;
- * this one hands the user the whole file, so a save can stop the site in ways no
- * validator can predict — an entrypoint that exits, a volume that shadows the
- * app, an image tag that does not exist. A save that leaves a site down and the
- * panel holding the text that broke it is worse than a save that refuses, so the
- * previous file is kept and put back when the new one will not come up. The ini
- * editor already works this way for the same reason.
+ * **Why this rolls back.** The user supplies the whole file, so a save can stop the site in ways
+ * no validator predicts (an entrypoint that exits, a volume that shadows the app, a missing image
+ * tag). The previous file is kept and put back when the new one will not come up.
  *
- * **Why the vhost is rewritten.** With a pasted compose the panel does not choose
- * the published port — the file does, and `ContainerSupervisor` records it on the
- * application. nginx proxies to `app_port`, so editing the port in the file and
- * not re-rendering the vhost points the web server at a port nothing is listening
- * on: a 502 caused by a save that "worked". Reconciled here because this is the
- * only screen where the port can move without the panel choosing it.
+ * **Why the vhost is rewritten.** With a pasted compose the file chooses the published port and
+ * `ContainerSupervisor` records it as `app_port`. nginx proxies to `app_port`, so a changed port
+ * without a re-rendered vhost gives a 502 after a save that "worked".
  */
 class UpdateContainerCompose
 {
@@ -41,25 +34,19 @@ class UpdateContainerCompose
     {
         $documentRoot = $this->provisioner->documentRoot($application);
 
-        // What to put back. Empty for a site that was running the generated file,
-        // which is a real state and not a missing value: rolling back to "" is
-        // rolling back to "generate it from the fields", which is exactly right.
+        // What to put back. Empty means the site ran the generated file; rolling back to ""
+        // regenerates it from the fields.
         $previous = (string) $application->compose;
         $previousPort = $application->app_port;
 
-        // Exactly one trailing newline. `TrimStrings` has already taken the one the
-        // editor sent, and a file that does not end in a newline is a POSIX text
-        // file that isn't — `tail`, `cat` of two files and a few YAML tools all
-        // behave differently for it. Normalised here rather than at the boundary
-        // because this is the only writer, and stored in the form it will be shown
-        // back in so the editor does not appear to change the file on load.
+        // Exactly one trailing newline (`TrimStrings` strips the editor's); stored as it will be
+        // shown back so the editor does not seem to change the file on load.
         $compose = rtrim($compose, "\r\n").PHP_EOL;
 
         $application->forceFill(['compose' => $compose])->save();
 
-        // Nothing on disk to rewrite for a site that was never provisioned, and a
-        // disabled site is deliberately offline — bringing its container up as a
-        // side effect of saving a file would put the site back online.
+        // Nothing to rewrite for an unprovisioned site; a disabled site must stay offline, so
+        // saving must not bring its container up.
         $applies = $application->status === ApplicationStatus::Active
             && $application->disabled_at === null;
 
@@ -77,16 +64,12 @@ class UpdateContainerCompose
             throw $e;
         }
 
-        // `apply()` may have moved `app_port` to whatever the file publishes.
-        // Read it fresh rather than trusting the in-memory model, which was
-        // written by a different object.
+        // `apply()` may have moved `app_port`; reload, as a different object wrote it.
         $application = $application->fresh(['systemUser']);
 
         if ($application->app_port !== $previousPort) {
-            // Written, TESTED, then reloaded — the provisioner's order (DS-09).
-            // Unchecked, a vhost that did not write or did not pass `nginx -t`
-            // left the old one proxying to the old port behind a save that
-            // reported success: the 502 this reconcile exists to prevent.
+            // Write, test, then reload (the provisioner's order); unchecked, a failed vhost
+            // leaves the old port behind a save that reported success.
             $driver = $this->webServers->driver();
 
             $steps = [
@@ -112,12 +95,10 @@ class UpdateContainerCompose
     }
 
     /**
-     * Put the working file back and bring the site up on it — and, when the
-     * vhost was already rewritten for the new port, the vhost too.
+     * Put the working file back and bring the site up on it, plus the vhost if it was already
+     * rewritten for the new port.
      *
-     * Best effort: if the rollback itself fails the site is already down and
-     * the original error is still the one worth reporting, so it is not
-     * replaced by a second one about the restore.
+     * Best effort: if the rollback fails, the original error is still the one to report.
      */
     private function rollBack(
         Application $application,
@@ -133,7 +114,7 @@ class UpdateContainerCompose
         try {
             $this->containers->apply($restored, $documentRoot);
         } catch (ProvisioningFailedException) {
-            // Intentionally swallowed — see above.
+            // Intentionally swallowed: best effort.
         }
 
         if ($vhost) {
@@ -150,10 +131,8 @@ class UpdateContainerCompose
     /**
      * Sizes and outcome, never the file.
      *
-     * A compose file holds environment variables, and people put secrets in
-     * those. The activity log is readable by a wider audience than the people who
-     * may edit a site, so it records that the file changed and what happened —
-     * which is the question asked after an incident — and not what it said.
+     * A compose file holds environment variables, often secrets, and the activity log has a wider
+     * audience than the site's editors, so it records that the file changed, not its content.
      */
     private function record(
         Application $application,
@@ -166,8 +145,7 @@ class UpdateContainerCompose
             'name' => $application->name,
             'bytes' => strlen($compose),
             'previous_bytes' => strlen($previous),
-            // True when the site was running the panel's generated file until now.
-            // The one-way part of this change, and worth being able to see later.
+            // True when the site ran the panel's generated file until now (the one-way part).
             'took_over_generated' => trim($previous) === '',
             'applied' => $applied,
             'rolled_back' => $rolledBack,

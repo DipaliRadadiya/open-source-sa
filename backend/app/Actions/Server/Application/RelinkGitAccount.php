@@ -12,25 +12,16 @@ use Throwable;
 /**
  * Point a git application at a different account, repository or public URL.
  *
- * Exists because deleting a git account is allowed to succeed. The foreign key
- * is `nullOnDelete`, so disconnecting an account leaves its applications with
- * no credential — and previously with no way back, since the account could
- * only ever be chosen while creating the site. Recovery meant deleting the
- * application and building it again.
+ * Deleting a git account succeeds (`nullOnDelete`) and leaves its applications with no
+ * credential; this is the way back, since the account was otherwise only chosen at creation.
  *
- * **Verified before it is persisted.** The candidate account is asked to list
- * the repository's branches, and only a successful answer is written. Storing
- * the link first would move the failure to the next deploy, where it reads as
- * a deployment problem rather than as "that credential cannot see that
- * repository" — and would leave the application pointing at something worse
- * than what it had. `UpdateGitAccount` takes the same care with a rotated
- * token, verifying a replica before touching the stored record.
+ * **Verified before it is persisted.** The candidate account must list the repository's branches
+ * first; storing the link first would surface the failure at the next deploy, as a deployment
+ * problem, with the application pointing somewhere worse. `UpdateGitAccount` does the same for a
+ * rotated token.
  *
- * Nothing on disk has to change. The token never reaches `.git/config` — it
- * travels in an ephemeral credential file that is removed after every deploy —
- * and `GitDeployer` rewrites `origin` on each run, so a changed host or
- * repository path corrects itself on the next deployment rather than needing a
- * migration of the checkout.
+ * Nothing on disk changes: the token never reaches `.git/config` (an ephemeral credential file
+ * is removed after each deploy) and `GitDeployer` rewrites `origin` on every run.
  */
 class RelinkGitAccount
 {
@@ -80,11 +71,8 @@ class RelinkGitAccount
         $account = GitAccount::findOrFail($data['git_account_id']);
         $repository = (string) $data['repository'];
 
-        // Listing branches is the cheapest question that proves the whole
-        // thing: the token is valid, it has not been revoked, and its scopes
-        // reach *this* repository. A token that verifies against the provider
-        // but cannot see this repository is exactly the case a plain
-        // credential check would pass and the next deploy would fail on.
+        // Listing branches proves the token is valid, not revoked, and can see *this* repository,
+        // which a plain credential check does not.
         try {
             $branches = $this->providers->driver($account->provider)->branches($account, $repository);
         } catch (Throwable) {
@@ -93,15 +81,11 @@ class RelinkGitAccount
             ]);
         }
 
-        // The drivers return `[['name' => ..., 'protected' => ...], ...]`, not
-        // a list of strings — comparing against the rows themselves silently
-        // never matches, and would have rejected every branch that exists.
+        // Drivers return `[['name' => ..., 'protected' => ...], ...]`, not strings.
         $names = array_column($branches, 'name');
 
         if ($branch !== '' && $names !== [] && ! in_array($branch, $names, true)) {
-            // Caught here rather than at the next deploy, where a missing
-            // branch surfaces as a failed fetch against a reference nobody
-            // asked about.
+            // Caught here, not as a failed fetch at the next deploy.
             throw ValidationException::withMessages([
                 'branch' => __('git.relink.branch_missing', ['branch' => $branch]),
             ]);
@@ -116,14 +100,10 @@ class RelinkGitAccount
     }
 
     /**
-     * A webhook's provider is defaulted from the account it was configured
-     * with, so moving a site from GitHub to GitLab leaves it verifying
-     * signatures against the wrong scheme — it would reject every delivery,
-     * silently, as though the remote had stopped sending them.
+     * A webhook's provider comes from the account it was set up with, so moving a site from GitHub
+     * to GitLab would verify signatures with the wrong scheme and silently reject every delivery.
      *
-     * Disabled rather than rewritten: the new provider needs its own webhook
-     * created at its own remote, which is a deliberate act, not something to
-     * infer from a credential change.
+     * Disabled, not rewritten: the new provider needs a webhook created at its own remote.
      */
     private function clearWebhookOnProviderChange(Application $application, ?string $previousProvider): void
     {
@@ -137,9 +117,7 @@ class RelinkGitAccount
             return;
         }
 
-        // `webhook_identifier` is kept: it is the public part of the delivery
-        // URL and is unique, so discarding it would hand the next webhook a
-        // different address for the same site with nothing gained.
+        // `webhook_identifier` is kept: it is the public, unique part of the delivery URL.
         $application->forceFill([
             'webhook_enabled' => false,
             'webhook_provider' => null,

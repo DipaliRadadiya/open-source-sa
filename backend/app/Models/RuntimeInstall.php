@@ -25,10 +25,8 @@ class RuntimeInstall extends Model
     }
 
     /**
-     * The localized sentence for a failure, in the *viewer's* locale rather
-     * than the locale of whoever started the install — the same rule the
-     * activity log follows, and the reason `reason` is stored instead of a
-     * finished string.
+     * The localized sentence for a failure, in the viewer's locale (hence `reason` is stored,
+     * not a finished string).
      */
     public function message(): ?string
     {
@@ -38,9 +36,8 @@ class RuntimeInstall extends Model
 
         $message = $this->reasonMessage();
 
-        // FS-C18/FS-C19: a failure with no better code said only "quote the
-        // reference", while apt had printed exactly why. Its error line is
-        // added for those; a classified reason already says it in words.
+        // Add the package manager's error line when the reason is generic; a classified reason
+        // already says it in words.
         $generic = in_array((string) $this->reason, ['', 'unknown', 'failed', 'remove_failed', 'remove_unknown'], true);
         $line = $this->errorLine();
 
@@ -52,8 +49,7 @@ class RuntimeInstall extends Model
     /**
      * The package manager's own error line, out of the stored output tail.
      *
-     * The last `E:` (apt), `dpkg: error` or `error:` line — the one that
-     * names what went wrong. Null when there is none to quote.
+     * The last `E:` (apt), `dpkg: error` or `error:` line. Null when there is none.
      */
     public function errorLine(): ?string
     {
@@ -72,9 +68,8 @@ class RuntimeInstall extends Model
 
     private function reasonMessage(): string
     {
-        // A removal's terminal status is `failed`, same as an install's, so
-        // its reason carries the operation prefix. Do not tell an operator an
-        // uninstall was an installation failure — the remedy is different.
+        // A removal also ends as `failed`; its reason carries a `remove_` prefix so an uninstall
+        // is not reported as an install failure.
         $removing = str_starts_with((string) $this->reason, 'remove_');
         $operation = $removing
             ? 'uninstall_failed'
@@ -86,24 +81,12 @@ class RuntimeInstall extends Model
         $replace = [
             'version' => $this->label(),
             'extension' => $this->extension,
-            // Named live, because the answer is a property of this server and
-            // not of the row: an install that failed because a vendor has not
-            // built for this release should say which release.
+            // Read live: it is a property of this server, not of the row.
             'os' => OsRelease::label() ?? __('runtime.this_server'),
         ];
 
-        /*
-         * The runtime is part of the lookup, not just the row.
-         *
-         * This used to be the operation alone, so `install_failed` was shared
-         * by PHP, Node, database engines and fail2ban alike — and it is worded
-         * for PHP. A failed MongoDB install therefore told the user to "check
-         * the PHP repository is configured and reachable": the wrong component,
-         * pointing at the wrong remedy, on a screen that has nothing to do with
-         * PHP. A per-runtime group is consulted first and the shared one
-         * remains the fallback, so only the reasons that genuinely differ per
-         * runtime need their own wording.
-         */
+        // A per-runtime group is consulted first, then the shared one: the shared
+        // `install_failed` wording is written for PHP and misleads for other runtimes.
         $groups = ["{$this->runtime}_{$operation}", $operation];
 
         foreach ($groups as $group) {
@@ -114,8 +97,7 @@ class RuntimeInstall extends Model
             }
         }
 
-        // An unrecognised reason falls back rather than rendering the key at
-        // the user: a missing translation must not become UI text.
+        // Fall back so a missing translation never reaches the user as a raw key.
         foreach ($groups as $group) {
             $key = "runtime.{$group}.unknown";
 
@@ -128,12 +110,8 @@ class RuntimeInstall extends Model
     }
 
     /**
-     * What `:version` should read as in a sentence.
-     *
-     * For PHP and Node the version *is* the name. For a database engine the
-     * column holds the engine key (`mongodb`), and a message reading "mongodb
-     * has not published packages" is the panel talking to itself — the catalog
-     * already carries the label everything else displays.
+     * What `:version` should read as in a sentence: the version for PHP and Node, the catalog
+     * label for a database engine (the column holds the engine key, e.g. `mongodb`).
      */
     private function label(): string
     {
@@ -145,8 +123,7 @@ class RuntimeInstall extends Model
     }
 
     /**
-     * Asked for, not yet picked up by a worker (FS-B1): `status` already
-     * says installing/removing, and the job is still waiting its turn.
+     * Asked for, not yet picked up by a worker.
      */
     public function isQueued(): bool
     {
@@ -169,15 +146,9 @@ class RuntimeInstall extends Model
             'reference' => $this->reference,
             // apt's error line on its own, for a screen that shows one line.
             'error_line' => $this->status === InstallStatus::Failed ? $this->errorLine() : null,
-            // What apt is doing, read out of its own output rather than
-            // guessed — see InstallProgress. Null until it has said something
-            // recognisable, which the screen shows as "starting" rather than
-            // inventing a first step.
+            // What apt is doing, read from its output (see InstallProgress); null until recognised.
             'current_step' => $this->current_step,
-            // apt's own words, tail only. The step says where an install
-            // stopped; this is the only thing that says why, and "unable to
-            // locate package" and "could not get lock" are the same failed
-            // install without it.
+            // apt's own words, tail only: the step says where it stopped, this says why.
             'output' => $this->output,
         ];
     }

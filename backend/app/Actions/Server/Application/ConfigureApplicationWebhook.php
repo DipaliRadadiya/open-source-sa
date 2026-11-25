@@ -20,10 +20,8 @@ use Illuminate\Support\Str;
 class ConfigureApplicationWebhook
 {
     /**
-     * How the last `execute()` that switched deploy-on-push on left the
-     * repository's webhook: `{status: registered|manual, reason}`. Null after
-     * switching it off. Read by the controller to tell the user whether there
-     * is still something to paste into the provider.
+     * How the last `execute()` that switched deploy-on-push on left the repository's webhook:
+     * `{status: registered|manual, reason}`. Null after switching it off.
      *
      * @var array{status: string, reason: ?string}|null
      */
@@ -49,13 +47,8 @@ class ConfigureApplicationWebhook
         $this->registration = null;
 
         if (! ($data['enabled'] ?? false)) {
-            // The hook the panel added, taken out of the repository again.
-            // One added by hand is the user's and is left alone.
-            //
-            // A refusal is reported, not swallowed. A Bitbucket token with
-            // `write:webhook` but not `delete:webhook` (tested 2026-09-28)
-            // lets the panel add a hook and not remove it; the screen said
-            // "off" while the repository went on sending every push.
+            // Remove the hook the panel added; one added by hand is left alone. A refusal is
+            // reported (e.g. a Bitbucket token without `delete:webhook`), not swallowed.
             if (! $this->registrar->unregister($application)) {
                 $this->registration = ['status' => WebhookRegistrar::REMOVAL_REFUSED, 'reason' => 'removal_refused'];
             }
@@ -71,10 +64,8 @@ class ConfigureApplicationWebhook
 
         $provider = (string) ($data['provider'] ?? $application->gitAccount?->provider);
 
-        // Checked here as well as in the FormRequest: this action is the thing
-        // that stores the provider, and an unknown one would leave a webhook
-        // enabled that no verifier can be resolved for — a delivery would then
-        // 500 rather than being refused.
+        // Also checked here: an unknown provider would leave a webhook enabled that no verifier
+        // can handle, so deliveries would 500.
         if (! $this->webhooks->supports($provider)) {
             throw GitProviderException::unsupportedProvider($provider);
         }
@@ -87,22 +78,18 @@ class ConfigureApplicationWebhook
             (bool) ($data['rotate'] ?? false),
         );
 
-        // Only a *replacement* is a rotation. Enabling for the first time has no
-        // previous secret to replace, and reporting that as "replaced the
-        // secret" would tell the user something was invalidated when nothing was.
+        // Only a replacement is a rotation; a first enable invalidates nothing.
         $rotated = filled($previous) && $secret !== $previous;
 
         $application->forceFill([
             'webhook_enabled' => true,
             'webhook_provider' => $provider,
-            // Kept across disable/enable so the URL in the user's repository
-            // settings stays valid; only ever generated once.
+            // Kept across disable/enable so the URL in the repository settings stays valid.
             'webhook_identifier' => $application->webhook_identifier ?: $this->identifier(),
             'webhook_secret' => $secret,
         ])->save();
 
-        // After the save: the provider is given the secret now stored, and
-        // on a rotation that is exactly the point.
+        // After the save: the provider must get the stored secret (matters on rotation).
         $this->registration = $this->registrar->register($application);
 
         $this->activityLogger->log(
@@ -122,11 +109,8 @@ class ConfigureApplicationWebhook
      * A pasted secret wins; otherwise the stored one is kept, unless the caller
      * asked to rotate or there is nothing stored yet.
      *
-     * Every provider can be given a generated secret — GitLab's *signing* token
-     * cannot be generated, but its legacy plaintext one can, and that is what a
-     * GitLab application with no pasted secret gets. `webhook.verification` in
-     * the response says which check that leaves in force, so the weaker scheme
-     * is never a silent outcome.
+     * Every provider can get a generated secret; GitLab gets its legacy plaintext token (not the
+     * signing token), and `webhook.verification` in the response says which check is in force.
      */
     private function resolveSecret(Application $application, ?string $supplied, bool $rotate): string
     {
@@ -142,10 +126,7 @@ class ConfigureApplicationWebhook
     }
 
     /**
-     * 64 hex characters from a CSPRNG. Hex rather than the full base64 charset
-     * because this gets typed into three different providers' web forms, and a
-     * value that survives a copy-paste is worth more than the eight bits of
-     * entropy per character it costs — 256 bits is not the constraint here.
+     * 64 hex characters from a CSPRNG; hex survives copy-paste into provider web forms.
      */
     private function secret(): string
     {
@@ -153,9 +134,8 @@ class ConfigureApplicationWebhook
     }
 
     /**
-     * The public part of the URL. Not a credential — it only names the
-     * application — but random anyway, because a sequential id would let anyone
-     * enumerate how many sites a panel hosts.
+     * The public part of the URL. Not a credential, but random so a sequential id cannot be
+     * enumerated.
      */
     private function identifier(): string
     {

@@ -11,22 +11,19 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * The access map: which containers each system user may log in to (RC-28).
+ * The access map: which containers each system user may log in to.
  *
- * The one thing the root helper trusts. One entry per Docker app —
- * `{app, id, owner, project, containers: [{service, name, main}]}` — built from
- * the database and each app's stored compose ({@see ContainerAccess}), and
- * written root:root 0600 through a temporary file and a rename, so the helper
- * never reads half of one.
+ * The one thing the root helper trusts. One entry per Docker app,
+ * `{app, id, owner, project, containers: [{service, name, main}]}`, built from the database
+ * and each app's stored compose ({@see ContainerAccess}), and written root:root 0600 through a
+ * temporary file and a rename, so the helper never reads half of one.
  *
- * Rebuilt whole every time, never patched: the database is the truth, the
- * file is a copy of it, and a full rebuild cannot drift. It is small (one line
- * per container) and only rewritten when its content changes.
+ * Rebuilt whole every time, never patched: the database is the truth and a full rebuild cannot
+ * drift. Only rewritten when its content changes.
  *
- * **The `app` name** is what a user types after `@` when they own several
- * Docker apps. It is the app's slug — already unique, lowercase, made of
- * `a-z 0-9 -`, and the name of its folder — when that is at most 40
- * characters; otherwise, or if another entry already uses it, `app-<id>`.
+ * **The `app` name** is what a user types after `@` when they own several Docker apps: the
+ * app's slug (unique, lowercase, `a-z 0-9 -`) when it is at most 40 characters; otherwise, or
+ * if another entry already uses it, `app-<id>`.
  */
 class AppShellMap
 {
@@ -89,8 +86,7 @@ class AppShellMap
             try {
                 $containers = $this->access->containers($application);
             } catch (Throwable) {
-                // A Simple-mode site with no container port yet has no file and
-                // so nothing to log in to; it appears once it has one.
+                // A Simple-mode site with no container port yet has no file: nothing to log in to.
                 $containers = [];
             }
 
@@ -116,9 +112,6 @@ class AppShellMap
         return $entries;
     }
 
-    /**
-     * Docker apps owned by this system user.
-     */
     public function dockerAppsOwnedBy(int $systemUserId): int
     {
         return $this->dockerApps()->where('system_user_id', $systemUserId)->count();
@@ -135,10 +128,8 @@ class AppShellMap
     /**
      * Rebuild after something that can change it (an app, an owner, a user).
      *
-     * Never throws and never fails the operation that triggered it: an app
-     * that was created is still created if its owner cannot log in to it yet,
-     * and the next rebuild — including the one every panel update runs —
-     * brings the map back in step.
+     * Never throws and never fails the operation that triggered it; the next rebuild (including
+     * the one every panel update runs) brings the map back in step.
      */
     public function refresh(): void
     {
@@ -178,8 +169,7 @@ class AppShellMap
         $temporary = $path.'.new';
         $context = ['feature' => 'app_shell', 'op' => 'map'];
 
-        // The directory is 0700, so the moment `tee` creates the file with
-        // root's default mode nobody else can see into it anyway.
+        // The directory is 0700, so the file `tee` creates is unreadable to others until chmod.
         foreach ([
             fn () => $this->serverOps->run(['install', '-d', '-m', '0700', '-o', 'root', '-g', 'root', dirname($path)], $context),
             fn () => $this->serverOps->run(['tee', $temporary], $context, input: $content),

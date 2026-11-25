@@ -19,21 +19,14 @@ class StoreStorageDestinationRequest extends FormRequest
     }
 
     /**
-     * Provider-independent rules, plus whichever `config.*` rules the chosen
-     * provider's driver asks for.
-     *
-     * The driver supplies its rules rather than applying them: validation
-     * still lives here, in the FormRequest, which is the only layer that
-     * knows this is a create and therefore that credentials are required.
+     * Provider-independent rules, plus the `config.*` rules the chosen provider's driver supplies.
      *
      * @return array<string, mixed>
      */
     public function rules(): array
     {
-        // Exactly this credential is already a destination: the request is
-        // answered with that one (Dipali, 2026-10-28), so neither its name nor
-        // the provider's own checks — a local folder "already in use", for one
-        // — may refuse it first.
+        // This exact credential is already a destination: the existing one is returned, so neither
+        // its name nor the provider's own checks (e.g. a local folder "already in use") may refuse it.
         if ($this->existingRecord() !== null) {
             return [
                 'name' => ['required', 'string', 'max:100', new SingleLine],
@@ -44,16 +37,11 @@ class StoreStorageDestinationRequest extends FormRequest
         return array_merge([
             'name' => ['required', 'string', 'max:100', Rule::unique('storage_destinations', 'name'), new SingleLine],
 
-            // Required with no default. A default provider would be a silent
-            // 's3' on a request that forgot to say — which is exactly the
-            // guessing this column was added to end.
+            // No default: a missing provider must fail, not silently become 's3'.
             'provider' => ['required', Rule::enum(StorageProvider::class)],
 
-            // Provider-independent: every destination lands somewhere inside
-            // its own space, whether that space is an S3 key prefix or a
-            // subdirectory of an FTP account.
-            // `..` walks out of the bucket or folder the destination names (bug
-            // #36) — refused as the SFTP/FTP root already is.
+            // Where inside the destination's space files land (S3 key prefix, FTP subdirectory).
+            // `..` would walk out of the bucket or folder, so it is refused.
             'prefix' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9._/-]*$#', 'not_regex:#(^|/)\.\.(/|$)#'],
         ], $this->providerRules());
     }
@@ -65,9 +53,7 @@ class StoreStorageDestinationRequest extends FormRequest
     {
         $provider = StorageProvider::tryFrom((string) $this->input('provider'));
 
-        // An unknown provider fails the enum rule above; returning nothing
-        // here avoids a second, more confusing error about a config key
-        // belonging to a provider that does not exist.
+        // An unknown provider already fails the enum rule; no second error about its config keys.
         if ($provider === null) {
             return [];
         }
@@ -88,10 +74,7 @@ class StoreStorageDestinationRequest extends FormRequest
     }
 
     /**
-     * SFTP authenticates with a password *or* a private key, so neither can be
-     * `required` on its own — but a destination with neither cannot connect at
-     * all, and storing one means the failure arrives at the first backup
-     * instead of at the form that could have prevented it.
+     * SFTP needs a password or a private key; neither is `required` alone, but one must be present.
      */
     protected function validateSftpHasOneAuthMethod(mixed $validator): void
     {
@@ -106,11 +89,6 @@ class StoreStorageDestinationRequest extends FormRequest
         $validator->errors()->add('config.password', __('storage.validation.sftp_auth_required'));
     }
 
-    /**
-     * The frontend sends a slim payload; the gaps that have a single sensible
-     * answer are filled here rather than in the driver, so validation sees the
-     * same values the database will.
-     */
     protected function validateSftpPrivateKey(mixed $validator): void
     {
         if (StorageProvider::tryFrom((string) $this->input('provider')) !== StorageProvider::Sftp
@@ -128,6 +106,9 @@ class StoreStorageDestinationRequest extends FormRequest
         }
     }
 
+    /**
+     * Fills gaps that have a single sensible answer, so validation sees the values the database will.
+     */
     protected function prepareForValidation(): void
     {
         $config = $this->input('config');
@@ -136,10 +117,7 @@ class StoreStorageDestinationRequest extends FormRequest
             return;
         }
 
-        // Region is S3's only field with a universal default — an empty one
-        // means AWS's own, which is `us-east-1`. Endpoint keeps its
-        // empty-string sentinel: blank *means* AWS, and the driver reads it
-        // that way.
+        // A blank S3 region means AWS's `us-east-1`; a blank endpoint stays '' (the driver reads it as AWS).
         if (StorageProvider::tryFrom((string) $this->input('provider')) === StorageProvider::S3) {
             $config['region'] = ($config['region'] ?? '') === '' ? 'us-east-1' : $config['region'];
             $config['endpoint'] ??= '';
@@ -149,10 +127,8 @@ class StoreStorageDestinationRequest extends FormRequest
     }
 
     /**
-     * The destination already holding exactly this credential, if any —
-     * returned instead of a second one (Dipali, 2026-10-28). Asked after
-     * prepareForValidation, so an S3 region left blank compares as the
-     * us-east-1 it is saved as.
+     * The destination already holding exactly this credential, if any.
+     * Asked after prepareForValidation, so a blank S3 region compares as `us-east-1`.
      */
     public function existingRecord(): ?StorageDestination
     {

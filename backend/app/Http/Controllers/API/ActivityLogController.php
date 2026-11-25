@@ -23,13 +23,10 @@ class ActivityLogController extends Controller
     /**
      * Filter options for the caller's own history.
      *
-     * Unlike the admin equivalent — which lists every action the system can
-     * ever record, sourced from lang/activity.php — this is built from the
-     * caller's actual rows. On a personal history an option that is
-     * guaranteed to match nothing (a user who has never touched databases
-     * seeing a "database" filter) is worse than a short list.
+     * Unlike the admin equivalent (every action in lang/activity.php), this is built from the
+     * caller's actual rows, so no option is guaranteed to match nothing.
      *
-     * Shape matches the admin endpoint so the frontend reuses one component.
+     * Same shape as the admin endpoint so the frontend reuses one component.
      */
     public function filters(ListMyActivityLogRequest $request, ActivityScopes $scopes, ActivityKinds $kinds): JsonResponse
     {
@@ -50,8 +47,7 @@ class ActivityLogController extends Controller
         return response()->json([
             'types' => $types->all(),
             'actions' => ['all' => $all] + $perType->all(),
-            // Only the scopes the caller actually has rows in — same reason
-            // `types` is built from their history rather than the catalog.
+            // Only scopes the caller has rows in, like `types`.
             'scopes' => $scopes->options(
                 $types->map(fn (string $type) => $scopes->for($type))->filter()->unique()->all(),
             ),
@@ -60,23 +56,18 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * A user's own activity history — unlike the admin activity log
-     * (Admin\ActivityLogController), this only ever shows the
-     * authenticated user's own entries, never anyone else's, so the
-     * redundant `user` field is omitted (no `with('user')` eager load —
-     * ActivityLogResource's whenLoaded('user', ...) drops the key when
-     * it's not loaded).
+     * A user's own activity history. Unlike the admin log (Admin\ActivityLogController) it only
+     * shows the caller's entries, so the `user` field is omitted (no `with('user')` eager load;
+     * ActivityLogResource drops the key when it is not loaded).
      */
     public function index(ListMyActivityLogRequest $request, ActivityScopes $scopes, ActivityKinds $kinds): JsonResponse
     {
-        // The self-scope is applied first and unconditionally — no filter
-        // combination can widen it to another user's rows.
+        // The self-scope is applied first, so no filter can widen it to another user's rows.
         $query = ActivityLog::query()
             ->where('user_id', $request->user()->id)
             ->latest('created_at');
 
-        // A set of types rather than one — `type` is indexed, so this
-        // stays an index scan.
+        // A set of types; `type` is indexed, so this stays an index scan.
         if ($scope = $request->input('filter.scope')) {
             $query->whereIn('type', $scopes->types($scope));
         }
@@ -90,7 +81,6 @@ class ActivityLogController extends Controller
             $query->where('action', $action);
         }
 
-        // FS-C15 / OLD-18.
         if ($kind = $request->input('filter.kind')) {
             $kinds->apply($query, $kind);
         }
@@ -99,8 +89,7 @@ class ActivityLogController extends Controller
             $kinds->applySecurity($query);
         }
 
-        // Unlike the admin log there is no actor to search — every row here
-        // belongs to the caller.
+        // No actor to search: every row belongs to the caller.
         if ($search = $request->string('search')->trim()->value()) {
             ActivityLog::search($query, $search);
         }
@@ -120,10 +109,8 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * FS-C11: filter options for the server log, for someone with the
-     * `activity_log` permission but no admin access — the admin endpoint was
-     * the only one that listed them. The catalog, limited to the server
-     * scope, so an option is never one this log cannot show.
+     * Filter options for the server log, for someone with `activity_log` but no admin access.
+     * The catalog limited to the server scope, so no option is one this log cannot show.
      */
     public function serverFilters(ActivityCatalog $catalog, ActivityScopes $scopes, ActivityKinds $kinds): JsonResponse
     {
@@ -136,14 +123,10 @@ class ActivityLogController extends Controller
      * The server's events — everything in the `server` scope of
      * config/activity.php, sites and databases included.
      *
-     * The types were a list of their own here and it drifted: it had nine of
-     * the scope's nineteen, so PHP versions, system users, build tools and
-     * every site and database event never reached this log — and nothing
-     * else shows them to someone without admin access. One source now, the
-     * same one the admin log's scope filter reads.
+     * The types come from the same source as the admin log's scope filter; a separate list drifted
+     * and hid events from non-admins.
      *
-     * Requires `activity_log` permission — different from `access-admin`
-     * which gates the admin-wide log.
+     * Requires `activity_log` permission, not `access-admin` (which gates the admin-wide log).
      */
     public function serverIndex(ListServerActivityLogRequest $request, ActivityScopes $scopes, ActivityKinds $kinds): JsonResponse
     {
@@ -159,7 +142,6 @@ class ActivityLogController extends Controller
             $query->where('action', $action);
         }
 
-        // FS-C15 / OLD-18.
         if ($kind = $request->input('filter.kind')) {
             $kinds->apply($query, $kind);
         }

@@ -18,13 +18,10 @@ use Throwable;
 /**
  * Installs a certificate the user pasted in.
  *
- * Synchronous, unlike issuance: there is nothing to wait for. Writing two files
- * and reloading takes milliseconds, and a queued job would only add a spinner
- * to something already finished.
+ * Synchronous, unlike issuance: writing two files and reloading takes milliseconds.
  *
- * The pair is checked before anything is written. A mismatched certificate and
- * key are accepted happily by the filesystem, fail the config test, and take
- * the site down over a copy-paste — this catches it while nothing has changed.
+ * The pair is checked before anything is written: the filesystem accepts a mismatched certificate
+ * and key, which then fails the config test and takes the site down.
  */
 class UploadCertificate
 {
@@ -50,9 +47,8 @@ class UploadCertificate
             'issued_at', 'expires_at', 'reason', 'reference',
         ]);
 
-        // Before a byte is written: the pair goes into the server's own
-        // /etc/ssl tree (v7's layout), where a file this application does not
-        // own is somebody else's — the trust store, the distro's snakeoil key.
+        // Before a byte is written: the pair goes into /etc/ssl (v7's layout), where a file this
+        // application does not own belongs to someone else (trust store, snakeoil key).
         $taken = $this->files->conflict($application->slug, [
             $previousCertificate['certificate_path'] ?? null,
             $previousCertificate['private_key_path'] ?? null,
@@ -83,8 +79,8 @@ class UploadCertificate
         $certificate = null;
 
         try {
-            // Reconcile first: a failure must not make the vhost advertise a
-            // canonical scheme the application itself could not adopt.
+            // Reconcile first, so a failure cannot leave the vhost advertising a scheme the app
+            // could not adopt.
             $this->installers->syncUrl(
                 $application->fresh(['domains', 'certificate', 'systemUser']),
                 $targetUrl,
@@ -95,29 +91,22 @@ class UploadCertificate
                 [
                     'type' => CertificateType::Custom,
                     'status' => CertificateStatus::Active,
-                    // What the certificate says it covers, not what the site
-                    // serves. An uploaded wildcard may cover names that are not
-                    // attached yet, and a narrow one may miss names that are.
+                    // What the certificate covers, not what the site serves.
                     'domains' => $domains,
                     'certificate_path' => $paths['certificate'],
                     'private_key_path' => $paths['private_key'],
-                    // The chain is bundled into the `.crt` above. A path left
-                    // over from a previous Let's Encrypt certificate points
-                    // into a lineage this certificate has nothing to do with.
+                    // The chain is bundled into the `.crt`; an old Let's Encrypt path would point
+                    // into an unrelated lineage.
                     'chain_path' => null,
                     'uploaded_private_key' => (string) $data['private_key'],
-                    // Nothing can renew an uploaded certificate. Saying otherwise
-                    // would be a promise the panel cannot keep.
+                    // Nothing can renew an uploaded certificate.
                     'auto_renew' => false,
                     'issued_at' => now(),
-                    // Read back off the file. An uploaded certificate can be
-                    // anything, including one that expired last month, and a panel
-                    // that shows what it was told rather than what is true is worse
-                    // than one that shows nothing.
+                    // Read back off the file: an upload may already be expired.
                     'expires_at' => $this->files->expiresAt($paths['certificate']),
                     'reason' => null,
                     'reference' => null,
-                    // The last look was at the certificate this replaces (FS-C47).
+                    // The last look was at the certificate this replaces.
                     'served_expires_at' => null,
                     'served_checked_at' => null,
                 ],
@@ -159,20 +148,17 @@ class UploadCertificate
     /**
      * Whatever this upload replaced, once the upload is serving.
      *
-     * A Let's Encrypt lineage left behind renews itself forever for a
-     * certificate nothing uses; an older uploaded or self-signed pair at other
-     * paths (the primary domain changed since) is a private key with nothing
-     * to belong to. Best effort: the new certificate is already live, and
-     * failing to tidy up the old one must not report the upload as failed.
+     * A leftover Let's Encrypt lineage would renew forever for an unused certificate, and an older
+     * pair at other paths is an orphaned private key. Best effort: the new certificate is already
+     * live, so a tidy-up failure must not report the upload as failed.
      *
      * @param  array<string, mixed>|null  $previous
      * @param  array{certificate: string, private_key: string}  $paths
      */
     private function removeReplaced(?array $previous, array $paths, Application $application): void
     {
-        // The chain is bundled into the new `.crt`, so v7's separate chain
-        // file for this site — whether or not a row ever pointed at it — now
-        // describes a certificate that is gone. Removed as v7's uninstall did.
+        // The chain is bundled into the new `.crt`, so v7's separate chain file is stale; remove it
+        // as v7's uninstall did.
         try {
             $this->files->removeV7Bundle($application->slug, $application->id);
         } catch (Throwable) {
@@ -185,9 +171,8 @@ class UploadCertificate
 
         try {
             if ($previous['type'] === CertificateType::LetsEncrypt) {
-                // The lineage the files are in (`--cert-name {site}` since
-                // 63c204e0, the first domain before it) — never re-derived from
-                // the domains, which named the wrong lineage after B3.
+                // The lineage the files are in; never re-derived from the domains, which can name
+                // the wrong one.
                 $lineage = (new Certificate([
                     'type' => CertificateType::LetsEncrypt,
                     'certificate_path' => $previous['certificate_path'] ?? null,

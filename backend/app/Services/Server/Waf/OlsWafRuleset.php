@@ -7,21 +7,18 @@ use RuntimeException;
 /**
  * The 8G ruleset as OpenLiteSpeed rewrite conditions, by category.
  *
- * Read from the Apache file, not kept as a third copy: resources/waf/
- * 8g-apache-setenvif.conf is already split into the six categories the panel
- * offers, and OLS implements Apache's mod_rewrite, so each line maps to one
- * `RewriteCond` on the same variable with the same pattern. One source means
- * an 8G update reaches all three web servers together.
+ * Read from resources/waf/8g-apache-setenvif.conf (already split into the panel's six
+ * categories) rather than kept as a third copy. OLS implements mod_rewrite, so each line maps to
+ * one `RewriteCond` with the same variable and pattern, and an 8G update reaches all three web
+ * servers together.
  *
- * Two line shapes exist in that file, and nothing else (checked when this was
- * written; anything else throws rather than being skipped quietly):
+ * That file has only two line shapes; anything else throws rather than being skipped:
  *
  *   SetEnvIfExpr "%{QUERY_STRING} =~ m#PATTERN#i" waf_query
  *   SetEnvIfNoCase <Attribute> PATTERN waf_<category>
  *
- * Verified on the OLS test server on 2026-09-30: OLS takes the patterns as
- * PCRE (the `(?<!SAML)` lookbehind works) and supports `E=` flags and
- * `%{ENV:...}`, which is how exceptions skip the block.
+ * OLS takes the patterns as PCRE (lookbehind works) and supports `E=` flags and `%{ENV:...}`,
+ * which is how exceptions skip the block.
  */
 class OlsWafRuleset
 {
@@ -48,9 +45,8 @@ class OlsWafRuleset
     private ?array $rules = null;
 
     /**
-     * Apache's config-argument unescaping (httpd `substring_conf`): a
-     * backslash before another backslash, or before the quote character of a
-     * quoted argument, is dropped. Every other backslash is kept.
+     * Apache's config-argument unescaping (httpd `substring_conf`): a backslash before another
+     * backslash, or before the quote of a quoted argument, is dropped; all others are kept.
      */
     public static function apacheUnescape(string $value, ?string $quote): string
     {
@@ -103,13 +99,9 @@ class OlsWafRuleset
                 continue;
             }
 
-            // What the file says is not the regex Apache compiles: its config
-            // parser turns `\\` into `\` in every argument, and `\"` into `"`
-            // inside a quoted one. OLS reads a condition raw, so the regex has
-            // to be written out as Apache would have seen it — otherwise
-            // `=?\\\(?:...` reaches OLS as an unbalanced group, which it
-            // rejects by dropping the site's whole rewrite block, silently
-            // (seen on the OLS test server, 2026-09-30).
+            // Apache's parser turns `\\` into `\` (and `\"` into `"` when quoted), but OLS reads a
+            // condition raw, so write the regex as Apache would see it. Otherwise `=?\\\(?:...`
+            // reaches OLS as an unbalanced group and it silently drops the site's whole rewrite block.
             if (preg_match('/^SetEnvIfExpr "%\{QUERY_STRING\} =~ m#(.*)#i" (waf_[a-z]+)$/', $line, $m) === 1) {
                 [$variable, $pattern, $env] = ['QUERY_STRING', self::apacheUnescape($m[1], '"'), $m[2]];
             } elseif (preg_match('/^SetEnvIfNoCase (\S+) (\S+) (waf_[a-z]+)$/', $line, $m) === 1 && isset(self::VARIABLES[$m[1]])) {
@@ -118,20 +110,16 @@ class OlsWafRuleset
                 throw new RuntimeException('8G line '.($number + 1).' has a shape the OLS ruleset does not know: '.$line);
             }
 
-            // Compiled here, before anything is written: OLS's `-t` does not
-            // check rewrite regexes, so an invalid one would only show up as
-            // every rule on the site quietly not applying.
+            // Compiled before anything is written: OLS's `-t` does not check rewrite regexes, so a
+            // bad one would just silently stop every rule applying.
             if (@preg_match('#'.str_replace('#', '\\#', $pattern).'#i', '') === false) {
                 throw new RuntimeException('8G line '.($number + 1).' is not a valid regex once unescaped: '.$pattern);
             }
 
             $category = self::CATEGORIES[$env] ?? throw new RuntimeException('8G line '.($number + 1)." sets an unknown category {$env}");
-            // Always grouped. A RewriteCond pattern that *starts* with `<`,
-            // `>`, `=`, `-` or `!` is an operator, not a regex: the cookie rule
-            // `<|>|\'|...` became "lexicographically less than" and blocked
-            // every request (found on the OLS test server, 2026-09-30); `=?`
-            // and `-------` were an equality test and a file test. `(?:...)`
-            // matches exactly the same and can never be read as one.
+            // Always grouped: a RewriteCond pattern *starting* with `<`, `>`, `=`, `-` or `!` is read
+            // as an operator (the cookie rule `<|>|...` became "less than" and blocked every request).
+            // `(?:...)` matches the same and can never be read as one.
             $rules[$category][] = [$variable, '(?:'.$pattern.')'];
         }
 

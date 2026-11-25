@@ -18,11 +18,9 @@ use Illuminate\Support\Collection;
  * with a different (or no) user-agent block.
  *
  * Same apply → test → reload → rollback shape as `BasicAuthManager`,
- * `Waf8GManager` and `ApplicationProvisioner::disable()`/`enable()`, and the
- * rules borrow the WAF's discipline exactly: they are rendered from an
- * in-memory collection and only written to the database once the config test
- * has proved the new state is safe. A failed test must leave the database as
- * it was.
+ * `Waf8GManager` and `ApplicationProvisioner::disable()`/`enable()`. Rules are rendered from
+ * an in-memory collection and written to the database only once the config test has passed;
+ * a failed test must leave the database as it was.
  */
 class BotBlockerManager
 {
@@ -54,9 +52,8 @@ class BotBlockerManager
         $application->ai_bot_policy = $policy;
         $application->setRelation('botRules', $pending);
 
-        // v7's own files for this setting go first: one sits at the name v8
-        // writes to, and v8 never writes over a file it did not write. Put
-        // back with everything else if the change does not hold.
+        // v7's files for this setting go first (one sits at a name v8 writes to, and v8 never
+        // overwrites a file it did not write). Restored if the change does not hold.
         $moved = $this->leftovers->remove($application, 'ai_bot_blocker');
 
         $applied = $this->applyVhost($application);
@@ -68,9 +65,8 @@ class BotBlockerManager
             throw new BotBlockerOperationException($applied->reference);
         }
 
-        // Refused with v7's files gone: something may still lean on them (an
-        // nginx conf.d map another vhost reads), so they go back first and
-        // the change is kept if that is enough.
+        // Refused with v7's files gone: something may still lean on them (e.g. an nginx conf.d
+        // map another vhost reads), so they go back first; the change is kept if that suffices.
         if ($this->webServers->driver()->test()->failed()
             && ($moved === [] || ! $this->leftoversWereTheProblem($application, $moved))) {
             $this->leftovers->restore($application, $moved);
@@ -79,8 +75,7 @@ class BotBlockerManager
             throw new BotBlockerOperationException($restored->reference);
         }
 
-        // Saved either way: the tested config is on disk, and the rows have to
-        // say what the disk says. A failed reload is reported at the end.
+        // Saved either way: the tested config is on disk and the rows must match it.
         $reload = $this->webServers->driver()->reload();
 
         $application->save();
@@ -93,7 +88,7 @@ class BotBlockerManager
         }
 
         if ($rulesChange) {
-            // Replaced wholesale, and only now — see the class docblock.
+            // Replaced wholesale, and only now: the config test has passed.
             $application->botRules()->delete();
 
             foreach ($pending as $rule) {
@@ -114,9 +109,8 @@ class BotBlockerManager
      */
     private function leftoversWereTheProblem(Application $application, array &$moved): bool
     {
-        // Only the ones elsewhere: one at a name the panel now writes would
-        // go back over the panel's own file, the test would pass, and the
-        // setting would say one thing while v7's old rules did another.
+        // Only the ones elsewhere: one at a name the panel now writes would overwrite the
+        // panel's own file, and the setting would say one thing while v7's rules did another.
         $elsewhere = $this->leftovers->outsideSiteConf($application, $moved);
 
         if ($elsewhere === []) {
@@ -130,9 +124,8 @@ class BotBlockerManager
     }
 
     /**
-     * Put the previous policy and the stored rules back into the live config.
-     * Nothing has been reloaded at either call site, so this is restoring the
-     * files to match what the server is still serving.
+     * Put the previous policy and the stored rules back into the live config. Nothing has been
+     * reloaded yet, so this restores the files to match what the server is still serving.
      */
     private function restore(Application $application, ?AiBotPolicy $previous, bool $rulesChange): ServerOpsResult
     {

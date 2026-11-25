@@ -11,27 +11,19 @@ use Throwable;
 /**
  * Ties a Google callback back to the request that started it.
  *
- * Normally `state` is compared against a value held in the session. The panel's
- * API is Sanctum-token authenticated and has no session, so the binding has to
- * be carried in the parameter itself — and a destination id sitting in a query
- * string is an open invitation: anyone could post a callback naming any
- * destination and overwrite its credentials with a grant on an account they
- * control.
+ * The panel's API is token-authenticated with no session, so `state` cannot be compared against
+ * a session value; the binding travels in the parameter. A bare destination id there would let
+ * anyone post a callback naming any destination and overwrite its credentials with their own grant.
  *
- * Two properties, because one is not enough:
+ * Two properties:
  *
- * - **Unforgeable.** The payload is sealed with Laravel's encrypter, which is
- *   authenticated — a tampered or hand-written `state` fails to decrypt rather
- *   than decoding into something attacker-chosen.
- * - **Single-use.** Sealing alone still allows *replay*: a `state` captured
- *   from a browser's history or a referrer header would stay valid forever. So
- *   the sealed payload carries a nonce that must match one held server-side,
- *   and consuming it burns the nonce. A second callback with the same `state`
- *   is refused even though it decrypts perfectly.
+ * - **Unforgeable.** The payload is sealed with Laravel's authenticated encrypter, so a tampered
+ *   or hand-written `state` fails to decrypt.
+ * - **Single-use.** The sealed payload carries a nonce that must match one held server-side, and
+ *   consuming it burns the nonce, so a replayed `state` (browser history, referrer) is refused
+ *   even though it decrypts.
  *
- * The expiry is belt-and-braces. The cache entry already lapses on its own; the
- * timestamp inside means a `state` cannot outlive its window even if the cache
- * is one that does not honour TTLs strictly.
+ * The expiry timestamp is belt-and-braces for caches that do not honour TTLs strictly.
  *
  * See `google-drive-oauth-design.md` §3b.
  */
@@ -57,10 +49,8 @@ class GoogleOauthState
     /**
      * Read a destination id back out, once.
      *
-     * Deliberately returns a reason rather than throwing: every failure here is
-     * something the operator sees as a sentence on a callback page, and "this
-     * link has already been used" is a different instruction from "this link
-     * was not issued by this panel".
+     * Returns a reason rather than throwing: each failure is shown as a sentence on the callback
+     * page, and "already used" differs from "not issued by this panel".
      *
      * @return array{ok: bool, destination_id: int|null, reason: string|null}
      */
@@ -73,8 +63,7 @@ class GoogleOauthState
         try {
             $payload = json_decode(Crypt::decryptString($state), true);
         } catch (Throwable) {
-            // Tampered, truncated, or sealed by a different panel — the app key
-            // differs per install, so a `state` from elsewhere lands here too.
+            // Tampered, truncated, or sealed by another panel (the app key differs per install).
             return $this->failure('storage.oauth.state_invalid');
         }
 
@@ -96,28 +85,25 @@ class GoogleOauthState
 
         $expected = Cache::get($this->cacheKey($destinationId));
 
-        // Absent means already consumed, or the window closed. Both are
-        // "start again", not "something is wrong with your setup".
+        // Absent means already consumed or the window closed: "start again", not a setup error.
         if (! is_string($expected) || $expected === '') {
             return $this->failure('storage.oauth.state_expired');
         }
 
-        // Constant-time: the nonce is a secret, and a timing oracle on it would
-        // hand back the one thing that makes the seal single-use.
+        // Constant-time: a timing oracle on the nonce would defeat single-use.
         if (! hash_equals($expected, $nonce)) {
             return $this->failure('storage.oauth.state_invalid');
         }
 
-        // Burned before the caller does anything with it, so a request that
-        // fails downstream still cannot be replayed.
+        // Burned before the caller uses it, so a request failing downstream cannot be replayed.
         Cache::forget($this->cacheKey($destinationId));
 
         return ['ok' => true, 'destination_id' => $destinationId, 'reason' => null];
     }
 
     /**
-     * Drop an in-flight attempt — used when a destination is reconnected or
-     * removed, so an abandoned `state` cannot be redeemed afterwards.
+     * Drop an in-flight attempt when a destination is reconnected or removed, so an abandoned
+     * `state` cannot be redeemed.
      */
     public function forget(StorageDestination $destination): void
     {

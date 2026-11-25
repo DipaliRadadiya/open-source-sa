@@ -18,12 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Node as its own feature, mirroring PHP.
- *
- * It was a section of the Settings screen, gated by `setting` — which also
- * grants the SSH port and the reboot button. Someone who manages Node apps
- * should not need that, and Node needed a permission of its own before it
- * could have a sidebar row at all.
+ * Node as its own feature, mirroring PHP, with its own permission (not the broader `setting`).
  */
 class NodeController extends Controller
 {
@@ -35,9 +30,8 @@ class NodeController extends Controller
     /**
      * Choose the version bare `node` resolves to.
      *
-     * Only the symlinks move. A site that pinned a version keeps the absolute
-     * path already in its unit — changing the server default must not migrate
-     * a running site onto a different Node behind its back.
+     * Only the symlinks move: a site that pinned a version keeps the absolute path in its unit,
+     * so changing the default never migrates a running site onto a different Node.
      */
     public function setDefault(NodeDefaultRequest $request, NodeRuntime $node, NodeOverview $overview, ActivityLogger $log): JsonResponse
     {
@@ -52,21 +46,18 @@ class NodeController extends Controller
     }
 
     /**
-     * Install a version. Queued: unpacking a runtime is far too slow to hold
-     * a request open for.
+     * Install a version. Queued: unpacking a runtime is too slow for a request.
      */
     public function store(InstallNodeVersionRequest $request, NodeRuntime $node, ActivityLogger $log, InstallTracker $installs): JsonResponse
     {
         $version = (string) $request->validated('version');
 
-        // Idempotent: asking for a version that is already here is a no-op
-        // rather than an error, since the outcome the caller wanted is true.
+        // Idempotent: an already-installed version is a no-op, not an error.
         if ($node->installed($version)) {
             return response()->json(['message' => __('node.already_installed', ['version' => $version])], 200);
         }
 
-        // FS-C25: a second click or a second tab. Both used to answer 202 and
-        // run two installs of the same version.
+        // A second click or tab must not start a second install of the same version.
         if (in_array($installs->current('node', $version)?->status, [InstallStatus::Installing, InstallStatus::Removing], true)) {
             return response()->json([
                 'message' => __('errors/node.install_in_progress', ['version' => $version]),
@@ -74,8 +65,7 @@ class NodeController extends Controller
             ], 409);
         }
 
-        // Before dispatch: a client polling straight after this 202 must see
-        // the version, and the worker may not have started yet.
+        // Before dispatch: a client polling right after this 202 must already see the version.
         $installs->start('node', $version);
 
         InstallNodeVersion::dispatch($version, Auth::id());
@@ -87,17 +77,13 @@ class NodeController extends Controller
     /**
      * Remove a version.
      *
-     * Refused while a site depends on it, or while it is the default: the
-     * failure would otherwise be a site that stops booting with no obvious
-     * cause. The message names every site — unlike the list response, which
-     * caps them, this is the one place completeness is the point.
+     * Refused while a site depends on it or while it is the default, or a site would stop booting.
+     * The message names every site (the list response caps them).
      */
     public function destroy(string $version, NodeRuntime $node, PinnedSites $pinned, ActivityLogger $log, ServerCapabilities $capabilities): JsonResponse
     {
         if (! $node->installed($version)) {
-            // A failed install leaves an entry with nothing installed behind
-            // it. Remove answered 404 for it forever (bug #31), so the entry
-            // could never be cleared; clearing it is what Remove means here.
+            // A failed install leaves an entry with nothing installed; Remove clears it.
             $failed = app(InstallTracker::class)->current('node', $version);
             abort_unless($failed?->status === InstallStatus::Failed, 404);
 
@@ -124,9 +110,7 @@ class NodeController extends Controller
 
         $node->uninstall($version);
 
-        // The mirror of the refresh after an install. Removing the last Node
-        // version left the recorded capability still claiming Node, so the
-        // create screen kept offering Node applications that could not run.
+        // Mirror of the refresh after an install: the recorded capability must stop claiming Node.
         $capabilities->refresh();
 
         $log->log('node.uninstalled', null, ['version' => $version]);
@@ -141,10 +125,7 @@ class NodeController extends Controller
     {
         abort_unless($node->installed($version), 404);
 
-        // Refuse rather than install a guess. The catalog is what knows which
-        // npm this Node version can actually run; when it cannot say — no
-        // egress, never refreshed — installing `npm@latest` anyway is how a
-        // Node 20 box ends up with an npm that will not start.
+        // Refuse rather than guess: `npm@latest` can be an npm this Node version cannot run.
         $target = $npm->resolveTarget($version);
 
         if ($target === null) {
@@ -159,9 +140,7 @@ class NodeController extends Controller
         return response()->json([
             'message' => __('node.npm_updated', ['version' => $version]),
             'npm_version' => $installed,
-            // The same three fields the list sends, so the row can be updated
-            // from this response rather than left claiming an update is still
-            // waiting until the next refetch.
+            // The same three fields the list sends, so the row updates without a refetch.
             'npm_latest' => $npm->latestFor($version),
             'npm_update_available' => $npm->updateAvailable($version, $installed),
         ]);

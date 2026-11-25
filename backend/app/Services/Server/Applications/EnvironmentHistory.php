@@ -7,21 +7,15 @@ use App\Models\Application;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * Who changed an application's `.env`, when, and whether the version they
- * replaced can still be put back.
+ * Who changed an application's `.env`, when, and whether the version they replaced can still be
+ * put back.
  *
- * Two sources that answer different questions, and they are not interchangeable:
+ * - The **activity log** is the record: append-only, keeps the user, never pruned.
+ * - The **files on disk** are availability: only {@see ApplicationEnvironment::KEEP_BACKUPS}
+ *   survive, and a restore can only be offered while the file is still there.
  *
- * - The **activity log** is the record. It is append-only, keeps the user, and
- *   is never pruned. It is the answer to "who did this".
- * - The **files on disk** are availability. Only {@see
- *   ApplicationEnvironment::KEEP_BACKUPS} survive, and a restore is an offer
- *   this class can only make while the file is still there.
- *
- * They will disagree, always — the log outlives the files by design. So a row
- * whose backup has been pruned is still shown, marked as no longer restorable,
- * rather than dropped. Hiding it would quietly rewrite the history of who
- * touched the file, which is the one thing this screen exists to answer.
+ * The log outlives the files, so a row whose backup was pruned is still shown, marked as no longer
+ * restorable. Dropping it would rewrite the history of who touched the file.
  */
 class EnvironmentHistory
 {
@@ -33,10 +27,8 @@ class EnvironmentHistory
     /**
      * Newest first, paginated.
      *
-     * The backup listing is read once and turned into a lookup, rather than
-     * asked per row: it is a `find` over the application directory, and running
-     * it twenty times to render twenty rows would be twenty shell-outs for one
-     * screen.
+     * The backup listing is read once and turned into a lookup: it is a `find` over the
+     * application directory, so asking per row would be one shell-out per row.
      */
     public function for(Application $application, int $perPage = 20): LengthAwarePaginator
     {
@@ -49,9 +41,8 @@ class EnvironmentHistory
             ->where('subject_id', $application->getKey())
             ->whereIn('action', self::ACTIONS)
             ->latest('created_at')
-            // Ties broken by id: several saves can share a second, and a
-            // paginator with an unstable sort can show the same row on two
-            // pages and never show another one at all.
+            // Ties broken by id: saves can share a second, and an unstable sort can repeat or skip
+            // rows across pages.
             ->latest('id')
             ->paginate($perPage);
 
@@ -75,11 +66,8 @@ class EnvironmentHistory
             'id' => $row->id,
             'action' => $row->action,
 
-            // Key names only, exactly as the log stores them. No value from the
-            // file has ever been written here and none is read back — the whole
-            // premise of this screen is that those are secrets, and a history
-            // holding old values would put every rotated password in the panel
-            // database for anyone who can read a log.
+            // Key names only, as the log stores them. Never store or read values from the file:
+            // they are secrets, and old values would keep every rotated password in the database.
             'keys' => $properties['keys'] ?? null,
 
             // Which version a restore put back, when this row is a restore.
@@ -89,23 +77,18 @@ class EnvironmentHistory
                 'id' => $row->user->id,
                 'username' => $row->user->username,
             ] : null,
-            // Nobody did this one. Said outright rather than left to be
-            // inferred from a null user, which is indistinguishable from a row
-            // whose user was deleted.
+            // Stated outright: a null user is indistinguishable from a deleted user.
             'is_system' => $row->user_id === null,
 
             'created_at' => $row->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $row->created_at?->diffForHumans(),
 
-            // The version this change replaced, and whether it is still on
-            // disk. `null` backup means a first save — there was nothing to
-            // keep, so there is nothing to go back to, which is different from
-            // "it was kept and has since been pruned".
+            // The version this change replaced, and whether it is still on disk. A `null` backup
+            // means a first save (nothing to go back to), not "kept and since pruned".
             'backup' => $backup,
             'restorable' => $backup !== null && isset($available[$backup]),
-            // False when the user saved without a copy (2026-10-29): then a
-            // null `backup` is not a first save, it is a copy never taken.
-            // Rows from before the switch existed always kept one.
+            // False when the user saved without a copy: then a null `backup` is a copy never
+            // taken, not a first save. Older rows always kept one.
             'safety_copy' => ($properties['safety_copy'] ?? true) !== false,
         ];
     }

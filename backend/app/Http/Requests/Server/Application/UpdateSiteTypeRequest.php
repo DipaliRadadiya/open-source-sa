@@ -13,34 +13,24 @@ use Illuminate\Validation\Validator;
 /**
  * Relabel a site: tell the panel what is actually installed in it.
  *
- * **This changes what the panel offers, not what is on disk.** Nothing is
- * installed, nothing is downloaded, no installer runs. The site type decides
- * which screens a site gets — WordPress adds Staging, Clone and Magic Login —
- * and this endpoint exists because a user who installs WordPress by hand into
- * a Custom PHP site has, as far as the panel is concerned, a Custom PHP site
- * forever. Said plainly here and in API_REFERENCE.md because the opposite
- * assumption — that changing the type converts the site — is the natural one.
+ * This changes what the panel offers, not what is on disk: nothing is installed or converted.
+ * The site type decides which screens a site gets (WordPress adds Staging, Clone and Magic
+ * Login), so a WordPress installed by hand into a Custom PHP site stays Custom PHP until relabelled.
  *
- * Which changes are allowed is not symmetric, and the asymmetry is the design:
+ * Allowed changes are deliberately asymmetric:
  *
- *   - **Narrowing** to a generic type is always allowed. The site gives up
- *     features; it claims nothing. This is the escape hatch for a wrong guess
- *     and for a site that has since been replaced by something else.
+ *   - **Narrowing** to a generic type is always allowed: the site gives up features and claims
+ *     nothing.
  *
- *   - **Widening** from a generic type must be backed by evidence on disk.
- *     Turning a site into a WordPress site turns on `app_magic_login`, which
- *     *writes a loader into the site*. Point that at a directory containing no
- *     WordPress and the panel is writing files an application cannot use.
+ *   - **Widening** from a generic type needs evidence on disk. A WordPress type turns on
+ *     `app_magic_login`, which writes a loader into the site, so it must not target a directory
+ *     without WordPress.
  *
- *   - **A git site cannot be relabelled at all**, in either direction. Its
- *     Deployments, Workers and .env screens exist because `method() === 'git'`
- *     (see AbstractSiteType::features()), and relabelling does not stop the
- *     things behind them: the supervisord workers keep running and the deploy
- *     webhook keeps accepting pushes, with no screen left to manage either.
- *     Nothing is deleted — it becomes invisible, which is worse than refused.
+ *   - **A git site cannot be relabelled at all.** Its Deployments, Workers and .env screens exist
+ *     because `method() === 'git'` (see AbstractSiteType::features()); relabelling would leave
+ *     running workers and a live deploy webhook with no screen to manage them.
  *
- *   - **Marketplace to marketplace is meaningless.** A Moodle site is not
- *     "actually" Joomla; whoever is asking has a different problem.
+ *   - **Marketplace to marketplace is meaningless.**
  */
 class UpdateSiteTypeRequest extends FormRequest
 {
@@ -54,11 +44,8 @@ class UpdateSiteTypeRequest extends FormRequest
      */
     public function rules(): array
     {
-        // Validated against the whole catalog, not against the allowed
-        // transitions. An unknown string is a malformed request; a known type
-        // that this site may not become is a refusal with a reason the user
-        // can act on, and collapsing the two would answer "invalid selection"
-        // to a question that deserves a sentence.
+        // Whole catalog, not allowed transitions: an unknown type is malformed, while a disallowed
+        // one gets a specific reason (see refuseDisallowedTransition).
         return [
             'site_type' => ['required', 'string', Rule::in(app(SiteTypeManager::class)->names())],
         ];
@@ -91,9 +78,7 @@ class UpdateSiteTypeRequest extends FormRequest
             __('application.site_type_change.'.$reason),
         );
 
-        // Ordered so that the most specific refusal wins. A git site asking to
-        // become WordPress should be told about its workers, not told that
-        // WordPress needs evidence.
+        // Ordered so the most specific refusal wins (a git site hears about its workers first).
         if ($current === 'git') {
             $refuse('git_cannot_change');
 
@@ -112,10 +97,8 @@ class UpdateSiteTypeRequest extends FormRequest
             return;
         }
 
-        // The escape hatch. No evidence required in this direction: a user
-        // telling the panel to stop treating a site as WordPress is not a
-        // claim that needs proving, and requiring proof would trap a site
-        // whose WordPress has since been deleted.
+        // The escape hatch: no evidence needed to narrow, or a site whose WordPress was deleted
+        // would be stuck.
         if (in_array($target, $generic, true)) {
             return;
         }
@@ -138,10 +121,7 @@ class UpdateSiteTypeRequest extends FormRequest
     /**
      * The disk has to agree.
      *
-     * Detected here, at apply time, rather than trusting the verdict the
-     * Detect button stored. Six `test -f` probes are cheaper than reasoning
-     * about how stale a cached verdict is, and it closes the window where
-     * somebody deletes WordPress between clicking Detect and clicking Apply.
+     * Detected at apply time, not from the verdict the Detect button stored, which may be stale.
      */
     private function refuseWithoutEvidence(
         Validator $validator,

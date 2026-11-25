@@ -17,15 +17,13 @@ use Illuminate\Support\Facades\View;
 class PhpMyAdminSso extends DatabaseClientSso
 {
     /**
-     * Not 'phpMyAdmin': that is the session phpMyAdmin keeps for itself, and
-     * upstream is explicit that the signon session has to be a different one.
+     * Not 'phpMyAdmin': the signon session must differ from phpMyAdmin's own.
      */
     public const SIGNON_SESSION = 'SVPanelSignon';
 
     /**
-     * The second server entry in config.inc.php — same database host as the
-     * first, reached only through this flow. The first stays on cookie auth so
-     * that typing your own credentials never stops working.
+     * The second server entry in config.inc.php: same host as the first, reached only through
+     * this flow. The first stays on cookie auth.
      */
     public const SIGNON_SERVER = 2;
 
@@ -68,11 +66,8 @@ class PhpMyAdminSso extends DatabaseClientSso
     /**
      * Put the sign-in script and its token directory in place.
      *
-     * Rewritten every time rather than written once and checked for: it is two
-     * commands, it is idempotent, and it means a site installed before this
-     * feature existed — which is every phpMyAdmin site the panel has ever
-     * created — repairs itself the first time someone clicks the button,
-     * instead of needing to be deleted and made again.
+     * Rewritten every time: it is idempotent, and a site installed before this feature repairs
+     * itself on the first click.
      */
     public function installShim(Application $application): ServerOpsResult
     {
@@ -99,25 +94,19 @@ class PhpMyAdminSso extends DatabaseClientSso
     /**
      * Give an older site the second server entry the sign-in script needs.
      *
-     * Every phpMyAdmin site created before this feature has a config.inc.php
-     * with one server on cookie auth. Writing `sso.php` alone would leave the
-     * script handing a session to a server that does not exist, so the config
-     * has to be brought forward too.
+     * An older config.inc.php has one server on cookie auth; `sso.php` alone would hand a
+     * session to a server that does not exist.
      *
-     * Left alone once it has the entry. Rewriting on every click would work,
-     * but the file also holds `blowfish_secret`, and regenerating that logs out
-     * everyone currently signed in — a fresh secret cannot decrypt the cookies
-     * the old one issued.
+     * Left alone once it has the entry: the file also holds `blowfish_secret`, and a fresh one
+     * logs out everyone signed in.
      */
     private function ensureSignonServer(Application $application): ServerOpsResult
     {
         $path = $this->configPath($application);
         $read = $this->run($this->asUser($application, ['cat', $path]), $application);
 
-        // A config that cannot be read is not a config that is missing the
-        // entry. Rewriting on a failed read would replace a working file with
-        // one built from guesses — the same shape of bug as treating an
-        // unreadable /etc/fstab as an empty one.
+        // An unreadable config is not a config missing the entry: rewriting on a failed read
+        // would replace a working file with one built from guesses.
         if ($read->failed()) {
             return $read;
         }
@@ -128,8 +117,7 @@ class PhpMyAdminSso extends DatabaseClientSso
             return $read;
         }
 
-        // Reused when it is there so existing sessions survive; generated only
-        // when the old file had none to find.
+        // Reused so existing sessions survive; generated only when the old file had none.
         preg_match("/sodium_hex2bin\('([0-9a-f]{64})'\)/", $existing, $matches);
 
         return $this->writeFile(

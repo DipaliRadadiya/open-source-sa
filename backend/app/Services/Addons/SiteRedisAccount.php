@@ -12,18 +12,12 @@ use Illuminate\Support\Str;
 /**
  * A Redis login of the site's own, for Object Cache Pro.
  *
- * v7 opened Redis's unix socket to every account on the server
- * (`unixsocketperm 777`) and gave each site the server's Redis password, so
- * any site could read and write every other site's cache. On v8 that would
- * also be the panel's own data: the panel keeps its cache, queue and sessions
- * in the same Redis.
- *
- * Instead each site gets a Redis 6 ACL user that can touch only keys under its
- * own prefix (`~sv<id>:*`), with no pub/sub channels and no administrative or
- * dangerous commands (CONFIG, FLUSHALL, KEYS, DEBUG...). INFO is allowed back
- * because Object Cache Pro reads it; it reports the server, not anybody's
- * keys. SCAN stays allowed because Object Cache Pro flushes its own prefix
- * with it: it can list other key *names*, never their values.
+ * Sharing the server's Redis password would let any site read every other site's cache, and the
+ * panel's own cache, queue and sessions live in the same Redis. So each site gets a Redis 6 ACL
+ * user that can touch only keys under its own prefix (`~sv<id>:*`), with no pub/sub channels
+ * and no administrative or dangerous commands (CONFIG, FLUSHALL, KEYS, DEBUG...). INFO is
+ * allowed back (it reports the server, not keys); SCAN stays allowed because Object Cache Pro
+ * flushes its own prefix with it (it lists other key *names*, never values).
  *
  * The password goes to Redis only as its SHA-256 (`#<hash>`), so it is never
  * on a command line; the panel keeps it encrypted to hand to the site.

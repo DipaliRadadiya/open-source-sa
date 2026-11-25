@@ -7,26 +7,14 @@ use Throwable;
 /**
  * Turns a driver's raw failure into one of the panel's stable categories.
  *
- * **The reason this is a shared walk rather than three `if` ladders: Flysystem
- * never hands back the exception that actually went wrong.** Every adapter
- * wraps it — a rejected SFTP host key arrives as
- * `UnableToWriteFile: Unable to write file at location: … The authenticity of
- * host can't be established.` with the real
- * `UnableToEstablishAuthenticityOfHost` one level down in `getPrevious()`.
- * Each driver's `instanceof` checks were reading the wrapper, so none of them
- * could ever match, and every typed failure fell through to the catch-all.
+ * **Flysystem never hands back the exception that actually went wrong:** every adapter wraps it
+ * (a rejected SFTP host key arrives as `UnableToWriteFile`, with the real
+ * `UnableToEstablishAuthenticityOfHost` in `getPrevious()`). So the whole chain is walked; an
+ * `instanceof` on the outer exception alone never matches, and a changed host key would be
+ * reported as "could not be reached".
  *
- * Measured against a live SFTP server, not inferred: a changed host key was
- * reported as **"could not be reached"**, which sends an operator to check
- * their firewall while a possible interception goes unmentioned. The unit test
- * covering it passed throughout, because its fake threw the inner exception
- * directly — a shape the real adapter never produces.
- *
- * **Types are asked about the whole chain before any message is.** A type is a
- * statement; a message match is a guess, and the wrapper's message contains
- * the inner one, so a string rule on the outer link would otherwise pre-empt a
- * precise type on the inner. Both passes walk outward-in, so the most specific
- * answer available wins over the most general.
+ * **Types are asked about the whole chain before any message is.** A type is a statement, a
+ * message match is a guess, and the wrapper's message contains the inner one.
  */
 trait ClassifiesFailures
 {
@@ -54,31 +42,20 @@ trait ClassifiesFailures
             }
         }
 
-        // Unreachable is the honest default: something failed and nothing in
-        // the chain said what. It must stay the *last* answer rather than an
-        // early one — that is the bug this trait exists to stop.
+        // The default when nothing in the chain said what failed; it must stay the last answer.
         return 'storage.test.unreachable';
     }
 
     /**
      * Rules that belong to no single driver.
      *
-     * A stalled transfer is not an S3 problem or a Drive problem — it is cURL
-     * reporting that the bytes stopped, and every driver that speaks HTTP can
-     * produce it. Put in one place rather than copied into each
-     * `categoryForMessage()`, because a rule duplicated four times is a rule
-     * that will be updated in three.
-     *
-     * Checked *after* the driver's own pass, so a provider that has a more
-     * specific name for the same condition keeps it.
+     * A stalled transfer is cURL reporting that the bytes stopped, which any HTTP driver can
+     * produce. Checked after the driver's own pass, so a more specific driver rule wins.
      */
     private function sharedCategoryForMessage(string $message): ?string
     {
-        // cURL error 28 with this wording is specifically the low-speed abort
-        // configured in GoogleHttpClient — the transfer moved nothing for the
-        // stall window — and not an ordinary timeout. Saying "unreachable"
-        // here would send an operator to check a network that is working
-        // fine; the connection was established and then went quiet.
+        // cURL error 28 with this wording is the low-speed abort configured in GoogleHttpClient
+        // (connected, then went quiet), not an ordinary timeout.
         if (str_contains($message, 'operation too slow')
             || str_contains($message, 'less than 1 bytes/sec')) {
             return 'storage.upload.stalled';
@@ -96,8 +73,7 @@ trait ClassifiesFailures
     {
         $seen = 0;
 
-        // Bounded: a cyclic `previous` chain is malformed but possible, and a
-        // classifier is not the place to hang the queue worker.
+        // Bounded so a cyclic `previous` chain cannot hang the queue worker.
         while ($e !== null && $seen < 10) {
             yield $e;
 

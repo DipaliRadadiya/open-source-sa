@@ -15,21 +15,17 @@ use Illuminate\Support\Str;
  * One certificate operation per lineage name at a time: issuing a site's
  * certificate, uploading or removing one, and deleting the site.
  *
- * Without it the two raced on a real server (sync-deletion QA, 2026-10-21):
- * the delete's `certbot delete` lost to certbot's own process lock while the
- * issuance was still talking to Let's Encrypt, the delete went on and removed
- * the site, and the issuance then created a lineage for a site that no longer
- * existed — renewing forever — and crashed reading it.
+ * Without it a site delete races an issuance: `certbot delete` loses to certbot's own process
+ * lock, the site is removed, and the issuance then creates a lineage for a site that no longer
+ * exists (renewing forever) and crashes reading it.
  *
- * Keyed by the name the job issues under, the site's slug. Two live sites
- * never share one, so an unrelated site is never held up; a later site that
- * reuses a deleted site's slug shares the key, which is what lets the job
- * decide safely whether a lineage it just made still has an owner.
+ * Keyed by the name the job issues under, the site's slug. Two live sites never share one; a
+ * later site that reuses a deleted site's slug does, which lets the job decide safely whether a
+ * lineage it just made still has an owner.
  *
- * The panel's half of the defence, as {@see AccountLock}
- * is for accounts. certbot's own "Another instance of Certbot is already
- * running" — the renew timer, a hand-run certbot — is the other half, ridden
- * over by ServerOps' transient retry.
+ * The panel's half of the defence, as {@see AccountLock} is for accounts. certbot's own
+ * "Another instance of Certbot is already running" (renew timer, a hand-run certbot) is the
+ * other half, covered by ServerOps' transient retry.
  */
 class CertificateLock
 {
@@ -47,9 +43,8 @@ class CertificateLock
     }
 
     /**
-     * Held by a site delete from before its first change until its row is
-     * gone. An issuance in progress is waited for, briefly; past that the
-     * delete answers "busy, try again" with nothing changed.
+     * Held by a site delete from before its first change until its row is gone. An issuance in
+     * progress is waited for, briefly; past that the delete answers "busy" with nothing changed.
      *
      * @throws CertificateBusyException
      */
@@ -59,10 +54,9 @@ class CertificateLock
     }
 
     /**
-     * Held by an upload or a removal of the site's certificate for its whole
-     * run (2026-10-22). Both revoke the site's Let's Encrypt lineage, which
-     * loses to certbot's own lock mid-issuance exactly as the delete did; an
-     * issuance that starts meanwhile finds the lock taken and requeues.
+     * Held by an upload or a removal of the site's certificate for its whole run. Both revoke
+     * the Let's Encrypt lineage, which loses to certbot's own lock mid-issuance; an issuance
+     * that starts meanwhile finds the lock taken and requeues.
      *
      * @throws CertificateBusyException
      */
@@ -101,9 +95,8 @@ class CertificateLock
     }
 
     /**
-     * Taken by the issuing job without waiting: a worker blocked on a lock
-     * spends the job's own timeout doing nothing. Null when it is held — the
-     * job puts itself back on the queue instead.
+     * Taken by the issuing job without waiting, so a worker does not burn the job's timeout.
+     * Null when held: the job requeues itself.
      */
     public function forIssue(string $name): ?Lock
     {
@@ -113,10 +106,8 @@ class CertificateLock
     }
 
     /**
-     * Longer than anything that holds it, so it never expires under a live
-     * holder: the issuing job is killed at its own timeout (600s), and a
-     * delete is a request behind a 300s proxy timeout. Only a holder that died
-     * without releasing waits this out.
+     * Longer than anything that holds it (issuing job timeout 600s, delete behind a 300s proxy
+     * timeout), so it never expires under a live holder. Only a dead holder waits this out.
      */
     public function ttl(): int
     {

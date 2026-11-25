@@ -11,24 +11,19 @@ use App\Services\Server\ServerOps;
  * **Docker bypasses the firewall.** It inserts its own rules into the `DOCKER`
  * chain ahead of the filter rules ufw manages, so a port published to
  * `0.0.0.0` is reachable from anywhere *even while the panel's firewall screen
- * says it is closed*. The screen is not lying on purpose; it reports ufw, and
- * ufw is not what is deciding.
+ * says it is closed*. The screen reports ufw, and ufw is not what is deciding.
  *
- * That makes this the one check that ships before the panel can create a
- * container at all. Everything the panel generates publishes to `127.0.0.1`
- * and is proxied by nginx, so a finding here is either a container someone
- * started by hand or a bug in our own template — and both need saying out
- * loud, because neither is visible anywhere else in the panel.
+ * Everything the panel generates publishes to `127.0.0.1` and is proxied by
+ * nginx, so a finding is a container started by hand or a bug in our template.
  *
- * Reported as a failure, not a warning. An unintended open port is not a
+ * Reported as a failure, not a warning: an unintended open port is not a
  * degraded feature.
  */
 class DockerExposureCheck implements DoctorCheck
 {
     /**
-     * Addresses that mean "every interface". An empty host field means the
-     * same thing — `docker run -p 8080:80` with no address publishes to all of
-     * them, and it is the most common way this happens.
+     * Addresses that mean "every interface". An empty host field means the same:
+     * `docker run -p 8080:80` publishes to all of them.
      */
     private const WILDCARDS = ['0.0.0.0', '::', '*', ''];
 
@@ -41,11 +36,8 @@ class DockerExposureCheck implements DoctorCheck
 
     public function run(): array
     {
-        // Presence first, and without sudo. `sudo -n docker` on a box with no
-        // Docker answers "a password is required" rather than "command not
-        // found" — there is no binary for sudo to resolve against its rules —
-        // so an absent Docker and an ungranted one arrive identically. Asking
-        // here is what lets the two branches below mean different things.
+        // Presence first, and without sudo: `sudo -n docker` answers "a password is required"
+        // whether Docker is absent or ungranted, so the branches below need this check.
         if (! $this->serverOps->binaryExists('docker')) {
             return [
                 'status' => 'pass',
@@ -60,12 +52,8 @@ class DockerExposureCheck implements DoctorCheck
             timeout: 20,
         );
 
-        // Docker being refused is not Docker being absent, and this is the one
-        // check where the difference is a security claim. Without this branch a
-        // denied sudo produced "nothing to expose" — a check asserting that no
-        // container is open to the internet on the strength of a command it was
-        // never allowed to run. Said out loud instead, as a warning: unproven,
-        // not proven safe.
+        // Docker refused is not Docker absent: passing here would claim no container is
+        // exposed on the strength of a command that never ran. Warn: unproven, not proven safe.
         if ($result->denied) {
             return [
                 'status' => 'warn',
@@ -74,8 +62,7 @@ class DockerExposureCheck implements DoctorCheck
             ];
         }
 
-        // Docker down is DockerCheck's business, not this one's. Two checks
-        // failing for one cause buries the cause.
+        // Docker down is DockerCheck's business; two checks failing for one cause buries it.
         if (! $result->answered) {
             return [
                 'status' => 'pass',
@@ -116,10 +103,8 @@ class DockerExposureCheck implements DoctorCheck
     /**
      * The published ports bound to every interface.
      *
-     * `docker ps` renders the mapping as
-     * `0.0.0.0:8080->80/tcp, [::]:8080->80/tcp` and a loopback one as
-     * `127.0.0.1:8080->80/tcp`. Only the host side of the arrow matters — the
-     * container port is internal and says nothing about reachability.
+     * `docker ps` renders mappings as `0.0.0.0:8080->80/tcp, [::]:8080->80/tcp`. Only the host
+     * side of the arrow matters for reachability.
      *
      * @return list<string>
      */
@@ -131,16 +116,14 @@ class DockerExposureCheck implements DoctorCheck
             $mapping = trim($mapping);
 
             if ($mapping === '' || ! str_contains($mapping, '->')) {
-                // No arrow means the port is exposed but not published, which
-                // is reachable only from other containers. Not a finding.
+                // No arrow: exposed but not published, so only other containers reach it.
                 continue;
             }
 
             [$host] = explode('->', $mapping, 2);
             $host = trim($host);
 
-            // Rightmost colon: an IPv6 host is full of them, so splitting on
-            // the first would read `[` as the address on every v6 mapping.
+            // Rightmost colon: an IPv6 host contains many.
             $separator = strrpos($host, ':');
             $address = $separator === false ? '' : substr($host, 0, $separator);
 

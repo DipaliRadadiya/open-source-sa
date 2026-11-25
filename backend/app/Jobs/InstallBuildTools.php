@@ -15,56 +15,40 @@ use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
 /**
- * Installs the compiler toolchain, so npm can build a package that ships no
- * prebuilt binary for the Node version a site runs.
+ * Installs the compiler toolchain, so npm can build a package that ships no prebuilt binary for
+ * the Node version a site runs.
  *
- * Queued because apt is far too slow to hold a request open for, and
- * `$tries = 1` for the same reason as every other server job: an automatic
- * retry of a package install just repeats a failure someone needs to read.
+ * Queued because apt is too slow for a request, and `$tries = 1` because retrying a package
+ * install just repeats a failure someone needs to read.
  *
- * `ShouldBeUnique` because apt takes a lock. Two of these at once is not a
- * theoretical race — the second waits on `configure_apt_lock_wait` and then
- * fails, and the user sees an install that broke for a reason that has nothing
- * to do with their server.
+ * `ShouldBeUnique` because apt takes a lock: a second run waits on `configure_apt_lock_wait` and
+ * then fails for a reason unrelated to the user's server.
  */
 class InstallBuildTools implements ShouldBeUnique, ShouldQueue
 {
-    // Gives the unique lock an expiry over this job's own timeout. Without it
-    // a worker killed mid-apt leaves a lock nothing releases, and every later
-    // install request is silently dropped — no error, no failed job, the
-    // button simply stops working.
+    // Gives the unique lock an expiry over this job's timeout. Without it a worker killed mid-apt
+    // leaves a lock nothing releases, and every later install request is silently dropped.
     use ExpiresUniqueLock;
     use Queueable;
     use TracksActor;
 
-    /**
-     * apt decides the version, so the tracker's (runtime, version) key needs a
-     * constant rather than a choice — the same shape {@see InstallFail2ban}
-     * uses, and `latest` is what apt actually installs.
-     */
+    /** apt decides the version, so the tracker's key is constant, as in {@see InstallFail2ban}. */
     public const RUNTIME = 'build_tools';
 
     public const VERSION = 'latest';
 
     /**
-     * The metapackage, not the individual compilers.
-     *
-     * `installed()` asks whether the binaries are present, which is the real
-     * question; installing asks apt for the standard set, which is the answer
-     * a distribution already curates. Naming gcc and make individually would
-     * leave out the headers node-gyp needs and fail later, in the build.
+     * The metapackage, not the individual compilers: naming gcc and make alone would leave out the
+     * headers node-gyp needs and fail later, in the build.
      */
     public const PACKAGE = 'build-essential';
 
     public int $tries = 1;
 
     /**
-     * The work itself, plus apt's wait for a lock another package manager
-     * holds ({@see ServerOps::aptLockBudgetSeconds()}), as InstallDatabaseEngine
-     * does. A fresh server's installer now finishes while Ubuntu's first-boot
-     * updates may still hold the lock, so a job started straight away waits
-     * for it — and must not be killed by the worker mid-wait, which reads as
-     * "stopped unexpectedly" instead of "another install is running".
+     * The work itself, plus apt's wait for a lock another package manager holds
+     * ({@see ServerOps::aptLockBudgetSeconds()}), as InstallDatabaseEngine does. Ubuntu's
+     * first-boot updates may still hold it, and the worker must not kill the job mid-wait.
      */
     public int $timeout;
 
@@ -89,10 +73,8 @@ class InstallBuildTools implements ShouldBeUnique, ShouldQueue
         );
 
         if ($result->failed()) {
-            // Recorded, not just logged. The screen reports `installed`, a
-            // boolean derived from the binaries being present — so a failed
-            // install is otherwise indistinguishable from one still running,
-            // for the fifteen minutes apt is allowed and then forever.
+            // Recorded, not just logged: `installed` is derived from the binaries, so a failed
+            // install would otherwise look like one still running.
             $installs->fail(
                 self::RUNTIME,
                 self::VERSION,
@@ -106,10 +88,8 @@ class InstallBuildTools implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // apt succeeding is not the same as the server being able to compile.
-        // The packages can install and still leave a binary off PATH — and the
-        // whole point of this job is that the next native build works, so that
-        // is what gets checked before it reports success.
+        // apt succeeding is not the same as being able to compile: a binary can still be off PATH,
+        // so check before reporting success.
         if (! $buildTools->installed()) {
             $installs->fail(self::RUNTIME, self::VERSION, null, 'incomplete', $result->reference);
 
@@ -121,17 +101,15 @@ class InstallBuildTools implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Present on disk now, which is the answer `installed()` already reads,
-        // so the row has nothing left to say.
+        // Present on disk now, which `installed()` already reads: the row has nothing left to say.
         $installs->succeed(self::RUNTIME, self::VERSION);
 
         $log->log('build_tools.installed', null, [], actor: $this->actor());
     }
 
     /**
-     * The job died outright — apt hit the timeout, or the worker was killed.
-     * Without this the row sits at `installing` and the screen spins on
-     * something that stopped running.
+     * The job died outright (apt timeout, or the worker was killed). Without this the row stays at
+     * `installing` and the screen spins forever.
      */
     public function failed(?Throwable $e): void
     {

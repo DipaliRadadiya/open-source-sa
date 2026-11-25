@@ -8,12 +8,9 @@ use Illuminate\Support\Sleep;
 /**
  * OpenLiteSpeed's own WebAdmin console, and the address it listens on.
  *
- * Review finding S5: OpenLiteSpeed ships the console on `*:7080`, and
- * install.sh relied on the firewall to keep it in — but the installer never
- * enables ufw, so on a stock Ubuntu box it answered on every address. Nothing
- * of the panel's uses it, so it belongs on 127.0.0.1, where an operator still
- * reaches it through an SSH tunnel. install.sh now writes that; this carries
- * it to servers installed before.
+ * OpenLiteSpeed ships the console on `*:7080`, and the installer never enables ufw, so it would
+ * answer on every address. The panel does not use it, so it belongs on 127.0.0.1 (reachable
+ * through an SSH tunnel). install.sh writes that; this carries it to servers installed before.
  */
 class OlsWebAdmin
 {
@@ -30,10 +27,9 @@ class OlsWebAdmin
     }
 
     /**
-     * The config with the console's :7080 listener moved to 127.0.0.1, or
-     * null when there is nothing to do: it is there already, or nothing
-     * listens on 7080 (an operator who moved the console chose its address).
-     * The same rewrite as install.sh's harden_ols_webadmin.
+     * The config with the console's :7080 listener moved to 127.0.0.1, or null when there is
+     * nothing to do: already there, or nothing listens on 7080 (an operator who moved the console
+     * chose its address). Same rewrite as install.sh's harden_ols_webadmin.
      */
     public static function desired(string $config): ?string
     {
@@ -49,9 +45,8 @@ class OlsWebAdmin
     }
 
     /**
-     * The addresses OpenLiteSpeed itself listens on for :7080 right now, as
-     * `ss` prints them (`0.0.0.0:7080`, `127.0.0.1:7080`, …). Other programs
-     * on the port are not ours to judge, so they are left out.
+     * The addresses OpenLiteSpeed itself listens on for :7080 right now, as `ss` prints them
+     * (`0.0.0.0:7080`, `127.0.0.1:7080`, …). Other programs on the port are left out.
      *
      * @return list<string>
      */
@@ -80,18 +75,13 @@ class OlsWebAdmin
      * Stop OpenLiteSpeed, wait until no server process is left, start it.
      * Null on success, otherwise what went wrong.
      *
-     * Not `lswsctrl restart`. A graceful restart hands the running server's
-     * listening sockets to the new one, so the new one inherits `*:7080`,
-     * cannot bind 127.0.0.1:7080 beside it, and exits ("Can't listen at
-     * address adminListener: Address already in use … Fatal error in
-     * configuration, exit!"). The old server keeps serving its old config:
-     * the console never moved, and from then on every graceful restart (each
-     * site change) failed the same way. Measured on a real server on
-     * 2026-11-03 (finding N1). install.sh does the same (restart_ols_cold).
+     * Never `lswsctrl restart`: a graceful restart hands the old listening sockets to the new
+     * server, which inherits `*:7080`, cannot bind 127.0.0.1:7080 beside it, and exits. The old
+     * server keeps its old config, and every later graceful restart fails the same way.
+     * install.sh does the same (restart_ols_cold).
      *
-     * The unit's own stop is graceful too (`lswsctrl delay-stop`,
-     * KillMode=none): it returns at once, and a draining server may linger
-     * for gracefulRestartTimeout (300 s). So: wait, then TERM, then KILL.
+     * The unit's own stop is graceful too (`lswsctrl delay-stop`, KillMode=none) and a draining
+     * server may linger for gracefulRestartTimeout (300 s). So: wait, then TERM, then KILL.
      */
     public function restartCold(int $grace = 15): ?string
     {
@@ -128,8 +118,7 @@ class OlsWebAdmin
     /**
      * The PIDs of every OpenLiteSpeed server process.
      *
-     * `ps -C` and `kill` rather than pgrep/pkill: the same match on the
-     * process name, with binaries the panel is already allowed to run
+     * `ps -C` and `kill` rather than pgrep/pkill: they are already allowed to the panel
      * (server.privilege.binaries), so this widens no grant.
      *
      * @return list<int>

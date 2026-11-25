@@ -1,29 +1,16 @@
 <?php
 
 /*
- * AI crawler names in three buckets, because "AI bot" is three different
- * things and blocking them is three different decisions:
+ * AI crawler names in three buckets, because blocking them is three different decisions:
  *
  *  - `training` feeds model weights and never sends a visitor back.
  *  - `search` indexes the site so it can be *cited* in an AI answer. This is
- *    inbound traffic; blocking it is what costs a site owner real money.
+ *    inbound traffic; blocking it costs a site owner real visitors.
  *  - `agent` fetches one page because a person asked a question right now.
- *    It carries the load of a crawl without the citation of a search index,
- *    so wanting it gone while keeping citations is a coherent position — and
- *    one two buckets could not express.
+ *    It carries the load of a crawl without the citation of a search index.
  *
- * The split follows the industry: Anthropic split ClaudeBot into training and
- * retrieval agents in Q2 2026, and Cloudflare moved its own policy from two
- * categories to Search/Agent/Training in July 2026. Treating training and
- * search as one bucket is the documented expensive mistake.
- *
- * Curated, not exhaustive — cross-checked against multiple independent 2026
- * sources rather than importing a third-party "block everything AI" list
- * wholesale (most of those also block the search bots, which is exactly the
- * traffic this project's default is trying to protect). Expect this to need
- * occasional updates as crawlers split or rename.
- *
- * Last reviewed: 2026-08-06.
+ * Curated, not exhaustive: a third-party "block everything AI" list also blocks the search
+ * bots, which is the traffic the default protects. Update as crawlers split or rename.
  */
 
 return [
@@ -51,10 +38,8 @@ return [
         'SemrushBot-OCOB',
     ],
 
-    // Indexes the site to answer questions about it later — the crawlers
-    // behind ChatGPT search, Claude search and Perplexity citations. Blocking
-    // these removes the site from AI search results, so nothing but the
-    // explicit "block everything" choice touches them.
+    // Indexes the site for AI search answers and citations. Blocking these removes the site from
+    // them, so only the explicit "block everything" choice touches them.
     'search' => [
         'OAI-SearchBot',
         'Claude-SearchBot',
@@ -63,8 +48,7 @@ return [
         'Amzn-SearchBot',
     ],
 
-    // Acts in real time on one person's behalf: a chat assistant fetching the
-    // page a user just asked about. Costs a request, returns no citation.
+    // Acts in real time on one person's behalf (a page a user just asked about).
     'agent' => [
         'ChatGPT-User',
         'Claude-User',
@@ -74,13 +58,9 @@ return [
     ],
 
     /*
-     * Names that exist only inside robots.txt, never as a visitor's user
-     * agent. Google and Apple train on what their ordinary crawlers
-     * (Googlebot, Applebot) fetch, and these tokens are how a site says "index
-     * me, don't train on me". A user-agent block on them can never match, so
-     * they were in `training` doing nothing while the screen said Gemini and
-     * Apple AI training were blocked (found 2026-09-30). The bot blocker
-     * returns the robots.txt lines for them instead.
+     * Names that exist only inside robots.txt, never as a visitor's user agent: how a site says
+     * "index me, don't train on me" to Google and Apple. A user-agent block can never match
+     * them, so the bot blocker returns robots.txt lines for them instead.
      */
     'robots_only' => [
         'Google-Extended',
@@ -88,12 +68,11 @@ return [
     ],
 
     /*
-     * Real visitors and search engines, as they identify themselves (bug #85).
+     * Real visitors and search engines, as they identify themselves.
      *
-     * A block rule matches anywhere in the user agent, so "Always block"
-     * refuses anything found in one of these — `Chrome`, `Windows`, `Android`,
-     * `Mozilla/5.0`, `Googlebot/2.1` all blocked every real visitor or Google.
-     * Keyed by what the refusal names.
+     * A block rule matches anywhere in the user agent, so "Always block" refuses anything found
+     * in one of these (`Chrome`, `Windows`, `Mozilla/5.0`, `Googlebot/2.1` would block every
+     * real visitor or Google). Keyed by what the refusal names.
      */
     'real_visitors' => [
         'Chrome (Windows)' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',

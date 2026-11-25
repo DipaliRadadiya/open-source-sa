@@ -8,29 +8,12 @@ use Illuminate\Contracts\Validation\ValidationRule;
 /**
  * Refuses a PHP version the chosen application will not run on.
  *
- * The sibling of {@see SupportedNodeVersion}, written after the same bug
- * arrived on the other runtime. The PHP field is one shared `phpFields()`
- * select offering every version on the box, and `defaultPhpVersion()` opens on
- * the *newest* installed one — `FpmPhpStack::versions()` sorts descending. So a
- * server with PHP 8.5 offered PrestaShop 8.5 and pre-selected it.
+ * The sibling of {@see SupportedNodeVersion}. The PHP field offers every installed version and
+ * defaults to the newest, which an app may not support (e.g. PrestaShop 8.2.1 on PHP 8.5). Caught
+ * at the form because by install time the user, directory, vhost and database already exist.
  *
- * What that cost, on 2026-09-08: PrestaShop 8.2.1 vendors the old monolithic
- * `symfony/symfony`, which does not run on 8.5. The install died inside
- * `ProxyCacheWarmer->warmUp()`, twenty-one frames deep in someone else's vendor
- * directory, and reached the user as "Server operation failed." The shop was
- * downloaded, unpacked, chowned and handed a database first.
- *
- * Caught at the form for the reason the Node rule gives: by install time the
- * system user, the directory, the vhost and the database all exist, so this is
- * the difference between an error message and a half-built site to clean up.
- *
- * **The ceiling is compared as major.minor, not as a major series — this is
- * where it differs from the Node rule and the difference is the whole point.**
- * Node majors *are* the support series, so that rule compares majors and a
- * ceiling of `24` admits `24.7`. PHP's series is the minor: 8.1 and 8.5 share
- * a major, so comparing majors would admit exactly the version that broke.
- * `version_compare` on the two-part string is the correct comparison here, and
- * copying the Node rule verbatim would have reproduced the bug it was fixing.
+ * **The ceiling is compared as major.minor, unlike the Node rule:** PHP's support series is the
+ * minor (8.1 and 8.5 share a major), so comparing majors would admit the version that broke.
  */
 class SupportedPhpVersion implements ValidationRule
 {
@@ -48,12 +31,8 @@ class SupportedPhpVersion implements ValidationRule
     {
         $version = (string) $value;
 
-        // An empty field is not "no version" — `AbstractPhpInstaller` resolves
-        // it to `server.default_php_version`, which is the newest PHP on the
-        // box and therefore the exact version a ceiling exists to exclude. The
-        // rule used to return here, so clearing the field walked straight past
-        // it: green form, no error, install dead inside the app's own vendor
-        // directory. Checking the fallback is checking what will actually run.
+        // An empty field resolves to `server.default_php_version` (the newest PHP, which a ceiling
+        // exists to exclude), so check the fallback: that is what will actually run.
         if (blank($version)) {
             if (blank($this->fallback)) {
                 return;
@@ -80,9 +59,7 @@ class SupportedPhpVersion implements ValidationRule
     }
 
     /**
-     * Public so the catalog asks the same question the form does — a card
-     * greyed by one comparison and a form refused by another could disagree
-     * about the very version on the ceiling.
+     * Public so the catalog and the form use the same comparison.
      */
     public static function within(?string $min, ?string $max, string $version): bool
     {
@@ -94,8 +71,7 @@ class SupportedPhpVersion implements ValidationRule
     }
 
     /**
-     * Said the way the project says it, because "invalid" tells the user
-     * nothing about what to pick instead.
+     * Names the supported range, so the user knows what to pick instead.
      */
     private function message(): string
     {
@@ -106,10 +82,7 @@ class SupportedPhpVersion implements ValidationRule
     }
 
     /**
-     * The empty-field case, worded separately because the user did not choose
-     * anything — telling them "the version you picked is unsupported" about a
-     * field they left alone reads as a bug in the form. It has to name the
-     * version they would get, or the message is about something invisible.
+     * The empty-field case, worded separately: it names the default version the user would get.
      */
     private function defaultMessage(): string
     {
@@ -126,8 +99,7 @@ class SupportedPhpVersion implements ValidationRule
     }
 
     /**
-     * The range as the project writes it, shared with the catalog's
-     * unavailable reason so the card and the form name it identically.
+     * The range as written for users, shared with the catalog's unavailable reason.
      */
     public static function describe(?string $min, ?string $max): string
     {

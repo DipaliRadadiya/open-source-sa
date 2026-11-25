@@ -32,10 +32,8 @@ class DeleteSystemUser
         $this->accountLock->run(function () use ($systemUser, $endSessions) {
             $this->emptyOwnGroup($systemUser->username);
 
-            // FS-C31: asked for, the account's processes are ended first — an
-            // open SSH session, a shell left running — because userdel will
-            // not remove an account that has any, and the panel had no other
-            // way to end them. Only when asked: it signs a person out.
+            // Only when asked, because it signs a person out; userdel refuses an account that
+            // still has processes.
             if ($endSessions) {
                 $this->endProcesses($systemUser->username);
             }
@@ -45,37 +43,31 @@ class DeleteSystemUser
                 ['feature' => 'system_user', 'op' => 'delete', 'system_user' => $systemUser->username],
             );
 
-            // Exit 8 is userdel refusing because the account still has a
-            // process — an SSH session, a worker, a cron run. Nothing is
-            // broken and nothing was removed; the person can end it and retry.
+            // Exit 8: userdel refuses because the account still has a process. Nothing was
+            // removed; the person can end it and retry.
             if ($result->exitCode() === 8) {
                 throw ValidationException::withMessages([
                     'system_user' => [__('errors/system-user.has_processes', ['username' => $systemUser->username])],
                 ]);
             }
 
-            // Exit 6 is "user does not exist": removed outside the panel, so
-            // the delete could never succeed and the row was stuck (bug #26).
-            // Confirmed with getent before trusting it — the panel's side
-            // (its row, its cron files) is all that is left to remove.
+            // Exit 6: the user was removed outside the panel, so only the panel's side (row, cron
+            // files) is left. Confirmed with getent before trusting it.
             if ($result->failed() && ! ($result->exitCode() === 6 && $this->goneFromServer($systemUser->username))) {
                 $this->activityLogger->log('system_user.delete_failed', $systemUser, ['username' => $systemUser->username]);
                 throw new SystemUserDeleteFailedException($result->reference);
             }
 
-            // Remove each cron job's /etc/cron.d file before the DB cascade drops
-            // the rows — otherwise the files would be orphaned and would point at
-            // a now-deleted OS user.
+            // Remove each cron job's /etc/cron.d file before the DB cascade drops the rows,
+            // or the files are orphaned and point at a deleted OS user.
             $cronjobs = $systemUser->cronjobs;
 
             foreach ($cronjobs as $cronjob) {
                 $this->crontab->remove($cronjob);
-                // The output log too — it outlived every user deletion, with
-                // nothing left in the panel pointing at it.
+                // The output log too; nothing else points at it.
                 $this->crontab->removeLog($cronjob);
             }
 
-            // Record how many cron jobs went with the user (audit breadcrumb).
             $this->activityLogger->log('system_user.deleted', $systemUser, [
                 'username' => $systemUser->username,
                 'cronjobs_removed' => $cronjobs->count(),
@@ -86,12 +78,10 @@ class DeleteSystemUser
     }
 
     /**
-     * End the account's PHP workers, and nothing else (OLD-20).
+     * End the account's PHP workers, and nothing else.
      *
-     * Asked when the account's application has just been deleted: its PHP
-     * workers then serve a site that is gone. True when only such workers were
-     * running (now ended) or nothing was; false when the account runs anything
-     * else — a person's SSH session or shell is not the panel's to end.
+     * True when only such workers were running (now ended) or nothing was; false when the
+     * account runs anything else: a person's SSH session or shell is not the panel's to end.
      */
     public function endPhpWorkers(string $username): bool
     {
@@ -126,9 +116,8 @@ class DeleteSystemUser
     /**
      * Kill every process the account owns.
      *
-     * `ps` then `kill`, both already granted, rather than `pkill`/`loginctl`
-     * and a new sudo grant for one button. KILL rather than TERM: a shell
-     * ignores TERM, and the account is about to stop existing.
+     * `ps` then `kill` (already granted), not `pkill`/`loginctl`. KILL rather than TERM: a
+     * shell ignores TERM.
      */
     private function endProcesses(string $username): void
     {
@@ -163,16 +152,12 @@ class DeleteSystemUser
     /**
      * Take everyone else out of the user's own group, so `userdel` removes it.
      *
-     * `userdel` removes a user's private group only when nobody else is in it,
-     * and somebody always is: provisioning a site adds the web server's account
-     * (`nobody` on OpenLiteSpeed) so it can write the site's logs. So the group
-     * outlived every user the panel deleted, and the name could never be used
-     * again, since creating a user refuses a name a group already has. Found on
-     * a real server, 2026-09-24: six deleted users, six leftover groups.
+     * `userdel` keeps a private group while anyone else is in it, and provisioning a site adds
+     * the web server's account (`nobody` on OpenLiteSpeed). A leftover group blocks reusing the
+     * name, since creating a user refuses a name a group already has.
      *
-     * Only the group named after the user, and only its supplementary members.
-     * Nothing still needs them there: a user with sites cannot be deleted, so
-     * no site's logs depend on the membership.
+     * Only the group named after the user, and only its supplementary members. Nothing needs
+     * them there: a user with sites cannot be deleted.
      */
     private function emptyOwnGroup(string $username): void
     {

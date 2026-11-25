@@ -25,12 +25,8 @@ class UfwFirewall implements Firewall
     {
         $result = $this->serverOps->run(['ufw', 'status', 'verbose'], ['feature' => 'firewall', 'op' => 'status']);
 
-        // A failed status command used to fall through to `enabled: false`,
-        // which is not "unknown" — it is a specific, wrong answer. The panel
-        // reported an active firewall as off, and worse, SshLockoutGuard and
-        // DeleteFirewallRule decide whether a rule is safe to remove from this
-        // value: false reads as "nothing is being blocked, deleting is fine".
-        // A firewall whose state cannot be read is a failure, not a disabled one.
+        // Never fall through to `enabled: false` here: SshLockoutGuard and DeleteFirewallRule read
+        // false as "nothing is blocked, deleting is fine". An unreadable firewall is a failure.
         if ($result->failed()) {
             throw new FirewallOperationException(
                 $result->reference,
@@ -42,9 +38,7 @@ class UfwFirewall implements Firewall
 
         $output = $result->output();
 
-        // Null when ufw does not say. An inactive ufw prints no `Default:`
-        // line, and "deny incoming / allow outgoing" was a guess shown as
-        // fact (OLD-1).
+        // Null when ufw does not say (an inactive ufw prints no `Default:` line); never guess.
         $incoming = null;
         $outgoing = null;
         if (preg_match('/Default:\s*(\w+)\s*\(incoming\),\s*(\w+)\s*\(outgoing\)/i', $output, $m)) {
@@ -66,11 +60,9 @@ class UfwFirewall implements Firewall
     /**
      * One ufw change at a time, panel-wide.
      *
-     * ufw rewrites its rules file on every change and has no lock of its own
-     * worth relying on: two rules switched off at the same moment both
-     * answered 200 and one stayed in ufw — the port open while the panel said
-     * closed (frontend QA FS-C24, reproduced 3 of 3 on Ubuntu 26.04). A
-     * position read for `insert` and the insert itself also belong together.
+     * ufw rewrites its rules file on every change and has no reliable lock: two concurrent removals
+     * left one rule in ufw, the port open while the panel said closed. A position read for `insert`
+     * and the insert itself also belong together.
      */
     private function exclusively(callable $change): ServerOpsResult
     {
@@ -94,11 +86,9 @@ class UfwFirewall implements Firewall
     {
         $context = ['feature' => 'firewall', 'op' => 'apply', 'rule' => $rule->id];
 
-        // ufw stops at the first rule that matches, and a plain add goes to
-        // the bottom. A deny for one address landed below "allow 22 from
-        // anywhere" and blocked nothing (bug #20), so — as v7 does — deny and
-        // reject go on top. Appending stays the fallback: with no rules yet
-        // there is no position to insert at.
+        // ufw stops at the first matching rule and a plain add goes to the bottom, so a deny would
+        // land below "allow 22 from anywhere" and block nothing: deny/reject go on top. Appending is
+        // the fallback when there is no position to insert at.
         if (in_array($rule->action, ['deny', 'reject'], true) && ($position = $this->topPosition($rule)) !== null) {
             $inserted = $this->serverOps->run(
                 array_merge(['ufw', 'insert', (string) $position], $this->ruleArgs($rule)),
@@ -116,10 +106,8 @@ class UfwFirewall implements Firewall
     /**
      * Where the top of the rule list is for this rule, or null when unknown.
      *
-     * ufw numbers its IPv6 rules after all the IPv4 ones and refuses to put
-     * an IPv6-only rule at position 1 ("Invalid position"), so a rule from an
-     * IPv6 address goes above the first IPv6 rule instead. Measured with
-     * `ufw --dry-run insert` on Ubuntu 26.04.
+     * ufw numbers IPv6 rules after all IPv4 ones and refuses an IPv6-only rule at position 1
+     * ("Invalid position"), so an IPv6 source goes above the first IPv6 rule instead.
      */
     private function topPosition(FirewallRule $rule): ?int
     {
@@ -154,10 +142,8 @@ class UfwFirewall implements Firewall
 
     public function enable(): ServerOpsResult
     {
-        // Enforce the secure default posture (deny incoming / allow outgoing)
-        // before turning UFW on — don't rely on the box's persisted default,
-        // which a prior `ufw default allow incoming` could have left insecure.
-        // --force skips the interactive "proceed?" prompt.
+        // Set the secure default (deny incoming / allow outgoing) first: a persisted default may be
+        // insecure. --force skips the interactive prompt.
         $commands = [
             ['ufw', 'default', 'deny', 'incoming'],
             ['ufw', 'default', 'allow', 'outgoing'],

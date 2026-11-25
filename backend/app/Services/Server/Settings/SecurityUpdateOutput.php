@@ -7,16 +7,11 @@ use App\Support\CommandRedactor;
 /**
  * The running tail of a security update's output, bounded and redacted.
  *
- * Bounded for the reason `InstallProgress` is: apt emits hundreds of chunks and
- * a database write each would cost more than the upgrade. The cap keeps the
- * *end* of the output, because the thing worth reading is what it said last.
+ * Bounded as `InstallProgress` is: a database write per apt chunk would cost more than the
+ * upgrade. The cap keeps the *end* of the output, because that is what is worth reading.
  *
- * Redacted, unlike `InstallProgress`, which writes apt's bytes through
- * untouched. That is defensible for `apt install php8.4-fpm` — the package name
- * is the whole command. An upgrade pulls from whatever sources the box has
- * configured, and a private mirror with credentials in its URL is quoted back
- * verbatim the moment it cannot be reached. This field is read through the same
- * card as the failed-run excerpt, which is redacted for exactly that reason.
+ * Redacted, unlike `InstallProgress`: an upgrade pulls from the box's configured sources, and
+ * a private mirror with credentials in its URL is quoted back verbatim when unreachable.
  */
 class SecurityUpdateOutput
 {
@@ -25,11 +20,8 @@ class SecurityUpdateOutput
     /**
      * How much new output justifies a write.
      *
-     * Per-chunk would be hundreds of writes; only-at-the-end would leave the
-     * screen watching a spinner with nothing under it for minutes, and would
-     * lose apt's last words entirely if the run were killed. A kilobyte is the
-     * compromise, and it scales with how talkative the run is rather than with
-     * a clock.
+     * Per chunk would be hundreds of writes; only at the end would show nothing for minutes
+     * and lose apt's last words if the run were killed.
      */
     private const FLUSH_BYTES = 1024;
 
@@ -60,10 +52,8 @@ class SecurityUpdateOutput
     /**
      * The buffer, every line redacted.
      *
-     * Line by line including the last, which may be a fragment: a chunk
-     * boundary can land in the middle of the URL being complained about, and
-     * skipping the incomplete line is how the one secret in the output survives
-     * the redactor.
+     * Line by line including the last, which may be a fragment: skipping an incomplete line
+     * would let a secret cut mid-URL by a chunk boundary survive the redactor.
      */
     public function text(): string
     {
@@ -78,9 +68,7 @@ class SecurityUpdateOutput
     /**
      * How many packages the run said it upgraded, or null if it did not say.
      *
-     * unattended-upgrades names them on one line. Null rather than zero when
-     * the line is absent: "it did not report" and "it upgraded nothing" are
-     * different answers, and only the second is a claim.
+     * Null rather than zero when the line is absent: "did not report" is not "upgraded nothing".
      */
     public function packagesUpgraded(): ?int
     {
@@ -88,12 +76,9 @@ class SecurityUpdateOutput
     }
 
     /**
-     * The line is printed near the start of a run, and the buffer keeps only
-     * the last 8 KB — so reading it from the buffer at the end, as this used
-     * to, found it only on runs too small to matter. On the Apache test server
-     * a 109-package run reported `packages_upgraded: null`. So it is counted
-     * while it passes through, and only once the whole line has arrived: a
-     * chunk can end in the middle of the package list.
+     * The line is printed near the start of a run and the buffer keeps only the last 8 KB, so it
+     * is counted as it passes through, once the whole line has arrived (a chunk can end in the
+     * middle of the package list).
      */
     private function countPackages(string $text, bool $requireEndOfLine = true): ?int
     {
@@ -119,8 +104,7 @@ class SecurityUpdateOutput
 
         $text = substr($text, -self::MAX_BYTES);
 
-        // Starting mid-line makes the first line look like a complete
-        // statement. Drop the fragment.
+        // Drop the leading fragment: it would look like a complete line.
         $newline = strpos($text, "\n");
 
         return $newline === false ? $text : substr($text, $newline + 1);

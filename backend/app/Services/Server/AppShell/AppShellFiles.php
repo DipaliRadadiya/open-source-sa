@@ -5,13 +5,11 @@ namespace App\Services\Server\AppShell;
 use App\Services\Panel\PanelPhpBinary;
 
 /**
- * The four files container login is made of, rendered and nothing more (RC-28).
+ * The four files container login is made of, rendered and nothing more.
  *
- * Pure for the same reason SudoersFile is: two of these are a sudoers rule and
- * an sshd block, and either one written wrong can lock people out of the
- * server. Rendering apart from writing is what lets the content be asserted
- * and validated before anything is installed. {@see AppShellInstaller} owns
- * the writes.
+ * Pure like SudoersFile: a wrong sudoers rule or sshd block can lock people out of the server,
+ * so the content is asserted and validated before anything is installed.
+ * {@see AppShellInstaller} owns the writes.
  *
  *  - the helper: a standalone PHP script, root:root 0755, the only thing that
  *    runs docker for these users (resources/app-shell/helper.php);
@@ -25,12 +23,10 @@ class AppShellFiles
     public function __construct(private PanelPhpBinary $php) {}
 
     /**
-     * Are all the paths set, absolute and plain? Every write checks this
-     * first: a config that lost the block (a stale cache from before it
-     * existed) must fail the step, not run `tee` and `mv` against an empty
-     * path. Plain because two of them are written unquoted into sshd and sudo
-     * syntax, and the sudoers name must have no dot: sudo skips such files,
-     * which is what keeps the `.new` copy inert while visudo checks it.
+     * Are all the paths set, absolute and plain? Every write checks this first, so a config that
+     * lost the block (stale cache) fails the step instead of running `tee` and `mv` on an empty
+     * path. Plain because two are written unquoted into sshd and sudo syntax; the sudoers name
+     * must have no dot, since sudo skips such files, which keeps the `.new` copy inert during visudo.
      */
     public function configured(): bool
     {
@@ -78,11 +74,9 @@ class AppShellFiles
     /**
      * The helper, with the panel's own PHP as its interpreter.
      *
-     * `-n` so no php.ini is read: the helper runs as root for users who are not
-     * administrators, and an ini file is one more thing that could change what
-     * it does. It needs nothing beyond PHP's core (json, pcre, proc_open,
-     * syslog). The panel's own binary rather than `/usr/bin/php`, because on
-     * OpenLiteSpeed there may be no `/usr/bin/php` at all.
+     * `-n` so no php.ini is read: the helper runs as root for non-administrators, and an ini file
+     * could change what it does. It needs only PHP core (json, pcre, proc_open, syslog). The
+     * panel's own binary, since OpenLiteSpeed may have no `/usr/bin/php`.
      */
     public function helper(): string
     {
@@ -100,10 +94,8 @@ class AppShellFiles
     /**
      * What sshd runs instead of anything a member asks for.
      *
-     * Not root, and does nothing but forward: sudo resets the environment, so
-     * SSH_ORIGINAL_COMMAND would not survive into the helper, and is passed as
-     * a single argument instead. Unset (a plain `ssh -t`) and empty both arrive
-     * as '' and mean "open a shell".
+     * Not root, and only forwards: sudo resets the environment, so SSH_ORIGINAL_COMMAND is passed
+     * as a single argument. Unset (a plain `ssh -t`) and empty both arrive as '' and open a shell.
      */
     public function login(): string
     {
@@ -118,8 +110,8 @@ class AppShellFiles
     /**
      * One rule: the group may run the helper as root, with no password.
      *
-     * No `Defaults` line, for the reason SudoersFile::render() gives: a setting
-     * this sudo build does not know makes the whole file invalid.
+     * No `Defaults` line (see SudoersFile::render()): a setting this sudo build does not know
+     * invalidates the whole file.
      */
     public function sudoers(): string
     {
@@ -139,10 +131,9 @@ class AppShellFiles
     /**
      * The `Match Group` block.
      *
-     * A Match block in an included file ends with that file, so nothing here
-     * reaches users outside the group. Forwarding of every kind is off and
-     * `~/.ssh/rc` is not run: with ForceCommand alone, `ssh -L` and `-R` would
-     * still open tunnels from the host, and `.ssh/rc` is a host command.
+     * A Match block in an included file ends with that file, so it cannot reach users outside the
+     * group. All forwarding is off and `~/.ssh/rc` is not run: ForceCommand alone still allows
+     * `ssh -L`/`-R` tunnels from the host, and `.ssh/rc` is a host command.
      */
     public function sshd(): string
     {
