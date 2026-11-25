@@ -274,6 +274,8 @@ return new class extends Migration
             // traffic to the first — a data leak between sites, not just a
             // broken deploy.
             $table->unique('app_port');
+            // Extra nginx `location` blocks the user added to this site.
+            $table->text('nginx_location')->nullable();
         });
     }
 

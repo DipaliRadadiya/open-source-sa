@@ -398,14 +398,8 @@ describe('the record of a clean', function () {
     });
 });
 
-it('adds and removes the keep columns cleanly', function () {
-    $migration = require database_path('migrations/2026_10_26_000001_add_keep_days_to_disk_cleaner_tables.php');
-
-    $migration->down();
-    expect(Schema::hasColumn('disk_cleaner_schedules', 'keep_days'))->toBeFalse()
-        ->and(Schema::hasColumn('disk_cleaner_runs', 'keep_days'))->toBeFalse();
-
-    $migration->up();
+// Folded into the disk cleaner create migrations by the 2026-11-25 squash.
+it('creates the keep columns with their tables', function () {
     expect(Schema::hasColumn('disk_cleaner_schedules', 'keep_days'))->toBeTrue()
         ->and(Schema::hasColumn('disk_cleaner_runs', 'keep_days'))->toBeTrue();
 });

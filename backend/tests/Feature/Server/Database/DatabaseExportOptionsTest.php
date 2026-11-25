@@ -147,22 +147,10 @@ describe('compressed exports', function () {
     });
 });
 
-it('adds and removes its columns cleanly', function () {
-    $add = require database_path('migrations/2026_10_26_000002_add_export_expiry_and_import_safety_copy.php');
-    $drop = require database_path('migrations/2026_10_26_000003_drop_expires_at_from_database_exports.php');
-
-    $drop->down();
-    expect(Schema::hasColumn('database_exports', 'expires_at'))->toBeTrue();
-    $drop->up();
-    expect(Schema::hasColumn('database_exports', 'expires_at'))->toBeFalse();
-
-    // The earlier migration still runs in order on a fresh install: down
-    // with the column already dropped by its successor is re-added first.
-    $drop->down();
-    $add->down();
-    expect(Schema::hasColumn('database_imports', 'safety_copy'))->toBeFalse();
-    $add->up();
-    $drop->up();
+// Folded into the create migrations by the 2026-11-25 squash: imports have
+// their safety-copy switch, and exports never had the expiry column that was
+// added and dropped again.
+it('creates the import safety-copy column and no export expiry', function () {
     expect(Schema::hasColumn('database_imports', 'safety_copy'))->toBeTrue()
         ->and(Schema::hasColumn('database_exports', 'expires_at'))->toBeFalse();
 });

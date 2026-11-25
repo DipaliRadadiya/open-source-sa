@@ -41,6 +41,8 @@ return new class extends Migration
             $table->unsignedInteger('line')->nullable();
 
             $table->foreignId('safety_export_id')->nullable()->constrained('database_exports')->nullOnDelete();
+            // Whether a copy of the database is taken before the import.
+            $table->boolean('safety_copy')->default(true);
             // True when the import failed and the safety copy was loaded back.
             $table->boolean('restored')->default(false);
 

@@ -28,6 +28,7 @@ return new class extends Migration
             $table->string('kind', 8);   // push | pull
             $table->string('mode', 16);  // files | database | full
             $table->boolean('backup')->default(false);
+            $table->boolean('safety_copy')->default(true);
             $table->string('status', 16); // queued | running | succeeded | failed
             $table->json('error')->nullable();
             $table->unsignedSmallInteger('error_status')->nullable();

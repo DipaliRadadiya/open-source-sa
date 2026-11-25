@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('trigger'); // manual | scheduled
             $table->json('categories');
+            $table->unsignedTinyInteger('keep_days')->nullable();
             // Per-category freed bytes { key: bytes }.
             $table->json('freed')->nullable();
             $table->unsignedBigInteger('freed_total')->default(0);

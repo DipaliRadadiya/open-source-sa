@@ -46,6 +46,8 @@ return new class extends Migration
             $table->boolean('open_basedir_enabled')->default(false);
             $table->text('open_basedir_paths')->nullable();
             $table->text('disable_functions')->nullable();
+            // What the panel itself put in disable_functions at provisioning.
+            $table->text('provisioned_disable_functions')->nullable();
             $table->boolean('allow_url_fopen')->nullable();
             $table->string('php_timezone')->nullable();
             $table->string('auto_prepend_file')->nullable();

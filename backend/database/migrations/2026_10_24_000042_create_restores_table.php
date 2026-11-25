@@ -37,6 +37,8 @@ return new class extends Migration
             // The backup taken of the current state before anything was
             // overwritten — the way back.
             $table->foreignId('safety_backup_id')->nullable()->constrained('backups')->nullOnDelete();
+            // Whether a safety backup is taken before the restore.
+            $table->boolean('safety_copy')->default(true);
 
             // Where the previous site directory was moved to. Kept after a
             // successful restore too: "the restore worked but the site is

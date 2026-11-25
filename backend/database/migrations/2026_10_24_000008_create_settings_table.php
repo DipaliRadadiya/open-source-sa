@@ -31,6 +31,8 @@ return new class extends Migration
             // resets it.
             $table->timestamp('central_token_used_at')->nullable();
             $table->timestamps();
+            // Months the activity log is kept; null keeps everything.
+            $table->unsignedTinyInteger('activity_retention_months')->nullable();
         });
     }
 

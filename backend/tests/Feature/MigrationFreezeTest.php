@@ -29,6 +29,19 @@ use Illuminate\Support\Facades\Process;
  * reinstalled, never upgraded: its `migrations` table records none of the
  * new files, so `migrate` would try to create every table it already has.
  *
+ * The second squash, 2026-11-25. The ten migrations added after the baseline
+ * (keep_days, export expiry and import safety copy, restore and staging
+ * safety copies, activity retention, backup stop details and worker process,
+ * provisioned disable_functions, nginx_location) were folded into their
+ * tables' create migrations, so every table again has exactly one file
+ * (Dipali; schema compared table by table before and after: identical). Seven
+ * of them had shipped in v8.0.20, so this edits and deletes released
+ * migrations on purpose, as the first squash did: everything was still in
+ * test mode and is reinstalled, not upgraded. There is no upgrade path from
+ * v8.0.20 or earlier across it — the release checks below skip those
+ * releases and apply in full from the next one on. After launch this must
+ * not happen again: a change is a new migration.
+ *
  * The rule therefore holds again from the baseline on, with three checks:
  *
  *  - A released migration may be missing from the tree only when it sorts
@@ -48,6 +61,20 @@ use Illuminate\Support\Facades\Process;
 function migrationSquashBaseline(): string
 {
     return '2026_10_24_000000';
+}
+
+/** The last release the 2026-11-25 squash leaves without an upgrade path. */
+function secondSquashThroughRelease(): string
+{
+    return 'v8.0.20';
+}
+
+/** Skip the release comparison for a release the second squash cannot upgrade. */
+function skipIfBeforeSecondSquash(string $tag): void
+{
+    if (version_compare(ltrim($tag, 'v'), ltrim(secondSquashThroughRelease(), 'v'), '<=')) {
+        test()->markTestSkipped("{$tag} cannot be upgraded across the 2026-11-25 squash; such panels are reinstalled");
+    }
 }
 
 function latestReleaseTag(): ?string
@@ -101,6 +128,8 @@ it('never changes a migration that has already shipped in a release', function (
         $this->markTestSkipped('no release tag available to compare against');
     }
 
+    skipIfBeforeSecondSquash($tag);
+
     $changed = [];
 
     foreach (glob(database_path('migrations/*.php')) as $path) {
@@ -140,6 +169,8 @@ it('never deletes a released migration, except the set the squash replaced', fun
         $this->markTestSkipped('no release tag available to compare against');
     }
 
+    skipIfBeforeSecondSquash($tag);
+
     $deleted = array_values(array_filter(
         $released,
         fn (string $name): bool => strcmp($name, migrationSquashBaseline()) > 0
@@ -171,7 +202,8 @@ it('keeps every baseline migration exactly as it was squashed', function () {
             return [$name => $hash];
         });
 
-    expect($pinned)->toHaveCount(60);
+    // One per table (61 since application_runs; re-pinned by the 2026-11-25 squash).
+    expect($pinned)->toHaveCount(61);
 
     $changed = $pinned
         ->filter(fn (string $hash, string $name): bool => ! is_file(database_path('migrations/'.$name))

@@ -74,6 +74,9 @@ return new class extends Migration
             $table->string('status', 16)->index();
             $table->json('manifest')->nullable();
             $table->string('reason')->nullable();
+            // Where a run that did not finish stopped, and why.
+            $table->string('stopped_step', 64)->nullable();
+            $table->string('stopped_cause', 32)->nullable();
 
             // Why a failed backup could not reach its storage. `reason` is the
             // step — `upload_artifact` — which is where, not why; the cause
@@ -121,6 +124,10 @@ return new class extends Migration
             // over an unindexed `created_at` is a full scan that gets
             // measurably slower every night.
             $table->index('created_at');
+            // Which worker process runs it, so a run whose worker died can be
+            // cleared at once (StaleBackupReaper).
+            $table->unsignedInteger('worker_pid')->nullable();
+            $table->string('worker_started', 32)->nullable();
         });
     }
 

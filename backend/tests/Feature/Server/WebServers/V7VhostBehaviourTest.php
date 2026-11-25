@@ -131,12 +131,7 @@ it('renders a Node site\'s own v7 location block instead of the default proxy', 
     expect($default)->toContain('proxy_pass http://127.0.0.1:3000;')->toContain('@restarting');
 });
 
-it('adds and removes the nginx_location column', function () {
-    $migration = require database_path('migrations/2026_11_08_000001_add_nginx_location_to_applications.php');
-
-    $migration->down();
-    expect(Schema::hasColumn('applications', 'nginx_location'))->toBeFalse();
-
-    $migration->up();
+// Folded into create_applications by the 2026-11-25 squash.
+it('creates the nginx_location column with the applications table', function () {
     expect(Schema::hasColumn('applications', 'nginx_location'))->toBeTrue();
 });

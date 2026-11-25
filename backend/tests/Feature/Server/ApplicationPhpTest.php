@@ -1630,13 +1630,8 @@ it('cannot be told what the provisioned list was through the settings endpoint',
     $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', true);
 });
 
-it('has a migration for the provisioned list that can be rolled back', function () {
-    $migration = require database_path('migrations/2026_11_05_000001_add_provisioned_disable_functions_to_application_php_settings.php');
-
-    $migration->down();
-    expect(Schema::hasColumn('application_php_settings', 'provisioned_disable_functions'))->toBeFalse();
-
-    $migration->up();
+// Folded into create_application_php_settings by the 2026-11-25 squash.
+it('creates the provisioned list column with its table', function () {
     expect(Schema::hasColumn('application_php_settings', 'provisioned_disable_functions'))->toBeTrue();
 });
 
