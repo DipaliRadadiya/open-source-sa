@@ -17,12 +17,9 @@ use App\Services\Server\ServerOps;
 use Illuminate\Support\Str;
 
 /**
- * Shared machinery for the PHP marketplace: WordPress, Moodle, Nextcloud and
- * the rest.
+ * Shared machinery for the PHP marketplace: WordPress, Moodle, Nextcloud and the rest.
  *
- * Split from the base so a Node application does not carry a PHP stack it
- * never asks a question of. The two families share fetching and file writing;
- * they share nothing about which interpreter runs the application's own CLI.
+ * Split from the base so a Node application does not carry a PHP stack it never uses.
  */
 abstract class AbstractPhpInstaller extends AbstractSiteInstaller
 {
@@ -39,8 +36,8 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
     }
 
     /**
-     * Nearly every PHP application in the catalog stores its content in a
-     * database; the ones that don't (Statamic) say so.
+     * Nearly every PHP application stores its content in a database; the ones that don't
+     * (Statamic) say so.
      */
     public function needsDatabase(): bool
     {
@@ -50,9 +47,8 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
     /**
      * Nothing to run: a PHP application is served from its directory.
      *
-     * Left unimplemented on the shared base on purpose, so a Node installer
-     * that forgets it is a fatal error at boot rather than an application that
-     * quietly never starts.
+     * Left unimplemented on the shared base on purpose, so a Node installer that forgets it
+     * fails loudly instead of never starting.
      */
     public function startCommand(Application $application, string $documentRoot): ?string
     {
@@ -60,36 +56,19 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
     }
 
     /**
-     * The command prefix an application's own CLI should run under: the
-     * interpreter, plus the memory limit that run is allowed.
+     * The command prefix an application's own CLI runs under: the interpreter plus a memory limit.
      *
-     * **The binary** is the site's version, from the stack that serves it.
-     * Every installer used to build this from `php_binary_pattern`, which is
-     * the FPM answer — on an OpenLiteSpeed box the interpreter lives in the
-     * lsws tree, and running /usr/bin/php there means installing an
-     * application against a different PHP than the one that will serve it.
+     * The binary is the site's version from the stack that serves it (on OpenLiteSpeed the
+     * interpreter lives in the lsws tree, not `php_binary_pattern`'s FPM path).
      *
-     * **The memory limit** is set explicitly because the ambient one differs
-     * per stack, and on one of them it is too small to install with. Debian's
-     * CLI ini sets `memory_limit = -1`, so `/usr/bin/php8.4` on nginx and
-     * Apache is effectively unlimited; LiteSpeed's lsphp lands on its
-     * *production* ini at 128M instead, and Mautic's Symfony container compile
-     * does not fit in it — "Allowed memory size of 134217728 bytes exhausted",
-     * on OpenLiteSpeed only. Every PHP site type here runs a CLI step, so
-     * Mautic was simply the heaviest and therefore the first to hit the wall.
+     * The memory limit is explicit because the ambient one differs per stack: Debian's CLI ini is
+     * unlimited, but lsphp uses its 128M production ini, which is too small for Mautic's container
+     * compile. `ApplicationPhpSettings` cannot answer this: it is written into the FPM pool or
+     * site ini, which a CLI run never reads. Uses `-d` like {@see MoodleInstaller} rather than
+     * editing a php.ini.
      *
-     * The site's own `ApplicationPhpSettings` cannot answer this: that value is
-     * written into the FPM pool or the site's ini, which a CLI invocation never
-     * reads. It also describes a request-serving budget, which is a different
-     * job from a one-off container compile.
-     *
-     * Passing `-d` rather than editing a php.ini follows {@see MoodleInstaller},
-     * which already does this for `max_input_vars`: fix the run, and leave the
-     * ini the user may later want to own alone.
-     *
-     * Returned as an array, and `phpBinary()` deliberately no longer exists, so
-     * that running an application's CLI *without* a limit is unexpressible
-     * rather than merely discouraged — a new site type cannot forget it.
+     * Returned as an array and `phpBinary()` no longer exists, so a CLI run without a limit cannot
+     * be expressed.
      *
      * @return array<int, string>
      */
@@ -100,17 +79,14 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
         return [
             $this->stack->binaryPath($version),
             '-d',
-            // Top level, and deliberately not inside `server.installers`: the
-            // keys of that array are site types (`ProvisioningBudget` iterates
-            // them), so a scalar in there would become a one-click app.
+            // Not inside `server.installers`: its keys are site types, so a scalar there would
+            // become a one-click app.
             'memory_limit='.(string) config('server.installer_php_memory_limit', '512M'),
         ];
     }
 
     /**
-     * The PHP this site's installer runs under: its own version, or the server
-     * default a blank one resolves to. One place, so choosing a release for
-     * a version and running the installer on it cannot use two answers.
+     * The PHP this site's installer runs under: its own version, or the server default.
      */
     protected function phpVersion(Application $application): string
     {
@@ -118,24 +94,14 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
     }
 
     /**
-     * Schedule the application's own background job, as the site user, on
-     * the site's own PHP.
+     * Schedule the application's own background job, as the site user, on the site's PHP.
      *
-     * Nextcloud and Moodle both need a cron to run their background tasks,
-     * and nothing added one: Nextcloud reported "background jobs last ran 56
-     * years ago" on a fresh install (nginx test server). A preset for it
-     * existed on the Cronjobs screen, but the user had to know to add it.
+     * Uses the PHP binary by absolute path (`php` resolves to the server default, not the site's)
+     * and the Cronjobs screen's action, so the job shows up there. Skipped when a job with the
+     * same command exists, so Retry Setup does not add a second.
      *
-     * The PHP binary by absolute path, not `php`: that resolves to the
-     * server's default version, which is not necessarily the site's. Created
-     * through the same action as the Cronjobs screen, so the job appears there
-     * and can be edited or removed like any other. Skipped when a job with the
-     * same command already exists, so Retry Setup does not add a second.
-     *
-     * `$script` may carry arguments (`bin/console mautic:segments:update`):
-     * `php -f <file> <args>` hands them to the script. `$phpOptions` go
-     * before `-f`, for a console that needs more than the CLI's default
-     * memory.
+     * `$script` may carry arguments (`bin/console mautic:segments:update`); `$phpOptions` go
+     * before `-f`.
      *
      * @param  array<int, string>  $phpOptions
      *
@@ -152,8 +118,7 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
 
         try {
             app(CreateCronjob::class)->execute([
-                // Unique per job: an application with several (Mautic) needs a
-                // name for each, and cron job names are unique.
+                // Unique per job: cron job names are unique and an app may have several.
                 'name' => Str::limit($application->name, 200, '').' '.$label.' #'.$application->id,
                 'system_user_id' => $application->system_user_id,
                 'application_id' => $application->id,

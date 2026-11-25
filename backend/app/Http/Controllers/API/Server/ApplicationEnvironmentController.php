@@ -25,30 +25,20 @@ use RuntimeException;
 /**
  * The application's `.env`, edited as one file.
  *
- * Whole-file rather than per-key: comments, ordering and blank-line grouping
- * belong to whoever wrote them, and a key-by-key API would rebuild the file on
- * every save and quietly discard all three.
+ * Whole-file rather than per-key, so a save keeps the user's comments, ordering and blank lines.
  */
 class ApplicationEnvironmentController extends Controller
 {
     public function show(Application $application): JsonResponse
     {
-        // No site-type check here: `permission:app_environment` already
-        // refuses a WordPress site with a 404, in one place, for every app
-        // route. A second answer in the controller would only be a second
-        // thing to keep in step.
+        // No site-type check: `permission:app_environment` already returns 404 for a WordPress site.
         return response()->json([
             'environment' => ApplicationEnvironmentResource::make($application)->resolve(),
         ]);
     }
 
     /**
-     * Check a file before it is saved (ENV-1).
-     *
-     * The warnings — an `export` line a Node service will not read, a debug
-     * flag, a duplicate key — only appeared after saving, by which point the
-     * file was in place and the service restarted on it. Same checks, same
-     * refusals as a save, nothing written.
+     * Check a file before it is saved: the same checks and refusals as a save, nothing written.
      */
     public function check(
         SaveEnvironmentRequest $request,
@@ -74,19 +64,15 @@ class ApplicationEnvironmentController extends Controller
 
         return response()->json([
             'checks' => $checks,
-            // What a save of this text would be refused for. Empty: it saves.
+            // What a save of this text would be refused for; empty means it saves.
             'refused' => $refused,
             'saveable' => $refused === [],
         ]);
     }
 
     /**
-     * Replace the file.
-     *
-     * Then do whatever that framework needs for the change to actually take
-     * effect — a Laravel site with a cached config and a Node service both
-     * ignore a saved `.env` until told otherwise, and a screen that says
-     * "Saved" while nothing changed is worse than one that fails.
+     * Replace the file, then do what the framework needs for the change to take effect (a cached
+     * Laravel config and a running Node service both ignore a saved `.env` until told).
      */
     public function update(
         SaveEnvironmentRequest $request,
@@ -100,9 +86,7 @@ class ApplicationEnvironmentController extends Controller
         $raw = (string) $request->validated('raw');
         $framework = $detector->detect($application);
 
-        // Syntax errors are refused; warnings are not. A duplicate key or a
-        // debug flag is the user's business, but a line the parser cannot read
-        // means the file they are about to install does not work at all.
+        // Syntax errors are refused; warnings are not (a duplicate key or debug flag is the user's call).
         $errors = array_values(array_filter(
             $inspector->checks($raw, $framework),
             fn (array $check): bool => $check['severity'] === 'error' && str_starts_with($check['code'], 'syntax_'),
@@ -127,15 +111,12 @@ class ApplicationEnvironmentController extends Controller
         $applied = $this->apply($application, $framework, $detector);
         $restarted = $this->restart($application, $request->boolean('restart'));
 
-        // Key names only. The whole point of the screen is that the values are
-        // secrets, and an activity log is read by more people than the file is.
+        // Key names only: the values are secrets and the activity log has more readers than the file.
         $activity->log('application.environment_updated', $application, [
             'name' => $application->name,
             'keys' => implode(', ', $this->changedKeys($before, $raw)) ?: '—',
-            // The file holding what this change replaced. Recorded so the
-            // history can offer to undo *this* row rather than leaving someone
-            // to match a log entry against a directory listing by timestamp.
-            // Null on a first save, where there was nothing to keep.
+            // The file holding what this change replaced, so the history can undo this row.
+            // Null on a first save.
             'backup' => $backup,
             // False when turned off, so the line says "(without a safety copy)".
             'safety_copy' => $request->safetyCopy(),
@@ -156,7 +137,7 @@ class ApplicationEnvironmentController extends Controller
             throw ValidationException::withMessages(['backup' => [__('errors/application.unknown_backup')]]);
         }
 
-        // Missing: restore() below answers that, as before.
+        // Missing: restore() below answers that.
         if ($backup === null) {
             return;
         }
@@ -171,12 +152,8 @@ class ApplicationEnvironmentController extends Controller
     }
 
     /**
-     * Who changed this file, and when.
-     *
-     * Its own endpoint rather than a field on {@see show()}: the editor is
-     * loaded to be typed into, and paying for a log query and a directory
-     * listing on every one of those loads to render a panel nobody has scrolled
-     * to yet is the wrong trade.
+     * Who changed this file, and when. Its own endpoint rather than a field on {@see show()}, so
+     * loading the editor does not pay for a log query and a directory listing.
      */
     public function history(Request $request, Application $application, EnvironmentHistory $history): JsonResponse
     {
@@ -196,18 +173,13 @@ class ApplicationEnvironmentController extends Controller
     /**
      * What one logged change did, variable by variable.
      *
-     * Guarded on `manage` rather than `app_environment` view, unlike the
-     * history list beside it. A view-only user can read the file's *current*
-     * values in the editor; nobody can see previously rotated ones today. A
-     * `manage` user already can — restore a backup, read it, restore back — so
-     * this shows them nothing new and saves them from doing exactly that to
-     * find out what changed. For a viewer it would be a genuine widening.
+     * Guarded on `manage`, unlike the history list. A view-only user sees only the current values;
+     * this shows previous ones, which a `manage` user can already reach by restoring a backup.
      */
     public function diff(Application $application, ActivityLog $log, EnvironmentDiff $diff): JsonResponse
     {
-        // Route model binding resolves the id globally. Without this a log id
-        // from any other application would render against this one — and this
-        // is the endpoint that answers with secret values.
+        // Route binding resolves the log id globally: without this check a log from another
+        // application would be rendered here, and this endpoint returns secret values.
         $belongs = $log->type === 'application'
             && $log->subject_type === $application->getMorphClass()
             && (int) $log->subject_id === (int) $application->getKey()
@@ -229,12 +201,10 @@ class ApplicationEnvironmentController extends Controller
     ): JsonResponse {
         $name = (string) $request->validated('backup');
 
-        // An older copy is as able to carry a different key as a typed one:
-        // a backup from before a key change would undo it the same way.
+        // An older copy can undo a key change just as typed text can.
         $this->refuseLockedKeyChange($application, $files, $lock, $name);
 
-        // A well-formed name that is not (or no longer) on disk is the user's
-        // mistake — a stale list — not a server failure.
+        // A well-formed name that is no longer on disk is a stale list, not a server failure.
         try {
             $safety = $files->restore($application, $name, $request->safetyCopy());
         } catch (RuntimeException) {
@@ -246,9 +216,8 @@ class ApplicationEnvironmentController extends Controller
 
         $activity->log('application.environment_restored', $application, [
             'name' => $application->name,
-            // `restored_from` is which version was put back; `backup` is what
-            // this restore itself replaced. Two different files, and the second
-            // is what makes a restore undoable from its own history row.
+            // `restored_from` is the version put back; `backup` is what this restore replaced,
+            // which makes the restore undoable from its history row.
             'restored_from' => $name,
             'backup' => $safety,
             'safety_copy' => $request->safetyCopy(),
@@ -260,9 +229,8 @@ class ApplicationEnvironmentController extends Controller
     }
 
     /**
-     * Clear a cached config, when there is one. Reported rather than silent:
-     * "we also cleared your config cache" is information, and its failure is
-     * the difference between a save that works and one that looks like it did.
+     * Clear a cached config, when there is one. The result is reported, so a failed clear is not
+     * mistaken for a save that took effect.
      */
     private function apply(Application $application, string $framework, FrameworkDetector $detector): bool
     {
@@ -301,10 +269,8 @@ class ApplicationEnvironmentController extends Controller
      */
     private function changedKeys(string $before, string $after): array
     {
-        // Compared from the raw text, not from the parsed variables: the
-        // parser blanks secret values, so DB_PASSWORD would compare null to
-        // null and a password change would be recorded as no change at all —
-        // exactly the edit most worth having in the log.
+        // Compared from the raw text: the parser blanks secret values, so a DB_PASSWORD change
+        // would otherwise compare null to null and go unrecorded.
         $keyed = function (string $raw): array {
             $map = [];
 

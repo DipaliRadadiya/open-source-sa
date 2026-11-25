@@ -5,38 +5,24 @@ namespace App\Services\Server\Databases;
 /**
  * The panel's block inside somebody else's `pg_hba.conf`.
  *
- * Pure text in, pure text out — no I/O at all, so the part of this feature most
- * likely to corrupt a file somebody depends on can be tested exhaustively
- * without a PostgreSQL server anywhere near it.
+ * Pure text in, pure text out (no I/O), so it can be tested without a PostgreSQL server.
  *
- * **A marked block, not a rewritten file.** `pg_hba.conf` is the cluster's, not
- * ours: it may carry rules an administrator wrote, a replication entry, an
- * `include` directive. Everything outside the markers is copied through byte for
- * byte, and a re-run edits the block rather than appending a second one — the
- * same convention {@see Installers\MongoDbInstaller} uses for the mongod config.
+ * A marked block, not a rewritten file: `pg_hba.conf` is the cluster's and may carry an
+ * administrator's rules. Everything outside the markers is copied through byte for byte, and a
+ * re-run edits the block instead of appending a second one (same convention as
+ * {@see Installers\MongoDbInstaller}).
  *
- * **Appended at the end, deliberately.** PostgreSQL takes the *first* matching
- * record and never falls through, so a block at the top would take precedence
- * over everything an administrator had already written — including a deliberate
- * `reject`. Silently overriding somebody's explicit deny is worse than the
- * alternative, which is that our rule can be shadowed by one. A shadowed rule is
- * visible in `pg_hba.conf` and in `pg_hba_file_rules`; an overridden deny is
- * visible nowhere.
+ * Appended at the end, deliberately: PostgreSQL takes the first matching record, so a block at
+ * the top would override an administrator's rules, including a deliberate `reject`. A shadowed
+ * rule of ours is visible in `pg_hba_file_rules`; an overridden deny is visible nowhere.
  *
- * `include_dir` would be tidier and is not available: it is PostgreSQL 16+, and
- * Ubuntu 22.04 — a release this panel supports — ships PostgreSQL 14.
+ * `include_dir` is not usable: it needs PostgreSQL 16+, and Ubuntu 22.04 ships 14.
  */
 final class PgHbaFile
 {
     /**
-     * Neutral wording, deliberately.
-     *
-     * The panel is white-labelled and this string is written onto a customer's
-     * server, where a reseller's client should see their reseller's product or
-     * nothing at all. `MongoDbInstaller::CONFIG_MARKER` says "Managed by the
-     * control panel" for the same reason, and `WhiteLabelTest` fails the build
-     * over a brand name in here — which is how the first draft of this constant
-     * was caught.
+     * Neutral wording, deliberately: the panel is white-labelled and this is written onto a
+     * customer's server, so no brand name here (`WhiteLabelTest` enforces it).
      */
     public const BEGIN = '# BEGIN control panel managed rules — edits inside this block are overwritten';
 
@@ -45,9 +31,7 @@ final class PgHbaFile
     /**
      * The rules currently in the block, keyed by `database|role`.
      *
-     * Keyed rather than listed because every write is an upsert for one
-     * account: changing a user's address must replace that account's rules and
-     * leave every other account's alone.
+     * Keyed so a write replaces one account's rules and leaves every other account's alone.
      *
      * @return array<string, array<int, string>>
      */
@@ -63,10 +47,8 @@ final class PgHbaFile
                 continue;
             }
 
-            // `host <database> <role> <address> <method>` — the shape this
-            // class writes. Anything else in the block is something we did not
-            // put there and is dropped on the next write, which is what the
-            // marker warns about.
+            // `host <database> <role> <address> <method>` is the shape this class writes; anything
+            // else in the block is dropped on the next write, as the marker warns.
             $fields = preg_split('/\s+/', $line) ?: [];
 
             if (count($fields) < 5 || $fields[0] !== 'host') {
@@ -82,9 +64,7 @@ final class PgHbaFile
     /**
      * `$contents` with the block replaced by `$rules`.
      *
-     * An empty rule set removes the block entirely rather than leaving an empty
-     * one: a file that has never had remote access should look like a file that
-     * has never had remote access.
+     * An empty rule set removes the block entirely instead of leaving an empty one.
      *
      * @param  array<string, array<int, string>>  $rules
      */
@@ -110,14 +90,10 @@ final class PgHbaFile
     /**
      * The `host` lines granting one role access to one database from `$host`.
      *
-     * `anywhere` becomes **two** rules, not one. MySQL's `%` covers every
-     * address family in a single grant; `0.0.0.0/0` is IPv4 only, and on a
-     * server with IPv6 — which is most of them — a user told "anywhere" would
-     * find half the internet unable to connect and no setting to blame.
+     * `anywhere` becomes two rules: `0.0.0.0/0` is IPv4 only, so IPv6 clients need `::0/0`
+     * (MySQL's `%` covers both).
      *
-     * `scram-sha-256` is the method: it is the default for a cluster this panel
-     * installed, and `md5` is long deprecated. `password` (cleartext) is never
-     * written.
+     * The method is `scram-sha-256`; cleartext `password` is never written.
      *
      * @return array<int, string>
      */
@@ -144,9 +120,7 @@ final class PgHbaFile
     /**
      * A bare address becomes an explicit single-host CIDR.
      *
-     * PostgreSQL accepts `203.0.113.4` and treats it as `/32`, but writing the
-     * mask makes the file say what it means to somebody reading it later, and
-     * matches what the panel stores.
+     * PostgreSQL treats `203.0.113.4` as `/32`; the explicit mask matches what the panel stores.
      */
     private static function cidr(string $host): string
     {
@@ -154,10 +128,8 @@ final class PgHbaFile
     }
 
     /**
-     * Database and role names are double-quoted in `pg_hba.conf` for the same
-     * reason they are in SQL: unquoted, `all` and `replication` are keywords
-     * rather than names, so a database legitimately called `all` would silently
-     * grant access to every database on the cluster.
+     * Names are double-quoted: unquoted, `all` and `replication` are keywords, so a database
+     * called `all` would silently grant access to every database on the cluster.
      */
     private static function quote(string $value): string
     {

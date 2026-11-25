@@ -14,107 +14,67 @@ class BackupResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            // The name this archive has in the bucket. `id` is an
-            // autoincrement meaningful only inside one panel's database, so it
-            // cannot identify an object to anyone looking at the destination
-            // directly — which is the whole reason `uid` exists (2026-09-09).
-            // Exposed read-only: it is assigned in `Backup::booted()` and is
-            // not fillable.
+            // The archive's name in the bucket. `id` only means something inside this panel's
+            // database. Read-only: assigned in `Backup::booted()`, not fillable.
             'uid' => $this->uid,
             'application_id' => $this->application_id,
             'application_name' => $this->resource->application?->name,
             'application_domain' => $this->resource->application?->domain,
-            // Added 2026-10-16. A backup of a database on its own carries the
-            // database; after the database is deleted `database_id` is null,
-            // `archived` is true, and the name and engine are still here.
+            // After a database is deleted `database_id` is null and `archived` is true, but the
+            // name and engine stay.
             'database_id' => $this->database_id,
             'database_name' => $this->resource->isDatabaseBackup() ? $this->resource->subjectName() : null,
             'database_engine' => $this->subject_engine,
             'archived' => $this->resource->isArchived(),
             // A site's backup kept after the site was deleted: its domain.
             'site_name' => ! $this->resource->isDatabaseBackup() && $this->application_id === null ? $this->subject_name : null,
-            // Where this archive actually went. Two backups of one site can
-            // sit on different destinations — the target's destination is
-            // editable, so the current setting does not say where an older
-            // archive was written, and the history is the one screen where
-            // that question gets asked.
-            //
-            // Read from the backup's own recorded destination, not through the
-            // target. Through the target this reported the destination
-            // configured *now* against every historical row, so repointing a
-            // target silently relabelled where every past archive lives — a
-            // confident wrong answer on the one screen that exists to answer
-            // exactly that.
-            //
-            // `whenLoaded`: absent rather than null when the relation was not
-            // eager-loaded, so a caller can tell "no destination" from "not
-            // asked for" instead of rendering a blank column that looks like
-            // data.
+            // Where this archive actually went, from the backup's own recorded destination, not
+            // through the target: the target's destination is editable, so repointing it would
+            // relabel every past archive. `whenLoaded` leaves the key absent (not null) when the
+            // relation was not eager-loaded, so "no destination" differs from "not asked for".
             'storage_destination_name' => $this->whenLoaded(
                 'storageDestination',
                 fn (): ?string => $this->resource->storageDestination?->name,
             ),
             'type' => $this->type->value,
-            // Whether the archive holds a database dump — not the same as the
-            // type: a site with no database has `full` backups without one.
-            // Offer "files and database" / "database" restores only when true.
+            // Whether the archive holds a database dump; not the same as the type (a site with no
+            // database has `full` backups without one). Offer database restores only when true.
             'has_database' => $this->resource->holdsDatabase(),
-            // Taken automatically just before a restore overwrote the site.
-            // Worth marking in the list: it is the one entry someone scanning
-            // timestamps after a bad restore is actually looking for, and it
-            // is exempt from retention so it will not quietly disappear.
+            // Taken automatically just before a restore overwrites the site; exempt from retention.
             'is_safety' => (bool) $this->is_safety,
             'status' => $this->status->value,
-            // Whether `POST /backups/{id}/clear` would accept this row (BK-B):
-            // in flight, and past the point where anything can still be
-            // working on it. The frontend copied the reaper's rule to decide
-            // when to show the button; one copy is how the two drift.
+            // Whether `POST /backups/{id}/clear` would accept this row: in flight and past the
+            // point where anything can still be working on it. Computed here so the frontend does
+            // not keep its own copy of the reaper's rule.
             'is_stale' => $stale = app(StaleBackupReaper::class)->isStale($this->resource),
             'clearable' => $stale,
             'status_title' => __('backup.status.'.$this->status->value),
             'type_title' => __('backup.type.'.$this->type->value),
-            // `reason` carries the step that failed — a stable key. The title
-            // explains it in the viewer's language; the frontend branches on
-            // the key, never on the prose.
+            // `reason` is a stable key (the step that failed); the title is localized prose, so
+            // the frontend branches on the key only.
             'reason_title' => $this->reasonTitle(),
-            // Where a run that died without reporting had got to, and the
-            // likely why (2026-10-29). Null on every other row, and on rows
-            // closed before they were recorded.
+            // Where a run that died without reporting had got to, and the likely why. Null on
+            // every other row, and on rows closed before these were recorded.
             'stopped_step' => $this->stopped_step,
             'stopped_cause' => $this->stopped_cause,
-            // Why the storage refused (FS-C33), in the destination test's
-            // own categories and words: `invalid_credentials` → "The access
-            // key or secret was rejected." Null when the step was not a
-            // storage one, or the cause could not be told.
+            // Why the storage refused, in the destination test's categories
+            // (`invalid_credentials` → "The access key or secret was rejected."). Null when the
+            // step was not a storage one or the cause is unknown.
             'error_class' => $this->error_class,
             'error_class_title' => $this->error_class === null ? null : __('storage.test.'.$this->error_class),
             'size_bytes' => $this->size_bytes,
 
-            // How far the upload has actually got.
-            //
-            // `size_bytes` above is only set once a backup has *finished*, so
-            // while one is running the panel had no number at all — a row that
-            // said `upload_artifact` for three and a half hours and could not
-            // distinguish a healthy transfer from a dead socket. It was
-            // reported as a hang, twice, and answering it needed `strace` on
-            // the box.
-            //
-            // Sent raw rather than as a percentage: the denominator can be
-            // null (a step that does not know its own total), and a server that
-            // computes `0` from a missing total hands the client a progress bar
-            // that confidently says nothing is happening. Let the client show a
-            // byte count when it cannot show a fraction.
+            // Upload progress. `size_bytes` is only set once a backup has finished, so these tell a
+            // healthy transfer from a dead socket. Sent raw, not as a percentage: the total can be
+            // null, and computing `0` from it would show a progress bar that says nothing happens.
             'bytes_transferred' => $this->bytes_transferred,
             'bytes_total' => $this->bytes_total,
 
-            // The heartbeat, exposed because "moving" and "stuck" look
-            // identical in a byte count sampled once. A client that can see
-            // this go stale can say so before the reaper gets there.
+            // The heartbeat: "moving" and "stuck" look identical in a byte count sampled once.
             'progress_at' => $this->progress_at?->format('d-m-Y H:i:s'),
             'reason' => $this->reason,
-            // No `log_key` (OLD-10): it addressed a line in the server-ops
-            // log, which no screen can open. `reference` below finds the same
-            // failure in Admin → Error log, and is what support asks for.
+            // No `log_key`: it addressed the server-ops log, which no screen opens. `reference`
+            // finds the same failure in Admin → Error log.
             'reference' => $this->reference,
             'started_at' => $this->started_at?->format('d-m-Y H:i:s'),
             'finished_at' => $this->finished_at?->format('d-m-Y H:i:s'),
@@ -125,11 +85,8 @@ class BackupResource extends JsonResource
     }
 
     /**
-     * A run that died without reporting (`abandoned` / `crashed`) says
-     * where it stopped, the likely why, and what to do (2026-10-29, Dipali:
-     * "if proper msg display then user can identify issue"). Rows closed
-     * before the step was recorded keep their old sentence: they never said
-     * where, and inventing it now would be worse.
+     * A run that died without reporting (`abandoned` / `crashed`) says where it stopped, the
+     * likely why, and what to do. Rows closed before the step was recorded keep their old sentence.
      */
     private function reasonTitle(): ?string
     {

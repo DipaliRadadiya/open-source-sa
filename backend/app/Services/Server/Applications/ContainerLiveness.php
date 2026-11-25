@@ -7,25 +7,19 @@ use App\Services\Recipes\RecipeRegistry;
 use App\Services\Server\ServerOps;
 
 /**
- * Whether a container site has anything running right now (DS-09).
+ * Whether a container site has anything running right now.
  *
- * `container_status` is what the last deploy's readiness check saw, and
- * nothing after it is reported back: a container stopped from a shell, killed
- * by the OOM killer three days later, or left stopped by a restore kept a
- * green "Running" over a 502. So a stored `running` is checked against Docker
- * before it is shown.
+ * `container_status` is only what the last deploy's readiness check saw, so a stored `running`
+ * is checked against Docker before it is shown (a later stop or OOM kill would keep a green
+ * "Running" over a 502).
  *
- * One `docker ps` per request, whatever the number of sites — scoped in the
- * container, the rule `DockerResources` follows for the same reason. When
- * Docker cannot be asked, the answer is null and the stored status stands:
- * a status query that failed is not a container that stopped.
+ * One `docker ps` per request, whatever the number of sites. When Docker cannot be asked the
+ * answer is null and the stored status stands: a failed query is not a stopped container.
  */
 class ContainerLiveness
 {
     /**
-     * The containers of every compose project, running or not, each
-     * `{service, state, health, code, oneoff}`; false when Docker did not
-     * answer.
+     * The containers of every compose project, running or not; false when Docker did not answer.
      *
      * @var array<string, list<array{service: string, state: string, health: ?string, code: ?int, oneoff: bool}>>|false|null
      */
@@ -51,14 +45,12 @@ class ContainerLiveness
     }
 
     /**
-     * The image's HEALTHCHECK verdict for a running site right now (DS-14):
-     * `healthy`, `starting` or `unhealthy`, the worst of its running
-     * containers. Null when nothing runs, the image has no healthcheck, or
-     * Docker did not answer. Read from the same single `docker ps` as
-     * {@see running()}.
+     * The image's HEALTHCHECK verdict for a running site: `healthy`, `starting` or `unhealthy`,
+     * the worst of its running containers. Null when nothing runs, there is no healthcheck, or
+     * Docker did not answer.
      *
-     * Every container counts here, helpers too: this is what the deploy-time
-     * readiness check reads, and that check stays strict.
+     * Every container counts, helpers too: the deploy-time readiness check reads this and stays
+     * strict.
      */
     public function health(Application $application): ?string
     {
@@ -69,19 +61,15 @@ class ContainerLiveness
     }
 
     /**
-     * Whether the app's MAIN part works right now, and what is wrong with the
-     * rest: `{status, warnings}`, or null when Docker did not answer or
-     * nothing of the app runs (a stop, which {@see running()} reports).
+     * Whether the app's MAIN part works right now, and what is wrong with the rest:
+     * `{status, warnings}`, or null when Docker did not answer or nothing runs (a stop, which
+     * {@see running()} reports).
      *
-     * Every container is essential unless its recipe marks the service
-     * `optional`, so a wrong guess costs a named warning, never a hidden
-     * outage. `status` is the worst essential problem — `exited` (also a
-     * paused or dead container), `restarting`, `unhealthy` — else `starting`
-     * while any healthcheck has no verdict or an essential container has not
-     * started yet, else `healthy`, else null (no healthcheck at all).
-     * `warnings` names every problem container, the essential ones first,
-     * then the optional ones; an app that is red therefore says which part
-     * made it red.
+     * Every container is essential unless its recipe marks the service `optional`, so a wrong
+     * guess costs a warning, never a hidden outage. `status` is the worst essential problem
+     * (`exited` also covers paused/dead, `restarting`, `unhealthy`), else `starting` while a
+     * healthcheck has no verdict or an essential container has not started, else `healthy`,
+     * else null (no healthcheck). `warnings` lists problem containers, essential first.
      *
      * @return array{status: ?string, warnings: list<array{service: string, state: string}>}|null
      */
@@ -105,11 +93,9 @@ class ContainerLiveness
                 continue;
             }
 
-            // A recipe's services all run `unless-stopped` (pinned by
-            // ShippedRecipesTest), so any stopped one is down, whatever its
-            // exit code: a `docker stop` that the process handles cleanly
-            // exits 0. A pasted compose file may hold a job that is meant to
-            // finish, so there only a non-zero exit is a failure.
+            // A recipe's services all run `unless-stopped`, so any stopped one is down whatever
+            // its exit code (`docker stop` can exit 0). A pasted compose file may hold a job
+            // meant to finish, so there only a non-zero exit is a failure.
             $problem = $this->problem($container, $recipe !== null);
 
             if ($problem === null) {
@@ -121,9 +107,8 @@ class ContainerLiveness
             }
         }
 
-        // `created` is what `compose up` leaves a service in while it waits on
-        // a dependency's healthcheck: starting, not failed. One that never
-        // starts is named all the same.
+        // `created` is what `compose up` leaves a service in while it waits on a dependency's
+        // healthcheck: starting, not failed.
         $rank = ['starting' => 1, 'unhealthy' => 2, 'restarting' => 3, 'exited' => 4];
         $shown = fn (array $warning): string => match ($warning['state']) {
             'unhealthy', 'restarting' => $warning['state'],
@@ -149,9 +134,8 @@ class ContainerLiveness
     }
 
     /**
-     * What is wrong with one container: `unhealthy`, `restarting`, `exited`
-     * (also a dead one), `created` (never started) or `paused`; null when
-     * nothing is.
+     * What is wrong with one container: `unhealthy`, `restarting`, `exited` (also dead),
+     * `created` (never started) or `paused`; null when nothing is.
      *
      * @param  array{service: string, state: string, health: ?string, code: ?int, oneoff: bool}  $container
      */

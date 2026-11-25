@@ -11,13 +11,11 @@ use Illuminate\Validation\Rule;
 /**
  * Deploy the user's own code from a git repository.
  *
- * ONE card, not one per provider — the provider comes from whichever connected
- * account is chosen, so the user never has to know "provider" is a concept.
+ * One card for every provider: the provider comes from the chosen connected account.
  *
  * Two ways in:
  *  - a connected account (private or public repos)
- *  - a pasted public URL, which needs no account at all — otherwise a user
- *    with nothing connected hits a dead end on their first visit.
+ *  - a pasted public URL, which needs no account at all
  */
 class GitSiteType extends AbstractSiteType
 {
@@ -32,11 +30,9 @@ class GitSiteType extends AbstractSiteType
     }
 
     /**
-     * The fallback only. A git site's real profile comes from the rendering
-     * type the user picks — see `ServingProfile::resolve()`, which maps `php`
-     * to php, `ssr` to node, and `csr`/`static` to static. This value is what
-     * that resolver falls back to when a payload carries neither a rendering
-     * type nor a start command.
+     * The fallback only. The real profile comes from the rendering type the user picks (see
+     * `ServingProfile::resolve()`); this is used when a payload has neither a rendering type
+     * nor a start command.
      */
     public function servingProfile(): string
     {
@@ -44,14 +40,9 @@ class GitSiteType extends AbstractSiteType
     }
 
     /**
-     * All three, because the rendering type on this card chooses between them.
-     *
-     * This is why the set exists. Gating the card on `servingProfile()` alone
-     * read the fallback as the whole truth and so hid "deploy from git" from
-     * every MERN server — a stack that hosts node and static, exactly two of
-     * the three things this card can produce, and whose entire purpose is
-     * running the user's own Node code. The order matches
-     * `ServingProfile::resolve()`'s own branches.
+     * All three, because the rendering type on this card chooses between them. Gating on
+     * `servingProfile()` alone would hide "deploy from git" from node/static-only stacks such as
+     * MERN. The order matches `ServingProfile::resolve()`'s branches.
      *
      * @return array<int, string>
      */
@@ -107,11 +98,8 @@ class GitSiteType extends AbstractSiteType
                 'depends_on' => 'repository',
             ]),
 
-            // Asked early, because it decides which of the fields below the
-            // form should show at all — and it has no safe default: a Node app
-            // served as a directory publishes its source, and a PHP app served
-            // by proxy is a permanent 502. So the question is asked outright
-            // rather than guessed from the repository.
+            // Asked early, as it decides which fields below show. No safe default: a Node app
+            // served as a directory publishes its source, a PHP app served by proxy is a 502.
             $this->field('rendering_type', 'select', required: true, extra: [
                 'options' => [
                     ['value' => 'php', 'label' => __('application.rendering.php')],
@@ -122,25 +110,15 @@ class GitSiteType extends AbstractSiteType
                 'help' => __('application.help.rendering_type'),
             ]),
         ], $this->commonFields(), $this->phpFields(), [
-            // Not `nodeFields()` — that also carries `app_port`, which this
-            // card already declares below with its own `rendering_type`
-            // depends_on. `node_version` is genuinely optional (nullable at
-            // the top level in StoreApplicationRequest, same as php_version):
-            // leaving it unset runs the build and the process on whatever
-            // `node` resolves to on PATH, exactly as before this field
-            // existed. Restricted to ssr/csr for the same reason as
-            // package_manager — a PHP or static repository has no Node
-            // runtime to pin.
+            // Not `nodeFields()`: that also carries `app_port`, declared below with its own
+            // `rendering_type` depends_on. `node_version` is optional (unset runs on whatever
+            // `node` is on PATH) and only for ssr/csr, as a PHP or static repo has no Node to pin.
             $this->field('node_version', 'select', extra: [
                 'depends_on' => 'node_rendering',
                 'source' => 'node_versions',
             ]),
-            // Only a Node app installs dependencies with one of these — a PHP
-            // repository uses composer, a static site generator has no
-            // package manager of its own to pick. `node_rendering` is a
-            // second `depends_on` sentinel alongside `rendering_type`: this
-            // field belongs to both ssr (runs a process) and csr (built to
-            // files), not just the ssr-only fields below it.
+            // Only a Node app picks a package manager. `node_rendering` is a second `depends_on`
+            // sentinel: the field belongs to both ssr and csr, not just the ssr-only fields below.
             $this->field('package_manager', 'select', extra: [
                 'depends_on' => 'node_rendering',
                 'required_if' => ['rendering_type' => ['ssr', 'csr']],
@@ -151,10 +129,7 @@ class GitSiteType extends AbstractSiteType
                     ['value' => 'pnpm', 'label' => __('application.package_manager.pnpm')],
                     ['value' => 'bun', 'label' => __('application.package_manager.bun')],
                 ],
-                // Handed to the frontend rather than hardcoded there, the same
-                // way the cron/deploy-script placeholders already are — one
-                // source of truth for what each tool's install+build looks
-                // like.
+                // Sent to the frontend so the install+build commands have one source of truth.
                 'build_templates' => (array) config('server.deployments.package_manager_scripts', []),
                 'help' => __('application.help.package_manager'),
             ]),
@@ -162,22 +137,16 @@ class GitSiteType extends AbstractSiteType
                 'help' => __('application.help.build_command'),
             ]),
 
-            // Offered at creation, not only on the Deployment screen. The very
-            // first deploy runs automatically once provisioning finishes, and
-            // it is the one deploy that decides whether the site works at all
-            // — a Laravel repository whose migrations live here came up 500ing
-            // until somebody found the screen and deployed a second time.
+            // Offered at creation: the first deploy runs automatically after provisioning and
+            // decides whether the site works at all (e.g. a Laravel repo's migrations).
             $this->field('deploy_script', 'textarea', advanced: true, extra: [
                 'help' => __('application.help.deploy_script'),
             ]),
 
-            // Only meaningful for server-side rendering — `depends_on` tells
-            // the form to hide them otherwise rather than collecting answers
-            // that would then be refused.
+            // Only meaningful for server-side rendering: `depends_on` hides them otherwise.
             $this->field('start_command', 'text', extra: [
                 'depends_on' => 'rendering_type',
-                // OLD-22: required for SSR, as the rules below say — the form
-                // could not know until the save came back 422.
+                // Required for SSR, as the rules below say.
                 'required_if' => ['rendering_type' => ['ssr']],
                 'help' => __('application.help.start_command'),
             ]),
@@ -208,38 +177,28 @@ class GitSiteType extends AbstractSiteType
             'repository_url' => [
                 Rule::requiredIf(fn () => request()->input('git_source') === 'public_url'),
                 Rule::excludeIf(request()->input('git_source') !== 'public_url'),
-                // A pasted URL is user-controlled and ends up in `git clone`,
-                // so it gets the same treatment as a self-hosted GitLab host.
+                // User-controlled and passed to `git clone`: same check as a self-hosted GitLab host.
                 'string', 'max:255', new SafeProviderHost,
             ],
             'branch' => ['required', 'string', 'max:255'],
             'build_command' => ['nullable', 'string', 'max:500'],
 
-            // Same cap and same deliberate lack of content validation as the
-            // Deployment screen's own rule: this is a shell script the user
-            // wrote to run as their own site user, and refusing characters
-            // would be theatre. The control that matters is the privilege
-            // drop, not a denylist.
+            // Same cap and no content validation, as on the Deployment screen: it is a script the
+            // user runs as their own site user. The control is the privilege drop, not a denylist.
             'deploy_script' => ['nullable', 'string', 'max:65535', new DeployScriptPhpInstalled],
 
-            // Required for a Node app (it has to install dependencies
-            // somehow), refused otherwise — a PHP or static site has no
-            // package manager of its own for the field to name.
+            // Required for a Node app, refused otherwise.
             'package_manager' => [
                 Rule::requiredIf(fn () => in_array(request()->input('rendering_type'), ['ssr', 'csr'], true)),
                 Rule::excludeIf(fn () => ! in_array(request()->input('rendering_type'), ['ssr', 'csr'], true)),
                 Rule::in(['npm', 'yarn', 'pnpm', 'bun']),
             ],
 
-            // `php` covers the common case this card is used for — a Laravel
-            // or plain-PHP repository — which is neither built to files nor
-            // run as a process.
+            // `php`: a Laravel or plain-PHP repository, neither built to files nor run as a process.
             'rendering_type' => ['required', Rule::in(['php', 'static', 'csr', 'ssr'])],
 
-            // Required for SSR and refused otherwise. A static site with a
-            // start command would get a systemd unit and a proxy vhost for a
-            // process nothing routes to; the honest answer is that the two
-            // choices are incompatible, not that one silently wins.
+            // Required for SSR, refused otherwise: a static site with a start command would get a
+            // systemd unit and proxy vhost for a process nothing routes to.
             'start_command' => [
                 Rule::requiredIf(fn () => request()->input('rendering_type') === 'ssr'),
                 Rule::excludeIf(request()->input('rendering_type') !== 'ssr'),

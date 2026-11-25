@@ -9,11 +9,10 @@ use App\Services\Server\Runtimes\PhpRuntime;
 /**
  * Which PHP a cron command runs, and the command with that PHP swapped.
  *
- * A command names PHP one of two ways. A fixed version — what the panel's
- * installers write, `/usr/bin/php8.2 -f …/cron.php` — keeps running on that
- * version after its site moves to another. Plain `php` runs whatever the
- * server default is. Neither tells the user anything when the site's PHP
- * changes, and #5 (support list, 2026-10-27) is to say so and let them choose.
+ * A command names PHP one of two ways. A fixed version (what the panel's installers write,
+ * `/usr/bin/php8.2 -f …/cron.php`) keeps running on that version after its site moves to
+ * another; plain `php` runs the server default. Neither tells the user when the site's PHP
+ * changes, so the panel says so and lets them choose.
  *
  * Only the panel's own interpreter paths are recognised, on every stack:
  *
@@ -22,8 +21,7 @@ use App\Services\Server\Runtimes\PhpRuntime;
  *   /usr/bin/lsphp8.2, /usr/local/bin/lsphp8.2
  *   php, /usr/bin/php, /usr/local/bin/php    the server default
  *
- * Anything else is "unknown" and is never rewritten: a guess that rewrites the
- * wrong word in somebody's command is worse than not offering to.
+ * Anything else is "unknown" and never rewritten: a wrong guess is worse than not offering.
  */
 class CronPhpBinary
 {
@@ -42,8 +40,8 @@ class CronPhpBinary
     public function __construct(private PhpRuntime $php) {}
 
     /**
-     * The PHP a command uses: `"8.2"`, {@see DEFAULT}, or null when it names
-     * none, or names two different ones (nothing could say which to switch).
+     * The PHP a command uses: `"8.2"`, {@see DEFAULT}, or null when it names none or two
+     * different ones.
      */
     public function version(string $command): ?string
     {
@@ -53,12 +51,8 @@ class CronPhpBinary
     }
 
     /**
-     * The command with its PHP replaced by `$version`'s interpreter, or null
-     * when there is nothing it can safely replace.
-     *
-     * Only the interpreter's own word changes. Every other character of the
-     * command — arguments, redirects, a `cd` before it — is left exactly as
-     * it was.
+     * The command with its PHP replaced by `$version`'s interpreter, or null when there is
+     * nothing it can safely replace. Only the interpreter's own word changes.
      */
     public function switchTo(string $command, string $version): ?string
     {
@@ -78,8 +72,7 @@ class CronPhpBinary
     }
 
     /**
-     * The version a command actually runs on today: a fixed version is itself,
-     * plain `php` is whatever the server default is right now.
+     * The version a command runs on today: a fixed version, or the server default for plain `php`.
      */
     public function effectiveVersion(string $command): ?string
     {
@@ -89,9 +82,8 @@ class CronPhpBinary
     }
 
     /**
-     * Whether a site's cron runs on the site's PHP. Null when there is
-     * nothing to compare: no site, a site with no PHP version, or a command
-     * whose PHP is unknown.
+     * Whether a site's cron runs on the site's PHP. Null when there is nothing to compare: no
+     * site, no site PHP version, or a command whose PHP is unknown.
      */
     public function matchesSite(Cronjob $cronjob, ?Application $application): ?bool
     {
@@ -106,13 +98,12 @@ class CronPhpBinary
     }
 
     /**
-     * A site's cron jobs that do not run on `$version`, for the user to choose
-     * from after changing the site's PHP. Changes nothing.
+     * A site's cron jobs that do not run on `$version`, for the user to choose from after
+     * changing the site's PHP. Changes nothing.
      *
-     * `suggested` is the default tick: yes for a job that names another
-     * version (it was written for this site's old PHP and stays there), no for
-     * plain `php` (it may follow the server default on purpose). `new_command`
-     * is exactly what a switch would write, so nothing is a surprise.
+     * `suggested` is the default tick: yes for a job naming another version, no for plain `php`
+     * (it may follow the server default on purpose). `new_command` is exactly what a switch
+     * would write.
      *
      * @return array<int, array{id: int, name: string, command: string, php_version: string, suggested: bool, new_command: string}>
      */
@@ -125,9 +116,7 @@ class CronPhpBinary
             ->map(function (Cronjob $cronjob) use ($version) {
                 $named = $this->version((string) $cronjob->command);
 
-                // Unknown, or already runs on this version. Plain `php` on a
-                // server whose default is this version is in step today, so
-                // it is not listed either.
+                // Unknown, or already on this version (plain `php` on a matching default too).
                 if ($named === null || $this->effectiveVersion((string) $cronjob->command) === $version) {
                     return null;
                 }
@@ -147,8 +136,8 @@ class CronPhpBinary
     }
 
     /**
-     * Every cron job that runs plain `php`: they follow the server default,
-     * so they move with it. For the warning after the default changes.
+     * Every cron job that runs plain `php`: they move with the server default. For the warning
+     * after the default changes.
      *
      * @return array<int, array{id: int, name: string, command: string, application_id: int|null}>
      */
@@ -169,8 +158,7 @@ class CronPhpBinary
     }
 
     /**
-     * Names of the cron jobs that name `$version` itself — what removing that
-     * version would break.
+     * Names of the cron jobs that name `$version` itself: what removing it would break.
      *
      * @return array<int, string>
      */

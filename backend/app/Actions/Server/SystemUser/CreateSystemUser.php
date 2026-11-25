@@ -32,27 +32,19 @@ class CreateSystemUser
      */
     public function execute(array $data): SystemUser
     {
-        // Serialize with every other account command: the OS lock over
-        // /etc/passwd is global, so a create of one user still collides with a
-        // usermod/passwd/create for another unless they run one at a time.
+        // Serialize with every other account command: the OS lock over /etc/passwd is global.
         //
-        // sudo/ssh_access/password are folded into this same single lock
-        // acquisition rather than calling ToggleSudo/ToggleSshAccess/
-        // SetSystemUserPassword's own execute() — those each take the lock
-        // themselves, and Laravel's atomic lock is not reentrant, so calling
-        // them from inside this callback would deadlock against itself.
+        // sudo/ssh_access/password are done here rather than via ToggleSudo/ToggleSshAccess/
+        // SetSystemUserPassword::execute(): those take the lock themselves, and Laravel's atomic
+        // lock is not reentrant, so calling them from this callback would deadlock.
         return $this->accountLock->run(function () use ($data) {
             $username = $data['username'];
             $homePath = rtrim((string) config('server.home_base'), '/').'/'.$username;
             $shell = $data['shell'] ?? '/bin/bash';
 
-            // Group membership set at creation time via useradd -G, rather
-            // than a separate usermod after — one command instead of two,
-            // and no window where the user briefly exists without the
-            // access it was created with.
-            // useradd refuses the whole command if any -G group is missing,
-            // so the account would not be created at all — not merely created
-            // without SSH access.
+            // Groups are set by `useradd -G`, not a later usermod, so the user never exists without
+            // its access. useradd refuses the whole command if a -G group is missing, so the
+            // group must exist first.
             if ($data['ssh_access'] ?? false) {
                 $this->sshUsersGroup->ensure();
             }
@@ -87,8 +79,7 @@ class CreateSystemUser
 
                 return $systemUser;
             } catch (Throwable $exception) {
-                // useradd succeeded but a later step did not. Do not leave an
-                // untracked OS account (or a panel row) behind.
+                // useradd succeeded but a later step did not: leave no untracked OS account or row.
                 $systemUser?->delete();
 
                 $cleanup = $this->serverOps->run(
@@ -111,21 +102,16 @@ class CreateSystemUser
     /**
      * Create the account on the server for a row that already exists.
      *
-     * The panel records an application's owner when the application is
-     * recorded, in the same transaction, so that a site and its user are one
-     * fact rather than two. The *account* is a server write, and server writes
-     * belong to provisioning — this is what lets the provisioner make it.
+     * The row is recorded with its application; the *account* is a server write that belongs to
+     * provisioning, which calls this.
      *
-     * Idempotent on purpose. It is called from a step that re-runs, and it is
-     * the repair for three states the provisioner used to only complain about:
-     * a box adopted with a populated database, a server rebuilt underneath one,
-     * and a `useradd` that failed somewhere the row outlived.
+     * Idempotent: it runs from a step that re-runs, and repairs a box adopted with a populated
+     * database, a rebuilt server, or a failed `useradd` whose row outlived it.
      */
     public function ensureOnServer(SystemUser $systemUser): ServerOpsResult
     {
         return $this->accountLock->run(function () use ($systemUser): ServerOpsResult {
-            // `getent`, not the row: the row is what the panel believes, and
-            // the whole reason this method exists is that the two can disagree.
+            // `getent`, not the row: the panel's record and the server can disagree.
             $probe = $this->serverOps->run(
                 ['getent', 'passwd', $systemUser->username],
                 ['feature' => 'system_user', 'op' => 'account_check', 'system_user' => $systemUser->username],
@@ -133,15 +119,12 @@ class CreateSystemUser
                 expectedExitCodes: [2],
             );
 
-            // Already there — including the ordinary case of a user the
-            // operator picked rather than one the panel generated.
+            // Already there (including a user the operator picked).
             if ($probe->ok) {
                 return $probe;
             }
 
-            // Could not ask. Reported rather than treated as "absent", because
-            // the answer to that would be a useradd against a server we cannot
-            // see, and the step should fail with its own reference instead.
+            // Could not ask: not "absent", or useradd would run against a server we cannot see.
             if (! $probe->answered) {
                 return $probe;
             }
@@ -162,19 +145,15 @@ class CreateSystemUser
                 $groups,
             );
 
-            // A password chosen on the create-application form (FS-B9) is
-            // set as the account comes into being — the row carried it here.
+            // A password chosen on the create-application form arrives on the row.
             if (filled($systemUser->password)) {
                 $this->setPassword($systemUser, (string) $systemUser->password);
             }
 
             $this->activityLogger->log('system_user.created', $systemUser, ['username' => $systemUser->username]);
 
-            // Asked again rather than assuming. The caller is a provisioning
-            // step whose whole job is "this account exists", and returning the
-            // *first* probe would hand it the miss that started all this — a
-            // failed result for work that succeeded. Re-probing also means the
-            // step passes only if the account is genuinely there now.
+            // Probe again: the first probe was a miss, which would read as failure for work that
+            // succeeded, and the step must pass only if the account is really there now.
             return $this->serverOps->run(
                 ['getent', 'passwd', $systemUser->username],
                 ['feature' => 'system_user', 'op' => 'account_confirm', 'system_user' => $systemUser->username],
@@ -186,9 +165,8 @@ class CreateSystemUser
     /**
      * `useradd` and the one permission fix it needs, with no database writes.
      *
-     * Shared by `execute()` and `ensureOnServer()` so the account a
-     * provisioning run creates is identical to the account the System Users
-     * screen creates — shell, home, groups and traversal bit.
+     * Shared by `execute()` and `ensureOnServer()` so both create the same account (shell, home,
+     * groups, traversal bit).
      *
      * @param  array<int, string>  $groups
      */
@@ -205,11 +183,8 @@ class CreateSystemUser
             ['feature' => 'system_user', 'op' => 'create', 'system_user' => $username],
         );
 
-        // Exit 9 is useradd's "name already in use" — by a user OR a group
-        // (`ssh-users`, `lsadm`, the panel's own `panel`). The name is only
-        // unique in the panel's table, and the server has accounts the panel
-        // never made; that is the person's input to change, not a fault to
-        // file a reference for.
+        // Exit 9 is useradd's "name already in use", by a user OR a group (`ssh-users`, `lsadm`,
+        // `panel`). The name is only unique in the panel's table: the input to change, not a fault.
         if ($result->exitCode() === 9) {
             throw ValidationException::withMessages([
                 'username' => [__('errors/system-user.username_taken_on_server')],
@@ -226,12 +201,9 @@ class CreateSystemUser
             );
         }
 
-        // `useradd -m` on Ubuntu 22.04+ creates the home at 0750, which the
-        // web server and the panel cannot enter. This used to be `chmod o+x`,
-        // which let them in and every other local account with them — and
-        // with those, every file an application writes world-readable. They
-        // are let in by ACL instead; without setfacl the home falls back to
-        // `o+x` rather than locking the sites out. {@see HomeDirectoryAccess}
+        // `useradd -m` on Ubuntu 22.04+ creates the home at 0750, which the web server and panel
+        // cannot enter. Never `chmod o+x` (every local account gets in too): they are let in by
+        // ACL, falling back to `o+x` only without setfacl. {@see HomeDirectoryAccess}
         $fallback = $this->homeAccess->closeNewHome($username, $homePath);
 
         if ($fallback?->failed()) {
@@ -240,8 +212,7 @@ class CreateSystemUser
     }
 
     /**
-     * Same OS mutation as `SetSystemUserPassword`, inlined rather than
-     * delegated to it — see the note above about why the lock can't nest.
+     * Same OS mutation as `SetSystemUserPassword`, inlined because the lock cannot nest.
      */
     private function setPassword(SystemUser $systemUser, string $password): void
     {
@@ -260,8 +231,7 @@ class CreateSystemUser
     }
 
     /**
-     * The key's own comment (`user@laptop`) as its label (FS-C30), rather than
-     * "default" in English in every language. The key type when it has none.
+     * The key's own comment (`user@laptop`) as its label, or the key type when it has none.
      */
     private function keyName(string $publicKey): string
     {

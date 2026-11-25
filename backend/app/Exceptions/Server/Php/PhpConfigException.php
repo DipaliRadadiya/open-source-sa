@@ -14,7 +14,7 @@ class PhpConfigException extends Exception
         public readonly ?string $reference = null,
         /** @var array<string, mixed> */
         private readonly array $replace = [],
-        /** @var array<int, string> PHP's own words about what it refused (FS-C17) */
+        /** @var array<int, string> PHP's own words about what it refused */
         public readonly array $phpErrors = [],
     ) {
         parent::__construct();
@@ -31,8 +31,8 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * The submitted configuration failed PHP's own validation, so it was
-     * rolled back. The user's mistake to fix, hence 422 and no reference.
+     * The submitted configuration failed PHP's own validation and was rolled back: the user's
+     * mistake, so 422 and no reference.
      */
     /**
      * @param  array<int, string>  $phpErrors  the lines PHP printed about it — which line, what is wrong
@@ -43,9 +43,8 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * Bug #28: an `extension=/tmp/x.so` in php.ini is code the PHP-FPM master
-     * — root — loads at the next reload. Extensions load from PHP's own
-     * extension directory only, which is also where v7 put ionCube.
+     * An `extension=/tmp/x.so` in php.ini is code the PHP-FPM master (root) loads at the next
+     * reload, so extensions load from PHP's own extension directory only.
      */
     public static function extensionOutsideDirectory(string $line, string $directory): self
     {
@@ -53,9 +52,8 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * The change is on disk but PHP was not told to pick it up, so it is not
-     * active yet. Its own message: "could not be updated" would send someone
-     * to redo a change that already happened.
+     * The change is on disk but PHP was not told to pick it up. Its own message, as "could not
+     * be updated" would send someone to redo a change that already happened.
      */
     public static function reloadFailed(string $version, string $reference): self
     {
@@ -68,9 +66,8 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * The toggle ran and the extension is still where it was (junior re-test
-     * #11). Its own message, so "Disabled" is never reported for an extension
-     * that is still loaded.
+     * The toggle ran and the extension is still where it was. Its own message, so "Disabled"
+     * is never reported for an extension that is still loaded.
      */
     public static function extensionUnchanged(string $version, string $extension, bool $enable, string $reference): self
     {
@@ -78,9 +75,8 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * The PHP stack this server runs has no way to do it. Refusing is the
-     * honest answer — the alternative is a control that reports success and
-     * changes nothing.
+     * The PHP stack this server runs cannot do it; refusing beats a control that reports
+     * success and changes nothing.
      */
     public static function unsupportedOnStack(string $stack): self
     {
@@ -90,9 +86,8 @@ class PhpConfigException extends Exception
     /**
      * ionCube publishes no loader for this PHP version.
      *
-     * 422 and no reference: nothing failed on the server, the combination
-     * simply does not exist. PHP 8.0 is the live case — the panel still
-     * offers it and the current archive starts at 8.1.
+     * 422 and no reference: nothing failed on the server, the combination does not exist
+     * (the current archive starts at PHP 8.1).
      */
     public static function ionCubeUnsupportedVersion(string $version): self
     {
@@ -105,9 +100,8 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * Installed outside the panel — v7's php.ini line, or LiteSpeed's
-     * package. 422: nothing failed, the panel declines to manage what it did
-     * not put there.
+     * Installed outside the panel (a php.ini line, or LiteSpeed's package). 422: the panel
+     * declines to manage what it did not put there.
      */
     public static function ionCubeExternal(string $version): self
     {
@@ -128,10 +122,8 @@ class PhpConfigException extends Exception
     /**
      * What arrived is not an ionCube loader for this machine.
      *
-     * Its own message rather than a generic install failure, because the
-     * distinction matters to whoever reads it: the download succeeded and the
-     * contents were wrong, which is the one case a checksum would have caught
-     * if the vendor published one.
+     * Its own message rather than a generic install failure: the download succeeded but the
+     * contents were wrong (a checksum would catch it, but the vendor publishes none).
      */
     public static function ionCubeInvalidLoader(string $reference): self
     {
@@ -144,9 +136,8 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * Validation failed and the original file state was restored without a
-     * reload. This does not claim anything about the serving processes.
-     * A failed restoration uses the separate rollback factory below.
+     * Validation failed and the original files were restored without a reload. A failed
+     * restoration uses `ionCubeRollbackFailed()`.
      */
     public static function ionCubeConfigTestFailed(string $reference): self
     {
@@ -154,10 +145,8 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * Discovery is the safety check that decides whether an install is even
-     * safe to attempt. Failing here means we could not be sure what was
-     * already on disk, so nothing was changed — every subsequent step is
-     * built on top of that "we know" answer.
+     * Discovery is the safety check before an install. Failing here means what was already on
+     * disk is unknown, so nothing was changed.
      */
     public static function ionCubeDiscoveryFailed(string $reference): self
     {
@@ -175,9 +164,8 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * The reload itself failed — not the change, but telling PHP to pick it
-     * up. The change may still be on disk waiting for the next reload, and
-     * the recovery files are still there in case it has to come back out.
+     * The reload failed, not the change: it may be on disk waiting for the next reload, and the
+     * recovery files are still there.
      */
     public static function ionCubeReloadFailed(string $reference): self
     {
@@ -185,9 +173,8 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * Recovery could not complete. Any original-file backups are retained;
-     * a fresh install may have no originals to back up. Manual recovery is
-     * required rather than reporting that the change was safely undone.
+     * Recovery could not complete. Any original-file backups are retained (a fresh install has
+     * none). Manual recovery is required; never report the change as safely undone.
      */
     public static function ionCubeRollbackFailed(string $reference): self
     {
@@ -195,9 +182,8 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * What went wrong, as a stable code — `ioncube_download_failed`,
-     * `reload_failed` — for a caller that records the failure instead of
-     * rendering it, so the cause survives into the row the screen reads.
+     * What went wrong, as a stable code (`ioncube_download_failed`, `reload_failed`) for a
+     * caller that records the failure instead of rendering it.
      */
     public function reason(): string
     {
@@ -212,7 +198,7 @@ class PhpConfigException extends Exception
             $payload['reference'] = $this->reference;
         }
 
-        // FS-C17: the user was told the file was wrong and not where.
+        // PHP's own lines say where the file is wrong.
         if ($this->phpErrors !== []) {
             $payload['php_errors'] = $this->phpErrors;
         }

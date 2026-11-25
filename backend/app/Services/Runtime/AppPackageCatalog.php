@@ -10,24 +10,12 @@ use Throwable;
 /**
  * Which Node versions a one-click application's current release runs on.
  *
- * The problem this removes: the version a site type installs and the Node
- * range it allows had to agree, and were maintained by hand in two different
- * files. n8n's installer resolves `latest`, while `N8nSiteType` declared
- * `20.19`–`24` — numbers transcribed from the registry months earlier. By the
- * time anybody looked, n8n 1.x's `>=20.19 <= 24.x` had become 2.x's
- * `>=24.0.0`, with no ceiling at all. Nothing reported the drift, because the
- * failure it causes happens later and elsewhere: a site installs without
- * complaint and then refuses to start on the only Node the form offered.
+ * The range is read from the release's `engines.node` instead of being hand-copied into the
+ * site type, so the installed version and the offered Node range cannot drift apart.
  *
- * So the range is read off the package instead of remembered. Whatever
- * `engines.node` the resolved release declares is what the picker offers, and
- * the two facts cannot disagree because there is now only one of them.
- *
- * Reads never touch the network, the same rule {@see NpmCatalog} follows: a
- * self-hosted panel behind a firewall must not hang on a create form because
- * registry.npmjs.org is unreachable. A scheduled command fills the table, and
- * a site type with no row falls back to the range it declares in code — the
- * last answer anybody had, which is better than no form at all.
+ * Reads never touch the network (same rule as {@see NpmCatalog}): a panel behind a firewall
+ * must not hang on a create form. A scheduled command fills the table; a site type with no
+ * row falls back to the range it declares in code.
  */
 class AppPackageCatalog
 {
@@ -49,17 +37,12 @@ class AppPackageCatalog
     }
 
     /**
-     * Split an npm `engines.node` range into the floor and ceiling the site
-     * type API publishes.
+     * Split an npm `engines.node` range into the floor and ceiling the site type API publishes.
      *
-     * Deliberately narrow. npm's dialect can express things this does not
-     * attempt — unions, carets, pre-release tags — and a range it cannot read
-     * confidently returns null rather than a guess, which falls the caller
-     * back to the declared range. A wrong bound here does not show up as an
-     * error; it shows up as a version quietly missing from a dropdown, so
-     * "not sure" has to stay expressible.
+     * Deliberately narrow: a range it cannot read (unions, carets, pre-release tags) returns
+     * null rather than a guess, so the caller falls back to the declared range.
      *
-     * Understood, because they are what these packages actually publish:
+     * Understood:
      *
      *   >=24.0.0            → min 24.0.0, no ceiling
      *   >=20.19 <= 24.x     → min 20.19,  max 24
@@ -75,8 +58,7 @@ class AppPackageCatalog
             return null;
         }
 
-        // A union means several disjoint windows and there is no single
-        // min/max that describes them honestly.
+        // A union means disjoint windows; no single min/max describes them.
         if (str_contains($range, '||')) {
             return null;
         }
@@ -118,9 +100,8 @@ class AppPackageCatalog
             try {
                 $release = $this->fetch($package, $pin);
             } catch (Throwable $e) {
-                // Keep what is stored. A network blip must not blank a range
-                // that was correct yesterday — and blanking it would widen the
-                // picker back to versions the application refuses.
+                // Keep what is stored: blanking a good range would widen the picker to versions
+                // the application refuses.
                 Log::warning('app package refresh failed', [
                     'package' => $package,
                     'error' => $e->getMessage(),
@@ -130,11 +111,8 @@ class AppPackageCatalog
             }
 
             if ($release === null) {
-                // Said out loud. A refresh that fetches nothing and a package
-                // that has never been refreshed produce the same empty table,
-                // and without this line the difference is unknowable — which
-                // is exactly the position I was in when this returned zero
-                // once and could not be made to do it again.
+                // Log it: a refresh that fetched nothing and a never-refreshed package leave the
+                // same empty table.
                 Log::warning('app package release not readable', [
                     'package' => $package,
                     'pin' => $pin,
@@ -155,28 +133,16 @@ class AppPackageCatalog
     /**
      * One release's version and Node requirement, from the registry.
      *
-     * The registry resolves a dist-tag for us — `/n8n/latest` is the release
-     * npm itself would install — so the pin does not have to be understood
-     * here. A pin that names a bare major (`1`) is not a dist-tag and has no
-     * such endpoint; those return null and keep the declared range.
+     * The registry resolves a dist-tag (`/n8n/latest`). A pin naming a bare major (`1`) is not a
+     * dist-tag and has no such endpoint; it returns null and keeps the declared range.
      *
      * @return array{version: string, node_range: string}|null
      */
     private function fetch(string $package, string $pin): ?array
     {
-        // No `application/vnd.npm.install-v1+json` here, deliberately, even
-        // though NpmCatalog sends it two files away.
-        //
-        // That header selects the *abbreviated packument* and is only defined
-        // for the package endpoint (`/n8n`). This is the single-version
-        // endpoint (`/n8n/latest`), where the registry may answer **406 Not
-        // Acceptable** — and whether it does depends on which CDN edge answers.
-        // Copying the header from NpmCatalog gave 200 from one machine and 406
-        // from another, which is a refresh that works on the developer's box
-        // and silently stores nothing on the customer's.
-        //
-        // The document is one release's metadata either way, so the header
-        // bought nothing here even where it was tolerated.
+        // No `application/vnd.npm.install-v1+json` header (unlike NpmCatalog): it is only defined
+        // for the package endpoint, and this single-version endpoint may answer 406 depending on
+        // the CDN edge, which would silently store nothing.
         $response = Http::timeout((int) config('server.runtimes.npm.timeout', 30))
             ->get('https://registry.npmjs.org/'.rawurlencode($package).'/'.rawurlencode($pin));
 

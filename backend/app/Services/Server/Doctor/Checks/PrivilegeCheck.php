@@ -8,22 +8,15 @@ use Illuminate\Support\Facades\Process;
 /**
  * Can the panel actually run the privileged commands it depends on?
  *
- * This is the check that would have caught the panel shipping with a sudoers
- * grant it never used: php-fpm runs unprivileged, so without a working sudo
- * every system user, firewall rule, service restart and package install fails
- * — while every faked test passes.
+ * php-fpm runs unprivileged, so without a working sudo every system user, firewall rule, service
+ * restart and package install fails (while faked tests pass).
  *
- * It asks sudo whether the grant exists rather than running the tools, using
- * `sudo -n -l <binary>`. That resolves the real sudoers rules for the real
- * user and changes nothing: running `useradd` to find out if `useradd` works
- * would create an account nobody asked for.
+ * It asks `sudo -n -l <binary>` rather than running the tools: that resolves the real sudoers
+ * rules for the real user and changes nothing.
  */
 class PrivilegeCheck implements DoctorCheck
 {
-    /**
-     * Checked first, and on their own, because if these are denied then sudo
-     * itself is not working and naming sixty other binaries would bury that.
-     */
+    /** Checked first and on their own: if these are denied, sudo itself is broken. */
     private const REPRESENTATIVE = ['useradd', 'systemctl', 'ufw', 'apt-get', 'tee'];
 
     public function key(): string
@@ -34,10 +27,8 @@ class PrivilegeCheck implements DoctorCheck
     /**
      * The account php-fpm and the queue worker run as.
      *
-     * Taken from the owner of the panel's own code, which install.sh chowns to
-     * that account — rather than from config, where it is not recorded, or
-     * from a guess at the name. Null when it cannot be determined, which is
-     * reported rather than treated as "fine".
+     * Taken from the owner of the panel's code (install.sh chowns it to that account). Null when
+     * it cannot be determined, which is reported rather than treated as "fine".
      */
     private function serviceUser(): ?string
     {
@@ -53,8 +44,7 @@ class PrivilegeCheck implements DoctorCheck
 
         $user = posix_getpwuid($owner);
 
-        // root owning the checkout means the panel is not running as its own
-        // account at all, so there is nothing unprivileged to check.
+        // root owning the checkout means there is no unprivileged account to check.
         return ($user['name'] ?? null) && $user['name'] !== 'root' ? $user['name'] : null;
     }
 
@@ -72,17 +62,9 @@ class PrivilegeCheck implements DoctorCheck
 
     public function run(): array
     {
-        // Whoever ran `panel:doctor` is not who does the work. An operator
-        // reads this from a root shell, and root needs no sudo — so this used
-        // to answer "sudo not required" and skip every check, while php-fpm
-        // and the queue worker went on failing as the unprivileged panel
-        // account. A green tick beside a broken feature is worse than no
-        // check: it sends the reader somewhere else entirely. That is exactly
-        // what happened when `touch` gained a sudoers grant the running
-        // servers did not have.
-        //
-        // So when this runs as root it drops to the account the panel actually
-        // runs as and asks about that one instead.
+        // Whoever ran `panel:doctor` (often root, which needs no sudo) is not who does the work.
+        // A green tick for root hides a broken grant for the panel account, so when running as
+        // root, ask about the account the panel actually runs as.
         $asRoot = function_exists('posix_geteuid') && posix_geteuid() === 0;
         $serviceUser = $asRoot ? $this->serviceUser() : null;
 
@@ -122,21 +104,11 @@ class PrivilegeCheck implements DoctorCheck
             ];
         }
 
-        // sudo works. Now the question that actually bites: does the grant on
-        // this server cover everything *this build* of the panel will try to
-        // run?
+        // sudo works. Now check the grant covers everything *this build* will run: the sample
+        // above only finds a broken sudo, not an out-of-date grant (the state after every panel
+        // update without re-running `install.sh`).
         //
-        // The five above were always granted, on every install, which is why
-        // this check passed for months while certbot, openssl, touch, stat and
-        // crontab were all denied — every Let's Encrypt certificate, every
-        // self-signed one, every cron job's log file and every chunked upload
-        // failing on a server the panel reported as healthy. A sample can only
-        // find a sudo that is entirely broken; it cannot find a grant that is
-        // merely out of date, which is the state every server reaches the
-        // moment the panel is updated and `install.sh` is not re-run.
-        //
-        // One `sudo -n -l` rather than one per binary: sixty round trips would
-        // make the doctor slow enough that people stop running it.
+        // One `sudo -n -l` rather than one per binary: dozens of round trips make the doctor slow.
         $ungranted = $this->ungranted($serviceUser);
 
         if ($ungranted !== []) {
@@ -157,26 +129,19 @@ class PrivilegeCheck implements DoctorCheck
     }
 
     /**
-     * Binaries the panel will try to elevate that this server's sudoers rule
-     * does not cover.
+     * Binaries the panel will try to elevate that this server's sudoers rule does not cover.
      *
      * @return array<int, string>
      */
     private function ungranted(?string $serviceUser): array
     {
-        // Through the service account, exactly like the probes above. Asked as
-        // root this lists root's own `(ALL) ALL`, which contains no absolute
-        // paths at all — so the regex below matched nothing and every binary
-        // the panel uses was reported missing, on a server whose grant was
-        // fine. A check that cries wolf about all 76 is as useless as one that
-        // passes silently.
+        // Through the service account, like the probes above: as root this lists `(ALL) ALL`
+        // with no absolute paths, so every binary would be reported missing.
         $listing = Process::timeout(15)->run($this->probe(null, $serviceUser));
 
         if (! $listing->successful()) {
-            // sudo answered for the five above, so a failure here is something
-            // else — a locked-down sudoers that permits commands but not
-            // listing them. Reporting every binary as missing would be worse
-            // than reporting nothing.
+            // sudo answered above, so this is a sudoers that permits commands but not listing
+            // them. Reporting every binary as missing would be worse than reporting nothing.
             return [];
         }
 
@@ -186,9 +151,7 @@ class PrivilegeCheck implements DoctorCheck
 
         $granted = array_unique($matches[1]);
 
-        // `php-fpm*` is granted as a wildcard — one binary per installed PHP
-        // version, so an exact list would need editing every time a version is
-        // added through the panel's own feature.
+        // `php-fpm*` is granted as a wildcard: one binary per installed PHP version.
         $wildcards = array_filter($granted, fn (string $entry) => str_ends_with($entry, '*'));
 
         return array_values(array_filter(

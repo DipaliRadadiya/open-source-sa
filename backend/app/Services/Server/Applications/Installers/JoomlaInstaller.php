@@ -11,20 +11,13 @@ use Illuminate\Support\Str;
 /**
  * Joomla — content management system.
  *
- * Three things this one does differently, each of which would have been a bug
- * had the previous installer's shape simply been copied:
+ * Differences from the other installers:
  *
- *  - **Its archive is flat.** The full package's entries start at
- *    `administrator/`, with no wrapping directory, so the usual
- *    `--strip-components=1` would throw away the top-level directories and
- *    scatter their contents across the web root.
- *  - **There is no stable "latest" download URL.** Joomla publishes versioned
- *    filenames, so the current release has to be asked for before anything can
- *    be fetched.
- *  - **The passwords are prompted in the opposite order to Nextcloud's** —
- *    admin first, then database. The order is not a detail: reversed, the
- *    installation succeeds with the two swapped, and the user is locked out of
- *    a site that otherwise looks fine.
+ *  - **Its archive is flat** (entries start at `administrator/`), so `--strip-components=1`
+ *    would throw away the top-level directories.
+ *  - **There is no stable "latest" download URL**; the current release has to be looked up.
+ *  - **Passwords are prompted admin first, then database** (opposite of Nextcloud). Reversed,
+ *    the install succeeds with the two swapped and the user is locked out.
  */
 class JoomlaInstaller extends AbstractPhpInstaller
 {
@@ -42,12 +35,9 @@ class JoomlaInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * PostgreSQL last, so MySQL stays the first available engine and nothing
-     * changes for a server that already makes Joomla sites.
+     * PostgreSQL last, so MySQL stays the first available engine.
      *
-     * Taken from Joomla's own `installation/forms/setup.xml`, where the
-     * `db_type` field declares `supported="mysql,mysqli,pgsql"` — so `pgsql`
-     * is a value its installer accepts, not a guess.
+     * Per Joomla's `installation/forms/setup.xml`: `db_type` supports `mysql,mysqli,pgsql`.
      *
      * @return array<int, string>
      */
@@ -57,10 +47,8 @@ class JoomlaInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * Joomla's technical requirements table gives PostgreSQL two numbers: 14
-     * "supported" and 12 "minimum", where minimum is defined as the version
-     * the CMS itself enforces. 12 is the one the panel can refuse on without
-     * blocking an install Joomla will complete.
+     * PostgreSQL 12 is the minimum Joomla itself enforces (14 is only "supported"), so refusing
+     * below 12 never blocks an install Joomla would complete.
      *
      * @return array<string, string>
      */
@@ -78,27 +66,22 @@ class JoomlaInstaller extends AbstractPhpInstaller
 
         $this->downloadAndExtract($application, null, $documentRoot);
 
-        // Every option except the two passwords is given here. Joomla prompts
-        // for whatever it wasn't told, and prompting is the only way to get a
-        // secret in without putting it on the command line, where `ps` shows
-        // it to every user on the machine.
+        // Both passwords are left out and answered at the prompt: on the command line `ps`
+        // would show them to every user on the machine.
         $this->runAsSiteUser('install_app', $application, [
             ...$this->phpCommand($application), 'installation/joomla.php', 'install',
             '--site-name='.($settings['site_name'] ?? $application->name),
             '--admin-user='.($settings['admin_name'] ?? 'Administrator'),
             '--admin-username='.($settings['admin_user'] ?? 'admin'),
             '--admin-email='.($settings['admin_email'] ?? ''),
-            // The engine the site was actually given, not a configured default
-            // that could disagree with it. mysqli speaks to both SQL engines
-            // the panel had until PostgreSQL, which is why this was a literal.
+            // The engine the site was actually given, not a configured default.
             '--db-type='.$this->dbType($context),
             '--db-host='.$this->hostWithPort($context),
             '--db-user='.(string) $context['db_user'],
             '--db-name='.(string) $context['database'],
             '--db-prefix='.$this->tablePrefix($settings),
             '--db-encryption=0',
-            // Empty: the site is served from the document root itself. Left
-            // out, Joomla would stop and ask about it.
+            // Empty: served from the document root itself; omitted, Joomla would prompt.
             '--public-folder=',
         ],
             // Asked for in this order — admin, then database.
@@ -108,11 +91,8 @@ class JoomlaInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * Ask Joomla which release is current.
-     *
-     * Their downloads carry the version in the filename and there is no
-     * "latest" alias, so a hardcoded URL would rot into a 404 on the next
-     * release and take one-click Joomla down with it.
+     * Ask Joomla which release is current (downloads carry the version in the filename, so a
+     * hardcoded URL would 404 on the next release).
      *
      * @throws ProvisioningFailedException
      */
@@ -124,8 +104,7 @@ class JoomlaInstaller extends AbstractPhpInstaller
             return $configured;
         }
 
-        // FS-B3: a release host that does not answer is a reason, not a
-        // bare "download failed".
+        // An unreachable release host gets its own reason, not a bare "download failed".
         try {
             $response = Http::timeout(15)->acceptJson()
                 ->get((string) config('server.installers.joomla.releases_api'));
@@ -139,8 +118,7 @@ class JoomlaInstaller extends AbstractPhpInstaller
                 && str_ends_with($candidate, '-Stable-Full_Package.tar.gz'));
 
         if (! is_string($url)) {
-            // Better to stop here than to download something that isn't
-            // Joomla and unpack it into a live web root.
+            // Stop rather than unpack something that isn't Joomla into a live web root.
             throw new ProvisioningFailedException('download', (string) Str::uuid(), $response->successful() ? 'release_not_found' : 'download_unreachable');
         }
 
@@ -148,10 +126,8 @@ class JoomlaInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * The driver name Joomla's installer expects.
-     *
-     * `mysqli` covers MySQL and MariaDB alike; `pgsql` is PostgreSQL's, per
-     * the `supported` list on its own `db_type` field.
+     * The driver name Joomla's installer expects: `mysqli` for MySQL and MariaDB, `pgsql` for
+     * PostgreSQL.
      *
      * @param  array<string, mixed>  $context
      */
@@ -161,8 +137,7 @@ class JoomlaInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * A per-site table prefix, as Joomla's own installer generates. It keeps
-     * the tables apart if the database is ever shared.
+     * A per-site table prefix, as Joomla's own installer generates.
      *
      * @param  array<string, mixed>  $settings
      */
@@ -170,10 +145,7 @@ class JoomlaInstaller extends AbstractPhpInstaller
     {
         $prefix = (string) ($settings['table_prefix'] ?? '');
 
-        // A letter first: Joomla refuses a prefix that starts with a digit
-        // ("must start with a letter"), and `Str::random()` draws one about
-        // one time in six — so that share of Joomla installs failed at
-        // install_app (seen live on 2026-09-30 with `42k4p_`).
+        // A letter first: Joomla refuses a prefix starting with a digit.
         return $prefix !== '' ? $prefix : chr(random_int(ord('a'), ord('z'))).Str::lower(Str::random(4)).'_';
     }
 }

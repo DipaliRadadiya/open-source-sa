@@ -13,9 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * One site's PHP settings, plus everything the screen needs to render them
- * honestly: which versions exist, whether the site is isolated yet, and what
- * the numbers cost in memory.
+ * One site's PHP settings, plus what the screen needs to render them: available versions,
+ * isolation state and the memory cost.
  *
  * @property Application $resource
  */
@@ -32,47 +31,32 @@ class ApplicationPhpSettingsResource extends JsonResource
 
         $effective = $settings->effective();
 
-        // Whether a site on this stack runs as its own user without the pool
-        // feature being involved. True on LSPHP, where isolation is a property
-        // of how the vhost is written rather than something to switch on.
+        // True on LSPHP, where isolation comes from how the vhost is written, not the pool feature.
         $isolatesByDefault = app(PhpStackManager::class)->stack()->isolatesByDefault();
 
         return [
             'application_id' => $application->id,
             'php_version' => $application->php_version,
 
-            // Read from disk every time. A stored list is wrong the moment
-            // someone installs or removes a version.
-            //
-            // Only the ones this site type runs on: WordPress (7.4+) listed an
-            // installed 7.0, and choosing it was refused with a 422 — the menu
-            // offered what the endpoint rejects. Filtered with the same rule
-            // the endpoint uses, so the two cannot disagree. The site's
-            // current version is always kept, so the menu shows what it is on.
+            // Read from disk every time (a stored list goes stale). Only versions this site type
+            // runs on, filtered with the endpoint's own rule so the menu never offers what the
+            // endpoint rejects. The site's current version is always kept.
             'available_versions' => $this->versionsForType($application),
 
-            // Whether this site has a pool of its own yet. Everything else on
-            // this screen is only enforceable once it does — a shared pool
-            // means a shared memory_limit.
+            // Whether this site has a pool of its own yet; the other settings are only enforceable
+            // then (a shared pool means a shared memory_limit).
             'isolated' => $application->isolated_at !== null || $isolatesByDefault,
             'isolated_at' => $application->isolated_at?->format('d-m-Y H:i:s'),
             'isolation_supported' => $pools->supported(),
 
-            // The account this site's PHP actually runs as.
-            //
-            // This said `www-data` for every OpenLiteSpeed site, because it
-            // inferred the answer from `isolated_at` — a column only the pool
-            // feature ever sets. On LSPHP the vhost names the site's own user
-            // as `extUser`, so the site has never run as www-data and the one
-            // screen a user checks to find that out was telling them it did.
+            // The account this site's PHP runs as. Not inferred from `isolated_at` alone: that is
+            // only set by the pool feature, while LSPHP names the site's own user as `extUser`.
             'runs_as' => $application->isolated_at !== null || $isolatesByDefault
                 ? $application->systemUser?->username
                 : (string) config('server.web_server_user', 'www-data'),
 
-            // False when the pool file no longer matches what the panel would
-            // write — someone edited it by hand. Said before they press save,
-            // not after their changes have gone. Null when it could not be
-            // checked, which is not the same as either answer.
+            // False when the pool file no longer matches what the panel would write (hand-edited),
+            // so the user is told before saving. Null when it could not be checked.
             'managed' => $application->isolated_at === null
                 ? true
                 : $pools->managed($application, $settings),
@@ -103,44 +87,28 @@ class ApplicationPhpSettingsResource extends JsonResource
                 'additional_directives' => $effective['additional_directives'],
             ],
 
-            // True for each field whose value is not the panel default — false
-            // means it is the default, whether stored or inherited. Lets the
-            // frontend render a "Reset to default" button per field rather
-            // than guessing.
-            //
-            // Compared with the default, not "is a value stored" (PHP-ob): a
-            // new site has open_basedir_enabled written as true at provision,
-            // which *is* the default, and the field read "changed" forever.
+            // True for each field whose value is not the panel default (stored or inherited), for
+            // the frontend's per-field "Reset to default". Compared with the default, not "is a
+            // value stored": a new site stores open_basedir_enabled = true, which is the default.
             'overridden' => $this->overridden($settings, (string) $application->site_type),
 
-            // Three named starting points instead of asking anyone to reason
-            // about worker counts, each carrying the memory it implies.
+            // Three named starting points, each with the memory it implies.
             'presets' => $this->presets(),
 
             'memory' => app(MemoryBudget::class)->withProposed($application, $settings),
 
-            // Three different answers, on purpose.
-            //
             //  effective   — what the panel would write from the stored row.
-            //  live        — what the pool file on disk actually says. Null
-            //                when the site has no pool, or its pool sets
-            //                nothing. Differs from `effective` when someone
-            //                hand-edited the file or overrode the directive
-            //                through the additional-directives box, where it
-            //                lands after ours and wins.
+            //  live        — what the pool file says; null when there is no pool or it sets
+            //                nothing. Differs from `effective` after a hand edit or an override
+            //                through additional directives (which lands later and wins).
             //  recommended — what turning it on with no additions would give.
-            //                A starting point to show when it is off, so the
-            //                screen offers the value instead of asking the
-            //                user to invent it.
             'open_basedir_effective' => $pools->openBasedirFor($application, $settings),
             'open_basedir_live' => $pools->liveOpenBasedir($application),
             'open_basedir_recommended' => $pools->recommendedOpenBasedir($application),
 
             'suggested_disable_functions' => ApplicationPhpSettings::SAFE_DISABLED_FUNCTIONS,
 
-            // The same value again, as one entry in a list the frontend can
-            // render a button per. Kept alongside the flat key rather than
-            // replacing it, so an older client keeps working.
+            // The same value as a list of presets; the flat key stays for older clients.
             'disable_functions_presets' => $this->disableFunctionPresets(),
         ];
     }
@@ -179,13 +147,10 @@ class ApplicationPhpSettingsResource extends JsonResource
             $flags[$key] = $stored !== null && $stored !== '' && $normal($stored) !== $normal($defaults[$key]);
         }
 
-        // RC-3: a new site is provisioned with a list of its own, which the
-        // generic default (null) never equals, so every untouched site read
-        // "changed". The list it was given is its default: the one recorded at
-        // provisioning, not today's preset, which a later release may have
-        // moved. A site provisioned before the record existed falls back to the
-        // preset for its type. Compared as a set: order and spacing are not a
-        // change.
+        // A new site is provisioned with its own list, which the generic default (null) never
+        // equals. Its default is the list recorded at provisioning (not today's preset, which may
+        // have moved), else the preset for its type. Compared as a set: order and spacing are not
+        // a change.
         $functions = fn (mixed $value): array => collect(explode(',', (string) $value))
             ->map(fn (string $name): string => trim($name))->filter()->unique()->sort()->values()->all();
 

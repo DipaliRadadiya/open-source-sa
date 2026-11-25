@@ -15,13 +15,10 @@ use Throwable;
 /**
  * SFTP over SSH. Password or private key.
  *
- * **Host-key verification is the point.** An SFTP destination that accepts
- * whatever key the far end presents is encrypted against a passive observer
- * and wide open to anyone who can answer first — which, for a backup channel
- * carrying a site's database and `.env`, is the whole threat. So the
- * fingerprint is recorded the first time the panel connects and enforced
- * afterwards (trust on first use); a changed key stops the transfer and says
- * so, rather than uploading the archive to whoever is now answering.
+ * **Host-key verification is the point.** A destination that accepts any key is open to whoever
+ * answers first, and the backup carries a site's database and `.env`. So the fingerprint is
+ * recorded on the first connection and enforced afterwards (trust on first use); a changed key
+ * stops the transfer instead of uploading the archive to whoever is now answering.
  */
 class SftpDriver extends RemoteHostDriver
 {
@@ -48,10 +45,8 @@ class SftpDriver extends RemoteHostDriver
             'port' => (int) ($destination->configValue('port') ?: self::DEFAULT_PORT),
             'root' => $this->remoteRoot($destination),
 
-            // Key and password are alternatives, and passing an empty string
-            // for the unused one is not the same as omitting it: phpseclib
-            // will try to authenticate with it and fail. Only the one that is
-            // actually set is handed over.
+            // Key and password are alternatives: an empty string for the unused one is not the same
+            // as omitting it (phpseclib tries it and fails). Pass only the one that is set.
             ...($privateKey
                 ? array_filter([
                     'privateKey' => $privateKey,
@@ -59,27 +54,20 @@ class SftpDriver extends RemoteHostDriver
                 ], fn ($v) => $v !== null)
                 : ['password' => $destination->configValue('password')]),
 
-            // Pinned on every connection after the first. Null means the
-            // panel has not met this host yet — see `StorageConnectionProber`,
-            // which records what it saw.
+            // Pinned on every connection after the first; null means the host is new
+            // (`StorageConnectionProber` records it).
             ...array_filter([
                 'hostFingerprint' => $destination->configValue('host_fingerprint') ?: null,
             ], fn ($v) => $v !== null),
 
             'timeout' => 30,
 
-            // One attempt, not flysystem's default five. Its retry loop also
-            // retries a *refused login*, so one Test with a mistyped password
-            // was five failed logins on the user's server — which is
-            // fail2ban's default `maxretry`, i.e. the backup server banning
-            // this panel. And OpenSSH 10 drops the retries from an address
-            // that just failed ("penalty: failed authentication"), so the last
-            // error was "could not connect" and a wrong key was reported as
-            // `unreachable`. Measured on a real server, 2026-09-23.
+            // One attempt, not flysystem's default five: its retry loop also retries a refused
+            // login, so one Test with a wrong password becomes five failed logins (fail2ban's
+            // default `maxretry`), and OpenSSH 10 then drops the retries, which hides the real error.
             'maxTries' => 0,
 
-            // Same reason as every other driver: a swallowed failure is a
-            // backup that reports success over an empty directory.
+            // A swallowed failure would report a successful backup over an empty directory.
             'throw' => true,
         ];
     }
@@ -90,11 +78,8 @@ class SftpDriver extends RemoteHostDriver
     public function rules(bool $requireSecrets = true): array
     {
         return array_merge($this->hostRules(self::DEFAULT_PORT), [
-            // Exactly one of the two is needed, and which one is the user's
-            // choice — so neither is unconditionally required. The
-            // "at least one" check is the FormRequest's, because it is the
-            // only layer that can see whether the *stored* destination
-            // already has one during a partial update.
+            // One of the two is needed, so neither is required here. The "at least one" check is the
+            // FormRequest's: only it can see whether the stored destination already has one.
             'config.password' => ['nullable', 'string', 'max:512'],
             'config.private_key' => ['nullable', 'string', 'max:16384'],
             'config.passphrase' => ['nullable', 'string', 'max:512'],
@@ -119,13 +104,9 @@ class SftpDriver extends RemoteHostDriver
             'port' => (int) ($destination->configValue('port') ?: self::DEFAULT_PORT),
             'username' => $destination->configValue('username'),
             'root' => $destination->configValue('root'),
-            // Which auth method is in use, never the material itself. The UI
-            // needs this to label the rotate dialog correctly — rotating a
-            // key is not rotating a password.
+            // The auth method in use, never the secret itself; the UI labels the rotate dialog with it.
             'auth_method' => $destination->configValue('private_key') ? 'private_key' : 'password',
-            // Safe to show: a public key fingerprint is public by definition,
-            // and displaying it is how an operator verifies the box is the
-            // one they think it is.
+            // Safe to show: a host key fingerprint is public, and lets the user verify the box.
             'host_fingerprint' => $destination->configValue('host_fingerprint'),
         ];
     }
@@ -133,22 +114,13 @@ class SftpDriver extends RemoteHostDriver
     /**
      * Download straight onto disk, never through `php://temp`.
      *
-     * The adapter's `readStream()` is `fopen('php://temp')` + `$sftp->get()`
-     * into it — the whole archive buffered, spilling into the system temp
-     * directory (a tmpfs of a couple of gigabytes on a normal install) before
-     * the caller sees a byte. The same trap {@see FtpDriver::downloadTo()}
-     * documents, in the other adapter. phpseclib's `get()` takes a local
-     * path and writes to it chunk by chunk, so this hands it the destination
-     * file instead.
+     * The adapter's `readStream()` buffers the whole archive in `php://temp` (a small tmpfs), the
+     * same trap as {@see FtpDriver::downloadTo()}. phpseclib's `get()` writes to a local path chunk
+     * by chunk, so it is handed the destination file instead.
      *
-     * The connection is the disk's own — same credentials, same pinned host
-     * key, same single login attempt — so this cannot be laxer than an
-     * upload. A refused connection throws the adapter's own exception rather
-     * than returning false: the caller's fallback would only log in a second
-     * time (two failed logins towards the server's fail2ban), and the typed
-     * exception is what `classify()` names — a changed host key, a refused
-     * login. A transfer that fails part-way throws too, rather than falling
-     * back into the very buffer this exists to avoid.
+     * Same credentials, pinned host key and single login attempt as an upload. A refused connection
+     * or a failed transfer throws rather than returning false: the caller's fallback would log in a
+     * second time, and the typed exception is what `classify()` names.
      */
     public function downloadTo(StorageDestination $destination, string $key, string $path): bool
     {
@@ -170,14 +142,9 @@ class SftpDriver extends RemoteHostDriver
     }
 
     /**
-     * A changed host key gets its own category rather than being folded into
-     * "unreachable". The host is reachable — that is precisely the problem,
-     * and "could not connect" would send the operator to check the firewall
-     * while a possible interception went unmentioned.
-     *
-     * An unloadable private key is the user's paste, not the server: telling
-     * them the destination is unreachable would be a lie about whose fault it
-     * is.
+     * A changed host key gets its own category, not "unreachable": the host is reachable, and
+     * "could not connect" would hide a possible interception. An unloadable private key is the
+     * user's paste, not a server fault.
      */
     protected function categoryForType(Throwable $e): ?string
     {
@@ -202,9 +169,8 @@ class SftpDriver extends RemoteHostDriver
 
     protected function categoryForMessage(string $message): ?string
     {
-        // Deliberately not 'authenticity' — that is the host-key failure, and
-        // it is answered by type above. Matching it here would relabel a
-        // possible interception as a bad password.
+        // Not 'authenticity': that is the host-key failure, handled by type above. Matching it here
+        // would report a possible interception as a bad password.
         if (str_contains($message, 'authentication')
             || str_contains($message, 'permission denied')
             || str_contains($message, 'login')) {

@@ -6,28 +6,16 @@ use App\Models\ServerCapability;
 use App\Services\Server\ServerOps;
 
 /**
- * Where this server keeps its OpenLiteSpeed vhosts, and what the files are
- * called.
- *
- * Two layouts exist in the wild and a migrated server has the one this panel
- * did not write:
+ * Where this server keeps its OpenLiteSpeed vhosts, and what the files are called.
  *
  *   this panel   <vhost_root>/<slug>/vhconf.conf
  *   the old one  /etc/<brand>-ols/<name>/main.conf   (+ php.conf beside it)
  *
- * `<brand>` is the old panel's build-time name — `strings.ToLower(ServiceName)`
- * in its agent, its whitelabel's `folder_name` in its backend — so on a
- * reseller's box it is that reseller's brand and no hardcoded list is right
- * everywhere. It is found by looking, not by being told: the directory is on
- * disk, and a directory cannot be rebranded out from under a glob.
+ * `<brand>` is the old panel's build-time (whitelabel) name, so it is found by globbing
+ * `/etc/*-ols`, not from a hardcoded list. Without this a migrated v7 server syncs zero sites.
  *
- * This matters because without it a v7 server that installs this panel gets a
- * sync that finds **zero** OpenLiteSpeed sites — wrong root and wrong
- * filename — and a panel that cannot see the sites it is supposed to manage.
- *
- * Detection is deliberately conservative: a directory only counts when it
- * actually contains a vhost, so an empty `/etc/something-ols` left behind by
- * an uninstall does not redirect a working server at its own leftovers.
+ * Detection is conservative: a directory only counts when it actually contains a vhost, so an
+ * empty `/etc/something-ols` left by an uninstall does not redirect a working server.
  */
 class OlsVhostLayout
 {
@@ -39,8 +27,7 @@ class OlsVhostLayout
     /**
      * The directory this server's vhosts live in.
      *
-     * The recorded answer wins: it was measured on this box, and the config
-     * default is only ever a guess about a server nobody has looked at.
+     * The recorded (detected) answer wins over the config default.
      */
     public function root(): string
     {
@@ -56,8 +43,7 @@ class OlsVhostLayout
     /**
      * Is this server using a layout the old panel left behind?
      *
-     * Recorded only when detection found one, so this is the same question as
-     * "did this box come from the old panel", asked without another probe.
+     * A root is recorded only when detection found one, so no extra probe is needed.
      */
     public function isLegacy(): bool
     {
@@ -69,12 +55,8 @@ class OlsVhostLayout
     /**
      * What this server calls a vhost file.
      *
-     * Per server, not per site, and deliberately so. A migrated box keeps the
-     * old panel's name for the sites it already had *and* uses it for sites
-     * created afterwards, because one box with two layouts is a box where
-     * every later question — which file does this site use, which does the
-     * shared config point at — has to be asked per site forever. Following the
-     * layout the server already has is the whole point of detecting it.
+     * Per server, not per site: a migrated box uses the old name for new sites too, so
+     * "which file does this site use" never has to be asked per site.
      */
     public function filename(): string
     {
@@ -82,25 +64,17 @@ class OlsVhostLayout
     }
 
     /**
-     * Look for a vhost root the old panel wrote, and record it if one is
-     * there.
+     * Look for a vhost root the old panel wrote, and record it if one is there.
      *
-     * Returns the root in use afterwards, so a caller can log what it will be
-     * working with rather than having to ask again.
+     * Returns the root in use afterwards.
      */
     public function detect(): string
     {
         $configured = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root'), '/');
 
-        // Ours first: a server that has both — one this panel created, one it
-        // inherited — is a server this panel is already managing, and moving it
-        // to the inherited directory would strand every site it made.
-        //
-        // "Created" means sites, not just files. The configured root always
-        // holds the panel's own vhosts (panel, panel-api) and OpenLiteSpeed's
-        // Example, so a v7 server with this panel installed on it was taken for
-        // one of ours and its sites were written where OpenLiteSpeed does not
-        // look (found 2026-11-08 checking the v7 layout).
+        // Ours first: a server with both layouts is already managed by this panel, and moving it
+        // to the inherited directory would strand its sites. "Ours" means registered sites, not
+        // just files: the configured root always holds the panel's own vhosts and the Example.
         if ($configured !== '' && $this->holdsVhost($configured) && $this->managesSites()) {
             $this->record(null);
 
@@ -125,8 +99,7 @@ class OlsVhostLayout
     /**
      * Has this panel registered any site in the shared config yet?
      *
-     * Asked of the managed region, which only ever names sites. A config that
-     * cannot be read answers yes, which keeps the layout this panel already had.
+     * An unreadable config answers yes, which keeps the layout this panel already had.
      */
     private function managesSites(): bool
     {
@@ -139,8 +112,7 @@ class OlsVhostLayout
     }
 
     /**
-     * `/etc/*-ols` directories, newest-looking last so the loop takes the
-     * first that holds anything.
+     * `/etc/*-ols` directories.
      *
      * @return array<int, string>
      */
@@ -165,10 +137,8 @@ class OlsVhostLayout
     /**
      * Does this directory hold a site's vhost, under either name?
      *
-     * Asked of the filesystem rather than assumed from the directory existing:
-     * php-fpm ships an `/etc/apache2` on boxes with no Apache, and a config
-     * directory existing has already been mistaken here for a thing being
-     * installed.
+     * Checks for a real vhost file, not just the directory: a config directory can exist without
+     * the software (php-fpm ships an `/etc/apache2` on boxes with no Apache).
      */
     private function holdsVhost(string $directory): bool
     {

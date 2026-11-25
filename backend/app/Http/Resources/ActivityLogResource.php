@@ -23,13 +23,11 @@ class ActivityLogResource extends JsonResource
             'id' => $this->id,
             'type' => $this->type,
             'action' => $this->action,
-            // Which half of the panel this row is about, so the frontend
-            // can badge or group without keeping its own copy of the map.
+            // Which half of the panel this row is about, so the frontend need not keep the map.
             'scope' => app(ActivityScopes::class)->for($this->type),
             'description' => $this->description(),
-            // What the save changed, old → new, worded for the reader (null for
-            // an event that records no changes, `[]` for a save that changed
-            // nothing). Secrets carry no values, only that they changed.
+            // Old → new, worded for the reader: null when the event records no changes, `[]` when
+            // the save changed nothing. Secrets carry no values, only that they changed.
             'changes' => $this->changes(),
             'user' => $this->when($this->relationLoaded('user'), fn () => match (true) {
                 $this->user !== null => [
@@ -37,9 +35,8 @@ class ActivityLogResource extends JsonResource
                     'username' => $this->user->username,
                     'deleted' => false,
                 ],
-                // The account is gone; the person still did this (FS-C22).
-                // Not whenLoaded(): it answers null for a null relation
-                // before the closure is ever asked.
+                // The account is gone; the person still did this. Not whenLoaded(): it answers
+                // null for a null relation before the closure is asked.
                 $this->user_name !== null => [
                     'id' => null,
                     'username' => $this->user_name,
@@ -47,21 +44,13 @@ class ActivityLogResource extends JsonResource
                 ],
                 default => null,
             }),
-            // No person did this — a scheduled reboot, an automatic disk clean,
-            // a deploy from a git webhook. Stated outright rather than left for
-            // the frontend to infer from a null user, because "the system did
-            // it" and "this row is missing its user" would otherwise look
-            // identical, and only one of them is fine.
-            //
-            // Deliberately not solved by writing an admin's id onto system
-            // actions: that would make the audit log name someone who was not
-            // there, and put machine activity in their personal history.
-            //
-            // A sign-in attempt on a name that matches no account has no
-            // person to name either, but the system did not do it.
+            // No person did this (scheduled reboot, automatic disk clean, git webhook deploy).
+            // Stated outright, as a null user alone cannot tell "the system did it" from "the row
+            // lost its user". Never write an admin's id onto system actions: the audit log would
+            // name someone who was not there. A failed sign-in on an unknown name is not the system.
             'is_system' => $this->user_id === null && $this->user_name === null
                 && ! ($this->type === 'user' && $this->action === 'login_failed_unknown'),
-            // FS-C15 / OLD-18: the same classification the filters use.
+            // The same classification the filters use.
             'kind' => app(ActivityKinds::class)->of($this->action),
             'is_security' => app(ActivityKinds::class)->isSecurity($this->type, $this->action),
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
@@ -70,39 +59,24 @@ class ActivityLogResource extends JsonResource
     }
 
     /**
-     * The row's properties, in a shape `__()` can actually substitute.
+     * The row's properties, in a shape `__()` can substitute.
      *
-     * 🔴 **This endpoint returned a 500 for the whole screen without it.**
-     * `Translator::makeReplacements()` calls `ucfirst()` on every value, so one
-     * property holding an array is a `TypeError` deep in the framework —
-     * `mb_substr(): Argument #1 ($string) must be of type string, array given` —
-     * and it takes down the entire activity log, not the one row. Three events do
-     * it: `container_secrets_viewed` records the credential KEYS it handed over,
-     * and `docker_resources_removed` records what it `removed` and what it `kept`.
-     * Every row of all three was already in the database, so refusing to record
-     * arrays in future would not have fixed a single existing one.
+     * 🔴 `Translator::makeReplacements()` calls `ucfirst()` on every value, so one array property
+     * is a `TypeError` that takes down the whole activity log, not just that row
+     * (`container_secrets_viewed`, `docker_resources_removed` record lists). Rows already stored
+     * hold arrays, so refusing to record them would not fix those.
      *
-     * The words live in `activity_values.php`, NOT in `activity.php`: the keys of
-     * that file are the event-type list — `/activity-log/filters` builds its
-     * dropdowns from them — so a non-event key there becomes a filter option for
-     * activity that does not exist. Which is exactly what happened on the first
-     * attempt, and a test caught it.
+     * The words live in `activity_values.php`, NOT `activity.php`: that file's keys are the
+     * event-type list `/activity-log/filters` builds its dropdowns from.
      *
-     * Joined rather than counted or dropped. A list of names is the useful half of
-     * those events — "removed sv-app-7_data, sv-app-7_db" is what somebody asks the
-     * log for — and `count()` would answer "3" to the question "which ones". An
-     * empty list says so in words, because `:removed` rendering as nothing reads
-     * like a broken sentence rather than a true one.
-     *
-     * Booleans go to words for the same reason: PHP casts `false` to `''`, so
-     * `rolled_back` on a save that did not roll back rendered as a gap.
+     * Arrays are joined (a list of names is what the log is asked for; an empty list says so in
+     * words). Booleans become words too: PHP casts `false` to `''`, which rendered as a gap.
      *
      * @return array<string, mixed>
      */
     private function replacements(): array
     {
-        // Rendered separately ({@see changes()}), and an array of arrays would
-        // only reach a sentence as "…, …".
+        // Rendered separately ({@see changes()}); an array of arrays would read "…, …".
         $properties = array_diff_key((array) ($this->properties ?? []), ['changes' => true]);
 
         $replacements = array_map(function (mixed $value): mixed {
@@ -122,32 +96,27 @@ class ActivityLogResource extends JsonResource
             return $value;
         }, $properties);
 
-        // A reason stored as a code, so it reads in the viewer's language
-        // rather than the deleter's: why a deleted site's adopted config was
-        // left in place (FS-C22 #14). An unknown code stays as it is.
+        // Stored as a code so it reads in the viewer's language: why a deleted site's adopted
+        // config was left in place. An unknown code stays as it is.
         $reason = $properties['left_reason'] ?? null;
 
         if (is_string($reason) && Lang::has('activity_values.adopted_left_'.$reason)) {
             $replacements['left_reason'] = __('activity_values.adopted_left_'.$reason);
         }
 
-        // The keep choice a disk clean ran with, in the viewer's language.
-        // Set for every disk-cleaner row, so one written before the choice
-        // existed reads "default" rather than a bare `:kept`.
-        // A cron job switched off plain `php` came from the server default,
-        // stored as a code so it reads in the viewer's language.
+        // A cron job switched off plain `php` came from the server default, stored as a code.
         if ($this->type === 'cronjob' && ($properties['from'] ?? null) === CronPhpBinary::DEFAULT) {
             $replacements['from'] = __('activity_values.php_default');
         }
 
-        // The settings group is stored as its key (`security`), so the
-        // sentence read "Einstellungen security aktualisiert" in German.
+        // The settings group is stored as its key (`security`); translate it for the sentence.
         $group = $properties['group'] ?? null;
 
         if ($this->type === 'setting' && is_string($group) && Lang::has('activity_values.setting_groups.'.$group)) {
             $replacements['group'] = __('activity_values.setting_groups.'.$group);
         }
 
+        // The keep choice a disk clean ran with; a row written before it existed reads "default".
         if ($this->type === 'disk_cleaner') {
             $replacements['kept'] = KeepDays::label($properties['keep_days'] ?? null);
         }
@@ -158,12 +127,9 @@ class ActivityLogResource extends JsonResource
     /**
      * The sentence for this row, never a raw key and never a bare `:name`.
      *
-     * Laravel answers a missing translation with the key itself, so an event
-     * whose sentence was renamed or never written read `activity.x.y` on the
-     * screen — a key nobody but a developer can read (support list,
-     * 2026-10-28). It now reads as words built from the event, and a warning
-     * says which sentence is missing. A placeholder the row has no value for
-     * (written before the property existed) reads "—" instead of `:name`.
+     * Laravel answers a missing translation with the key itself, so a missing sentence falls
+     * back to words built from the event, and a warning names it. A placeholder the row has no
+     * value for (written before the property existed) reads "—" instead of `:name`.
      */
     private function description(): string
     {
@@ -184,9 +150,8 @@ class ActivityLogResource extends JsonResource
             $sentence = __($key, $replacements);
         }
 
-        // Anything done with the safety copy turned off says so (2026-10-29):
-        // staging push/pull, `.env` and file-manager saves and restores. A
-        // broken site later, with nothing to go back to, is then no mystery.
+        // An action done with the safety copy turned off (staging push/pull, `.env` and
+        // file-manager saves and restores) says so.
         if ((((array) ($this->properties ?? []))['safety_copy'] ?? null) === false) {
             $sentence = __('activity_values.without_safety_copy', ['sentence' => $sentence]);
         }
@@ -204,8 +169,8 @@ class ActivityLogResource extends JsonResource
     }
 
     /**
-     * `properties.changes` in the reader's language: each field's label, its
-     * old and new value as words, and the phrase both make.
+     * `properties.changes` in the reader's language: field label, old and new value, and the
+     * phrase they make.
      *
      * @return list<array{field: string, label: string, from: string|null, to: string|null, secret: bool, text: string}>|null
      */

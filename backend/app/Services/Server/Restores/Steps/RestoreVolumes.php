@@ -12,28 +12,15 @@ use RuntimeException;
 /**
  * Pours a container site's archived volumes back into their volumes.
  *
- * **The containers are stopped first, and that is not the same decision taken
- * for backups.** A backup may not cost downtime — the site is up and expected
- * to stay up — so it copies a live volume and records the copy as
- * crash-consistent. A restore is already an outage by the time it runs: the data
- * is being replaced underneath the application, and a container that kept
- * writing through that would corrupt the incoming copy *and* lose its own
- * writes. Stopping is what makes a restore deterministic.
+ * The containers are stopped first (unlike a backup, which copies a live volume): a container
+ * that kept writing during a restore would corrupt the incoming copy and lose its own writes.
  *
- * **Written through a helper container, not to the host mountpoint.** This is
- * the asymmetry with `ArchiveVolumes`, which reads the host path directly.
- * Reading root-owned files is something the panel already does; writing into a
- * volume is not, because its contents and permissions belong to Docker, and
- * untarring into `/var/lib/docker/volumes/...` from the host is how a volume
- * ends up full of correct data the container cannot use. Mounting the volume
- * into a throwaway container means Docker does the writing, exactly as for any
- * other write to that volume.
+ * Written through a helper container, not to the host mountpoint (unlike `ArchiveVolumes`, which
+ * only reads): a volume's contents and permissions belong to Docker, and untarring into
+ * `/var/lib/docker/volumes/...` from the host leaves data the container cannot use.
  *
- * **It refuses to restore over a volume something else is using.** Restoring
- * into a live volume is the one way this feature can destroy the thing it exists
- * to protect. The site's own containers are stopped by then, so its own volumes
- * are free; anything still attached belongs to something that is not expecting
- * its data to be replaced.
+ * It refuses to restore over a volume something else is using. The site's own containers are
+ * stopped by then, so anything still attached is not expecting its data to be replaced.
  */
 class RestoreVolumes implements RestoreStep
 {
@@ -58,10 +45,7 @@ class RestoreVolumes implements RestoreStep
         $staging = $context->stagingDirectory;
 
         if ($staging === null || ! is_dir($staging.'/volumes')) {
-            // Said plainly rather than skipped quietly: a volumes restore that
-            // finds no volumes to restore means the archive does not contain
-            // what its type claims, and continuing would report success for
-            // having done nothing.
+            // Fail rather than skip: continuing would report success for having done nothing.
             throw new RuntimeException('this backup contains no volumes to restore');
         }
 
@@ -71,46 +55,31 @@ class RestoreVolumes implements RestoreStep
             throw new RuntimeException('this backup contains no volumes to restore');
         }
 
-        // `ApplicationProvisioner::documentRoot()`, which is what every other
-        // caller of the supervisor uses — `ApplyVhost`, `PullContainerImage`,
-        // `UpdateContainerCompose` and the rest. The `document_root` *column* is
-        // empty for a container site; the value the API shows is computed. This
-        // step originally read the column, passed an empty string, and the stop
-        // then found no compose file and stopped nothing — the containers stayed
-        // up and the in-use guard below refused the restore, which is how the
-        // mistake surfaced rather than becoming a write into a live volume.
+        // Use `documentRoot()`, not the `document_root` column: the column is empty for a
+        // container site, so the stop would find no compose file and stop nothing.
         $documentRoot = $this->provisioner->documentRoot($context->application);
 
-        // Stop before anything is written. `stop` on a site whose containers are
-        // already down is not an error — compose answers for the project, not
-        // for one container's state.
+        // Stop before anything is written. Stopping an already-stopped site is not an error.
         $this->containers->stop($context->application, $documentRoot);
 
-        // Recorded before the writes, so cleanup knows it owes a start. The
-        // flag is what `RestartProcess::cleanup()` reads, and both steps set it
-        // false once the site is up again, which makes running both harmless.
+        // Set before the writes so cleanup knows it owes a start (`RestartProcess::cleanup()`
+        // reads the same flag).
         $context->processStopped = true;
 
         foreach ($tars as $tar) {
             $this->pour($context, $tar);
         }
 
-        // Deliberately not restarted here. `RestartProcess` runs last and owns
-        // bringing a site back up for every site type. Starting the containers
-        // here would start them before `SwapFiles` has put the restored compose
-        // file in place, so a volumes+config restore would come up on the old
-        // definition and then have it swapped underneath.
+        // Deliberately not restarted here: `RestartProcess` runs last. Starting earlier would
+        // bring the site up on the old compose file before `SwapFiles` replaces it.
     }
 
     /**
      * Replace one volume's contents with the archived copy.
      *
-     * Emptying first is explicit, because tar has no `--delete-first`:
-     * extracting over existing contents *merges*, which would leave files the
-     * backup never contained alive inside a volume that is supposed to be a
-     * point-in-time copy. The empty and the extract are one container run, so
-     * there is no window in which the volume is empty and something could start
-     * against it.
+     * The volume is emptied first, because extracting over existing contents merges and would keep
+     * files the backup never had. Empty and extract are one container run, so there is no window
+     * with an empty volume.
      */
     private function pour(RestoreContext $context, string $tar): void
     {
@@ -124,9 +93,7 @@ class RestoreVolumes implements RestoreStep
             '-v', dirname($tar).':/backup:ro',
             (string) config('server.backups.volume_helper_image', 'busybox:stable'),
             'sh', '-c',
-            // `find . -mindepth 1 -delete` rather than `rm -rf /volume/*`, which
-            // leaves dotfiles behind — and a dotfile is exactly what an
-            // application checks to decide whether to re-run first-time setup.
+            // `find -delete`, not `rm -rf /volume/*`, which leaves dotfiles behind.
             'set -e; cd /volume; find . -mindepth 1 -delete; tar -xf /backup/'.basename($tar).' -C /volume',
         ], [
             'feature' => 'backup',
@@ -143,9 +110,8 @@ class RestoreVolumes implements RestoreStep
     /**
      * A volume still attached to a running container is not ours to replace.
      *
-     * Asked of Docker rather than of the panel's own rows, because the panel
-     * does not know about containers it did not create — and a pasted compose
-     * file can mount a volume into a service the panel never recorded.
+     * Asked of Docker, not the panel's rows: a pasted compose file can mount a volume into a
+     * service the panel never recorded.
      */
     private function refuseIfInUse(RestoreContext $context, string $name): void
     {
@@ -158,9 +124,8 @@ class RestoreVolumes implements RestoreStep
             'volume' => $name,
         ], timeout: 30);
 
-        // A question that could not be answered is not permission to proceed.
-        // Reading "nothing is using it" out of a failed `docker ps` is how a
-        // restore overwrites live data.
+        // A failed `docker ps` is not "nothing is using it": that is how a restore overwrites live
+        // data.
         if (! $result->answered) {
             throw new RuntimeException("could not check whether the volume {$name} is in use");
         }
@@ -176,15 +141,9 @@ class RestoreVolumes implements RestoreStep
 
     public function cleanup(RestoreContext $context, bool $failed): void
     {
-        // Nothing of its own on disk — the staged tars belong to the staging
-        // directory the runner removes.
-        //
-        // But this step stops the containers, so a failure after that point owes
-        // the site a start: it was up when somebody pressed the button, and a
-        // failed restore that also leaves it down turns a recoverable mistake
-        // into an outage. `SwapFiles` and `RestartProcess` carry the same guard
-        // for the same reason, and the `processStopped` flag makes all three
-        // running harmless.
+        // Nothing on disk to remove (the runner removes the staging directory), but this step
+        // stops the containers, so a failed restore must start them again. `SwapFiles` and
+        // `RestartProcess` have the same guard; the `processStopped` flag makes all three safe.
         if (! $failed || ! $context->processStopped) {
             return;
         }

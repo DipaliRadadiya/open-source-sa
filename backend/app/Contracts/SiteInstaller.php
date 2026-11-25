@@ -7,14 +7,10 @@ use App\Models\Application;
 use App\Services\Server\Applications\ProvisionProgress;
 
 /**
- * Installs a marketplace application into a site that has already been
- * provisioned — WordPress, Moodle, Mautic and the rest.
+ * Installs a marketplace application (WordPress, Moodle, Mautic, ...) into an already provisioned
+ * site: fetch the software, configure it, run its setup.
  *
- * Provisioning (directory, vhost, reload) is done by the time an installer
- * runs, so an installer only concerns itself with the application's own
- * software: fetch it, configure it, run its setup.
- *
- * Adding an app to the marketplace is one class here plus one config entry.
+ * Adding an app is one class here plus one config entry.
  */
 interface SiteInstaller
 {
@@ -27,36 +23,29 @@ interface SiteInstaller
     /**
      * The engines this application can actually use, most preferred first.
      *
-     * Only consulted when it needs a database. Handing an application an
-     * engine it cannot speak fails inside its own setup, with an error about
-     * a driver rather than about the server.
+     * Only consulted when it needs a database. An unsupported engine fails inside the
+     * application's own setup with a confusing driver error.
      *
      * @return array<int, string>
      */
     public function acceptedEngines(): array;
 
     /**
-     * The oldest version of an accepted engine this application will run on,
-     * keyed by engine name — empty when it has no such requirement.
+     * The oldest version of an accepted engine this application will run on, keyed by engine
+     * name; empty when it has no such requirement.
      *
-     * Separate from {@see acceptedEngines()} because the two answer different
-     * questions: that one is "can this application speak to that engine at
-     * all", this one is "is the one on this server new enough". Accepting an
-     * engine and then failing inside the application's own installer is
-     * exactly the outcome the accepted list exists to prevent, so the version
-     * belongs at the same gate.
+     * Separate from {@see acceptedEngines()}: that asks whether the application can use the
+     * engine at all, this asks whether the server's version is new enough.
      *
      * @return array<string, string>
      */
     public function minimumEngineVersions(): array;
 
     /**
-     * The command that runs this application, for the ones that are a process
-     * rather than a directory of files — null for everything served by PHP.
+     * The command that runs this application, for the ones that are a process rather than a
+     * directory of files; null for everything served by PHP.
      *
-     * The panel writes it rather than asking: a one-click application has one
-     * right answer, and the path it needs is only known once the document root
-     * is.
+     * The panel writes it because the path it needs is only known once the document root is.
      */
     public function startCommand(Application $application, string $documentRoot): ?string;
 
@@ -73,16 +62,11 @@ interface SiteInstaller
     /**
      * Install into the prepared document root.
      *
-     * The database (when needed) is already created and passed in `$context`
-     * as `database`, `db_user` and `db_password`, so an installer never talks
-     * to the database engine itself.
+     * The database (when needed) is already created and passed in `$context` as `database`,
+     * `db_user` and `db_password`, so an installer never talks to the database engine itself.
      *
-     * Returns nothing: progress is recorded as it happens, by
-     * {@see ProvisionProgress} — every
-     * command an installer runs passes through one method that reports the
-     * step it belongs to. An installer that also returned its step list would
-     * be keeping a second copy of the same information, and the two disagreed:
-     * three installers named steps in an order their commands do not run in.
+     * Returns nothing: progress is recorded as it happens by {@see ProvisionProgress}, through the
+     * one method every installer command passes through.
      *
      * @param  array<string, mixed>  $context
      *
@@ -93,11 +77,9 @@ interface SiteInstaller
     /**
      * Run once the application has started and answered its first request.
      *
-     * For what only a running application can do. n8n and Uptime Kuma have
-     * no setup command: their first administrator is created by whoever
-     * opens the site first, so an install that stopped at "started" handed
-     * the site to the first stranger to find the URL. They create it here,
-     * from the server, before the site is reported ready.
+     * For what only a running application can do. n8n and Uptime Kuma have no setup command: the
+     * first visitor would become administrator, so the installer creates that account here,
+     * before the site is reported ready.
      *
      * @throws ProvisioningFailedException
      */

@@ -8,45 +8,22 @@ use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\Log;
 
 /**
- * A directory holding one symlink named `php`, pointing at a site's own
- * interpreter, meant to go first on `PATH`.
+ * A directory holding one symlink named `php`, pointing at a site's own interpreter, meant to go
+ * first on `PATH`.
  *
- * ## Why this exists at all
+ * A PHAR's shebang is `#!/usr/bin/env php`, so composer, wp-cli and every other PHAR run under
+ * the *server default* PHP regardless of the site's version. Naming an interpreter explicitly
+ * fixes the commands the panel writes, not a program that starts itself. Wrong-PHP composer runs
+ * break sites (platform_check.php 500s) or resolve backwards (Craft 4 on a Craft 5 site).
  *
- * A PHAR's shebang is `#!/usr/bin/env php`. The kernel reads that line and
- * looks up `php` on `PATH` — so composer, wp-cli and every other PHAR run
- * under whatever the *server default* happens to be, regardless of which
- * version the site is set to. Naming an interpreter explicitly fixes the
- * commands the panel writes; it does nothing for a program that starts itself.
+ * 🔴 **A directory, not `dirname($binary)`.** apt puts every PHP version in `/usr/bin` under a
+ * versioned name, so prepending `/usr/bin` selects nothing; a directory with exactly one link
+ * called `php` is the only shape that means "this version" to a shebang.
  *
- * 🔴 **A directory, not `dirname($binary)`.** fnm gives each Node version its
- * own `bin`, so Node can prepend the real directory. PHP cannot: apt puts
- * every version in `/usr/bin` under a versioned name, so prepending
- * `/usr/bin` selects nothing. A directory containing exactly one link called
- * `php` is the only shape that means "this version" to a shebang.
+ * Shared by `GitDeployer` and the installers: one rule, one place.
  *
- * ## Why it is shared
- *
- * Extracted from `GitDeployer`, which built it on 2026-09-17 after a site
- * pinned to 8.2 on a box defaulting to 8.4 had `composer install` resolve
- * against 8.4 — composer writes what it resolved against into
- * `vendor/composer/platform_check.php`, `vendor/autoload.php` requires it, and
- * the site answered every request with a 500 from composer's own guard.
- *
- * The installer needs the identical thing for the identical reason:
- * `composer create-project craftcms/craft` under the wrong PHP does not fail,
- * it **resolves backwards** and installs Craft 4 on a site the panel reports
- * as Craft 5. Copying the helper rather than sharing it is how this panel has
- * repeatedly ended up with one rule maintained in two places and edited in
- * one — three separate instances of this same PHP-resolution bug were found in
- * two days.
- *
- * ## Never fatal
- *
- * Every failure path returns null, and null means the caller behaves exactly
- * as it did before a shim existed. A site whose chosen PHP has since been
- * uninstalled must not have its deploy or install die inside a helper, in a
- * step the user cannot map to anything they did.
+ * Never fatal: every failure path returns null, and the caller then behaves as if no shim
+ * existed. A missing PHP must not kill a deploy or install inside a helper.
  */
 class PhpShim
 {
@@ -56,27 +33,21 @@ class PhpShim
     ) {}
 
     /**
-     * The shim directory for an application's PHP version, or null.
-     *
-     * Null when there is nothing sensible to shim — not a failure the caller
-     * should report, just an instruction to carry on unshimmed.
+     * The shim directory for an application's PHP version, or null (carry on unshimmed).
      */
     public function forApplication(Application $application): ?string
     {
         $version = (string) $application->php_version;
 
-        // Not a version we are willing to interpolate into a path. Only ever
-        // set from validated input, so this guards a future caller rather than
-        // today's.
+        // Never interpolate an unvalidated version into a path.
         if (preg_match('/^\d+\.\d+$/', $version) !== 1) {
             return null;
         }
 
         $binary = $this->php->binaryPath($version);
 
-        // A blank `php_binary_pattern` resolves to the bare name `php`, which
-        // is the operator saying "whatever is on PATH". Shimming that would
-        // point `php` at itself and override a deliberate choice.
+        // A blank `php_binary_pattern` resolves to the bare `php` ("whatever is on PATH");
+        // shimming that would point `php` at itself.
         if ($binary === '' || $binary === 'php') {
             return null;
         }
@@ -85,10 +56,7 @@ class PhpShim
     }
 
     /**
-     * `export PATH=…;` for a shell script, or an empty string.
-     *
-     * The shape `GitDeployer` needs: its script is assembled as text and run
-     * through a shell, so the prefix is a statement rather than an argument.
+     * `export PATH=…;` for a shell script, or an empty string (for scripts run through a shell).
      */
     public function exportFor(Application $application): string
     {
@@ -98,15 +66,10 @@ class PhpShim
     }
 
     /**
-     * `['env', 'PATH=…']` to prefix an argv, or an empty array.
+     * `['env', 'PATH=…']` to prefix an argv, or an empty array (for commands run without a shell).
      *
-     * The shape the installers need: their commands are argument arrays run
-     * without a shell, so there is nowhere to put an `export`. `env` is
-     * already in the privileged binary allowlist beside `runuser`, so this
-     * adds no sudoers grant and leaves the deploy runbook unchanged.
-     *
-     * `$PATH` is not interpolated by a shell here, so the inherited PATH is
-     * appended explicitly from the value the panel process itself has.
+     * `env` is already in the privileged binary allowlist, so no sudoers change is needed. No
+     * shell expands `$PATH`, so the panel process's own PATH is appended explicitly.
      *
      * @return array<int, string>
      */
@@ -126,9 +89,8 @@ class PhpShim
     /**
      * Create the directory and the link, or explain why not.
      *
-     * The `test -x` is the guard that matters: a dangling symlink named `php`
-     * early on PATH would break work that succeeds today, which is the one
-     * outcome this must never produce.
+     * The `test -x` guard matters: a dangling `php` symlink early on PATH would break work that
+     * succeeds today.
      */
     private function ensure(string $version, string $binary): ?string
     {

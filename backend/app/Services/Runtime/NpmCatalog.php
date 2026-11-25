@@ -12,25 +12,16 @@ use Throwable;
 /**
  * Which npm a given Node version can actually run.
  *
- * "The latest npm" sounds like one number and is not. npm 12 declares
- * `engines.node: ^22.22.2 || ^24.15.0 || >=26.0.0`, so on a box running Node
- * 20 the newest usable npm is 11.x. Showing the registry's `latest` on every
- * row would leave the update button lit forever on the versions that can
- * never reach it — and, worse, `npm install -g npm@latest` on such a box
- * installs an npm that cannot start.
+ * "The latest npm" is not one number: npm 12 declares
+ * `engines.node: ^22.22.2 || ^24.15.0 || >=26.0.0`, so on Node 20 the newest usable npm is 11.x,
+ * and `npm install -g npm@latest` there installs an npm that cannot start. So the answer is
+ * computed per Node version: the highest npm release whose `engines.node` that Node satisfies.
  *
- * So the answer is computed per Node version: the highest npm release whose
- * `engines.node` that Node satisfies.
+ * Reads never touch the network. A scheduled command fills `npm_releases`; a panel behind a
+ * firewall gets null and the frontend shows no comparison.
  *
- * Reads never touch the network. The registry is fetched by a scheduled
- * command into `npm_releases`; a panel behind a firewall gets null and the
- * frontend shows no comparison, which is honest, rather than a page that
- * hangs for ten seconds on a registry it cannot reach.
- *
- * One release per npm major is stored — the newest of each line. That is
- * deliberately conservative: a Node 22.14 box is offered the newest 11.x
- * rather than some earlier 12.0.x whose range it might have satisfied. It can
- * under-offer by a patch; it cannot offer something that will not run.
+ * One release per npm major is stored (the newest of each line). That can under-offer by a
+ * patch but never offers something that will not run.
  */
 class NpmCatalog
 {
@@ -40,9 +31,7 @@ class NpmCatalog
     /**
      * The newest npm this Node version can run, or null when unknown.
      *
-     * Null means one of: the catalog has never been refreshed, the box has no
-     * egress, or nothing in the catalog matches. All three are "we cannot say"
-     * and none of them should produce a number.
+     * Null means "we cannot say": never refreshed, no egress, or nothing matches.
      */
     public function latestFor(string $nodeVersion): ?string
     {
@@ -64,9 +53,7 @@ class NpmCatalog
     /**
      * Is there an npm worth installing on this Node version?
      *
-     * Computed here rather than left to the caller because the comparison is
-     * a semver one: string-comparing '9.8.1' against '10.2.4' says the older
-     * release is newer, which is exactly the bug this answers for the client.
+     * Semver comparison, not string: '9.8.1' vs '10.2.4' must not say the older one is newer.
      */
     public function updateAvailable(string $nodeVersion, ?string $installed): bool
     {
@@ -80,20 +67,12 @@ class NpmCatalog
     }
 
     /**
-     * The npm to install on this Node version, refreshing the catalog first if
-     * it cannot answer from what is stored.
+     * The npm to install on this Node version, refreshing the catalog first if the stored data
+     * cannot answer.
      *
-     * Reads elsewhere never touch the network, deliberately — a page must not
-     * hang on a registry it cannot reach. This is the one caller that does,
-     * because it is about to *install something*: an empty catalog is the
-     * normal state of a server whose catalog has never been filled, and the
-     * alternative to fetching is guessing.
-     *
-     * Null is a real answer — "we do not know what to install" — and its
-     * caller is expected to refuse rather than to pick something. That is the
-     * whole point: `npm install -g npm@latest` on a Node 20 box installs an
-     * npm that cannot start, which turns the button meant to keep npm current
-     * into the one that breaks it.
+     * The one reader that touches the network, because it is about to install something and
+     * the alternative to fetching is guessing. Null means "we do not know what to install";
+     * the caller must refuse rather than fall back to `npm@latest`.
      */
     public function resolveTarget(string $nodeVersion): ?string
     {
@@ -109,8 +88,7 @@ class NpmCatalog
     }
 
     /**
-     * Fetch the registry and replace what is stored. Called by a scheduled
-     * command, never by a request.
+     * Fetch the registry and replace what is stored. Scheduled command only, never a request.
      *
      * @return int the number of npm majors on record afterwards
      */
@@ -119,8 +97,7 @@ class NpmCatalog
         try {
             $fresh = $this->fetch();
         } catch (Throwable $e) {
-            // Keep what is stored. A network blip must not blank a comparison
-            // that was correct yesterday.
+            // Keep what is stored; a network blip must not blank it.
             Log::warning('npm catalog refresh failed', ['error' => $e->getMessage()]);
 
             return NpmRelease::query()->count();
@@ -150,10 +127,8 @@ class NpmCatalog
     }
 
     /**
-     * npm's ranges (`^22.22.2 || ^24.15.0 || >=26.0.0`) are the same dialect
-     * Composer parses. A range it cannot parse is treated as "does not match"
-     * rather than allowed to throw: one odd release must not take down the
-     * whole Node screen.
+     * npm's ranges are the same dialect Composer parses. An unparsable range counts as "does not
+     * match" instead of throwing, so one odd release cannot take down the Node screen.
      */
     private function satisfies(string $nodeVersion, string $range): bool
     {
@@ -167,18 +142,14 @@ class NpmCatalog
     }
 
     /**
-     * The newest release of each npm major, from the registry's abbreviated
-     * packument — the same document `npm` itself installs from, and a fifth
-     * of the size of the full one.
+     * The newest release of each npm major, from the registry's abbreviated packument.
      *
      * @return array<string, array{version: string, node_range: string}>
      */
     private function fetch(): array
     {
         $response = Http::timeout((int) config('server.runtimes.npm.timeout', 30))
-            // Without this header the registry returns every release's full
-            // metadata — README included — for a document we read two fields
-            // from.
+            // Without this header the registry returns the full metadata, README included.
             ->withHeaders(['Accept' => 'application/vnd.npm.install-v1+json'])
             ->get((string) config('server.runtimes.npm.registry_url'));
 
@@ -191,8 +162,7 @@ class NpmCatalog
         foreach ($response->json('versions') ?? [] as $version => $meta) {
             $version = (string) $version;
 
-            // Pre-releases are npm's own testing lines. A panel should not
-            // offer one to somebody's production box.
+            // Pre-releases are npm's testing lines; never offer one.
             if (str_contains($version, '-')) {
                 continue;
             }
@@ -205,9 +175,8 @@ class NpmCatalog
 
             $out[$major] = [
                 'version' => $version,
-                // Absent `engines` is npm's own "runs anywhere" — only true of
-                // releases old enough that no modern Node would ever pick
-                // them, since the newest compatible release always wins.
+                // Absent `engines` means "runs anywhere"; only very old releases, which the
+                // newest compatible release always outranks.
                 'node_range' => (string) ($meta['engines']['node'] ?? '*'),
             ];
         }

@@ -9,32 +9,22 @@ use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Support\Carbon;
 
 /**
- * Which bots actually hit this site, and which of them the current settings
- * would have blocked.
+ * Which bots actually hit this site, and which of them the current settings would have blocked.
  *
- * The point is to turn the Bot Blocker from a blind choice into an evidenced
- * one: "block AI training bots" means nothing until you can see that GPTBot
- * made 4,000 requests last week and PerplexityBot sent you eleven.
+ * Three states, never to be confused:
  *
- * Three states, and they must never be confused with each other:
+ *  - `unavailable` — the log could not be read. Reporting "no bots" here would be an invented fact.
+ *  - `empty` — the log was read and holds no bot hits.
+ *  - `partial` — the log was read up to the scan cap; the counts are a floor, not a total.
  *
- *  - `unavailable` — the log could not be read at all. Reporting this as "no
- *    bots visited you" would be the panel inventing a fact, and the user
- *    would make a real decision on it.
- *  - `empty` — the log was read and holds no bot hits. A genuinely quiet site.
- *  - `partial` — the log was read up to the scan cap. The counts are a floor,
- *    not a total, and the caller is told so rather than left to assume.
- *
- * Read-only, and it never takes a path from the client: the access log is
- * resolved from the web-server driver, same as the log viewer.
+ * Read-only, and it never takes a path from the client: the access log comes from the
+ * web-server driver, same as the log viewer.
  */
 class BotTrafficReporter
 {
     /**
-     * How many log lines to scan. A busy site's access log runs to millions
-     * of lines; reading all of them to count crawlers would cost more than
-     * the answer is worth, so the cap is explicit and the response says when
-     * it was hit rather than quietly presenting a partial count as a total.
+     * How many log lines to scan. A busy log runs to millions of lines; the response says
+     * (`partial`) when the cap was hit.
      */
     public const SCAN_LINES = 200000;
 
@@ -55,8 +45,7 @@ class BotTrafficReporter
         $days = max(1, min($days, self::MAX_DAYS));
 
         $logs = $this->webServers->driver()->logPaths($application);
-        // HTTP and HTTPS: with HTTPS forced, nearly all traffic is in the
-        // `-ssl` file (v7's names), and reading one file would report no bots.
+        // HTTP and HTTPS: with HTTPS forced, nearly all traffic is in the `-ssl` file.
         $paths = array_values(array_filter([$logs['access'] ?? null, $logs['access_ssl'] ?? null]));
 
         if ($paths === []) {
@@ -100,10 +89,7 @@ class BotTrafficReporter
 
             $stamp = $this->timestamp($line);
 
-            // A line we cannot date is counted rather than dropped: the
-            // window is a filter on top of the scan, and silently discarding
-            // traffic because one log format differs would understate the
-            // very thing this screen exists to show.
+            // A line we cannot date is counted, not dropped: dropping it would understate traffic.
             if ($stamp !== null && $stamp->lt($since)) {
                 continue;
             }
@@ -118,10 +104,7 @@ class BotTrafficReporter
 
             $counts[$bot] = ($counts[$bot] ?? 0) + 1;
 
-            // What the server actually answered, from the log line itself. The
-            // count used to come from the *current* settings, so hits that got
-            // a 200 — or arrived before the block existed — read as blocked
-            // (frontend QA AB-B).
+            // What the server actually answered, from the log line, not from the current settings.
             $status = $this->status($line);
 
             if ($status === 403) {
@@ -145,9 +128,7 @@ class BotTrafficReporter
                 'bot' => $name,
                 'hits' => $hits,
                 'category' => $this->categoryOf($name, $application),
-                // What the *current* settings would do to it, so the screen
-                // can show "this one is getting through" next to the count
-                // rather than making the user cross-reference two lists.
+                // What the *current* settings would do to it.
                 'blocked' => in_array(mb_strtolower($name), $blockedNow, true),
                 // Real refusals in the window, and what the latest hit got.
                 'blocked_hits' => $refused[$name] ?? 0,
@@ -189,15 +170,8 @@ class BotTrafficReporter
     }
 
     /**
-     * Every bot name to look for: the shipped list, from the same config the
-     * vhost is rendered from — so the frontend can join these counts against
-     * `GET /ai-bot-policies` without either side carrying its own list — plus
-     * this site's own rules.
-     *
-     * The site's own agents have to be in here or the feature contradicts
-     * itself: someone who adds `SemrushBot` because it is hammering the site
-     * would then find it missing from the one screen that shows whether the
-     * block is working.
+     * Every bot name to look for: the shipped list (same config the vhost is rendered from) plus
+     * this site's own rules, so a bot the owner added still shows up on the traffic screen.
      *
      * @return array<int, string>
      */
@@ -215,10 +189,8 @@ class BotTrafficReporter
     }
 
     /**
-     * Why a bot is on this site's list: one of v8's own buckets, the site's
-     * own rule, or v7's list on a legacy_v7 site. A v7 name was reported as
-     * `custom` ("Your own rule") although nobody added it (found in the
-     * browser, 2026-10-13); a name the owner did add stays theirs.
+     * Why a bot is on this site's list: one of v8's own buckets, the site's own rule, or v7's
+     * list on a legacy_v7 site. A name the owner added stays `custom`.
      */
     private function categoryOf(string $bot, Application $application): string
     {
@@ -243,9 +215,8 @@ class BotTrafficReporter
     }
 
     /**
-     * The names the site's current settings would 403, lower-cased for
-     * comparison — policy list plus custom blocks, minus exemptions, the same
-     * resolution the vhost renderer performs.
+     * The names the current settings would 403, lower-cased: policy list plus custom blocks,
+     * minus exemptions (same resolution as the vhost renderer).
      *
      * @return array<int, string>
      */
@@ -270,9 +241,8 @@ class BotTrafficReporter
     }
 
     /**
-     * Which known bot a user-agent string belongs to, if any. Matched as a
-     * case-insensitive substring, because a real agent carries a version and
-     * a URL around the name (`compatible; GPTBot/1.3; +https://…`).
+     * Which known bot a user-agent string belongs to, if any: a case-insensitive substring,
+     * since real agents wrap the name in a version and URL (`compatible; GPTBot/1.3; +https://…`).
      */
     private function match(Application $application, string $agent): ?string
     {
@@ -328,8 +298,7 @@ class BotTrafficReporter
     }
 
     /**
-     * The status code of a combined/common-format log line — the number right
-     * after the quoted request — or null when the line has none.
+     * The status code of a combined/common-format log line (right after the quoted request).
      */
     private function status(string $line): ?int
     {

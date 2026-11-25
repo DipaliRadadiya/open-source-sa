@@ -6,19 +6,15 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 
 /**
- * The server-wide files the panel owns beside the sites: the catch-all, the
- * Cloudflare real-IP list, nginx's compression lines.
+ * The server-wide files the panel owns beside the sites: the catch-all, the Cloudflare real-IP
+ * list, nginx's compression lines.
  *
- * Changed as one set — files written or removed, links made or removed —
- * only when something differs, tested before the reload, and put back exactly
- * as it was when the test fails, so a server the web server refuses it on
- * keeps serving what it had.
+ * Changed as one set (files and links), only when something differs, tested before the reload and
+ * restored exactly as before when the test fails.
  *
- * They sit where v7 has them, under v7's names (Dipali, 2026-11-11), which
- * on a server that comes from v7 is a file v7 or its owner already wrote.
- * {@see self::ownership()} is how the callers tell them apart: a file is the
- * panel's to write only when it is absent, the package's untouched original,
- * or one the panel wrote itself.
+ * They use v7's paths and names, so on a server upgraded from v7 a file may be v7's or its owner's.
+ * {@see self::ownership()} tells them apart: the panel writes a file only when it is absent, the
+ * package's untouched original, or one the panel wrote itself.
  */
 class SharedConfigFile
 {
@@ -122,8 +118,7 @@ class SharedConfigFile
         }
 
         if (! $ok) {
-            // Back exactly as it was: each file's previous text, or no file
-            // where there was none, and each link as it pointed.
+            // Restore each file's previous text (or remove it) and each link's previous target.
             foreach ($linksBefore as $link => $target) {
                 $target === null
                     ? $this->files->delete($link, $context)
@@ -173,8 +168,7 @@ class SharedConfigFile
         $read = $this->files->get($path, $context);
 
         if (! $read->ok) {
-            // "No such file" is the one failure that means absent; anything
-            // else (unreadable, sudo refused) is not known to be ours.
+            // Only "No such file" means absent; any other failure is treated as not ours.
             return str_contains($read->errorOutput(), 'No such file') ? 'absent' : 'foreign';
         }
 
@@ -219,12 +213,9 @@ class SharedConfigFile
     }
 
     /**
-     * The text of every config file but the ones named: `$files` and every
-     * `*.conf` in `$dirs`. Read once, so a caller can ask several questions of
-     * it — whether something there already sets a directive the panel would
-     * write, which nginx refuses as a duplicate and which, set by the server's
-     * owner, is an answer the panel should not overrule. An unreadable file
-     * reads as empty.
+     * The text of every config file in `$files` and every `*.conf` in `$dirs`, except `$except`.
+     * Lets a caller check whether a directive the panel would write is already set (nginx refuses
+     * duplicates, and the owner's setting should not be overruled). An unreadable file reads as empty.
      *
      * @param  array<int, string>  $files
      * @param  array<int, string>  $dirs

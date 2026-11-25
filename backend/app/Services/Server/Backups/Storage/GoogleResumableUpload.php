@@ -15,41 +15,21 @@ use Throwable;
 /**
  * Uploads an archive to Drive and survives a failed chunk.
  *
- * **The failure this exists to stop.** `GoogleDriveAdapter::upload()` drives
- * the resumable protocol like this:
+ * `GoogleDriveAdapter::upload()` loops `nextChunk()` with no retry, so any hiccup (a 5xx, a
+ * dropped connection, a token blip) ends the upload and Flysystem reports "Not able to write the
+ * file" with no exception underneath. This class retries instead.
  *
- * ```php
- * do { $status = $media->nextChunk(); } while ($status === false);
- * ```
+ * It resumes rather than restarts: a resumable session can be asked how much it holds (`PUT` with
+ * `Content-Range: bytes *\/size`, see {@see StreamableUpload::resume()}), so a retry continues from
+ * the committed offset instead of re-sending a 100 GB archive.
  *
- * No retry anywhere. Any hiccup — a 5xx, a dropped connection, a token blip —
- * ends the loop with something that is not a `DriveFile`, and the method
- * returns `false`. Flysystem turns that into "Not able to write the file" with
- * **no exception underneath**, so nothing is logged about the cause because
- * nothing was ever created. On 2026-09-23 a 102 GB backup died after exactly
- * 35 of ~1048 chunks and lost the 14-minute archive with it.
- *
- * The protocol is designed for this. A resumable session can be asked where it
- * got to — `PUT` with `Content-Range: bytes *\/size` — and the upload carries
- * on from that byte. The vendor even ships {@see StreamableUpload::resume()}
- * for it, and calls it from nowhere.
- *
- * **Resume, not restart.** The distinction is the whole point at this size: a
- * retry that starts again costs an hour on a 100 GB archive and will lose the
- * race against the next blip. A retry that continues from the committed offset
- * costs seconds, so the upload makes progress even on a flaky link.
- *
- * **Google's committed offset is the truth, never ours.** After a failure we do
- * not assume the last chunk landed or did not. We ask, and seek to the answer.
- * Guessing either way writes the archive's bytes at the wrong offset, and the
- * result is a corrupt artefact that verifies as the right *size* — the worst
- * possible outcome for a backup.
+ * Google's committed offset is the truth, never ours: after a failure, ask and seek to the answer.
+ * Guessing writes bytes at the wrong offset, giving a corrupt artefact of the right size.
  */
 class GoogleResumableUpload
 {
     /**
-     * 100 MB, matching the adapter this replaces, so archives keep the same
-     * request shape against Google and the same chunk count.
+     * 100 MB, matching the adapter this replaces.
      */
     private const CHUNK_SIZE = 100 * 1024 * 1024;
 
@@ -98,9 +78,7 @@ class GoogleResumableUpload
         $parent = $this->parentFolder($drive, $folderId, $key);
 
         if ($parent === null) {
-            // Could not place the file. Returning false rather than throwing
-            // hands the caller back to `writeStream()`, which at least has a
-            // chance — a worse upload is better than no upload.
+            // Returning false (not throwing) lets the caller fall back to `writeStream()`.
             return false;
         }
 
@@ -155,10 +133,8 @@ class GoogleResumableUpload
             while ($status === false) {
                 try {
                     $status = $media->nextChunk();
-                    // A chunk landed, so the budget is for *consecutive*
-                    // failures. Without this reset a long upload exhausts its
-                    // attempts on unrelated blips hours apart and dies having
-                    // recovered from every one of them.
+                    // Only consecutive failures count, or a long upload would exhaust its attempts
+                    // on unrelated blips hours apart.
                     $failures = 0;
                 } catch (Throwable $e) {
                     if (++$failures >= $attempts) {
@@ -182,10 +158,8 @@ class GoogleResumableUpload
 
                     sleep((int) ($backoff[min($failures - 1, count($backoff) - 1)] ?? 30));
 
-                    // Ask Google, never assume. `resume()` sends
-                    // `Content-Range: bytes *\/size`, and the reply says how
-                    // much it actually holds — which may be more or less than
-                    // we think if the failure happened mid-flight.
+                    // Ask Google, never assume: `resume()` learns how much it actually holds, which
+                    // may differ from what we think if the failure happened mid-flight.
                     $status = $media->resume($media->getResumeUri());
                 }
 
@@ -194,9 +168,7 @@ class GoogleResumableUpload
                 }
             }
 
-            // A DriveFile means Google acknowledged the whole object. Anything
-            // else is the ambiguous state the old code silently reported as a
-            // generic write failure, and the caller must not treat it as done.
+            // A DriveFile means Google acknowledged the whole object; anything else is not done.
             if (! $status instanceof DriveFile) {
                 throw new RuntimeException(
                     'the upload finished without Google confirming the file',
@@ -216,13 +188,9 @@ class GoogleResumableUpload
     /**
      * The folder the object key's directory part names, created if absent.
      *
-     * Our keys are one level deep — `site.example.com/2026-09-23-1035-uid.tar.gz`
-     * — so this is a single lookup. Matching the adapter's own layout matters:
-     * every reader (download, restore, prune) resolves the key through
-     * Flysystem's display paths, and a file parked somewhere else would upload
-     * fine and then be unreachable. `VerifyArtifact` checks `exists()` and the
-     * remote size immediately afterwards, so a mismatch fails the backup rather
-     * than recording a artefact nobody can fetch.
+     * Keys are one level deep (`site.example.com/<file>.tar.gz`), so this is a single lookup. It
+     * must match the adapter's own layout: readers (download, restore, prune) resolve the key
+     * through Flysystem's display paths, and a file parked elsewhere would be unreachable.
      */
     private function parentFolder(Drive $drive, string $folderId, string $key): ?string
     {

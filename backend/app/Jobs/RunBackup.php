@@ -25,34 +25,18 @@ use Throwable;
 /**
  * Runs one backup off the queue.
  *
- * Not retried. A backup is expensive — a full dump, a multi-gigabyte archive,
- * an upload — and an automatic second attempt against a box that just ran out
- * of disk makes the problem worse rather than better. The schedule brings the
- * next attempt round anyway, and the failed row says why.
+ * Not retried: a backup is expensive, and a second attempt against a box that just ran out of disk
+ * makes it worse. The schedule brings the next attempt and the failed row says why.
  *
- * Unique per target, so a manual run started while the scheduled one is still
- * going cannot produce two archives of the same site at once.
+ * Unique per target, so a manual run cannot overlap the scheduled one. Unique *until processing*,
+ * not until completion: a lock held for the whole run survives `kill -9`, an OOM or a reboot for
+ * the full `uniqueFor` TTL, and every dispatch for that target is then silently discarded while the
+ * API still answers `202`. Once the lock is released at pickup, concurrent runs are prevented by
+ * the backup row itself (`hasLiveRun()`, checked by every dispatch path including the scheduler),
+ * which clears within the stall window instead of the job's whole timeout.
  *
- * **Unique *until processing*, not until completion.** A lock held for the
- * whole run is only released if the job reaches an end — and the case that
- * matters is the one where it does not: `kill -9`, an OOM, a reboot. The lock
- * then survives with the job's full `uniqueFor` TTL, and every dispatch for
- * that target is silently discarded. Not refused — discarded, with the API
- * still answering `202`, so the panel reports a backup started and nothing ran.
- * That happened on 2026-09-21 and cost an afternoon; raising the timeout to six
- * hours would have stretched the same dead window from 65 minutes to six hours.
- *
- * Releasing at pickup means a killed worker leaves nothing behind. What then
- * prevents two concurrent runs is the backup row itself — `hasLiveRun()`, which
- * every dispatch path now checks, including the scheduler — and that guard is
- * strictly better than the lock was: it is visible in the database, it says
- * *why* on screen, and since it reads the progress heartbeat it clears within
- * the stall window instead of the job's whole timeout.
- *
- * Dispatched to the default queue, deliberately: the installer runs a single
- * `queue:work` with no `--queue`, so that is the only queue anything drains.
- * This job used to go to a `backups` queue that no worker consumed, which is
- * why scheduled backups never ran on any real install.
+ * Dispatched to the default queue, deliberately: the installer runs a single `queue:work` with no
+ * `--queue`, so a dedicated `backups` queue would never be drained.
  */
 class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -62,25 +46,15 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
     public int $tries = 1;
 
     /**
-     * Configuration, not a literal, and not an hour.
+     * Configuration, not an hour: a hardcoded 3600 made large backups impossible (a 24 GB archive
+     * is killed at the hour mark on every attempt and never reaches `verified`).
      *
-     * A hardcoded 3600 did not make large backups slow, it made them
-     * impossible: a 24 GB archive measured 13 minutes to build and — before
-     * the link's congestion control was fixed — over three hours to upload, so
-     * the worker killed the job at the hour mark on every single attempt. The
-     * run never reached `verified`, and because nothing recorded progress, the
-     * failure was indistinguishable from a hang.
+     * The ceiling is high enough to be irrelevant to honest work. A wedged run is ended by the
+     * byte-rate stall guard ({@see GoogleHttpClient}), because a clock cannot tell a slow upload
+     * from a dead one.
      *
-     * The ceiling is high enough to be irrelevant to honest work. What ends a
-     * genuinely wedged run is the byte-rate stall guard
-     * ({@see GoogleHttpClient}), not a
-     * clock — because a clock cannot tell a slow upload from a dead one, and a
-     * limit tuned to catch the dead one kills the slow one too.
-     *
-     * `retry_after` on the connection must exceed this or a slow backup is
-     * picked up a second time while the first is still running (Laravel queues:
-     * job expirations & timeouts). `config/queue.php` derives it from the same
-     * key so the two cannot drift apart.
+     * `retry_after` on the connection must exceed this, or a slow backup is picked up a second time
+     * while the first is still running. `config/queue.php` derives it from the same key.
      */
     public int $timeout;
 
@@ -101,20 +75,13 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
         $target = BackupTarget::with(['application', 'database', 'storageDestination'])->find($this->backupTargetId);
 
         if ($target === null) {
-            // Dispatched by id so a target deleted between queueing and
-            // running is a graceful no-op rather than a crash.
+            // Dispatched by id: a target deleted before the job runs is a no-op, not a crash.
             return;
         }
 
-        // The lock is released at pickup now, so two jobs for one target can
-        // legitimately sit in the queue if the second was dispatched while the
-        // first was running. Both callers check this before dispatching; this
-        // is the check that cannot be raced, because it happens on the worker
-        // that is about to start writing. Two concurrent runs would archive one
-        // site twice, to one key, on one disk.
-        // A scheduled run that falls during a restore: skipped, not queued
-        // behind it — the next schedule takes the restored site. See
-        // Restore::inProgressFor().
+        // The lock is released at pickup, so two jobs for one target can sit in the queue. The
+        // dispatchers check too; this check on the worker cannot be raced. A scheduled run that
+        // falls during a restore is skipped, not queued behind it. See Restore::inProgressFor().
         $busy = $target->isDatabaseTarget()
             // A database on its own: its restore, or an import replacing it.
             ? Restore::inProgressForDatabase($target->database_id) || DatabaseImport::query()->where('database_id', $target->database_id)->open()->exists()
@@ -126,10 +93,7 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
                 'backup_target' => $this->backupTargetId,
             ]);
 
-            // Someone pressed "Back up now" and was told it started. Skipping
-            // in silence left them believing a backup existed (bug #80), so a
-            // manual run leaves a row saying why it was not taken. A scheduled
-            // run stays quiet: the next one takes the restored site.
+            // A manual run leaves a failed row saying why it was skipped; a scheduled run stays quiet.
             if ($this->actorId !== null) {
                 $skipped = Backup::create([
                     'backup_target_id' => $target->id,
@@ -174,8 +138,7 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
                 'application' => $target->subjectName(),
                 'reason' => $backup->reason ?? '',
             ],
-            // Bug #46: whoever pressed "Back up now". Null for a scheduled
-            // run, which the log shows as System, and that is what it was.
+            // Null for a scheduled run, which the log shows as System.
             $this->actorId !== null ? User::find($this->actorId) : null,
         );
     }
@@ -193,8 +156,7 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
             'detail' => $e?->getMessage(),
         ]);
 
-        // One row at a time, not one UPDATE: each keeps its own step and
-        // cause (2026-10-29) — `reason` still names the step it was on.
+        // One row at a time, not one UPDATE: each keeps its own step and cause.
         Backup::query()
             ->where('backup_target_id', $this->backupTargetId)
             ->whereIn('status', [BackupStatus::Pending->value, BackupStatus::Running->value, BackupStatus::Verifying->value])
@@ -208,16 +170,12 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
                     'finished_at' => now(),
                 ]);
 
-                // The runner's own clean-up never ran (2026-10-29).
+                // The runner's own clean-up never ran.
                 StaleBackupReaper::discardWorkingDirectory($backup);
             });
 
-        // A crash is still an attempt. BackupRunner's catch block records one
-        // for every handled failure, five lines from here, and says why: a
-        // target that stays due retries on the very next tick, turning one
-        // broken backup into a new failed row every minute for as long as
-        // whatever killed the job keeps killing it. This path — the job dying
-        // outright — was the half that never recorded it.
+        // A crash is still an attempt, as in BackupRunner's catch block: otherwise a target that
+        // stays due retries on every tick and writes a new failed row each minute.
         BackupTarget::query()
             ->where('id', $this->backupTargetId)
             ->update(['last_run_at' => now()]);

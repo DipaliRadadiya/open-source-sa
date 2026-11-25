@@ -13,35 +13,16 @@ use Illuminate\Support\Facades\View;
 /**
  * The server-side half of taking a migrated box over.
  *
- * Sync finds the applications the old panel's PM2 is running and records them,
- * and stops there — `Discoverable` forbids a discoverer from writing to the
- * server, which is right: these are the customer's live sites and pressing Sync
- * must never be frightening. The three writes the migration still needs live
- * here, behind an action someone chooses.
+ * Sync only records the applications the old panel's PM2 runs (`Discoverable` forbids writing to
+ * the server). The three writes the migration still needs live here, behind an explicit action.
+ * None of them restarts an application, so they are safe on a working server.
  *
- * None of them restarts an application. They are safe to run on a working
- * server, which is the point: the customer keeps their sites on PM2 for as long
- * as they like, and this makes that state a supported one rather than a
- * half-migrated one.
- *
- * **1. Retire the old agent.** Stop and disable its service, nothing more.
- * Never through the agent's own API: its system-user teardown runs
- * `pm2 unstartup` and then `pm2 kill`, which would stop every application the
- * user owns. The applications are children of the per-user PM2 daemon, not of
- * the agent, so stopping the agent does not touch them.
- *
- * **2. Repair boot persistence.** `pm2 startup` prints a sudo line for a human
- * to paste, and the old panel scraped it with a regex that a Node upgrade or a
- * hyphenated username defeats — after which it ran the empty string, got exit
- * 0, and reported success. Some fraction of migrated servers therefore have
- * applications that will not come back from a reboot and nobody knows. The unit
- * is written from values we already hold and verified with `systemctl`.
- *
- * **3. Give PM2's logs a rotation policy.** The old panel installed
- * `pm2-logrotate` into *root's* daemon while every application runs under a
- * per-user one, so `~/.pm2/logs` has never rotated on any of these servers.
- * On an old box with a chatty application this is the failure that fills the
- * disk and takes down MySQL and every other site with it.
+ * 1. Retire the old agent: stop and disable its service, nothing more. Never use the agent's own
+ *    API: its teardown runs `pm2 unstartup` and `pm2 kill`, which stops every application.
+ * 2. Repair boot persistence: write the systemd unit from known values and verify it with
+ *    `systemctl`, instead of scraping the sudo line `pm2 startup` prints.
+ * 3. Rotate PM2's logs: the old panel installed `pm2-logrotate` into root's daemon, while the
+ *    applications run under per-user ones, so `~/.pm2/logs` never rotated.
  */
 class LegacyHandover
 {
@@ -69,9 +50,7 @@ class LegacyHandover
             ];
         }
 
-        // Every step checked, and a failure says which. It used to answer the
-        // same "done" whatever happened — the agent still running and boot
-        // persistence still broken read exactly like success (FS-C27).
+        // Every step is checked, so a failure is not reported as success.
         $ok = ($agent === null || ($agent['stopped'] && $agent['disabled']))
             && collect($users)->every(fn (array $u) => $u['boot_unit'] !== 'failed' && $u['log_rotation'] === 'ok');
 
@@ -79,8 +58,7 @@ class LegacyHandover
     }
 
     /**
-     * Whether a handover is needed, and what is already in place — the same
-     * checks {@see complete()} acts on, without acting (FS-C26).
+     * Whether a handover is needed: the same checks {@see complete()} acts on, without acting.
      *
      * @return array{needed: bool, agent: array{unit: ?string, running: bool}, users: list<array{username: string, boot_unit_healthy: bool, log_rotation: bool}>}
      */
@@ -121,11 +99,7 @@ class LegacyHandover
     }
 
     /**
-     * Stop and disable the old agent's service.
-     *
-     * Returns the unit it acted on, or null when there was nothing running —
-     * which is the normal case on a server that was never migrated, and not an
-     * error.
+     * Stop and disable the old agent's service; null when there is none (not an error).
      */
     /**
      * @return array{unit: string, stopped: bool, disabled: bool, reference: ?string}|null
@@ -155,10 +129,8 @@ class LegacyHandover
     /**
      * Make sure this account's PM2 daemon comes back after a reboot.
      *
-     * Left alone when a working unit is already enabled — a customer's own
-     * `pm2 startup` is not ours to rewrite. Rewritten when it is enabled but
-     * its `pm2` is gone, which is what a Node upgrade through `n` does to a
-     * unit written before it.
+     * A working enabled unit is left alone (the customer's own `pm2 startup`); one whose `pm2`
+     * binary is gone (a Node upgrade does that) is rewritten.
      */
     /**
      * @return 'healthy'|'written'|'failed'
@@ -177,20 +149,16 @@ class LegacyHandover
             return 'failed';
         }
 
-        // Deliberately not started. The daemon is already running — that is
-        // what is serving the customer's sites — and `pm2 resurrect` against a
-        // live daemon would start a second copy of every application in the
-        // dump. Enabling is the whole job; the unit takes effect at the next
-        // boot, which is the moment it is for.
+        // Deliberately not started: `pm2 resurrect` against the running daemon would start a
+        // second copy of every application. The unit takes effect at the next boot.
         return 'written';
     }
 
     /**
-     * A rotation policy for `~/.pm2/logs`, which has never had one.
+     * A rotation policy for `~/.pm2/logs`.
      *
-     * `copytruncate` because PM2 holds its log files open for the life of the
-     * daemon, so a rename would leave it writing to an unreachable inode — the
-     * same reason the applications' own policy uses it.
+     * `copytruncate`: PM2 keeps its log files open, so a rename would leave it writing to an
+     * unreachable inode.
      */
     public function ensureLogRotation(SystemUser $user): bool
     {
@@ -221,10 +189,8 @@ class LegacyHandover
     /**
      * Enabled, and pointing at a `pm2` that exists.
      *
-     * Both asked of the system rather than of PM2's own output. `is-enabled`
-     * is systemd's answer to the only question that matters here, and the
-     * binary check catches the unit that survived a Node upgrade and now names
-     * a path that is gone — which fails at boot, silently, months later.
+     * The binary check catches a unit that survived a Node upgrade and names a path that is gone,
+     * which would fail silently at boot.
      */
     private function bootUnitHealthy(SystemUser $user): bool
     {

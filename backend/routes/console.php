@@ -8,128 +8,86 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Every `withoutOverlapping()` below names its lock's expiry, in minutes.
-// Laravel's default is 24 hours, which is what a crashed run leaves behind:
-// the lock outlives the process and blocks the command for a day (a reboot
-// cannot strand one any more — see BootScopedEventMutex — but a killed PHP
-// process still can). Each expiry is well above how long that command runs,
-// so it never lets a second copy start beside a live one.
+// Every `withoutOverlapping()` below names its lock expiry in minutes. The default is 24 hours,
+// so a killed PHP process would block the command for a day. Each expiry is well above the
+// command's run time. (Reboots cannot strand a lock: see BootScopedEventMutex.)
 
 Schedule::command('sanctum:prune-expired --hours=24')->daily();
 
-// Server dashboard metrics: sample every 5 minutes into server_metrics for the
-// 24h charts; the command prunes rows past the retention window (bounded table).
+// Dashboard metrics: sampled every 5 minutes for the 24h charts; the command prunes old rows.
 Schedule::command('server:sample-metrics')->everyFiveMinutes()->withoutOverlapping(10);
 
-// Per-engine DB metrics for the Query Monitor chart (same bounded-table model).
+// Per-engine DB metrics for the Query Monitor chart (same model).
 Schedule::command('db:sample-metrics')->everyFiveMinutes()->withoutOverlapping(10);
 
-// The databases list reads a stored size rather than querying every schema on
-// every request. That is only the right trade if something keeps the column
-// current — without this it reported the size at creation, which is zero,
-// forever. Ten minutes is well inside "a few minutes old is fine" for a list,
-// and `show` re-measures on demand for anyone who wants the exact figure.
+// The databases list reads a stored size; this keeps it current. Ten minutes is fine for a list,
+// and `show` re-measures on demand.
 Schedule::command('databases:refresh-sizes')->everyTenMinutes()->withoutOverlapping(30);
 
-// Automatic disk cleaner: the tick just wakes the command every minute; the
-// command self-gates on the DB schedule (enabled / due / threshold). No cron
-// file, so it can never drift with the user-managed Cronjobs feature.
+// Automatic disk cleaner: the tick wakes the command every minute and it self-gates on the DB
+// schedule (enabled / due / threshold). No cron file, so it cannot drift from user Cronjobs.
 Schedule::command('disk-cleaner:run')->everyMinute()->withoutOverlapping(60);
 
-// Support and end-of-life dates for Node and PHP, from each project's own
-// published schedule. Daily is far more often than these change; the point is
-// that the API never makes a network call inside a request. A box with no
-// egress simply keeps an empty cache and shows no badges, which is honest.
+// Support and end-of-life dates for Node and PHP. Daily is plenty; the point is that the API
+// never makes a network call inside a request. With no egress the cache stays empty (no badges).
 Schedule::command('runtimes:refresh-lifecycle')->daily()->withoutOverlapping(120);
 
-// The newest npm of each npm major, and the Node versions each one runs on.
-// Same reasoning as the lifecycle refresh, and same failure mode: no egress
-// means no comparison on the Node screen rather than a page that blocks on
-// registry.npmjs.org. Daily because npm ships far less often than that, and
-// the number only has to be right by the time somebody opens the screen.
+// The newest npm of each npm major, and the Node versions each one runs on. Same reasoning as
+// the lifecycle refresh; daily because npm ships less often than that.
 Schedule::command('runtimes:refresh-npm')->daily()->withoutOverlapping(120);
 
-// The Node range a one-click application accepts, read off the release the
-// installer would actually fetch. Same rule as above and for the same reason:
-// the create form must never block on the registry, so the answer is stored
-// and a server with no egress keeps offering the last one anybody had. Daily,
-// because a package's `engines.node` changes at most a few times a year — and
-// when it does, the picker has to move with it or the form offers a Node the
-// application refuses to start on.
+// The Node range a one-click application accepts, read from the release the installer would
+// fetch. Stored so the create form never blocks on the registry. Daily: `engines.node` changes
+// a few times a year, and the picker must follow it.
 Schedule::command('runtimes:refresh-app-packages')->daily()->withoutOverlapping(120);
 
-// Renewal happens outside the panel — certbot's own timer swaps the file every
-// sixty days and tells nothing. Without this the SSL screen counts down from
-// the date captured at issuance and eventually reports "expired" on a site
-// whose certificate renewed correctly weeks ago. Daily, because the number it
-// maintains is measured in days.
+// Renewal happens outside the panel (certbot's own timer), so without this the SSL screen
+// counts down from the issuance date and reports "expired" after a successful renewal.
+// Daily, because the number is measured in days.
 Schedule::command('certificates:refresh-expiry')->daily()->withoutOverlapping(120);
 
-// Backups: the tick just wakes the command every minute; the command
-// self-gates on each target's DB schedule. No cron file, so it can never
-// drift with the user-managed Cronjobs feature.
+// Backups: the tick wakes the command every minute and it self-gates on each target's DB
+// schedule. No cron file, so it cannot drift from user Cronjobs.
 Schedule::command('backups:run-due')->everyMinute()->withoutOverlapping(10);
 
-// Site disk usage on the applications list, never more than a minute old.
+// Site disk usage on the applications list, at most a minute old by default.
 //
-// Every site, every minute, by default. This is the one scheduled job whose
-// cost scales with the customer's data rather than the panel's row count —
-// `du` walks every inode, one pass over eight small test sites is already ~6s
-// of solid disk, and it evicts the page cache the sites are served from. On a
-// server with dozens of large sites a pass will not finish inside the minute,
-// and `withoutOverlapping()` then means this runs continuously.
-//
-// That is a deliberate trade for freshness, and it is tunable rather than
-// fixed: `server.application_size.per_run` caps the sites per tick and
-// `stale_minutes` skips recently-measured ones. Sites are taken
-// least-recently-measured first, so a bounded sweep still brings every site
-// round, just across several ticks. See the config for the full note.
-//
-// Deploys, installs and file edits measure immediately regardless; this only
-// catches drift from what the applications write themselves.
+// Its cost scales with the customer's data (`du` walks every inode and evicts the page cache),
+// so on a server with many large sites a pass may not finish within the minute. Tune it with
+// `server.application_size.per_run` (sites per tick) and `stale_minutes` (skip recent ones);
+// sites are taken least-recently-measured first. Deploys, installs and file edits measure
+// immediately regardless.
 Schedule::command(sprintf(
     'applications:measure-sizes --stale=%d --limit=%d',
     (int) config('server.application_size.stale_minutes', 0),
     (int) config('server.application_size.per_run', 0),
 ))->everyMinute()->withoutOverlapping(120);
 
-// Joomla and Nextcloud loosen their own config file whenever their settings
-// are saved (Joomla to 0444, every time); resync only runs on deploy. Five
-// minutes bounds how long the web server account can read it.
+// Joomla and Nextcloud loosen their own config file (Joomla to 0444) whenever settings are
+// saved, and resync only runs on deploy. Five minutes bounds how long the web server can read it.
 Schedule::command('sites:narrow-app-secrets')->everyFiveMinutes()->withoutOverlapping(10);
 
-// File manager trash. Every delete keeps a full copy, so without a sweep this
-// is a slow disk-space leak on a machine whose whole job is running out of
-// disk quietly. Daily because the unit is days — and scheduled at all because
-// the retention was written first and wired up second, which for a while meant
-// the API promised a sweep that never ran.
+// File manager trash. Every delete keeps a full copy, so without a sweep this leaks disk space.
+// Daily because retention is measured in days.
 Schedule::command('files:prune-trash')->daily()->withoutOverlapping(120);
 
-// The activity log's "keep for" choice (2026-10-29). A no-op while it is
-// "keep everything", the default.
+// The activity log's "keep for" choice. A no-op while it is "keep everything" (the default).
 Schedule::command('activity:prune')->daily()->withoutOverlapping(120);
 
-// Unfinished uploads, for the same reason and by the same oversight: a closed
-// laptop mid-upload leaves a part file behind, uploads have no size limit, and
-// `ChunkedUpload::reap()` was written when the feature shipped and never
-// called. The per-chunk free-space guard refuses new writes once the disk is
-// nearly full; this is what stops it filling.
+// Unfinished uploads: an interrupted upload leaves a part file behind and uploads have no size
+// limit. The per-chunk free-space guard refuses writes near a full disk; this stops it filling.
 Schedule::command('uploads:reap')->daily()->withoutOverlapping(120);
 
-// The site copy a failed restore left beside the site (`.rollback-{id}`). The
-// restore runner removes old copies only after a restore that worked, so a
-// failed one's stayed for good — a whole second copy of the site. Kept a week,
-// then removed only where the site is in place and the restore's safety backup
-// is still there (RollbackCopies::pruneFailed).
+// The site copy a failed restore leaves beside the site (`.rollback-{id}`): a whole second copy.
+// Kept a week, then removed only where the site is in place and the restore's safety backup
+// still exists (RollbackCopies::pruneFailed).
 Schedule::command('restores:prune-rollbacks')->daily()->withoutOverlapping(120);
 
-// A site whose install job died without a word — worker killed, disk full —
-// stays `provisioning` for good, and Delete refuses a provisioning site. Past
-// its own time budget nothing can still be installing it
-// (StrandedProvisioning), so it is marked failed: Retry setup or Delete.
+// A site whose install job died silently (worker killed, disk full) stays `provisioning`, and
+// Delete refuses such a site. Past its time budget (StrandedProvisioning) it is marked failed,
+// so Retry setup or Delete works.
 Schedule::command('applications:close-stranded')->everyFiveMinutes()->withoutOverlapping(10);
 
-// Prepared backup downloads (SFTP/FTP): each is a whole site plus its database
-// copied to the panel's disk, promised to the user for an hour and no longer.
-// Every five minutes so "an hour" means about that, not "until tomorrow".
+// Prepared backup downloads (SFTP/FTP): a whole site plus database copied to the panel's disk,
+// promised for an hour. Every five minutes so "an hour" is about that.
 Schedule::command('backups:prune-downloads')->everyFiveMinutes()->withoutOverlapping(10);

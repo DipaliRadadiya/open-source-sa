@@ -24,15 +24,12 @@ use Throwable;
 /**
  * Re-render every live site's vhost from the current templates and lists.
  *
- * Run by the update script after migrations, because the AI bot list, the 8G
- * ruleset and the vhost templates all ship inside the panel: an update
- * changes what a site's config *would* say without changing what it does
- * say. See `SiteConfigResyncer` for why that gap is a correctness problem
- * rather than a missing convenience.
+ * Run by the update script after migrations: the bot list, the 8G ruleset and the vhost templates
+ * ship inside the panel, so an update changes what a site's config would say, not what it says.
+ * See `SiteConfigResyncer`.
  *
- * Exits 0 even when individual sites fail. A site whose config test failed
- * has already been rolled back and is still serving; failing the command
- * would abort an otherwise-good panel update over it.
+ * Exits 0 even when individual sites fail: a site whose config test failed was already rolled
+ * back and is still serving, and failing would abort an otherwise-good panel update.
  */
 class ResyncSiteConfigs extends Command
 {
@@ -44,11 +41,7 @@ class ResyncSiteConfigs extends Command
     {
         $result = $resyncer->run();
 
-        // The grant is reported separately because it is the one thing here
-        // that can be the *only* reason the web server was restarted. Folded
-        // into "updated" it would read as a config change that did not happen;
-        // left out entirely, a run saying "0 updated. Web server reloaded."
-        // would look like a bug.
+        // The grant is reported separately: it can be the only reason the web server reloaded.
         $this->info(sprintf(
             '%d site(s): %d updated, %d already current, %d failed.%s%s',
             $result['total'],
@@ -75,8 +68,7 @@ class ResyncSiteConfigs extends Command
         $this->ensureCompression(app(NginxCompression::class));
         $this->lockSiteRoots($rootLock);
         $this->closeHomes($homeAccess);
-        // The panel's own checkout, closed for the same reason as the homes
-        // and by the same means — see PanelDirectoryAccess.
+        // The panel's own checkout, closed the same way as the homes (see PanelDirectoryAccess).
         $this->call('panel:close-directory');
         $this->refreshUnits(app(ProcessSupervisor::class), app(ApplicationProvisioner::class));
         $this->refreshDisabledWorkers(app(WorkerSupervisor::class));
@@ -87,13 +79,13 @@ class ResyncSiteConfigs extends Command
     }
 
     /**
-     * Switched-off workers were written with autostart=true and came back on
-     * every reboot (bug #73). Rewritten once here; running ones untouched.
+     * Switched-off workers were written with autostart=true and came back on every reboot.
+     * Rewritten once here; running ones untouched.
      */
     private function refreshDisabledWorkers(WorkerSupervisor $workers): void
     {
-        // Never fails the resync: a server without supervisor, or a grant
-        // that refuses it, simply keeps what it has.
+        // Never fails the resync: a server without supervisor, or a refused grant, keeps what
+        // it has.
         try {
             $refreshed = Worker::query()->where('enabled', false)->with('application.systemUser')->get()
                 ->filter(fn (Worker $worker) => $worker->application !== null && $workers->refreshDisabled($worker))
@@ -108,10 +100,8 @@ class ResyncSiteConfigs extends Command
     }
 
     /**
-     * A neutral answer for domains no site claims (bug #55) — see
-     * CatchAllSite. Here so every install, update and manual deploy gets it.
-     * Never fails the command: a server whose web server refuses it keeps
-     * the default it already had.
+     * A neutral answer for domains no site claims — see CatchAllSite. Here so every install,
+     * update and manual deploy gets it. Never fails the command.
      */
     private function ensureCatchAll(CatchAllSite $catchAll): void
     {
@@ -127,8 +117,7 @@ class ResyncSiteConfigs extends Command
     }
 
     /**
-     * The visitor's own address behind Cloudflare, as v7 has it — see
-     * CloudflareRealIp. Never fails the command.
+     * The visitor's own address behind Cloudflare — see CloudflareRealIp. Never fails the command.
      */
     private function ensureRealIp(CloudflareRealIp $realIp): void
     {
@@ -145,8 +134,8 @@ class ResyncSiteConfigs extends Command
     }
 
     /**
-     * Compression of CSS, JavaScript and JSON on nginx, as v7 has it — see
-     * NginxCompression. Never fails the command.
+     * Compression of CSS, JavaScript and JSON on nginx — see NginxCompression. Never fails the
+     * command.
      */
     private function ensureCompression(NginxCompression $compression): void
     {
@@ -162,10 +151,8 @@ class ResyncSiteConfigs extends Command
     }
 
     /**
-     * Keep every site's `.env` and config secrets to the account that runs
-     * it — see SecretFilePrivacy. Here because the installs that left them
-     * readable happened before the fix did. Only ever narrows, so a file the
-     * user tightened is left as it is.
+     * Keep every site's `.env` and config secrets to the account that runs it — see
+     * SecretFilePrivacy. Only ever narrows, so a file the user tightened is left as it is.
      */
     private function narrowSecretFiles(SecretFilePrivacy $privacy): void
     {
@@ -184,13 +171,10 @@ class ResyncSiteConfigs extends Command
     }
 
     /**
-     * Additional directives saved before only PHP settings were accepted.
-     * Those were written into the PHP-FPM pool verbatim, and a pool is only
-     * rewritten when its settings are saved — so a pool whose text differs
-     * from what is written today is rewritten here, through the same apply
-     * (config test before reload) a save uses. OpenLiteSpeed's site php.ini
-     * was already rewritten by the resync above. A line that is not a PHP
-     * setting at all is named so the owner can review what was dropped.
+     * Additional directives saved before only PHP settings were accepted were written into the
+     * PHP-FPM pool verbatim, and a pool is only rewritten on save. Such a pool is rewritten here
+     * through the same apply (config test before reload). A line that is not a PHP setting is
+     * named so the owner can review what was dropped.
      */
     private function reportSkippedDirectives(): void
     {
@@ -232,11 +216,9 @@ class ResyncSiteConfigs extends Command
     }
 
     /**
-     * Whether this site's pool file still holds a directive as it was typed,
-     * which only the pre-2026-09-30 writer produced. Asked of the file, not
-     * the saved text — the text keeps a dropped line until the owner saves
-     * again, so asking it would rewrite (and reload) the pool on every run.
-     * A pool someone hand-edited is left alone, as a save would warn first.
+     * Whether this site's pool file still holds a directive as typed (an older writer did that).
+     * Asked of the file, not the saved text, which keeps a dropped line until the owner saves
+     * again and would rewrite and reload the pool on every run. A hand-edited pool is left alone.
      */
     private function poolPredatesDirectives(PoolManager $pools, AdditionalDirectives $directives, Application $application, string $text): bool
     {
@@ -253,8 +235,8 @@ class ResyncSiteConfigs extends Command
     }
 
     /**
-     * Bring every application's systemd unit up to the current template —
-     * see ProcessSupervisor::refreshUnit(). Never restarts anything.
+     * Bring every application's systemd unit up to the current template — see
+     * ProcessSupervisor::refreshUnit(). Never restarts anything.
      */
     private function refreshUnits(ProcessSupervisor $supervisor, ApplicationProvisioner $provisioner): void
     {
@@ -276,11 +258,9 @@ class ResyncSiteConfigs extends Command
     }
 
     /**
-     * Close every system user's home to other local accounts — see
-     * HomeDirectoryAccess. Here for the reason lockSiteRoots() is: a change
-     * made only when a user is created protects new accounts and none of the
-     * existing ones. Installs the `acl` package first when it is missing
-     * (Ubuntu 26.04 does not ship it); never fails the command.
+     * Close every system user's home to other local accounts — see HomeDirectoryAccess. Here so
+     * existing accounts are covered, not only new ones. Installs the `acl` package first when it
+     * is missing (Ubuntu 26.04 does not ship it); never fails the command.
      */
     private function closeHomes(HomeDirectoryAccess $homeAccess): void
     {
@@ -333,14 +313,10 @@ class ResyncSiteConfigs extends Command
     /**
      * Make every existing site root immutable — see SiteRootLock.
      *
-     * Here because this command is already run on every deploy and by the
-     * panel's own updater: a lock applied only when a site is created would
-     * protect new sites and leave every existing one open, the same shape as a
-     * template fix that reaches new sites only.
+     * Here so existing sites are locked, not only new ones.
      *
-     * A site root that is not a root-owned directory is reported and left
-     * alone. Locking it would pin whatever is there in place — and if the site
-     * user has already swapped it, that is exactly what must not be trusted.
+     * A site root that is not a root-owned directory is reported and left alone: locking it would
+     * pin whatever is there, which may be a directory the site user swapped in.
      */
     private function lockSiteRoots(SiteRootLock $rootLock): void
     {

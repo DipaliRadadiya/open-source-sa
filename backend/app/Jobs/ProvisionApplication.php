@@ -24,14 +24,10 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Provisioning takes long enough that holding the HTTP request open would be
- * wrong, so it runs on the queue and the app's status is what the UI polls.
+ * Provisioning runs on the queue; the app's status is what the UI polls.
  *
- * `$tries = 1` on purpose. A queued job can run twice on a kill or a retry,
- * and blind retries of server mutations are how half-applied state happens.
- * The steps are idempotent so a *deliberate* re-run converges, but an
- * automatic one would just repeat a failure the user needs to see and fix —
- * they get an explicit retry action instead.
+ * `$tries = 1` on purpose: blind retries of server mutations leave half-applied state. The
+ * steps are idempotent, so a deliberate re-run converges; the user gets an explicit retry action.
  */
 class ProvisionApplication implements ShouldBeUnique, ShouldQueue
 {
@@ -42,9 +38,8 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
     public int $tries = 1;
 
     /**
-     * Sized from the site type's own installer timeout rather than fixed —
-     * see {@see ProvisioningBudget}. Set here because the constructor runs at
-     * dispatch and the property travels with the serialized job.
+     * Sized from the site type's installer timeout, see {@see ProvisioningBudget}. Set in the
+     * constructor so it travels with the serialized job.
      */
     public int $timeout;
 
@@ -61,15 +56,10 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
     /**
      * Queue it, or record at once that it could not be queued.
      *
-     * Not named `queue()`: Laravel's dispatcher calls a job's own `queue()`
-     * method, if it has one, to push it.
+     * Not named `queue()`: Laravel's dispatcher calls a job's own `queue()` method to push it.
      *
-     * The site row is saved before this runs. When the queue refused the job
-     * (Redis down for a moment, seen on a fresh OpenLiteSpeed server,
-     * 2026-11-24) the request answered 500 and the site stayed `pending` for
-     * ever — no worker would ever touch it, and Retry setup did nothing while
-     * it said provisioning. Marked failed instead, it shows why and Retry setup
-     * works once the queue is back.
+     * The site row is saved before this runs. If the queue refuses the job, the site is marked
+     * failed (not left `pending` forever) so Retry setup works once the queue is back.
      */
     public static function queueOrFail(int $applicationId, ?int $actorId = null): void
     {
@@ -78,9 +68,8 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
         } catch (Throwable $e) {
             $job = new static($applicationId, $actorId);
 
-            // The one-at-a-time lock is taken before the push, so a refused
-            // push left it held: the next Retry setup was silently dropped as
-            // a duplicate and the site sat at "provisioning" instead.
+            // The unique lock is taken before the push; release it or the next Retry setup is
+            // dropped as a duplicate.
             try {
                 (new UniqueLock(app(Cache::class)))->release($job);
             } catch (Throwable) {
@@ -93,23 +82,19 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
 
     public function handle(ApplicationProvisioner $provisioner, ActivityLogger $activityLogger): void
     {
-        // The one thing `steps` and the activity log can never show: proof the
-        // worker actually picked this job up at all. Without this line, a job
-        // that never ran (queue misconfigured, worker down) looks identical
-        // in every other log to one still queued — this is what tells them apart.
+        // Proof the worker picked the job up: otherwise a job that never ran looks the same in
+        // every other log as one still queued.
         Log::info('provisioning job started', ['application_id' => $this->applicationId]);
 
         $application = Application::with('systemUser')->find($this->applicationId);
 
-        // Deleted while queued — nothing to do, and nothing to complain about.
+        // Deleted while queued: nothing to do.
         if ($application === null) {
             return;
         }
 
-        // Stamped on every run, including a retry — which is the whole reason
-        // it exists. `created_at` only records when the row was made, so after
-        // a retry an elapsed-time display built on it counts from the original
-        // attempt and keeps climbing.
+        // Stamped on every run, retries included: `created_at` would make elapsed time count
+        // from the original attempt.
         $application->update([
             'status' => ApplicationStatus::Provisioning,
             'steps' => [],
@@ -117,10 +102,8 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
             'provisioning_started_at' => now(),
         ]);
 
-        // What Background jobs lists (D3): the row opened where this job was
-        // queued, or a new one for a job queued before such rows existed.
-        // Resolved here rather than injected: tests and callers run this
-        // handle() directly with the two services it always had.
+        // What Background jobs lists: the row opened at queue time, or a new one for older jobs.
+        // Resolved here, not injected, because callers invoke handle() with two services.
         $runs = app(ApplicationRuns::class);
         $run = $runs->startInstall($application, $this->actorId);
 
@@ -131,8 +114,7 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
                 'status' => ApplicationStatus::Active,
                 'steps' => $steps,
                 'reference' => null,
-                // The admin password has been handed to the installer, and
-                // nothing reads it again. Kept on failure, for Retry setup.
+                // The admin password has been handed to the installer; kept on failure for Retry.
                 'install_secrets' => null,
             ]);
 
@@ -144,15 +126,13 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
 
             $this->deployInitialCode($application);
         } catch (ProvisioningFailedException $e) {
-            // The step that broke is useful to the user; the raw stderr is not,
-            // and lives only in the server-ops log under this reference.
+            // The failed step is shown to the user; the raw stderr stays in the server-ops log
+            // under this reference.
             $application->update([
                 'status' => ApplicationStatus::Failed,
                 'failed_step' => $e->step,
-                // Null for most failures, and deliberately so: the step and
-                // the reference already say more than a guessed category
-                // would. Set where the exit status names the cause — chiefly
-                // an OOM kill, whose log entry is empty.
+                // Null for most failures; set only where the exit status names the cause
+                // (chiefly an OOM kill, whose log entry is empty).
                 'failed_reason' => $e->reason,
                 'reference' => $e->reference,
             ]);
@@ -169,16 +149,9 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
     /**
      * Fetch a git application's code once the site is serving.
      *
-     * Provisioning deliberately builds the directory, vhost and unit without
-     * any code, because the code has to arrive over the network and that is a
-     * different kind of failure. But nothing then asked for it: a user who
-     * pasted a repository URL got a provisioned site showing a placeholder,
-     * with no indication that a second, manual step existed. "Create a site
-     * from this repository" plainly includes fetching the repository.
-     *
-     * Recorded as a real deployment so it shows up in the history with its own
-     * trigger, and dispatched rather than run inline so a slow clone cannot
-     * time out the provisioning job.
+     * Provisioning builds the directory, vhost and unit without code (fetching it is a network
+     * failure mode of its own), so the clone is queued here as a real deployment with its own
+     * trigger. Dispatched, not run inline, so a slow clone cannot time out provisioning.
      */
     private function deployInitialCode(Application $application): void
     {
@@ -190,14 +163,10 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * The job itself died (timeout, worker killed, or an exception from a step
-     * that isn't wrapped in ProvisioningFailedException — e.g. a marketplace
-     * installer's download/extract). Leave the record honest rather than stuck
-     * at `provisioning` forever.
+     * The job itself died (timeout, worker killed, or an exception not wrapped in
+     * ProvisioningFailedException). Mark the record failed rather than stuck at `provisioning`.
      *
-     * $e is the one piece of information that previously vanished entirely:
-     * failed_step='worker' told the user *that* it died, never *why*. Logged
-     * here because it's the only place this exception is ever seen at all.
+     * $e is logged here: it is the only place this exception is ever seen.
      */
     public function failed(?Throwable $e): void
     {

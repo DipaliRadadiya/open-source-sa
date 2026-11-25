@@ -12,20 +12,14 @@ use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Whole-site HTTP Basic Auth — one username, one password per application,
- * a single shared credential rather than a table of named users.
+ * Whole-site HTTP Basic Auth: one shared username and password per application.
  *
- * The credential file lives where v7 keeps it (v7 layout B4):
- * `{appRoot}/conf/{web server}/.htpasswd`, above the served directory. It
- * has to be 0644 so the web server's worker can read it at request time, so
- * keeping it out of the document root is what actually makes it unreachable
- * over HTTP. See `Application::basicAuthPath()`.
+ * The credential file lives where v7 keeps it, `{appRoot}/conf/{web server}/.htpasswd`, above the
+ * served directory. It must be 0644 so the web server's worker can read it, so keeping it out of
+ * the document root is what makes it unreachable over HTTP. See `Application::basicAuthPath()`.
  *
- * Enable/disable/change-credential all funnel through the same apply-then-
- * test-then-reload sequence `ApplicationProvisioner::disable()`/`enable()`
- * use, with the same rollback shape: a failed config test restores the
- * previous state before failing, so a bad toggle never leaves the vhost
- * pointed at a broken config file on the next restart.
+ * Enable, disable and change-credential use the same apply, test, reload sequence as
+ * `ApplicationProvisioner::disable()`/`enable()`: a failed config test restores the previous state.
  */
 class BasicAuthManager
 {
@@ -43,14 +37,8 @@ class BasicAuthManager
     }
 
     /**
-     * Where the file used to live, before it moved above the webroot.
-     *
-     * Sites protected before that change still have a world-readable copy
-     * sitting in their document root; writing the new one removes it.
-     */
-    /**
-     * Where the file used to live: inside the document root, then in the
-     * site's `.panel/`. Each is removed once the current one is in place.
+     * Where the file used to live: inside the document root, then in the site's `.panel/`. Each is
+     * removed once the current one is in place.
      *
      * @return list<string>
      */
@@ -85,10 +73,8 @@ class BasicAuthManager
         }
 
         if ($this->webServers->driver()->test()->failed()) {
-            // Put the previous state back before failing — the same reason
-            // disable()/enable() roll back: a config test failure must never
-            // leave the vhost pointed at a block referencing a credential
-            // that was never actually saved.
+            // Roll back, as disable()/enable() do: never leave the vhost referencing a credential
+            // that was not saved.
             $application->basic_auth_enabled = $wasEnabled;
             $application->basic_auth_username = $previousUsername;
 
@@ -99,8 +85,7 @@ class BasicAuthManager
 
         $reload = $this->webServers->driver()->reload();
 
-        // Saved either way: the tested config is on disk, and the row has to
-        // say what the disk says. A failed reload is reported, not success.
+        // Saved either way: the tested config is on disk and the row must match it.
         $application->basic_auth_password = $hash;
         $application->save();
 
@@ -131,16 +116,13 @@ class BasicAuthManager
 
         $application->save();
 
-        // A failed reload leaves the web server on the config that still
-        // points at the file, so it stays until a reload has really happened.
+        // After a failed reload the web server still uses the old config, so the file stays.
         if ($reload->failed()) {
             throw new WebServerReloadFailedException($reload->reference);
         }
 
-        // Removed only once the vhost no longer references it — nothing
-        // should be able to read a stale credential once protection is off,
-        // but the file must outlive the block that points at it, not the
-        // other way round.
+        // Removed only once the vhost no longer references it: the file must outlive the block
+        // that points at it.
         $this->serverOps->run(
             ['rm', '-f', $this->credentialsPath($application)],
             $this->context($application, 'basic_auth_remove_credentials'),
@@ -148,14 +130,9 @@ class BasicAuthManager
     }
 
     /**
-     * Write the credential file at the application's *current* document root,
-     * reusing the stored hash rather than asking for the password again.
-     *
-     * Needed when the document root moves under a protected site: the file is
-     * addressed by document root, so a moved root would leave the vhost
-     * pointing at a credential file that is not there. That fails closed
-     * rather than open, but the site is still down — and a webroot change
-     * silently switching protection off would be worse.
+     * Write the credential file at the application's current document root, reusing the stored
+     * hash. Needed when the document root moves under a protected site, or the vhost would point
+     * at a credential file that is not there (the site would be down, not open).
      */
     public function publish(Application $application): void
     {
@@ -174,15 +151,12 @@ class BasicAuthManager
     }
 
     /**
-     * `{site}/conf` and `{site}/conf/{web server}`, root's and real
-     * directories, before root writes into them.
+     * Make `{site}/conf` and `{site}/conf/{web server}` real root-owned directories before root
+     * writes into them.
      *
-     * On a server that comes from v7 both belong to the site user, who could
-     * swap either for a link: root's `tee` would then write the credential —
-     * and the `chown` after it hand ownership of — whatever the link points
-     * at. A link found here is removed, not followed, and both become
-     * root:root 0755: the web server still reads the file, the user can no
-     * longer replace what it sits in.
+     * On a server upgraded from v7 both belong to the site user, who could swap either for a
+     * symlink so root's `tee` and `chown` would hit whatever it points at. A link found here is
+     * removed, not followed, and both become root:root 0755.
      */
     private function secureDirectories(Application $application, string $directory): void
     {
@@ -195,8 +169,7 @@ class BasicAuthManager
                 $this->serverOps->run(['rm', '-f', $path], $this->context($application, 'basic_auth_unlink'));
             }
 
-            // `conf` is an entry of the site root, which is immutable once
-            // locked ({@see SiteRootLock}).
+            // `conf` is an entry of the site root, which is immutable once locked ({@see SiteRootLock}).
             $made = $path === $conf
                 ? $this->rootLock->ensureDirectory($application, $path, $this->context($application, 'basic_auth_mkdir'))
                 : $this->serverOps->run(['mkdir', '-p', $path], $this->context($application, 'basic_auth_mkdir'));
@@ -226,11 +199,8 @@ class BasicAuthManager
             throw new BasicAuthOperationException($written->reference);
         }
 
-        // Readable by the web server — nginx and Apache read this at request
-        // time as their own worker user, not as the site's isolated user. A
-        // 0600 file here would report "enabled" and then answer every request
-        // with a 500. Root's, as v7 leaves it: the site user has no business
-        // rewriting the password that protects their own site.
+        // 0644: nginx and Apache read it as their own worker user, so 0600 would answer every
+        // request with a 500. Root-owned, so the site user cannot rewrite its own password.
         $this->serverOps->run(
             ['chown', '-h', 'root:root', $path],
             $this->context($application, 'basic_auth_chown'),
@@ -241,8 +211,7 @@ class BasicAuthManager
             $this->context($application, 'basic_auth_chmod'),
         );
 
-        // Only after the new one is in place: the old file must outlive the
-        // config still pointing at it, never the other way round.
+        // Only after the new file is in place: the old one must outlive any config pointing at it.
         foreach ($this->legacyCredentialsPaths($application) as $legacy) {
             if ($legacy !== $path) {
                 $this->serverOps->run(

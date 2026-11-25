@@ -9,28 +9,15 @@ use App\Services\Server\ServerOps;
 /**
  * After starting an application, ask it for a page.
  *
- * `systemctl is-active` was the strongest thing provisioning checked, and it
- * answers a narrower question than anyone reading it assumed: whether the
- * process is running. A NodeBB whose assets never compiled runs perfectly. It
- * accepts connections, stays up, satisfies `is-active` — and answers every
- * request with `500 Internal server error. Failed to lookup view!`. The panel
- * reported that site as Active, because by every check it had, it was.
+ * `systemctl is-active` only says the process is running. An app whose assets never compiled
+ * (e.g. NodeBB) stays up and answers every request with a 500, so a served page is the
+ * evidence, not a command's exit status.
  *
- * This is the same detect-don't-trust rule the panel already applies one level
- * down — `php-fpm -t` before a reload, `is-active` after a start — moved up to
- * the thing the user actually experiences. A command's exit status is a claim;
- * a served page is the evidence.
+ * Probed on the loopback address and the application's own port, as the reverse proxy does, so
+ * DNS, the certificate and the vhost (which have their own checks) are not blamed on the app.
  *
- * Probed on the loopback address and the application's own port, not through
- * the domain. That is exactly what the reverse proxy in front of it does, so
- * it tests the application rather than DNS, the certificate or the vhost —
- * which have their own checks and their own failures, and would otherwise be
- * reported here as if the application were broken.
- *
- * **Only 5xx fails.** A forum that redirects to a login page (302), or refuses
- * an anonymous request (401/403), or has no route at `/` (404) is a working
- * application answering correctly. Treating anything but 2xx as broken would
- * fail installs that are completely fine.
+ * **Only 5xx fails.** A redirect to a login page (302), a refused anonymous request (401/403)
+ * or no route at `/` (404) is a working application; requiring 2xx would fail healthy installs.
  */
 class HttpReadinessCheck
 {
@@ -47,9 +34,7 @@ class HttpReadinessCheck
         $port = (int) $application->app_port;
 
         if ($port <= 0) {
-            // Nothing to probe: this application is not served by a process of
-            // its own. Silence rather than a failure — PHP sites are served by
-            // the web server and have no port to ask.
+            // Not served by a process of its own (e.g. PHP sites): nothing to probe.
             return;
         }
 
@@ -61,21 +46,14 @@ class HttpReadinessCheck
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
             $last = $this->probe($application, $port);
 
-            // Nothing was measured. `--write-out %{http_code}` always prints
-            // something — `000` when curl could not connect at all — so empty
-            // output does not mean "no answer", it means the probe itself did
-            // not happen: curl missing, or the command not actually run.
-            //
-            // Skipping is the honest response. Failing here would report a
-            // healthy application as broken on the strength of a measurement
-            // that was never taken, which is the exact mistake this class was
-            // written to stop making one level down.
+            // `--write-out %{http_code}` always prints something (`000` if curl could not connect),
+            // so empty output means the probe itself did not run (curl missing). Skip rather than
+            // fail a healthy application on a measurement that was never taken.
             if ($last['status'] === null) {
                 return;
             }
 
-            // A 5xx is the application answering that it is broken, and it will
-            // still be broken in two seconds. Retrying only delays the report.
+            // A 5xx is the application answering that it is broken; retrying only delays the report.
             if ($last['status'] >= 500) {
                 break;
             }
@@ -84,25 +62,15 @@ class HttpReadinessCheck
                 return;
             }
 
-            // No answer yet. Node applications take a while to boot — the
-            // connection being refused a second after `systemctl start` says
-            // nothing at all, so this is the case worth waiting on.
+            // No answer yet: Node applications take a while to boot, so wait and retry.
             if ($attempt < $attempts && $delay > 0) {
                 sleep($delay);
             }
         }
 
-        // The probe's own log entry records a status code and nothing else,
-        // which says the site is broken without saying anything about why.
-        // The application's journal is where the reason actually is — for the
-        // failure this was written for, NodeBB prints the view it could not
-        // find and the directory it looked in, which is the whole answer.
-        //
-        // So the journal is captured now, while the application is still in
-        // the state that failed, and the exception carries *that* entry's
-        // reference. Same rule as `assertAssetsBuilt`, which reports the
-        // build's reference rather than the probe's: hand the user the log
-        // that explains, not the one that noticed.
+        // The probe's log entry holds only a status code; the reason is in the application's
+        // journal. Capture it now, while the application is still failing, and give the user that
+        // reference (as `assertAssetsBuilt` does): the log that explains, not the one that noticed.
         $diagnostic = $this->captureJournal($application);
 
         throw new ProvisioningFailedException(
@@ -113,16 +81,12 @@ class HttpReadinessCheck
     }
 
     /**
-     * Record the application's own log beside the failure, and return the
-     * reference of the entry holding it.
+     * Record the application's own log beside the failure, and return the reference of the
+     * entry holding it. Null when the journal could not be read (its empty output would be a
+     * worse reference than the probe's).
      *
-     * Null when the journal could not be read at all — an unreadable journal
-     * is a worse reference than the probe's, because its recorded output is
-     * empty and the user would be quoting a log that says nothing.
-     *
-     * Deliberately swallows its own failure. A diagnostic that turns a clear
-     * "this site answers 500" into an error about journalctl has made the
-     * problem harder to see, which is the opposite of the point.
+     * Deliberately swallows its own failure: an error about journalctl must not hide the
+     * original "this site answers 500".
      */
     private function captureJournal(Application $application): ?string
     {
@@ -145,9 +109,7 @@ class HttpReadinessCheck
             return null;
         }
 
-        // An application that logged nothing leaves an empty entry, which is
-        // no more use than the probe's. Only claim this reference when it
-        // actually holds something to read.
+        // Only use this reference when it holds something to read.
         return $result->failed() || trim($result->output()) === ''
             ? null
             : $result->reference;
@@ -160,9 +122,7 @@ class HttpReadinessCheck
      */
     private function probe(Application $application, int $port): array
     {
-        // `-o /dev/null -w %{http_code}` keeps the body out of the ops log: a
-        // 500 page is HTML, and the status is the part that decides anything.
-        // `log_output` still records the code, which is what a reader wants.
+        // `-o /dev/null -w %{http_code}` keeps the HTML body out of the ops log; the code is logged.
         $result = $this->serverOps->run(
             [
                 'curl', '--silent', '--show-error', '--output', '/dev/null',

@@ -14,14 +14,12 @@ use App\Services\Server\SystemUsers\SshUsersGroup;
 /**
  * Login accounts on the box that the panel does not know about.
  *
- * Read from `getent passwd` rather than by listing /home: a directory under
- * /home proves nothing about whether an account still exists, and an account
- * whose home was moved would be missed entirely.
+ * Read from `getent passwd` rather than by listing /home: a directory proves nothing about
+ * whether an account exists, and an account whose home was moved would be missed.
  *
- * The filter is deliberately conservative. Adopting a system account would
- * put root or www-data in a list the panel offers to delete, so the bar is:
- * a real login UID, a home under the configured base, and a name that is not
- * one the panel itself refuses to create.
+ * The filter is conservative so root or www-data never land in a list the panel offers to
+ * delete: a real login UID, a home under the configured base, and a name the panel would
+ * itself accept.
  */
 class SystemUserDiscoverer implements Discoverable
 {
@@ -62,19 +60,16 @@ class SystemUserDiscoverer implements Discoverable
 
         $sudoers = $this->sudoGroupMembers();
 
-        // Null means the groups could not be read. Correcting from that would
-        // turn every account's sudo off in the panel's record, so it is left
-        // alone and new accounts are adopted without sudo, as before.
+        // Null means the groups could not be read. Correcting from that would switch every
+        // account's sudo off in the panel's record, so it is skipped.
         if ($sudoers !== null && $run->mode === SyncMode::Apply) {
             $this->correctTrackedSudo($sudoers);
         }
 
         $sudoers ??= [];
 
-        // SYNC-01: SSH access is membership of the panel's own group, the one
-        // its toggle adds to and the one sshd's AllowGroups names. Read like
-        // sudo; null (the group does not exist yet, as on a server migrated
-        // in) means nobody is in it, and corrects nothing.
+        // SSH access is membership of the panel's own group (the one sshd's AllowGroups names).
+        // Read like sudo; null (group not created yet) means nobody is in it and corrects nothing.
         $sshUsers = $this->groupMembers(SshUsersGroup::NAME);
 
         if ($sshUsers !== null && $run->mode === SyncMode::Apply) {
@@ -102,9 +97,8 @@ class SystemUserDiscoverer implements Discoverable
                 continue;
             }
 
-            // Only accounts living where this panel puts them. A developer's
-            // own login under /root or /var/lib is not a site owner, and
-            // offering to manage it would be presumptuous.
+            // Only accounts living where this panel puts them: a login under /root or /var/lib
+            // is not a site owner.
             if (! str_starts_with($homePath, $home.'/')) {
                 continue;
             }
@@ -132,19 +126,12 @@ class SystemUserDiscoverer implements Discoverable
     /**
      * Who is in the groups that grant sudo on a Debian-derived server.
      *
-     * `sudo` is the group the panel's own toggle adds to and removes from;
-     * `admin` is the older Ubuntu equivalent and is still granted in the
-     * default sudoers. Grants written straight into /etc/sudoers.d are not
-     * read — the panel cannot reproduce or revoke those, and guessing from a
-     * sudoers file is worse than not claiming anything.
+     * `sudo` is the group the panel's toggle changes; `admin` is the older Ubuntu equivalent.
+     * Grants written straight into /etc/sudoers.d are not read: the panel cannot reproduce or
+     * revoke them, and guessing is worse than not claiming anything.
      *
-     * Only lines whose group name is one of these count: `getent` answers
-     * with nothing but the groups asked for, and anything else is not a
-     * membership list.
-     *
-     * Null when the answer did not include the `sudo` group at all — it
-     * exists on every Debian-derived install, so its absence means the
-     * command failed, not that nobody has sudo.
+     * Null when the answer did not include the `sudo` group: it exists on every Debian-derived
+     * install, so its absence means the command failed, not that nobody has sudo.
      *
      * @return array<int, string>|null
      */
@@ -156,8 +143,7 @@ class SystemUserDiscoverer implements Discoverable
             timeout: 30,
         );
 
-        // Exit 2 when one of the groups does not exist (no `admin` on a new
-        // install) — the lines that did resolve are still printed.
+        // Exit 2 when one group does not exist (no `admin` on a new install); the rest still print.
         $members = [];
         $sawSudo = false;
 
@@ -193,8 +179,7 @@ class SystemUserDiscoverer implements Discoverable
             expectedExitCodes: [2],
         );
 
-        // The output decides, not the exit code: `getent group a b` exits 2
-        // when either is missing and still prints the one that exists.
+        // The output decides, not the exit code: `getent group a b` exits 2 if either is missing.
         foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
             $parts = explode(':', trim($line));
 
@@ -207,7 +192,7 @@ class SystemUserDiscoverer implements Discoverable
     }
 
     /**
-     * Same as correctTrackedSudo(), for SSH access (SYNC-01).
+     * Same as correctTrackedSudo(), for SSH access.
      *
      * @param  array<int, string>  $members
      */
@@ -223,11 +208,9 @@ class SystemUserDiscoverer implements Discoverable
     }
 
     /**
-     * Bring the recorded sudo flag of accounts already in the panel back in
-     * line with the server, when somebody changed it outside the panel.
+     * Bring the recorded sudo flag of accounts already in the panel in line with the server.
      *
-     * Apply runs only — a preview promises to write nothing. The panel's
-     * record moves; the server is never touched.
+     * Apply runs only: a preview writes nothing. Only the panel's record moves, never the server.
      *
      * @param  array<int, string>  $sudoers
      */
@@ -250,17 +233,10 @@ class SystemUserDiscoverer implements Discoverable
             'username' => $attributes['username'] ?? $item['key'],
             'home_path' => $attributes['home_path'] ?? null,
             'shell' => $attributes['shell'] ?? '/bin/bash',
-            // What the server says, not a default. This was hard-coded false
-            // under a comment claiming group membership was "read
-            // separately" — it was not read anywhere, so an account with full
-            // sudo was listed as having none. Nothing changed on the server;
-            // the screen was simply wrong about a root-equivalent account, and
-            // switching sudo "on and off again" to fix it would have removed
-            // a grant somebody set up on purpose.
+            // What the server says, not a default: a hard-coded false would list an account with
+            // full sudo as having none.
             'sudo' => (bool) ($attributes['sudo'] ?? false),
-            // Membership of the panel's SSH group, read from the server
-            // (SYNC-01) — it was hard-coded false, so an account that logged
-            // in with its key every day was listed as having no SSH access.
+            // Membership of the panel's SSH group, read from the server.
             'ssh_access' => (bool) ($attributes['ssh_access'] ?? false),
         ]);
     }

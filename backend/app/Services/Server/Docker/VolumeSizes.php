@@ -8,24 +8,15 @@ use App\Services\Server\ServerOps;
 /**
  * How much disk a container site's volumes actually hold.
  *
- * **Why the panel needed this at all.** A site's size is `du -sb` on its document
- * root, run as the site's own user. For a container site that root holds a compose
- * file and nothing else — measured on the test box, a Mattermost install reported
- * **6,468 bytes** while its six volumes held about **284 MB**, one of them 164 MB
- * of plugins. The number was not slightly wrong; it was four orders of magnitude
- * out, and it is the number the sites list sorts by.
+ * A site's size is `du -sb` on its document root, which for a container site holds only a compose
+ * file, so its volumes' data would otherwise not count towards the size the sites list sorts by.
  *
- * **Not `docker system df -v`**, which is where the Docker page gets its per-volume
- * figures. That reports `Size` as a rendered string — `164.2MB` — and turning it
- * back into bytes means the panel guessing at what three significant digits stood
- * for. Fine to display, useless to add up. `du -sb` on the mountpoint gives the
- * real figure, and this runs inside the already-queued, already-debounced size job,
- * so no request pays for the walk.
+ * Not `docker system df -v`: it reports `Size` as a rendered string (`164.2MB`), which cannot be
+ * summed reliably. `du -sb` on the mountpoint gives real bytes, and runs inside the already-queued
+ * size job so no request pays for the walk.
  *
- * **Run as root, unlike every other size measurement here.** `/var/lib/docker/
- * volumes` is `root:root` at 0700, so the site user cannot read its own data —
- * which is the point of a volume. The cost is an inode walk over data the panel
- * does not otherwise touch, which is why nothing calls this synchronously.
+ * Runs as root, unlike the other size measurements: `/var/lib/docker/volumes` is `root:root` 0700.
+ * The inode walk is why nothing calls this synchronously.
  */
 class VolumeSizes
 {
@@ -34,8 +25,7 @@ class VolumeSizes
     /**
      * The total bytes held by every volume belonging to this site.
      *
-     * Zero when the site has none, which is a real answer rather than a failure:
-     * a container site with no volumes keeps nothing across a rebuild.
+     * Zero when the site has none, which is a real answer, not a failure.
      */
     public function forApplication(Application $application): int
     {
@@ -45,19 +35,15 @@ class VolumeSizes
             return 0;
         }
 
-        // One `du` for all of them rather than one per volume. A site with six
-        // volumes is six process spawns and six sudo round-trips otherwise, and
-        // `du -sb a b c` prints one line each in a single walk.
+        // One `du` for all volumes: it prints one line each, saving a spawn and sudo round-trip per volume.
         $result = $this->serverOps->run(
             array_merge(['du', '-sb'], $mountpoints),
             ['feature' => 'application', 'op' => 'docker_volume_size', 'application' => $application->id],
             timeout: 120,
         );
 
-        // Deliberately tolerant, for the same reason `FileBrowser::measure()` is:
-        // `du` exits 1 when it could not read *some* entries and still prints a
-        // correct total for the rest. A slightly low figure beats none. A volume
-        // that has vanished between the listing and the walk is exactly this case.
+        // Tolerant, like `FileBrowser::measure()`: `du` exits 1 when it could not read some entries
+        // (e.g. a volume that vanished since the listing) but still prints a total for the rest.
         $total = 0;
 
         foreach (explode("\n", trim($result->output())) as $line) {
@@ -74,20 +60,14 @@ class VolumeSizes
      *
      * Two sources, unioned, because neither is complete on its own:
      *
-     *  - **`volume_mounts`** is what somebody attached on the Container screen. It
-     *    can name a volume the panel did not create and does not prefix.
-     *  - **The `sv-app-<id>_` prefix** covers everything the panel made for this
-     *    site — every one-click app's volumes, and the ones a pasted compose file
-     *    declared — none of which appear in `volume_mounts` at all.
+     *  - **`volume_mounts`**: volumes attached on the Container screen, which the panel may not
+     *    have created or prefixed.
+     *  - **The `sv-app-<id>_` prefix**: everything the panel made for this site (one-click apps,
+     *    pasted compose files), none of which appear in `volume_mounts`.
      *
-     * Asked of `docker volume ls` with a filter rather than `inspect` per name: one
-     * call, and a name that no longer exists simply does not come back instead of
-     * failing the whole measurement.
-     *
-     * Returns **name => mountpoint**, not a bare list. The name is what a backup
-     * records and what a restore recreates; the mountpoint is what gets read.
-     * Measuring size only ever needed the values, which is why this used to
-     * return one column.
+     * Uses one `docker volume ls` rather than `inspect` per name, so a vanished volume does not
+     * fail the whole measurement. Returns name => mountpoint: a backup records the name, and the
+     * mountpoint is what gets read.
      *
      * @return array<string, string>
      */
@@ -109,11 +89,8 @@ class VolumeSizes
     /**
      * {@see self::discover()}, but null when Docker did not answer.
      *
-     * The two empties mean different things to anyone acting on them. A
-     * `volumes` backup of a site with no volumes is refused with "this site has
-     * no volumes" (S-02), and saying that because the daemon was briefly
-     * unreachable would refuse a site that has them, for a reason that is
-     * false. So the refusals ask this and act only on `[]`.
+     * The two empties differ: refusing a backup as "no volumes" because the daemon was briefly
+     * unreachable would be false, so the refusals ask this and act only on `[]`.
      *
      * @return array<string, string>|null
      */
@@ -151,18 +128,14 @@ class VolumeSizes
                 continue;
             }
 
-            // The prefix match is `str_starts_with` and not the regex the Docker
-            // page uses, because here a false positive is the danger rather than a
-            // missed row: site 2's volumes must never be counted against site 20,
-            // and `sv-app-2_` is a prefix of nothing belonging to 20.
+            // `str_starts_with`, not the Docker page's regex: a false positive is the danger here
+            // (site 2's volumes must never count against site 20).
             if (in_array($name, $attached, true) || str_starts_with($name, $prefix)) {
                 $discovered[$name] = $mountpoint;
             }
         }
 
-        // Keyed by name, so duplicates collapse on their own — `array_unique`
-        // was only ever guarding against the same volume arriving from both
-        // sources, which a map does for free.
+        // Keyed by name, so a volume found by both sources collapses.
         return $discovered;
     }
 }

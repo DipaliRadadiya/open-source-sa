@@ -5,30 +5,25 @@ namespace App\Services\Server\Php;
 /**
  * The site owner's "Additional directives": PHP settings only.
  *
- * One field, two destinations — a PHP-FPM pool file (nginx, Apache) and the
- * site's php.ini (OpenLiteSpeed) — so it is parsed once and written in each
- * one's form. Each line is a PHP setting, `name = value`, or the FPM form
- * `php_[admin_]value|flag[name] = value`. On FPM every line is written as
- * `php_admin_value[...]` / `php_admin_flag[...]`, so the field can only ever
- * set a PHP setting, never a setting of the pool itself.
+ * One field, two destinations (a PHP-FPM pool file for nginx/Apache, the site's php.ini for
+ * OpenLiteSpeed), parsed once and written in each one's form. Each line is `name = value` or the
+ * FPM form `php_[admin_]value|flag[name] = value`. On FPM every line is written as
+ * `php_admin_value[...]` / `php_admin_flag[...]`, so the field can only set PHP settings, never
+ * a setting of the pool itself.
  *
- * Anything that is not a PHP setting line is refused when saved, and skipped
- * — never written — on every other path (2026-09-30).
+ * Anything that is not a PHP setting line is refused when saved, and skipped (never written) on
+ * every other path.
  *
- * Also refused when saved (2026-10-01), still written if already saved:
- * - a setting the panel writes itself. PHP-FPM keeps the first of a repeated
- *   php_admin_value, and the panel's lines come first, so on nginx/Apache the
- *   owner's line was silently ignored while on OpenLiteSpeed it won. One rule
- *   for every stack: set it on its own field.
+ * Also refused when saved (still written if already saved):
+ * - a setting the panel writes itself. PHP-FPM keeps the first of a repeated php_admin_value and
+ *   the panel's lines come first, so the owner's line would be ignored on nginx/Apache but win
+ *   on OpenLiteSpeed. One rule for every stack: set it on its own field.
  * - loading an extension, which has its own screen.
  *
- * Plus, on PHP-FPM only (2026-10-13, v7 parity — v7 pasted its "extra pool
- * lines" into the pool as typed): a short list of pool settings that change
- * how this site's own workers run and nothing else — `env[NAME]`, request
- * timeouts, a slow log inside the site's logs, worker output, rlimits. Pool
- * settings that would change who the workers run as, where they listen, what
- * counts as PHP, or the process manager the panel computes are refused by
- * name, each with its own reason.
+ * On PHP-FPM only: a short list of pool settings that change how this site's own workers run
+ * (`env[NAME]`, request timeouts, a slow log inside the site's logs, worker output, rlimits).
+ * Pool settings that change the workers' user, listen address, PHP file extensions or the
+ * panel-computed process manager are refused by name.
  */
 class AdditionalDirectives
 {
@@ -59,10 +54,9 @@ class AdditionalDirectives
     ];
 
     /**
-     * Pool settings refused by name: who the workers run as, where they listen,
-     * which files count as PHP (`security.limit_extensions` widened would run
-     * an upload as code), the pool's own environment and logs, and the process
-     * manager, which has its own fields.
+     * Pool settings refused by name: worker user, listen address, which files count as PHP
+     * (a widened `security.limit_extensions` would run an upload as code), the pool's own
+     * environment and logs, and the process manager (which has its own fields).
      */
     private const POOL_FORBIDDEN = '/^(user|group|listen(\..+)?|chroot|chdir|prefix|include|clear_env|access\..+|security\..+|process\..+|apparmor|ping\..+|request_terminate_timeout_track_finished)$/i';
 
@@ -101,12 +95,11 @@ class AdditionalDirectives
     }
 
     /**
-     * Why this text cannot be saved, or null: the first refused line, the
-     * translation key saying why, and the setting's name.
+     * Why this text cannot be saved, or null: the first refused line, the translation key saying
+     * why, and the setting's name.
      *
-     * `$fpm` is false on OpenLiteSpeed, where there is no pool: a pool
-     * setting has nowhere to go. `$logsPath` is the site's own logs folder,
-     * the only place a slow log may be written.
+     * `$fpm` is false on OpenLiteSpeed (no pool). `$logsPath` is the site's own logs folder, the
+     * only place a slow log may be written.
      *
      * @return array{reason: string, line: string, name: string}|null
      */
@@ -137,9 +130,8 @@ class AdditionalDirectives
     }
 
     /**
-     * `$logsPath`: the site's own logs folder. A slow log anywhere else is
-     * never written — refused on save, and skipped here for any other path
-     * into the pool (no folder known means no slow log at all).
+     * `$logsPath`: the site's own logs folder. A slow log anywhere else is never written (no
+     * folder known means no slow log at all).
      */
     public function forFpm(string $text, ?string $logsPath = null): string
     {
@@ -149,9 +141,8 @@ class AdditionalDirectives
     }
 
     /**
-     * Lines a pool written before 2026-09-30 held as the owner typed them,
-     * and one written today does not — so finding any of them in a pool file
-     * means that file still predates this class.
+     * Lines an older pool file held as the owner typed them; finding any means the file predates
+     * this class.
      *
      * @return array<int, string>
      */
@@ -243,8 +234,7 @@ class AdditionalDirectives
 
         $value = trim($value);
 
-        // One line, one value: nothing that could end the line or start a
-        // section in either file.
+        // One line, one value: nothing that could end the line or start a section.
         if (! $this->oneLine($value)) {
             return null;
         }
