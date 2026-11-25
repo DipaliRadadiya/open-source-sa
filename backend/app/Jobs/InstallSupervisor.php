@@ -13,19 +13,11 @@ use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
 /**
- * Installs supervisord, which workers need and an upgraded panel has not got.
+ * Installs supervisord, which workers need and a panel installed before workers existed lacks
+ * (the updater ships code, never packages).
  *
- * Workers became supervisor programs on 2026-09-07 and `install.sh` gained the
- * package in the same commit — which reaches new installs only, because the
- * updater ships code and never packages. Until now the panel told the person
- * to go and run apt themselves, which is a fair instruction and a poor answer:
- * the panel has the grant, knows the package name, and installs PHP versions,
- * database engines and fail2ban the same way already.
- *
- * Queued, because apt is far too slow to hold a request open for — the lock
- * alone is waited out for up to ten minutes. `$tries = 1` for the same reason
- * as every other server install job: retrying a package install automatically
- * just repeats a failure somebody needs to read.
+ * Queued because apt is too slow for a request (the lock alone is waited out for up to ten
+ * minutes). `$tries = 1` like every server install job: a retry just repeats a failure to read.
  */
 class InstallSupervisor implements ShouldQueue
 {
@@ -33,10 +25,8 @@ class InstallSupervisor implements ShouldQueue
     use TracksActor;
 
     /**
-     * There is one supervisor and apt decides its version, so the tracker's
-     * (runtime, version) key needs a constant rather than a choice. `latest`
-     * is what apt actually installs, so it is also true. Same shape as
-     * {@see InstallFail2ban}.
+     * The tracker's (runtime, version) key needs a constant: apt picks the version, so `latest`.
+     * Same shape as {@see InstallFail2ban}.
      */
     public const RUNTIME = 'supervisor';
 
@@ -45,11 +35,8 @@ class InstallSupervisor implements ShouldQueue
     public int $tries = 1;
 
     /**
-     * The work itself, plus apt's wait for a lock another package manager
-     * holds ({@see ServerOps::aptLockBudgetSeconds()}), as InstallDatabaseEngine
-     * does. A fresh server's installer now finishes while Ubuntu's first-boot
-     * updates may still hold the lock, so a job started straight away waits
-     * for it — and must not be killed by the worker mid-wait, which reads as
+     * The work itself, plus apt's wait for a lock another package manager holds
+     * ({@see ServerOps::aptLockBudgetSeconds()}). Must not be killed mid-wait, or it reads as
      * "stopped unexpectedly" instead of "another install is running".
      */
     public int $timeout;
@@ -74,10 +61,8 @@ class InstallSupervisor implements ShouldQueue
             timeout: 600,
         );
 
-        // Recorded, not merely logged. The screen reads "is supervisor there",
-        // a boolean derived from the binary existing — so a failed install and
-        // one still running look identical for the ten minutes apt is allowed,
-        // and then forever. Same reasoning as the fail2ban job.
+        // Recorded, not merely logged: the screen only sees whether the binary exists, so a failed
+        // install would look like a running one.
         if ($result->failed()) {
             $installs->fail(
                 self::RUNTIME,
@@ -94,10 +79,7 @@ class InstallSupervisor implements ShouldQueue
             return;
         }
 
-        // Asked rather than assumed. apt exiting 0 is not the same claim as
-        // "supervisorctl is on PATH", and the next worker create asks exactly
-        // this question — so the install reports success only if it can give
-        // the same answer.
+        // apt exiting 0 does not mean supervisorctl is on PATH, which is what worker create checks.
         if (! $supervisor->installed()) {
             $installs->fail(
                 self::RUNTIME,
@@ -120,9 +102,7 @@ class InstallSupervisor implements ShouldQueue
     }
 
     /**
-     * The job died outright — apt hit the timeout, or the worker was killed.
-     * Without this the row sits at `installing` and the screen spins on
-     * something that stopped running.
+     * The job died outright (timeout or killed worker); otherwise the row stays at `installing`.
      */
     public function failed(?Throwable $e): void
     {

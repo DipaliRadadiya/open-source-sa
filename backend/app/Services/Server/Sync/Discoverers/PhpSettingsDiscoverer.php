@@ -11,25 +11,19 @@ use App\Services\Server\Php\PoolManager;
 /**
  * The PHP limits a migrated site is actually running under.
  *
- * Without this an adopted site shows the panel's defaults — 256M, 30 seconds —
- * while FPM is enforcing whatever the old panel wrote. The screen would be
- * describing a server it is not looking at, and the first save would quietly
- * replace real limits with invented ones.
+ * Without this an adopted site shows the panel's defaults while FPM enforces what the old panel
+ * wrote, and the first save would replace real limits with invented ones.
  *
- * Only values the pool states explicitly are imported. A limit the old pool
- * did not set is one PHP was taking from its own ini, and inventing a number
- * for it here would turn a server default into a stored decision that then
- * stops following the server.
+ * Only values the pool states explicitly are imported: a limit it did not set comes from PHP's
+ * own ini, and inventing one would turn a server default into a stored decision.
  */
 class PhpSettingsDiscoverer implements Discoverable
 {
     /**
      * Pool directive => settings column.
      *
-     * `disable_functions` and `open_basedir` are deliberately absent:
-     * open_basedir is adopted by PoolManager when the panel takes over the
-     * pool, and disable_functions is a security decision this would silently
-     * relax if the old pool set a shorter list than the panel's preset.
+     * `disable_functions` and `open_basedir` are deliberately absent: PoolManager adopts
+     * open_basedir, and disable_functions is a security decision this could silently relax.
      */
     private const IMPORTABLE = [
         'memory_limit' => 'memory_limit',
@@ -50,8 +44,7 @@ class PhpSettingsDiscoverer implements Discoverable
 
     public function dependsOn(): array
     {
-        // The settings belong to a site. Before applications have run there
-        // is nothing to attach them to.
+        // The settings belong to a site, so applications run first.
         return ['application'];
     }
 
@@ -70,8 +63,7 @@ class PhpSettingsDiscoverer implements Discoverable
             ->get();
 
         foreach ($applications as $application) {
-            // A row already here means the user has answered for this site.
-            // A migrated pool must not overwrite a decision made in the panel.
+            // A row already here is a decision made in the panel; a migrated pool must not overwrite it.
             if ($application->phpSettings !== null) {
                 continue;
             }
@@ -85,8 +77,7 @@ class PhpSettingsDiscoverer implements Discoverable
             $values = $this->parse($application, $path);
 
             if ($values === []) {
-                // A pool that sets no limits at all is the common case for a
-                // simple site. Nothing to import is not a problem to report.
+                // A pool that sets no limits is common; nothing to import is not a problem.
                 continue;
             }
 
@@ -115,9 +106,7 @@ class PhpSettingsDiscoverer implements Discoverable
     /**
      * The limits this pool states, and only those.
      *
-     * Both `php_admin_value` and `php_value` are read: the first is what the
-     * panel writes, the second is what plenty of hand-written pools use, and
-     * a site running under one of them is running under it either way.
+     * Both `php_admin_value` (what the panel writes) and `php_value` (hand-written pools) are read.
      *
      * @return array<string, string>
      */
@@ -136,8 +125,7 @@ class PhpSettingsDiscoverer implements Discoverable
                 .preg_quote($directive, '/')
                 .'\s*\]\s*=\s*(.+?)\s*$/mi';
 
-            // Last match wins, the way FPM resolves a repeated key — taking
-            // the first would import a value the server is not using.
+            // Last match wins, the way FPM resolves a repeated key.
             if (preg_match_all($pattern, $contents, $matches) && $matches[1] !== []) {
                 $values[$column] = trim((string) end($matches[1]));
             }

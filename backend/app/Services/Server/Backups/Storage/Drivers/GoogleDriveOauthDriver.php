@@ -26,8 +26,6 @@ use Throwable;
  * - **A token that can die.** A refresh token can be revoked, and Google expires it after about a
  *   week if the OAuth app was left in "Testing". `preflight()` proves the grant is *alive*, not
  *   merely present.
- *
- * See `google-drive-oauth-design.md`.
  */
 class GoogleDriveOauthDriver implements StorageDriver
 {

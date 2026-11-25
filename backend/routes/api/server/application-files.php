@@ -5,18 +5,13 @@ use App\Http\Controllers\API\Server\ApplicationUploadController;
 use Illuminate\Support\Facades\Route;
 
 /*
-| A site's own files: reset permissions, browse/view/edit/download, upload,
-| extract (.zip/.tar.gz), create a folder, rename/move, delete, recursive
-| search, and on-demand folder size.
+| A site's own files: permissions, browse/view/edit/download, upload, extract, rename/move,
+| delete, search and folder size.
 |
-| Every command runs as the site's own Linux user (`runuser -u`, in
-| FileBrowser), never as the panel's root — that is what makes accepting a
-| client-supplied path (and, for extract, a client-supplied archive) safe
-| here.
+| Every command runs as the site's own Linux user (`runuser -u`, in FileBrowser), never as the
+| panel's root: that is what makes accepting a client-supplied path or archive safe.
 |
-| Delete additionally requires `confirm: true` in the body — see
-| DeleteFileRequest — as a floor against firing it by accident. It is the
-| only destructive endpoint in this file.
+| Delete also requires `confirm: true` in the body (see DeleteFileRequest).
 */
 
 Route::post('/applications/{application}/fix-permissions', [ApplicationFileController::class, 'fixPermissions'])
@@ -29,11 +24,8 @@ Route::get('/applications/{application}/files/search', [ApplicationFileControlle
     ->middleware(['permission:app_file', 'throttle:10,1']);
 
 /*
-| Bytes by file type, for the chart on the file manager.
-|
-| Read-only and permission:app_file like the listing, but throttled harder: it
-| walks every file under the target, so it is the one read on this screen that
-| a refresh loop could turn into real load.
+| Bytes by file type, for the file manager chart. Throttled harder than the listing: it walks
+| every file under the target.
 */
 Route::get('/applications/{application}/files/breakdown', [ApplicationFileController::class, 'breakdown'])
     ->middleware(['permission:app_file', 'throttle:30,1']);
@@ -41,16 +33,14 @@ Route::get('/applications/{application}/files/breakdown', [ApplicationFileContro
 Route::get('/applications/{application}/files/size', [ApplicationFileController::class, 'folderSize'])
     ->middleware(['permission:app_file', 'throttle:20,1']);
 
-// Every folder in a directory at once, for the size column. Remembered for
-// five minutes, so the limit is for `refresh=1`, not for browsing.
+// Every folder size in a directory at once. Cached for five minutes, so the limit is for
+// `refresh=1`, not for browsing.
 Route::get('/applications/{application}/files/sizes', [ApplicationFileController::class, 'folderSizes'])
     ->middleware(['permission:app_file', 'throttle:60,1']);
 
-// Reading a file's contents — open, download, preview — needs manage.
-// Operator decision 2026-09-29 (option A): `view` is browse, search and sizes.
-// With `view` reading contents, a view-only role opened wp-config.php or .env
-// here and read the database password and APP_KEY that every other screen
-// hides from it (DB-01, the .env screen), just through a different door.
+// Reading a file's contents (open, download, preview) needs manage; `view` is browse, search and
+// sizes only. Otherwise a view-only role could read wp-config.php or .env, secrets that every
+// other screen hides from it.
 Route::get('/applications/{application}/files/content', [ApplicationFileController::class, 'show'])
     ->middleware(['permission:app_file,manage', 'throttle:60,1']);
 
@@ -64,40 +54,20 @@ Route::post('/applications/{application}/files/upload', [ApplicationFileControll
     ->middleware(['permission:app_file,manage', 'throttle:10,1']);
 
 /*
-| Resumable uploads, for files past what the single-shot endpoint above can
-| buffer through PHP memory. `uploads` (plural) rather than a nested path
-| under `upload`, so neither route is a prefix of the other.
+| Resumable uploads, for files too big for the single-shot endpoint above to buffer in PHP
+| memory. The chunk endpoint takes a **raw body**, not multipart (see ApplicationUploadController).
 |
-| The chunk endpoint takes a **raw body**, not multipart — see
-| ApplicationUploadController for why that halves the disk traffic of an
-| upload on a box that is also serving customer sites.
+| Its throttle is per chunk, not per file: one large upload is thousands of requests. The real
+| bounds are nginx's client_max_body_size (one chunk) and ChunkedUpload's free-space guard.
 |
-| Its throttle is per chunk, not per file: one large upload is legitimately
-| thousands of requests, so the usual 10/min here would cap throughput at a
-| few hundred MB an hour. The real bounds on this endpoint are nginx's
-| client_max_body_size (one chunk) and ChunkedUpload's free-space guard.
-|
-| `throttle:api` is removed for the same reason it is removed on the deploy
-| webhook: bootstrap/app.php prepends it to every API route, and a per-route
-| throttle does not replace it, it stacks. Left on, the global 120/min won
-| every time — the declared 1200 and 240 were decoration, and a large upload
-| competed for that budget with the UI's own polling. Verified by probing:
-| the first 429 arrived at request 121 on a route declaring 240.
+| `throttle:api` is removed here as on the deploy webhook: bootstrap/app.php prepends it to
+| every API route and a per-route throttle stacks with it instead of replacing it, so the
+| global 120/min would always win.
 */
-// Registered before the `{uploadId}` route below so "space" is never taken
-// for an upload id. (It would 404 there anyway — ids are 32 hex characters —
-// but relying on that is a trap for whoever loosens the pattern later.)
-// These five are throttled per *file*, not per byte, so the limits have to
-// clear what a legitimate multi-file drop costs: begin + finalize for every
-// file, an abort for every one that fails, and a status call for every chunk
-// retry. At 30/min a forty-file drop throttled itself halfway through, and
-// the aborts fired by the failures then used up the same budget -- the limit
-// turned one failure into a stuck queue.
-//
-// They are cheap metadata operations (a few short commands each); the load a
-// large upload actually puts on the box is in the chunk endpoint below, and
-// what bounds it is the free-space guard and the size of the FPM pool, not a
-// request count.
+// Registered before the `{uploadId}` route so "space" is never taken for an upload id.
+// These are throttled per *file*, so the limits must clear a multi-file drop: begin + finalize
+// per file, an abort per failure, a status call per chunk retry. They are cheap metadata calls;
+// the real load is in the chunk endpoint.
 Route::get('/applications/{application}/files/uploads/space', [ApplicationUploadController::class, 'space'])
     ->withoutMiddleware('throttle:api')
     ->middleware(['permission:app_file', 'throttle:240,1']);
@@ -126,13 +96,9 @@ Route::get('/applications/{application}/files/download', [ApplicationFileControl
     ->middleware(['permission:app_file,manage', 'throttle:20,1']);
 
 /*
-| The one read here that returns a renderable response: an image, with its
-| real content type, so the file manager can show a picture instead of
-| offering to save it.
-|
-| Manage, like `content` and `download` (see there), and throttled like
-| `content` rather than like `download` — a folder of thumbnails is many small
-| reads, not a few large transfers.
+| Returns an image with its real content type, so the file manager can show it. Manage, like
+| `content` and `download`; throttled like `content`, since a folder of thumbnails is many
+| small reads.
 */
 Route::get('/applications/{application}/files/preview', [ApplicationFileController::class, 'preview'])
     ->middleware(['permission:app_file,manage', 'throttle:60,1']);
@@ -140,16 +106,14 @@ Route::get('/applications/{application}/files/preview', [ApplicationFileControll
 Route::post('/applications/{application}/files/extract', [ApplicationFileController::class, 'extract'])
     ->middleware(['permission:app_file,manage', 'throttle:5,1']);
 
-// Trash. Deleting moves here by default, so these are what make that a
-// safety net rather than a slower way to lose a file.
+// Trash: deleting moves files here by default.
 Route::get('/applications/{application}/files/trash', [ApplicationFileController::class, 'trash'])
     ->middleware(['permission:app_file', 'throttle:60,1']);
 
 Route::post('/applications/{application}/files/trash/restore', [ApplicationFileController::class, 'restoreTrash'])
     ->middleware(['permission:app_file,manage', 'throttle:30,1']);
 
-// The one unrecoverable action here, which is the point of it: this is how
-// the disk space comes back.
+// The one unrecoverable action here: it is how the disk space comes back.
 Route::delete('/applications/{application}/files/trash', [ApplicationFileController::class, 'emptyTrash'])
     ->middleware(['permission:app_file,manage', 'throttle:10,1']);
 
@@ -165,19 +129,9 @@ Route::post('/applications/{application}/files/copy', [ApplicationFileController
 Route::post('/applications/{application}/files/compress', [ApplicationFileController::class, 'compress'])
     ->middleware(['permission:app_file,manage', 'throttle:10,1']);
 
-// Polled while an archive job runs. `view` rather than `manage`: watching
-// something happen is not changing it, and a viewer looking at the file
-// browser should see that a compress is in progress rather than an
-// unexplained lock.
-//
-// Outside the global limiter and on `throttle:progress`, like every other
-// polling endpoint here. A per-route throttle *stacks* with `throttle:api`
-// rather than replacing it, so the lower always wins — this shipped as
-// `throttle:120,1` and therefore spent 30 of the user's 180 global requests
-// every minute the Files page was open, for as long as it was open. Measured
-// on a real server: 141 of the 172 requests in one six-minute window were this
-// endpoint, and the 429s landed on `/files/size` and `/files/compress`
-// instead, which is the tell — the budget was gone before the click arrived.
+// Polled while an archive job runs; `view` is enough, since watching is not changing.
+// Outside the global limiter, on `throttle:progress`, like the other polling endpoints: a
+// per-route throttle stacks with `throttle:api`, so polling would eat the user's global budget.
 Route::get('/applications/{application}/files/archive-jobs', [ApplicationFileController::class, 'archiveJobs'])
     ->withoutMiddleware('throttle:api')
     ->middleware(['permission:app_file,view', 'throttle:progress']);

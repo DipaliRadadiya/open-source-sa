@@ -29,8 +29,7 @@ class StoreDatabaseRequest extends FormRequest
         $allCollations = $charsets === [] ? [] : array_merge(...array_values($charsets));
 
         return [
-            // Identifiers can't be parameterised in DDL → the strict regex IS
-            // the injection guard.
+            // Identifiers can't be parameterised in DDL: the strict regex IS the injection guard.
             'name' => [
                 'required', 'string', 'regex:/^[A-Za-z0-9_]{1,63}$/',
                 Rule::notIn($this->systemSchemas()),
@@ -42,12 +41,11 @@ class StoreDatabaseRequest extends FormRequest
             'application_id' => ['nullable', 'integer', Rule::exists('applications', 'id')],
 
             'create_user' => ['nullable', 'array'],
-            // 32 is MySQL 8's hard limit on a user name, unlike the 63 allowed
-            // for the database name above — see StoreDatabaseUserRequest.
+            // 32 is MySQL 8's hard limit on a user name (see StoreDatabaseUserRequest).
             'create_user.username' => [
                 'required_with:create_user', 'string', 'regex:/^[A-Za-z0-9_]{1,32}$/',
                 Rule::notIn((array) config('server.databases.system_users', [])),
-                // PostgreSQL reserves the prefix and refuses CREATE ROLE (bug #25).
+                // PostgreSQL reserves the prefix and refuses CREATE ROLE.
                 'not_regex:/^pg_/i',
             ],
             'create_user.password' => ['nullable', 'string', 'min:8', 'max:255'],
@@ -55,10 +53,8 @@ class StoreDatabaseRequest extends FormRequest
                 'nullable', Rule::in(['localhost', 'remote', 'anywhere']),
                 new SupportsRemoteDatabaseUsers((string) $this->input('engine')),
             ],
-            // The caller's agreement to a cluster restart, needed only by
-            // PostgreSQL and only when it is still bound to loopback.
-            // Absent means "not agreed", which is a 409 rather than a
-            // silent restart of somebody's database.
+            // Agreement to a cluster restart, needed only by PostgreSQL while it is bound to
+            // loopback. Absent means "not agreed": a 409, never a silent restart.
             'create_user.restart_cluster' => ['sometimes', 'boolean'],
             'create_user.host' => [
                 'nullable',
@@ -83,8 +79,7 @@ class StoreDatabaseRequest extends FormRequest
 
             $this->refuseEngineNotAnswering($validator);
 
-            // FS-C13: the attach screen's rules, for a database made for an
-            // application.
+            // The attach screen's rules, for a database made for an application.
             $application = $this->input('application_id') ? Application::find($this->input('application_id')) : null;
 
             if ($application !== null) {
@@ -97,12 +92,8 @@ class StoreDatabaseRequest extends FormRequest
     /**
      * Refuse an engine that does not answer on this server, before any SQL.
      *
-     * The create screen only offers running engines, but the API took any
-     * configured one: `mysql` on a MariaDB server went to MariaDB's port as
-     * `root` with no password and came back a 500 "operation failed"
-     * (2026-10-22). One `SELECT VERSION()` on the requested engine only — the
-     * same probe that sets `running` on the engines list, so the API and the
-     * screen agree on what is usable.
+     * The API would otherwise accept any configured engine and fail with a 500. One
+     * `SELECT VERSION()` on the requested engine only, the same probe as the engines list.
      */
     private function refuseEngineNotAnswering(Validator $validator): void
     {
@@ -124,12 +115,8 @@ class StoreDatabaseRequest extends FormRequest
     /**
      * The charsets the *requested* engine actually understands.
      *
-     * Read per engine rather than from one global list, which accepted
-     * `utf8mb4` on a MongoDB database: the rule passed, the value was stored,
-     * and the engine had no such concept. An engine that is missing or unknown
-     * yields an empty list, so the `Rule::in` below rejects every charset —
-     * `engine` is required, and a charset for an engine we cannot name is not
-     * a value to wave through.
+     * Read per engine (a global list accepted `utf8mb4` on MongoDB). A missing or unknown engine
+     * yields an empty list, so `Rule::in` rejects every charset.
      *
      * @return array<string, array<int, string>>
      */

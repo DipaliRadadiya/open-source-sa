@@ -19,8 +19,6 @@ use Throwable;
  *
  * The single-use `code` is exchanged here, on the server: the client secret never reaches the
  * browser.
- *
- * See `google-drive-oauth-design.md` §3b.
  */
 class GoogleOauthRedirect
 {

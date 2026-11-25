@@ -12,17 +12,11 @@ use Illuminate\Support\Facades\Storage;
  *
  * The disk is built on demand and never registered in `filesystems.disks`, so
  * a destination's credentials cannot bleed into any other code that resolves a
- * named disk — across queue workers, Octane tasks, or a later request.
+ * named disk.
  *
- * Extracted so the connection prober and the backup uploader share one
- * definition. They had drifted once already: the prober's config carried a
- * `throw => false` that silently swallowed every failure, and a second copy of
- * that mistake in the uploader would have meant backups reporting success
- * while writing nothing.
- *
- * The per-provider knowledge moved out to `StorageDriver` implementations —
- * this class is now the seam that keeps every caller from having to know which
- * provider it got.
+ * The prober and the uploader share this one definition: a `throw => false` in
+ * either would swallow failures and report backups as written when they were not.
+ * Per-provider knowledge lives in the `StorageDriver` implementations.
  */
 class DestinationDisk
 {
@@ -43,18 +37,11 @@ class DestinationDisk
     }
 
     /**
-     * The seam, and therefore the one place a destination can repair itself.
+     * The one place a destination can repair itself.
      *
-     * Every path reaches a destination through here — the uploader, the
-     * verifier, prune, delete, restore's download and the connection prober —
-     * so a repair placed here runs on a scheduled backup at 3am as readily as
-     * on a button press. That matters: `preflight()` is only called by the
-     * prober, so anything hung off it would fix the destination for whoever was
-     * looking at the screen and leave the unattended run broken.
-     *
-     * For every provider but Google Drive this costs nothing — a bucket is not
-     * something the panel created, so there is nothing it may recreate. See
-     * {@see StorageDriver::heal()}.
+     * Every path (upload, verify, prune, delete, restore, prober) goes through here, so a
+     * repair runs on unattended scheduled backups too. `preflight()` only runs from the prober.
+     * Only Google Drive has anything to repair. See {@see StorageDriver::heal()}.
      */
     public function for(StorageDestination $destination): Filesystem
     {
@@ -62,9 +49,7 @@ class DestinationDisk
 
         $driver->heal($destination);
 
-        // Config is read *after* healing, deliberately: a repair that replaced
-        // the folder id has to be the one this disk is built on, or the very
-        // operation that triggered the repair would still use the dead id.
+        // Read config *after* healing: a repair may replace the folder id this disk is built on.
         return ($this->builder)($driver->config($destination));
     }
 

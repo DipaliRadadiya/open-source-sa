@@ -9,25 +9,14 @@ use App\Services\Server\WebServers\WebServerManager;
 /**
  * Who may enter the panel's own install directory.
  *
- * The checkout was `755` all the way down, so every local account — every
- * site user, every SSH user the panel creates — could read it. Most of it is
- * source code anyone can download, but not all: `bootstrap/cache/config.php`
- * is written `644` by `config:cache` and holds the APP_KEY and the Redis
- * password, and `database/database.sqlite` is `644` too. Found on the Apache
- * test server on 2026-09-26, logged in as an ordinary SSH user: with the key,
- * every encrypted column in that database (database passwords, storage and git
- * credentials) decrypts; with the Redis password, a job can be pushed onto the
- * panel's queue, which runs with the panel's sudo grant.
+ * Other local accounts (site and SSH users) must not read the checkout: `bootstrap/cache/config.php`
+ * (APP_KEY, Redis password) and `database/database.sqlite` are `644`, and the next `config:cache`
+ * rewrites `644` anyway. With the key every encrypted column decrypts; with the Redis password a
+ * job can be pushed onto the panel's queue, which runs with the panel's sudo grant.
  *
- * Only `.env` was `640`, and fixing files one by one does not hold: the next
- * `config:cache` writes `644` again. So the directory at the top is closed
- * instead, the way HomeDirectoryAccess closes a site owner's home — an ACL
- * with pass-through (`--x`) for the web server's account, which serves the
- * panel's `public/` and the frontend's static files, and nothing for anyone
- * else. Everything underneath keeps its modes; nobody else can reach it.
- *
- * The panel's own account owns the directory, so it is not listed: the owner
- * entry already applies to it.
+ * So the top directory is closed, the way HomeDirectoryAccess closes a site owner's home: an ACL
+ * with pass-through (`--x`) for the web server's account only. Everything underneath keeps its
+ * modes. The panel's own account owns the directory, so it is not listed.
  */
 class PanelDirectoryAccess
 {
@@ -73,8 +62,7 @@ class PanelDirectoryAccess
         $reader = $this->reader();
 
         if ($reader === null) {
-            // Closing it without letting the web server through would take the
-            // panel itself offline.
+            // Closing it without letting the web server through would take the panel offline.
             return self::NO_READER;
         }
 
@@ -128,10 +116,9 @@ class PanelDirectoryAccess
     }
 
     /**
-     * A real directory at least two levels deep that holds this backend and is
-     * owned by the account the backend belongs to. Never `/`, `/var` or a
-     * shared parent: an ACL of `o::---` there would lock the server out of
-     * far more than the panel.
+     * A real directory at least two levels deep that holds this backend and is owned by the
+     * backend's account. Never `/`, `/var` or a shared parent: `o::---` there would lock the
+     * server out of far more than the panel.
      */
     private function isPanelRoot(string $root): bool
     {

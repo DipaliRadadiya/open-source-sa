@@ -19,13 +19,10 @@ use Throwable;
 /**
  * Installs a database engine.
  *
- * Progress rides on `runtime_installs` with `runtime = 'database'` — the same
- * table PHP and Node versions use. Its own migration says "any runtime added
- * later gets progress for free", and taking that up means inheriting the parts
- * that were hard to get right: `ready` is never stored (a successful install
- * deletes the row and the box becomes the truth again, so the two cannot drift),
- * failures carry a classified code rather than raw stderr, and the message is
- * built in the *viewer's* locale at read time.
+ * Progress rides on `runtime_installs` with `runtime = 'database'`, like PHP and Node versions:
+ * `ready` is never stored (a successful install deletes the row, so the box stays the truth),
+ * failures carry a classified code rather than raw stderr, and the message is built in the
+ * viewer's locale at read time.
  */
 class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -34,18 +31,15 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
     use TracksActor;
 
     /**
-     * One attempt. A blind retry of a half-finished apt run is how a package
-     * database ends up needing `dpkg --configure -a` by hand; the user gets an
-     * explicit retry instead.
+     * One attempt: a blind retry of a half-finished apt run can leave dpkg needing
+     * `dpkg --configure -a`; the user gets an explicit retry instead.
      */
     public int $tries = 1;
 
     /**
-     * Long enough for the package download plus its post-install scripts, with
-     * room for the account provisioning after — and for apt's wait on a lock
-     * another install holds, which on a fresh box (unattended-upgrades) is the
-     * usual case rather than the odd one. `retry_after` in config/queue.php
-     * has to stay above this — a test asserts it does.
+     * Covers the package download, post-install scripts, account provisioning and apt's wait on a
+     * lock another install holds (usual on a fresh box). `retry_after` in config/queue.php must
+     * stay above this; a test asserts it.
      */
     public int $timeout;
 
@@ -57,9 +51,8 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
     }
 
     /**
-     * One install per engine in flight. Two `apt-get install` runs at once fight
-     * over the dpkg lock and one of them fails for a reason that has nothing to
-     * do with the user.
+     * One install per engine in flight: two `apt-get install` runs at once fight over the dpkg
+     * lock and one fails for no user-visible reason.
      */
     public function uniqueId(): string
     {
@@ -79,9 +72,8 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
             $installers->installer($this->engine)->install(
                 $progress === null ? null : fn (string $step) => $progress->step($step),
                 $progress === null ? null : fn (string $chunk) => $progress->output($chunk),
-                // Recorded when this install was requested, not asked again
-                // here: on a retry the box has already changed underneath the
-                // question. See MongoDbInstaller::install().
+                // Recorded at request time, not asked again here: on a retry the box has already
+                // changed. See MongoDbInstaller::install().
                 $row?->was_absent,
             );
         } catch (EngineInstallException $e) {
@@ -107,17 +99,15 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
         // The engine is on disk now, so the row has nothing left to say.
         $installs->succeed('database', $this->engine);
 
-        // So the new engine is usable immediately rather than after the next
-        // detection — creating a database is the first thing anyone will try.
+        // So the new engine is usable immediately, not after the next detection.
         $capabilities->refresh();
 
         $log->log('database.engine_installed', null, ['engine' => $this->engine], actor: $this->actor());
     }
 
     /**
-     * The job died outright — timeout, or the worker was killed. Without this the
-     * row sits at `installing` forever and the setup page shows a spinner that
-     * will never resolve.
+     * The job died outright (timeout, worker killed). Without this the row stays `installing`
+     * forever and the setup page spins.
      */
     public function failed(?Throwable $e): void
     {

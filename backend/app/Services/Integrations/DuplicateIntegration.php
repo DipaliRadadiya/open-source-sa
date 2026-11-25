@@ -12,18 +12,13 @@ use Illuminate\Contracts\Encryption\DecryptException;
 /**
  * An integration that is already here, found by its credential.
  *
- * The central panel connects a git account or a storage destination through
- * the same endpoints as the panel's own screens, and then clones or backs up
- * with it. Sent twice — a retry after a timeout, a second clone — it used to
- * leave two records for one account, or answer 422 for a name and leave the
- * caller to work out which record was meant. Dipali, 2026-10-28: exactly the
- * same credential returns the record that holds it; any difference at all (a
- * new token, another bucket) is a new record, and an existing one is never
- * changed.
+ * The central panel connects a git account or storage destination through the same endpoints
+ * as the panel's own screens, so a retry would leave two records for one account. Exactly the
+ * same credential returns the record that holds it; any difference (a new token, another
+ * bucket) is a new record, and an existing one is never changed.
  *
- * Credentials are encrypted at rest, so the database cannot be asked; the
- * records of the same provider are decrypted and compared here. A server has
- * a handful of them.
+ * Credentials are encrypted at rest, so the records of the same provider are decrypted and
+ * compared here (a server has a handful).
  */
 class DuplicateIntegration
 {
@@ -55,8 +50,8 @@ class DuplicateIntegration
     }
 
     /**
-     * The storage destination with exactly this provider, prefix and
-     * credential — every config field the provider's form asks for.
+     * The storage destination with exactly this provider, prefix and credential (every config
+     * field the provider's form asks for).
      *
      * @param  array<string, mixed>  $input
      */
@@ -91,8 +86,8 @@ class DuplicateIntegration
     }
 
     /**
-     * A record whose credential cannot be decrypted (the app key changed) is
-     * not the same as anything — and must not turn a create into a 500.
+     * A record whose credential cannot be decrypted (the app key changed) matches nothing and
+     * must not turn a create into a 500.
      */
     private function readable(callable $compare): bool
     {
@@ -104,9 +99,8 @@ class DuplicateIntegration
     }
 
     /**
-     * The config fields this provider's form takes, from its own rules — so a
-     * field added to a provider later is compared without anyone remembering
-     * to add it here.
+     * The config fields this provider's form takes, from its own rules, so a field added later
+     * is compared automatically.
      *
      * @return list<string>
      */
@@ -134,9 +128,8 @@ class DuplicateIntegration
     }
 
     /**
-     * Equal as a person would mean it: empty and missing are the same, so are
-     * `true` and `1`, and surrounding spaces do not count. Strings are
-     * compared in constant time — some of them are secrets.
+     * Equal as a person would mean it: empty and missing match, so do `true` and `1`, and
+     * surrounding spaces do not count. Compared in constant time, as some are secrets.
      */
     private function same(mixed $a, mixed $b): bool
     {

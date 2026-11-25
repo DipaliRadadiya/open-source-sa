@@ -8,20 +8,16 @@ use Throwable;
 /**
  * The panel's one queue worker, and which queues it drains.
  *
- * There is exactly one worker, on purpose: two workers changing the same
- * server at once is a failure mode, not throughput. So every job waits behind
- * every other one — and a certificate a site is waiting on sat behind sixteen
- * queued installs for 22 minutes, while the panel called the site active.
+ * There is exactly one worker on purpose: two workers changing the same server at once is a
+ * failure mode, not throughput.
  *
- * The worker takes `high` before `default`. That keeps one job at a time and
- * moves short, user-facing work to the front of the line: a certificate now
- * waits for the job that is running, not for every job queued.
+ * It takes `high` before `default`, so short user-facing work (a certificate) waits only for the
+ * running job, not for every queued one.
  *
- * **A job sent to a queue no worker reads is never run** — no error, no
- * failed_jobs row. Backups shipped that way once. The unit on an existing
- * server is only rewritten by `panel:queue-worker`, so a job goes to `high`
- * only when the *running* worker is seen to read it; anything else, including
- * not being able to tell, is the default queue, which every worker reads.
+ * **A job sent to a queue no worker reads is never run**, with no error and no failed_jobs row.
+ * The unit on an existing server is only rewritten by `panel:queue-worker`, so a job goes to
+ * `high` only when the running worker is seen to read it; otherwise (including when it cannot be
+ * told) it goes to the default queue, which every worker reads.
  */
 class QueueWorker
 {

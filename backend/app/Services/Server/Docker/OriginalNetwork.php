@@ -8,24 +8,17 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
- * The network a container site was created on, once it has been moved to
- * another one (BUG-5).
+ * The network a container site was created on, once it has been moved to another one.
  *
- * A generated compose file that names no network gets one from Compose,
- * `<project>_default`. Moving the site to a chosen network rewrites the file to
- * name only that one, and `compose up` stops using the default without removing
- * it — `--remove-orphans` removes containers, never networks. So the original
- * network stayed on the server for good: found in Docker QA on a real box,
- * `sv-app-110_default` outlived its site and was still listed against it.
+ * Compose gives a site that names no network `<project>_default`. After the site moves to a chosen
+ * network, `compose up` stops using the default but never removes it (`--remove-orphans` only
+ * removes containers), so it would stay on the server for good.
  *
- * Asked in two places — after a network change is applied, and when the site is
- * deleted with its Docker resources — and it is the same decision both times, so
- * it lives here once.
+ * Used after a network change and when a site is deleted with its Docker resources.
  *
- * Removed only when it is provably this site's and provably unused: Compose's
- * own labels say it was created as this project's default network (the name
- * alone could be anybody's), no other site names it, and no container outside
- * this project is attached. Anything short of that is kept, and why is recorded.
+ * Removed only when provably this site's and unused: Compose's labels say it was this project's
+ * default network (the name alone could be anybody's), no other site names it, and no container
+ * outside this project is attached. Otherwise it is kept and the reason recorded.
  */
 class OriginalNetwork
 {
@@ -37,9 +30,8 @@ class OriginalNetwork
     /**
      * The original network's name if it may be removed, or null.
      *
-     * Only when the site is on ANOTHER network. On its own default, `compose
-     * down` removes it as part of a delete, and planning it here as well would
-     * only produce a "remove failed" for a network that is already gone.
+     * Only when the site is on ANOTHER network: on its own default, `compose down` removes it
+     * already, and planning it here would only produce a "remove failed".
      *
      * @param  Collection<int, array<string, mixed>>  $networks  {@see DockerResources::networks()}
      * @param  list<string>  $kept  appended to with the reason, when it is kept.
@@ -56,7 +48,7 @@ class OriginalNetwork
 
         $row = $networks->firstWhere('name', $name);
 
-        // Not there: nothing was left behind, and nothing needs saying.
+        // Not there: nothing was left behind.
         if ($row === null) {
             return null;
         }
@@ -93,11 +85,9 @@ class OriginalNetwork
     /**
      * Remove it now, after a network change has been applied.
      *
-     * Never fatal. The change the user asked for has already happened and the
-     * site is running on its new network; a leftover network is tidiness, and
-     * failing the save over it would report a working change as a broken one.
-     * `docker network rm` without `--force` refuses a network that still has an
-     * endpoint, so Docker itself is the last guard.
+     * Never fatal: the change itself already worked, and a leftover network must not fail the
+     * save. `docker network rm` without `--force` refuses a network with an endpoint, so Docker is
+     * the last guard.
      *
      * @return array{removed: ?string, kept: list<string>}
      */

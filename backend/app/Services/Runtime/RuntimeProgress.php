@@ -7,10 +7,8 @@ use App\Enums\InstallStatus;
 /**
  * Folds in-flight installs into a runtime's version list.
  *
- * Shared by the PHP and Node screens rather than written twice: the two
- * overviews already promise the frontend identical field names so one
- * component renders both, and a progress field that behaved differently
- * between them would quietly break that promise.
+ * Shared by the PHP and Node screens: both overviews promise the frontend identical field
+ * names so one component renders both.
  */
 class RuntimeProgress
 {
@@ -27,16 +25,13 @@ class RuntimeProgress
 
         $onDisk = array_map(fn (array $version) => [
             ...$version,
-            // Present on disk, so `ready` unless apt is currently doing
-            // something to it — reinstalling over an existing version, say.
+            // Present on disk, so `ready` unless apt is currently working on it.
             ...($this->stillCurrent($installs->get($version['version']), $version)?->toProgress() ?? $this->settled()),
         ], $versions);
 
         $known = array_column($versions, 'version');
 
-        // A version that is installing or failed has nothing on disk yet, so
-        // nothing above found it. These are the entries the screen could not
-        // show at all before.
+        // An installing or failed version has nothing on disk yet, so nothing above found it.
         $pending = $installs
             ->reject(fn ($install, string $version) => in_array($version, $known, true))
             ->map(fn ($install, string $version) => [
@@ -48,14 +43,11 @@ class RuntimeProgress
 
         return [
             'versions' => [...$pending, ...$onDisk],
-            // A version being installed right now must not also be offered
-            // for installation — the button would start a second apt run for
-            // something already underway.
+            // A version being installed must not also be offered for installation (a second
+            // apt run).
             'installable' => array_values(array_filter(
                 $installable,
-                // Removing counts as busy too: offering Install for a version
-                // apt is midway through purging would start the two against
-                // each other on the same package.
+                // Removing counts as busy too: Install would race the purge on the same package.
                 fn (array $row) => ! in_array(
                     $installs->get($row['version'])?->status,
                     [InstallStatus::Installing, InstallStatus::Removing],
@@ -66,17 +58,12 @@ class RuntimeProgress
     }
 
     /**
-     * The install record, unless it is a failure the version has since got
-     * past. A PHP install marked failed whose version is now on disk with
-     * nothing missing is not failed any more — the nginx test server showed
-     * PHP 8.3 as "install failed" for the rest of the day while it served
-     * WordPress. Only where the screen knows what "complete" means
-     * (`missing_packages`); elsewhere the record stands.
+     * The install record, unless it is a failure the version has since got past: a version
+     * now on disk with nothing missing is not failed any more. Only where the screen knows what
+     * "complete" means (`missing_packages`); elsewhere the record stands.
      *
-     * Never a failed *removal* (FS-C18): a version apt refused to purge is
-     * still on disk with nothing missing — that is exactly what failing looks
-     * like — and treating it as settled showed `ready` with no reason, as if
-     * Remove had never been pressed.
+     * Never a failed *removal*: a version apt refused to purge is still on disk with nothing
+     * missing, and settling it would show `ready` as if Remove had never been pressed.
      *
      * @param  array<string, mixed>  $version
      */
@@ -105,9 +92,8 @@ class RuntimeProgress
             'message' => null,
             'reference' => null,
             'error_line' => null,
-            // Named here too, so every version carries the same keys whether
-            // or not an install touched it — a field that appears only
-            // sometimes is one the frontend has to guard on every read.
+            // Named here too, so every version carries the same keys whether or not an install
+            // touched it.
             'current_step' => null,
             'output' => null,
         ];

@@ -7,24 +7,19 @@ use Illuminate\Support\Facades\Cache;
 /**
  * The installed version of a service's package, read from dpkg.
  *
- * One `dpkg-query` for every package the Services screen asks about, cached
- * until dpkg's own database changes: the screen polls every three seconds,
- * and a version only changes when a package is installed, upgraded or
- * removed — every one of which rewrites `/var/lib/dpkg/status`, so its
- * modification time is the cache key and an upgrade shows on the next poll.
+ * One `dpkg-query` for every package the Services screen asks about (it polls every 3 seconds).
+ * Cached on the mtime of `/var/lib/dpkg/status`, which every install, upgrade or removal rewrites.
  *
- * Read-only. Nothing a client sends reaches the command: the package names
- * come from the services catalog in config.
+ * Read-only. Nothing a client sends reaches the command: package names come from the services
+ * catalog in config.
  */
 class PackageVersions
 {
     public function __construct(private ServerOps $serverOps) {}
 
     /**
-     * The version of the first candidate that is installed, or null when none
-     * is (or dpkg could not be asked). A candidate may be a dpkg pattern
-     * (`postgresql-[0-9]*`); when it matches several packages the highest
-     * version wins.
+     * The version of the first candidate that is installed, or null when none is (or dpkg could
+     * not be asked). A candidate may be a dpkg pattern (`postgresql-[0-9]*`); the highest match wins.
      *
      * @param  array<int, string>  $candidates
      * @param  array<string, string>  $installed  from {@see installed()}
@@ -53,8 +48,7 @@ class PackageVersions
     }
 
     /**
-     * Every installed package among the given names or patterns, as
-     * package => full version.
+     * Every installed package among the given names or patterns, as package => full version.
      *
      * @param  array<int, string>  $patterns
      * @return array<string, string>
@@ -95,8 +89,7 @@ class PackageVersions
             ['dpkg-query', '-W', '-f=${db:Status-Abbrev}\t${Package}\t${Version}\n', ...$patterns],
             ['feature' => 'service', 'op' => 'package_versions'],
             timeout: 15,
-            // 1 = some name matched no package, which is the normal answer for
-            // a service this stack does not have; the rest are still printed.
+            // 1 = some name matched no package (normal); the rest are still printed.
             expectedExitCodes: [1],
         );
 
@@ -105,8 +98,7 @@ class PackageVersions
         foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
             [$status, $package, $version] = array_pad(explode("\t", $line, 3), 3, '');
 
-            // `ii` = wanted and installed. A removed package that left its
-            // config behind (`rc`) has a version but no software.
+            // `ii` = wanted and installed; a removed package with config left (`rc`) has no software.
             if (str_starts_with($status, 'ii') && $package !== '' && $version !== '') {
                 $installed[$package] = trim($version);
             }

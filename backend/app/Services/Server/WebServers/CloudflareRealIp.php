@@ -5,24 +5,17 @@ namespace App\Services\Server\WebServers;
 /**
  * The visitor's own address for a site behind Cloudflare.
  *
- * Behind Cloudflare every request reaches the server from one of Cloudflare's
- * addresses. Without this the access logs, the bot report, the 8G log and
- * fail2ban all see Cloudflare — and a fail2ban ban lands on an address that
- * carries many sites' real visitors. v7 has it on every server (nginx
- * `conf.d/remoteip.conf`, Apache `conf-enabled/remoteip.conf`, OpenLiteSpeed
- * `useIpInProxyHeader`); this is the same, with one change on OpenLiteSpeed:
- * v7 trusts the header from anyone, which lets any visitor choose the address
- * the server logs and bans. Here only Cloudflare's own ranges are trusted, on
- * every web server.
+ * Without this the logs, bot report and fail2ban see Cloudflare's address, and a ban would hit
+ * an address carrying many sites' real visitors. Written where v7 writes it (nginx
+ * `conf.d/remoteip.conf`, Apache `conf-enabled/remoteip.conf`, OpenLiteSpeed `useIpInProxyHeader`).
+ * Unlike v7 on OpenLiteSpeed, only Cloudflare's own ranges are trusted: trusting anyone lets a
+ * visitor choose the address the server logs and bans.
  *
- * Run by `sites:resync` (install, every update, the manual deploy runbook).
- * Written where v7 writes it, under v7's name; on a server that comes from v7
- * that file is v7's and is left as it is, as is a server whose owner set the
- * header anywhere else.
+ * Run by `sites:resync`. A file that is v7's or the owner's, or a header set elsewhere, is left alone.
  */
 class CloudflareRealIp
 {
-    /** Where the panel wrote these before it used v7's names (2026-11-11). */
+    /** Where the panel wrote these before it used v7's names. */
     private const LEGACY_NGINX = '/etc/nginx/conf.d/panel-real-ip.conf';
 
     private const LEGACY_APACHE = '/etc/apache2/conf-available/panel-real-ip.conf';

@@ -7,16 +7,12 @@ use App\Services\Server\ServerOps;
 /**
  * What is actually listening on the server.
  *
- * A firewall screen without this is a list of rules about nothing: it cannot
- * tell "port 8080 is open and a service is behind it" from "port 8080 is open
- * and nothing has been there for months", and those want opposite actions.
+ * Lets the firewall screen tell an open port with a service behind it from an open port with
+ * nothing there.
  *
- * The program name is the one field that needs root — the kernel only reveals
- * which process owns a socket to that process's owner. Unprivileged, the port,
- * protocol and bind address all read fine, which is enough for the two
- * questions the screen is really asking. Where the name is unavailable it is
- * reported as null rather than inferred from the port number: a firewall
- * screen naming the wrong service is worse than one naming none.
+ * Only the program name needs root (the kernel reveals a socket's owner only to that owner).
+ * When unavailable it is null, never inferred from the port number: a wrong service name is
+ * worse than none.
  */
 class ListeningPorts
 {
@@ -47,8 +43,7 @@ class ListeningPorts
             }
         }
 
-        // A service bound to both IPv4 and IPv6 is one thing listening, not
-        // two — the screen should say "port 443" once.
+        // A service bound to both IPv4 and IPv6 is one thing listening, not two.
         return array_values($listening);
     }
 
@@ -65,8 +60,7 @@ class ListeningPorts
 
         [$protocol, $state] = [$fields[0], $fields[1]];
 
-        // UDP sockets show UNCONN rather than LISTEN; both are "something is
-        // there", which is the distinction that matters here.
+        // UDP sockets show UNCONN rather than LISTEN.
         if (! in_array($state, ['LISTEN', 'UNCONN'], true)) {
             return null;
         }
@@ -83,9 +77,7 @@ class ListeningPorts
             'port' => $port,
             'protocol' => str_starts_with($protocol, 'udp') ? 'udp' : 'tcp',
             'address' => $bind,
-            // Loopback and link-local resolvers are reachable only from the
-            // machine itself, so no firewall rule can expose them — the screen
-            // should not imply otherwise.
+            // Loopback and link-local addresses are reachable only from the machine itself.
             'public' => $this->isPublic($bind),
             'program' => $this->program($fields),
         ];
@@ -98,8 +90,7 @@ class ListeningPorts
     {
         $tail = implode(' ', array_slice($fields, 5));
 
-        // users:(("nginx",pid=1073,fd=6)) — absent entirely for processes we
-        // do not own, which unprivileged is nearly all of them.
+        // users:(("nginx",pid=1073,fd=6)) — absent for processes we do not own.
         return preg_match('/users:\(\("([^"]+)"/', $tail, $matches) === 1 ? $matches[1] : null;
     }
 
@@ -124,9 +115,8 @@ class ListeningPorts
      */
     private function key(array $entry): string
     {
-        // Deduped on port + protocol + reachability, so the same service on
-        // 0.0.0.0 and :: collapses but a loopback-only twin does not hide a
-        // public one.
+        // Deduped on port + protocol + reachability: 0.0.0.0 and :: collapse, but a loopback-only
+        // twin does not hide a public one.
         return $entry['protocol'].':'.$entry['port'].':'.($entry['public'] ? 'public' : 'local');
     }
 }

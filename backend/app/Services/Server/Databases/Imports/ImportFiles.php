@@ -7,13 +7,10 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Where an import's uploaded file lives while it arrives and waits, and what
- * kind of file it turned out to be.
+ * Where an import's uploaded file lives while it arrives and waits, and what kind of file it is.
  *
- * The panel's own directory, not a site's: the file is the panel's to load and
- * no site user should be able to read or swap it. Everything here is plain PHP
- * file I/O as the panel account — no ServerOps, no elevation — because nothing
- * here needs either.
+ * The panel's own directory, not a site's: no site user may read or swap the file. Plain PHP
+ * file I/O as the panel account; no ServerOps, no elevation.
  */
 class ImportFiles
 {
@@ -52,8 +49,7 @@ class ImportFiles
     }
 
     /**
-     * Refuse now, before the upload, when the disk cannot take it. Refusing
-     * after two gigabytes have crossed the network costs the user the upload.
+     * Refuse before the upload when the disk cannot take it.
      */
     public function assertRoom(int $bytes): void
     {
@@ -78,10 +74,8 @@ class ImportFiles
     /**
      * Append one chunk and return the new size.
      *
-     * Bounded by what the client declared at the start: a body that would take
-     * the file past it is refused and the overshoot cut off, so the declared
-     * size — which is what the disk check and the limit were run against —
-     * stays the real ceiling.
+     * Bounded by the size declared at the start (what the disk check and limit ran against): an
+     * overshooting body is refused and the excess cut off.
      *
      * @param  resource  $stream
      */
@@ -120,8 +114,7 @@ class ImportFiles
     }
 
     /**
-     * What the file is, from its first bytes — decompressing a gzip first, so
-     * `dump.sql.gz` is judged by the SQL inside it.
+     * What the file is, from its first bytes; a gzip is decompressed first.
      *
      * @return array{format: string, gzip: bool}|null null for anything this does not import
      */
@@ -145,9 +138,8 @@ class ImportFiles
             return ['format' => self::PG_CUSTOM, 'gzip' => false];
         }
 
-        // Text, or it is not a dump. A NUL in the first block is a zip, a tar,
-        // an image — anything a client would choke on, and say so badly. Not a
-        // UTF-8 check: a latin1 database dumps latin1 bytes, and that is fine.
+        // Text, or it is not a dump: a NUL in the first block means zip, tar, image, etc. Not a
+        // UTF-8 check, since a latin1 database dumps latin1 bytes.
         if (! str_contains($head, "\0")) {
             return ['format' => self::SQL, 'gzip' => $gzip];
         }
@@ -156,12 +148,10 @@ class ImportFiles
     }
 
     /**
-     * Whether a gzip file reaches its end marker. gzread() hands back whatever
-     * decompresses and stays silent about the rest, so a cut-off .sql.gz reads
-     * as a shorter dump — and one cut between two statements loads "fine",
-     * missing every table after the cut. Read to the end once, before
-     * anything is dropped. Further members (`cat a.gz b.gz`) are followed;
-     * bytes after the last one that are not a member are ignored, as gzip does.
+     * Whether a gzip file reaches its end marker. gzread() stays silent about a truncated file,
+     * which would load "fine" while missing every table after the cut; check before anything is
+     * dropped. Further members (`cat a.gz b.gz`) are followed; trailing non-member bytes are
+     * ignored, as gzip does.
      */
     public function gzipComplete(string $path): bool
     {

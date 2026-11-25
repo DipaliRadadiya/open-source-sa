@@ -10,16 +10,11 @@ use App\Services\Runtime\RuntimeProgress;
 use App\Services\Server\Runtimes\PhpRuntime;
 
 /**
- * What the PHP screen shows: every installed version with the facts a user
- * decides on — whether it is the default, how many sites pin it, whether the
- * panel itself runs on it — plus what could still be installed.
+ * What the PHP screen shows: every installed version with the facts a user decides on (default,
+ * how many sites pin it, whether the panel runs on it), plus what could still be installed.
  *
- * PHP is one feature here rather than three. It used to be split across the
- * Services screen (the ini editor, gated by `service`) and the Settings
- * screen (versions and extensions, gated by `setting`), which meant managing
- * PHP required both permissions — and `setting` also grants the SSH port and
- * the reboot button. You could not let someone change a PHP version without
- * also letting them reboot the server.
+ * PHP is one permission feature: splitting it across `service` and `setting` would let someone
+ * who manages PHP also change the SSH port or reboot the server.
  */
 class PhpOverview
 {
@@ -47,32 +42,19 @@ class PhpOverview
 
                 return [
                     ...$version,
-                    // Names, not just a count: "3 sites" does not tell you
-                    // whether removing this breaks staging or the shop.
+                    // Names, not just a count, so the user knows what removing it breaks.
                     'in_use_by' => $pinned['count'] ?? 0,
                     'sites' => $pinned['names'] ?? [],
                     'sites_truncated' => $pinned['truncated'] ?? false,
-                    // PHP has no LTS — active support, then security-only.
-                    // There is deliberately no `lts` field here.
+                    // PHP has no LTS (active support, then security-only), so no `lts` field.
                     'lifecycle' => $this->lifecycle->for('php', $version['version']),
-                    // The FPM unit stays on the Services screen — starting and
-                    // stopping a daemon is the same job there as for nginx or
-                    // redis. Named here so the two screens can link.
-                    //
-                    // Asked of the stack, not spelled out: on OpenLiteSpeed
-                    // there is no per-version unit at all, and naming one would
-                    // link the user to a service that does not exist.
+                    // The FPM unit lives on the Services screen; named here so the screens can
+                    // link. Asked of the stack: OpenLiteSpeed has no per-version unit.
                     'service' => $this->stack->serviceName($version['version']),
                     'ini_path' => $this->versions->iniPath($version['version']),
-                    // Base packages this version should have and does not.
-                    //
-                    // Empty for every version the panel installed. Non-empty
-                    // means the interpreter arrived some other way — as an apt
-                    // dependency of the web server, or by hand — and is a bare
-                    // one: no curl, no sqlite3, no redis. Published so the
-                    // screen can say so rather than showing it indis-
-                    // tinguishably beside a healthy version, and so the user
-                    // knows pressing Install on it will do something.
+                    // Base packages this version should have and does not. Non-empty means the
+                    // interpreter arrived another way (apt dependency, by hand) and is bare, so
+                    // the screen can say so and Install will do something.
                     'missing_packages' => $this->runtime->missingBasePackages($version['version']),
                 ];
             }, $this->runtime->versions()),
@@ -86,11 +68,9 @@ class PhpOverview
 
         $versions = array_map(fn (array $row) => [
             ...$row,
-            // `8.4.14` where `version` is `8.4`. Only for a version that is
-            // settled: apt may be rewriting the binary of one that is
-            // installing or being removed, and a failed one has no answer worth
-            // trusting. Null otherwise — and for a version whose binary would
-            // not say — so the key is on every row, as `status` is.
+            // `8.4.14` where `version` is `8.4`. Only for a settled version: apt may be rewriting
+            // the binary of one installing or being removed. Null otherwise, so the key is on
+            // every row.
             'full_version' => ($row['status'] ?? null) === InstallStatus::Ready->value && isset($row['path'])
                 ? $this->fullVersions->read($row['path'], $row['version'])
                 : null,

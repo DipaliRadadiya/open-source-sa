@@ -12,27 +12,12 @@ use Illuminate\Console\Command;
 /**
  * Rewrites the panel's `jail.local` from its own current contents.
  *
- * `jail.local` is written at install and when somebody saves the fail2ban
- * settings screen, and nowhere else. So a release that corrects how that file
- * is rendered reaches new installs only, and every existing server keeps the
- * file it was given — which is how a fix ships and repairs nothing.
+ * The file is written only at install and on saving the fail2ban settings, so a template fix
+ * would otherwise reach new installs only. Idempotent: it reads the settings, ignore list and
+ * enabled jails back out of the file and writes the same values through the current template.
  *
- * That is exactly what happened here. The template carried `backend = systemd`
- * inside `[DEFAULT]`, which applies to every jail, and the systemd backend
- * makes fail2ban ignore `logpath` and read the journal instead. Every
- * file-watching jail the panel writes — `recidive`, and every per-site
- * application jail — was therefore watching a file fail2ban never opened,
- * matching nothing and banning nobody, while the panel reported them enabled.
- * Removing the line fixes the render; this command is what makes the fix
- * arrive on a server that already exists.
- *
- * Idempotent: it reads the settings, the ignore list and the enabled jails
- * back out of the file and writes the same values through the current
- * template. Nothing the operator chose is changed.
- *
- * A console command rather than an endpoint because it runs from the installer
- * and the updater, where no user exists to authenticate as — the same
- * reasoning as {@see RecordFirewallDefaults}.
+ * A console command, not an endpoint: it runs from the installer and updater, where no user
+ * exists to authenticate as. See {@see RecordFirewallDefaults}.
  */
 class ResyncFail2banConfig extends Command
 {
@@ -53,10 +38,8 @@ class ResyncFail2banConfig extends Command
 
         $jails = $fail2ban->configuredJails();
 
-        // No managed file means the panel has never configured fail2ban on
-        // this server. Writing one here would be the panel deciding, during a
-        // deploy, which jails a server runs — and with an empty jail list that
-        // decision is "none". Leave it to the settings screen.
+        // No managed file: the panel never configured fail2ban here. Don't decide the jails
+        // during a deploy; leave it to the settings screen.
         if ($jails === []) {
             $this->components->info('No panel-managed jail.local found — nothing to resync.');
 
@@ -68,11 +51,8 @@ class ResyncFail2banConfig extends Command
         try {
             $fail2ban->write($settings, $fail2ban->ignoreIps(), $jails);
         } catch (Fail2banException $exception) {
-            // Never fatal. `write()` validates with `fail2ban-client -t` and
-            // restores the previous file before throwing, so the server still
-            // has the configuration it had a moment ago — and failing a whole
-            // deploy over a config the box has already rejected would turn a
-            // fixable problem into an outage.
+            // Never fatal: `write()` validates with `fail2ban-client -t` and restores the
+            // previous file before throwing, so the server keeps its old configuration.
             $this->components->warn('fail2ban config not resynced: '.$exception->getMessage());
 
             return self::SUCCESS;
@@ -90,17 +70,8 @@ class ResyncFail2banConfig extends Command
     }
 
     /**
-     * Take the `wp-admin` rule out of every site filter that is still the old
-     * default — it banned the site's own administrators (see
-     * ApplicationFail2banManager::defaultFilterContent()). Changing the
-     * default alone would have fixed only jails enabled from now on. Per site
-     * and never fatal, like the move below; an edited filter is left alone.
-     */
-    /**
-     * Site jails saved before the settings allowlist existed. Reported, not
-     * rewritten: the file is the user's, and changing what it does during a
-     * deploy is not this command's call. Re-saving it through the panel
-     * applies the allowlist.
+     * Site jails saved before the settings allowlist existed. Reported, not rewritten: the file
+     * is the user's; re-saving it through the panel applies the allowlist.
      */
     private function reportDisallowedJailSettings(ApplicationFail2banManager $sites): void
     {
@@ -116,6 +87,10 @@ class ResyncFail2banConfig extends Command
             });
     }
 
+    /**
+     * Drop the `wp-admin` rule (it banned the site's own admins) from every site filter that is
+     * still the old default; edited filters are left alone. Never fatal.
+     */
     private function repairDefaultFilters(ApplicationFail2banManager $sites): void
     {
         $repaired = 0;

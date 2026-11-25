@@ -12,33 +12,22 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Resumable uploads of arbitrary size, for files past what the single-shot
- * endpoint on ApplicationFileController can buffer.
+ * Resumable uploads of arbitrary size, for files past what the single-shot endpoint on
+ * ApplicationFileController can buffer.
  *
- * Chunks arrive as a **raw body**, not multipart. That is deliberate and is
- * half the point of the design: multipart makes PHP spool the part to its own
- * temp file before the handler runs, which doubles the disk traffic of every
- * upload on a box that is also serving customer sites. A raw body is read
- * straight off `php://input` as a stream and piped to the write, so a chunk is
- * never written to disk twice and never held in PHP memory at all.
+ * Chunks arrive as a raw body, not multipart: multipart makes PHP spool each part to a temp file
+ * first, doubling disk traffic. A raw body is streamed from `php://input` straight to the write.
+ * So there is no `$request->file()` and no size rule in a FormRequest; size is bounded by nginx's
+ * `client_max_body_size` (one chunk) and the free-space guard in ChunkedUpload.
  *
- * Consequently there is no `$request->file()` here and no size rule in a
- * FormRequest — the body is not form data. Size is bounded by nginx's
- * `client_max_body_size` (one chunk, not one file) and by the free-space guard
- * in ChunkedUpload.
- *
- * Activity is logged once, on finalize. Logging per chunk would write
- * thousands of rows for a single user action and bury the audit trail.
+ * Activity is logged once, on finalize, not per chunk.
  */
 class ApplicationUploadController extends Controller
 {
     /**
-     * How much the disk can take, so the client can refuse a file at the
-     * moment it is picked rather than partway through sending it.
+     * How much the disk can take, so the client can refuse a file when it is picked.
      *
-     * Advisory only — `begin` and every chunk re-check server-side, because a
-     * client's idea of the free space is stale the moment it is answered and
-     * other sites on the same disk are writing throughout.
+     * Advisory only: `begin` and every chunk re-check server-side, as the free space changes.
      */
     public function space(Application $application, ChunkedUpload $uploads): JsonResponse
     {
@@ -56,29 +45,20 @@ class ApplicationUploadController extends Controller
                 $request->targetPath(),
                 $request->expectedBytes(),
             ),
-            // What this server will actually take per chunk. The client sizes
-            // chunks by file size, but only the server knows its own
-            // post_max_size — and exceeding it is a 413 from middleware, long
-            // before any of this code runs.
+            // What this server takes per chunk; exceeding post_max_size is a 413 before this runs.
             'max_chunk' => ChunkedUpload::maxChunkBytes(),
         ]);
     }
 
-    /**
-     * Appends one chunk and reports the new total, which doubles as the
-     * client's confirmation of what actually landed.
-     */
+    /** Appends one chunk and reports the new total, which confirms what landed. */
     public function chunk(
         Request $request,
         Application $application,
         string $uploadId,
         ChunkedUpload $uploads,
     ): JsonResponse {
-        // `getContent(true)` rather than fopen('php://input'): it is the same
-        // unbuffered stream under FPM, but it goes through the request object,
-        // so the body is also readable when one is set synthetically — reading
-        // the raw SAPI stream directly is untestable and silently empty
-        // anywhere the request was not built by the web server.
+        // `getContent(true)` rather than fopen('php://input'): the same stream under FPM, but it
+        // also works when the request is built synthetically (tests).
         $stream = $request->getContent(true);
 
         abort_unless(is_resource($stream), 400);
@@ -92,10 +72,7 @@ class ApplicationUploadController extends Controller
         return response()->json(['received' => $received]);
     }
 
-    /**
-     * Bytes stored so far, so an interrupted client can resume from the offset
-     * the server actually has rather than trusting its own record of it.
-     */
+    /** Bytes stored so far, so an interrupted client resumes from the server's offset. */
     public function status(
         Application $application,
         string $uploadId,

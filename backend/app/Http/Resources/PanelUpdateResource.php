@@ -15,8 +15,7 @@ class PanelUpdateResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // This Resource is currently used only by admin routes, but keep the
-        // sensitive operational output fail-closed if it is reused elsewhere.
+        // Fail closed: the output is sensitive, so non-admins never get it if this is reused.
         $output = $request->user()?->isAdmin()
             ? app(PanelUpdateOutput::class)->read($this->resource)
             : ['content' => '', 'truncated' => false];
@@ -27,12 +26,10 @@ class PanelUpdateResource extends JsonResource
             'status_title' => $this->status->label(),
             'current_step' => $this->current_step,
             'current_step_title' => $this->stepTitle($this->current_step),
-            // Position in the sequence, so the UI can draw a progress bar
-            // without hardcoding the step list.
+            // Position in the sequence, so the UI can draw a progress bar.
             'step_number' => $this->stepNumber(),
             'total_steps' => app(UpdateSteps::class)->total(),
-            // A rehearsal (FS-C2): nothing was changed, and `to_version` is
-            // null because nothing was moved to.
+            // A rehearsal: nothing was changed, so `to_version` is null.
             'dry_run' => (bool) $this->dry_run,
             'from_version' => $this->from_version,
             'to_version' => $this->to_version,
@@ -53,11 +50,7 @@ class PanelUpdateResource extends JsonResource
     }
 
     /**
-     * Asked of the flow this installation actually runs.
-     *
-     * Two flows exist with different steps. Counting against the wrong one
-     * reports a position that is not true, and a migrated panel would draw its
-     * progress against a sequence it is not following.
+     * Asked of the flow this installation actually runs: the two flows have different steps.
      */
     private function stepNumber(): ?int
     {
@@ -65,14 +58,8 @@ class PanelUpdateResource extends JsonResource
     }
 
     /**
-     * A step's sentence, never its key.
-     *
-     * `__()` returns the key it was given when no line exists, so a step added
-     * to UpdateScript::STEPS without a line here rendered the literal string
-     * `panel_update.steps.swap` on the progress screen. Two steps shipped that
-     * way. The test beside this asserts the gap is closed; this makes the
-     * failure mode harmless if it ever reopens, because a progress screen
-     * showing an identifier is worse than one showing nothing.
+     * A step's sentence, never its key: `__()` returns the key when no line exists, and a progress
+     * screen showing an identifier is worse than one showing nothing.
      */
     private function stepTitle(?string $step): ?string
     {
@@ -88,12 +75,9 @@ class PanelUpdateResource extends JsonResource
     /**
      * The failure sentence, including the part a rollback could not undo.
      *
-     * The release flow appends `:migrated` to the failed step when the
-     * migration had already run — the code is back on the previous version and
-     * the schema is not, which is the single most important thing to say and
-     * was being said by rendering `panel_update.reasons.swap:migrated` as text.
-     * Any step after `migrate` can carry the suffix, so the clause is one
-     * sentence appended rather than nine duplicated reasons.
+     * The release flow appends `:migrated` to the failed step when the migration had already run
+     * (code rolled back, schema not). Any step after `migrate` can carry it, so the clause is
+     * appended instead of duplicating every reason.
      */
     private function reasonTitle(?string $reason): ?string
     {
@@ -104,13 +88,10 @@ class PanelUpdateResource extends JsonResource
         [$code, $suffix] = array_pad(explode(':', $reason, 2), 2, null);
 
         $key = 'panel_update.reasons.'.$code;
-        // Falls back to the generic sentence rather than the key: the reader
-        // already knows it failed, and an untranslated identifier tells them
-        // less than "for an unknown reason" does.
+        // Fall back to the generic sentence, not the raw key.
         $title = Lang::has($key) ? __($key) : __('panel_update.reasons.unknown');
 
-        // The legacy flow's rollback now puts the database back when the
-        // update changed it, and says which of the two happened.
+        // The legacy flow's rollback restores the database when the update changed it.
         return match ($suffix) {
             'migrated' => $title.' '.__('panel_update.reason_migrated'),
             'db_restored' => $title.' '.__('panel_update.reason_db_restored'),

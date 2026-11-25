@@ -6,25 +6,18 @@ use App\Contracts\GitWebhook;
 use Illuminate\Http\Request;
 
 /**
- * GitLab, which has two schemes, and the panel supports both because they are
- * not interchangeable:
+ * GitLab has two webhook schemes and the panel supports both:
  *
- *  - **Signing token (what GitLab now recommends).** Delivery follows the
- *    Standard Webhooks spec: `webhook-id`, `webhook-timestamp`, and
- *    `webhook-signature` holding a space-separated list of `v1,{base64}`
- *    entries. The signature covers **`{id}.{timestamp}.{raw body}`**, keyed by
- *    the token with its `whsec_` prefix stripped and the remainder
- *    base64-decoded. GitLab currently sends one entry and says that may change,
- *    so the list is walked.
- *  - **Secret token (legacy, GitLab labels it not recommended).** The secret
- *    itself arrives in plain text in `X-Gitlab-Token`.
+ *  - **Signing token (recommended).** Standard Webhooks spec: `webhook-id`, `webhook-timestamp`
+ *    and `webhook-signature`, a space-separated list of `v1,{base64}` entries (walked, as GitLab
+ *    may send more than one). The signature covers **`{id}.{timestamp}.{raw body}`**, keyed by the
+ *    token with its `whsec_` prefix stripped and the remainder base64-decoded.
+ *  - **Secret token (legacy).** The secret arrives in plain text in `X-Gitlab-Token`.
  *
- * **The panel cannot generate a signing token** — GitLab mints it and shows it
- * once — so that value travels from GitLab into the panel, the opposite
- * direction from GitHub and Bitbucket. Which scheme is in force is decided by
- * the stored secret's own `whsec_` prefix, GitLab's marker, and never by which
- * headers the request happens to carry: a caller who could pick would pick the
- * plaintext one.
+ * **The panel cannot generate a signing token**: GitLab mints it and shows it once, so the value
+ * travels from GitLab into the panel (the opposite of GitHub and Bitbucket). The scheme is chosen
+ * by the stored secret's `whsec_` prefix, never by the request's headers: a caller who could pick
+ * would pick the plaintext one.
  */
 class GitlabWebhook implements GitWebhook
 {
@@ -55,8 +48,7 @@ class GitlabWebhook implements GitWebhook
 
     public function secretSource(): string
     {
-        // Both: the signing token comes from GitLab, the legacy one can come
-        // from here. See the class docblock.
+        // Both: the signing token comes from GitLab, the legacy one from here.
         return 'either';
     }
 
@@ -83,18 +75,15 @@ class GitlabWebhook implements GitWebhook
             return false;
         }
 
-        // Replay protection, which the signature alone does not give: a captured
-        // delivery stays validly signed forever. GitLab's own docs call this
-        // out. Rejected before any HMAC work, so a flood of stale replays costs
-        // nothing.
+        // Replay protection: a captured delivery stays validly signed forever. Rejected before
+        // any HMAC work, so stale replays cost nothing.
         if (! $this->timestampIsFresh($timestamp)) {
             return false;
         }
 
         $key = base64_decode(substr($secret, strlen(self::SIGNING_PREFIX)), true);
 
-        // A token that is not valid base64 cannot verify anything, and treating
-        // the decode failure as an empty key would compute a real HMAC with a
+        // Invalid base64 must not become an empty key: that would compute a real HMAC with a
         // guessable one.
         if ($key === false || $key === '') {
             return false;
@@ -115,9 +104,7 @@ class GitlabWebhook implements GitWebhook
     {
         $sent = $request->header('X-Gitlab-Token');
 
-        // Compared in constant time even though it is a plain equality: the
-        // header is attacker-controlled and a naive `===` on a secret leaks its
-        // prefix through timing.
+        // Constant time: the header is attacker-controlled and `===` leaks the secret's prefix.
         return $sent !== null && hash_equals($secret, $sent);
     }
 
