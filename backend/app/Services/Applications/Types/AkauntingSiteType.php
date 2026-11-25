@@ -56,13 +56,8 @@ class AkauntingSiteType extends AbstractSiteType
                 'default' => 'en-GB',
                 'options' => FieldOptions::localeOptions(FieldOptions::hyphenLocales()),
             ]),
-            // `akt_`, an operator decision (2026-09-03). Akaunting is a
-            // Laravel application and Laravel does not prefix tables, so there
-            // was no convention to inherit — but a shared database with no
-            // prefix at all is the case this field exists for, and a prefix
-            // someone can recognise is worth more than fidelity to a framework
-            // default nobody sees. AkauntingInstaller still passes an empty
-            // --db-prefix through untouched if the box is cleared.
+            // Default prefix so a shared database stays recognisable; an empty value is still
+            // passed to the installer untouched.
             $this->field('table_prefix', 'text', advanced: true, extra: [
                 'default' => 'akt_',
                 'help' => __('application.help.table_prefix_optional'),
@@ -83,13 +78,8 @@ class AkauntingSiteType extends AbstractSiteType
     }
 
     /**
-     * Akaunting 3.2.4, measured 2026-09-18.
-     *
-     * `composer.json` declares `"php": "^8.1"`. The floor matters: Akaunting
-     * checks during its own install and stops, so a lower version is a
-     * half-provisioned site rather than a warning.
-     *
-     * No ceiling, because `^8.1` admits every 8.x and Akaunting names none.
+     * Akaunting declares `"php": "^8.1"` and stops its own install on a lower version, leaving a
+     * half-provisioned site. No ceiling: it names none.
      */
     public function supportedPhpRange(): ?array
     {
@@ -97,13 +87,9 @@ class AkauntingSiteType extends AbstractSiteType
     }
 
     /**
-     * Akaunting is served from its application root, so `storage/` (logs
-     * with stack traces, sessions), `config/` and the rest sit under the web
-     * root. Taken from Akaunting's own `.htaccess` and the nginx sample it
-     * ships: its protected folders, `artisan`, `.env` and `*.log`, and code
-     * under `modules/` and `vendor/` — where only assets may load. Its rule
-     * for those two uses a lookahead ("anything but an asset"); this lists
-     * what is code instead, so OpenLiteSpeed can apply it too.
+     * Akaunting is served from its application root, so `storage/`, `config/`, `.env` and the
+     * rest sit under the web root. Mirrors its own `.htaccess`; under `modules/` and `vendor/`
+     * it lists code extensions (no lookahead) so OpenLiteSpeed can apply it too.
      *
      * @return array<int, string>
      */
@@ -119,9 +105,7 @@ class AkauntingSiteType extends AbstractSiteType
     }
 
     /**
-     * Akaunting reads a `.env` beside its code, the same as Craft and Statamic
-     * (bug #69). The editor finds it there: ApplicationEnvironment reads the
-     * file the framework actually loads before the one it would create.
+     * Akaunting reads a `.env` beside its code, the same as Craft and Statamic.
      *
      * @return array<int, string>
      */

@@ -13,12 +13,8 @@ class StorageDestination extends Model
     {
         return [
             'provider' => StorageProvider::class,
-            // The per-provider credential + address set, encrypted as one
-            // value. `encrypted:array` encrypts the whole JSON document, so
-            // the secrets inside it are stored in plaintext *within* the
-            // ciphertext — do not pre-encrypt anything going in, or it is
-            // encrypted twice and every connection fails with a password made
-            // of base64.
+            // `encrypted:array` encrypts the whole document: never pre-encrypt values going in,
+            // or they are encrypted twice and every connection fails.
             'config' => 'encrypted:array',
             'last_tested_at' => 'datetime',
             'last_test_success' => 'boolean',
@@ -28,11 +24,8 @@ class StorageDestination extends Model
     /**
      * One value out of the provider config.
      *
-     * Exists so drivers read `$destination->configValue('host')` instead of
-     * `$destination->config['host'] ?? null` at forty call sites, and so a
-     * destination whose config failed to decrypt (a restored database, a
-     * rotated APP_KEY) answers null rather than throwing a TypeError deep
-     * inside a queue worker.
+     * A config that failed to decrypt (restored database, rotated APP_KEY) answers the default
+     * instead of throwing a TypeError inside a queue worker.
      */
     public function configValue(string $key, mixed $default = null): mixed
     {
@@ -48,10 +41,7 @@ class StorageDestination extends Model
     /**
      * Merge new values into the config, keeping what was not supplied.
      *
-     * This is what makes a partial update mean "rotate the credential I sent,
-     * leave the one I didn't" rather than "replace the whole blob and clear
-     * everything absent from this request". A null is treated as absent for
-     * the same reason — the API's contract is that omission preserves.
+     * A partial update rotates what was sent and keeps the rest; null counts as absent.
      *
      * @param  array<string, mixed>  $values
      */
@@ -66,9 +56,7 @@ class StorageDestination extends Model
     /**
      * What the panel currently knows about this destination.
      *
-     * `never_tested` is deliberately distinct from `failed`: "we have not
-     * asked" and "we asked and it said no" are different situations and only
-     * one of them is the user's problem to fix.
+     * `never_tested` is deliberately distinct from `failed`: not asked is not the same as refused.
      */
     public function testStatus(): string
     {
@@ -82,10 +70,8 @@ class StorageDestination extends Model
     /**
      * Forget what the last probe found.
      *
-     * Called whenever the credentials or the address change: a stored
-     * "connected" describes the keys that were tested, not the ones now
-     * stored, and a panel that shows a green tick for a key rotated out ten
-     * seconds ago is lying about the one thing this field exists to answer.
+     * Called whenever the credentials or address change: a stored "connected" describes the
+     * old keys, not the new ones.
      */
     public function forgetTestResult(): void
     {

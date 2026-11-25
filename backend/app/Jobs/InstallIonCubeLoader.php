@@ -15,14 +15,10 @@ use Throwable;
 /**
  * Installs the ionCube Loader for one PHP version.
  *
- * Queued for the reason every other install here is: the archive is ~29 MB
- * and a request held open for that long dies at the web server with the work
- * half done.
+ * Queued because the archive is ~29 MB and a request held open that long dies half done.
  *
- * `$tries = 1`, matching InstallFail2ban: an automatic retry of a server
- * mutation just repeats a failure somebody needs to read — and this one ends
- * in writing a `zend_extension` line, which is not a thing to retry
- * unattended.
+ * `$tries = 1`, like InstallFail2ban: a retry repeats a failure to read, and this install ends
+ * by writing a `zend_extension` line, which must not be retried unattended.
  */
 class InstallIonCubeLoader implements ShouldQueue
 {
@@ -30,29 +26,23 @@ class InstallIonCubeLoader implements ShouldQueue
     use TracksActor;
 
     /**
-     * The tracker keys installs by (runtime, version). The runtime is the
-     * loader rather than `php`, so an ionCube install in flight is not
-     * confused with the PHP version itself being installed — they are
-     * different operations on the same version and the screen shows both.
+     * The tracker keys installs by (runtime, version). The runtime is the loader, not `php`, so
+     * it is not confused with the PHP version itself being installed.
      */
     public const RUNTIME = 'ioncube';
 
     public int $tries = 1;
 
     /**
-     * The work itself, plus apt's wait for a lock another package manager
-     * holds ({@see ServerOps::aptLockBudgetSeconds()}), as InstallDatabaseEngine
-     * does. A fresh server's installer now finishes while Ubuntu's first-boot
-     * updates may still hold the lock, so a job started straight away waits
-     * for it — and must not be killed by the worker mid-wait, which reads as
+     * The work itself, plus apt's wait for a lock another package manager holds
+     * ({@see ServerOps::aptLockBudgetSeconds()}). Must not be killed mid-wait, or it reads as
      * "stopped unexpectedly" instead of "another install is running".
      */
     public int $timeout;
 
     /**
-     * `$keepCopy`: whether the files the install replaces get a recovery copy
-     * on disk, or are held in memory only (2026-10-29, the user's choice).
-     * Defaulted, so a job queued before the field existed still runs.
+     * `$keepCopy`: whether the files the install replaces get a recovery copy on disk, or are
+     * held in memory only. Defaulted, so a job queued before the field existed still runs.
      */
     public function __construct(public string $version, public ?int $actorId = null, public bool $keepCopy = true)
     {
@@ -66,12 +56,8 @@ class InstallIonCubeLoader implements ShouldQueue
         try {
             $loader->install($this->version, $this->keepCopy);
         } catch (PhpConfigException $e) {
-            // Recorded, not just logged. `installed` is read from disk, so a
-            // failed install is otherwise indistinguishable from one still
-            // running — for ten minutes, and then forever.
-            // The exception's own cause, not a generic `install_failed`: a
-            // download that failed and a config test that failed are fixed in
-            // different ways, and the card is the only place the user reads it.
+            // Recorded, not just logged: `installed` is read from disk, so a failed install looks
+            // like a running one. Uses the exception's own reason, not a generic `install_failed`.
             $installs->fail(self::RUNTIME, $this->version, null, $e->reason(), $e->reference);
 
             $log->log('php.ioncube_install_failed', null, [
@@ -88,9 +74,7 @@ class InstallIonCubeLoader implements ShouldQueue
     }
 
     /**
-     * The job died outright — the download hit the timeout, or the worker was
-     * killed. Without this the row sits at `installing` and the card spins on
-     * something that stopped running.
+     * The job died outright (timeout or killed worker); otherwise the row stays at `installing`.
      */
     public function failed(?Throwable $e): void
     {

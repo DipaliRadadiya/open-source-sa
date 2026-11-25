@@ -8,24 +8,18 @@ use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * Which containers a Docker app runs, for the Command-line access card (RC-23).
+ * Which containers a Docker app runs, for the Command-line access card.
  *
- * Read from the app's **stored compose file**, never from `docker ps`. The card
- * sits on the dashboard, so this runs on every page view, and a shell-out per
- * view is a cost paid to learn what the file already says: the panel always
- * starts it with `-p <project>`, so the names follow from the file alone.
- *
- * A site in Simple mode has no stored file, and gets the one the panel renders
- * for it — the same answer the compose editor shows.
+ * Read from the app's **stored compose file**, never from `docker ps`: the card runs on every
+ * dashboard view, and the panel always starts it with `-p <project>`, so the names follow from
+ * the file. A Simple-mode site has no stored file and gets the one the panel renders for it.
  */
 class ContainerAccess
 {
     /**
-     * What Docker accepts as a container name. A name it would refuse cannot be
-     * a running container, and these are pasted into a terminal as part of
-     * `sudo docker exec`, by somebody who did not necessarily write the file —
-     * so a `container_name` carrying a quote or a `;` is dropped rather than
-     * handed to someone else's root shell.
+     * What Docker accepts as a container name. The names are pasted into a terminal as part of
+     * `sudo docker exec`, so a `container_name` carrying a quote or a `;` is dropped rather than
+     * handed to a root shell.
      */
     private const NAME = '/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/';
 
@@ -51,8 +45,8 @@ class ContainerAccess
             : $this->containers->generated($application, $this->provisioner->documentRoot($application));
 
         try {
-            // Custom tags so a file using Compose's `!reset`/`!override` still
-            // parses; a tagged value is simply not an array below.
+            // Custom tags so Compose's `!reset`/`!override` still parse; a tagged value is not
+            // an array below.
             $document = Yaml::parse($compose, Yaml::PARSE_CUSTOM_TAGS);
         } catch (ParseException) {
             // A file that does not parse does not run either. Nothing to log in to.
@@ -73,8 +67,7 @@ class ContainerAccess
             $service = (string) $service;
             $definition = is_array($definition) ? $definition : [];
 
-            // Profiled services are not started by a plain `compose up`, which is
-            // all the panel ever runs.
+            // Profiled services are not started by a plain `compose up`.
             if (! empty($definition['profiles'])) {
                 continue;
             }
@@ -104,9 +97,8 @@ class ContainerAccess
     /**
      * Does one of these port entries publish `$port` on the host?
      *
-     * Any host address, not only loopback: the stored file is what the user
-     * typed, and the panel binds a bare `8080:80` to 127.0.0.1 when it writes
-     * the file to disk — so the column can say either.
+     * Any host address, not only loopback: the panel binds a bare `8080:80` to 127.0.0.1 only
+     * when it writes the file to disk, so the stored file can say either.
      *
      * @param  array<int, mixed>  $ports
      */

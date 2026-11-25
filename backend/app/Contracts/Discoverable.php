@@ -7,18 +7,15 @@ use App\Models\SyncRun;
 /**
  * One kind of thing the panel can find on the server and take a record of.
  *
- * Deliberately not one generic sync: "what exists" is genuinely different per
- * resource. A database is a name from `SHOW DATABASES`; a site is a vhost, a
- * directory, an owner and a type inferred from files on disk. What they share
- * is the shape of the answer, not the question.
+ * Not one generic sync: "what exists" differs per resource (a database is a name from
+ * `SHOW DATABASES`; a site is a vhost, directory, owner and a type inferred from disk).
  *
- * Implementations must obey two rules the whole feature rests on:
+ * Implementations must obey two rules:
  *
- *  - `discover()` never writes to the server. Not a file, not a service, not
- *    a reload. If people are afraid to press Sync, the feature is worthless.
- *  - `adopt()` writes only to the panel's own database, and only rows that
- *    are marked as not-managed, so nothing the user hand-wrote is at risk of
- *    being rewritten until they ask for that separately.
+ *  - `discover()` never writes to the server (no file, service or reload), or nobody dares press
+ *    Sync.
+ *  - `adopt()` writes only to the panel's own database, and only rows marked not-managed, so
+ *    nothing the user hand-wrote is rewritten until they ask.
  */
 interface Discoverable
 {
@@ -28,8 +25,8 @@ interface Discoverable
     /**
      * Resource types that must have run before this one.
      *
-     * Real dependencies, not preferences: an ssh key belongs to a user, a
-     * worker to an application. Running out of order means inventing parents.
+     * Real dependencies (an ssh key belongs to a user, a worker to an application); out of order
+     * would invent parents.
      *
      * @return array<int, string>
      */

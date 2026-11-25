@@ -24,8 +24,6 @@ use Throwable;
  *   even though it decrypts.
  *
  * The expiry timestamp is belt-and-braces for caches that do not honour TTLs strictly.
- *
- * See `google-drive-oauth-design.md` §3b.
  */
 class GoogleOauthState
 {

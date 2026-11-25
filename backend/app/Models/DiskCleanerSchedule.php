@@ -63,11 +63,8 @@ class DiskCleanerSchedule extends Model
     /**
      * The timezone this schedule is interpreted in.
      *
-     * The app's, because that is what the scheduler tick compares against.
-     * See BackupTarget::scheduleTimezone() for why this is deliberately not
-     * `ServerTimezone::get()` — the short version is that naming the server's
-     * clock on a schedule evaluated in UTC is a specific wrong answer, and a
-     * user cannot tell a specific wrong answer from a right one.
+     * The app's, because that is what the scheduler tick compares against; not
+     * `ServerTimezone::get()`. See BackupTarget::scheduleTimezone().
      */
     public function scheduleTimezone(): string
     {
@@ -77,10 +74,7 @@ class DiskCleanerSchedule extends Model
     /**
      * When the cleaner will next run, or null when it is switched off.
      *
-     * Published for the same reason BackupTarget publishes it: a screen that
-     * can only say "weekly" is asking the user to work out what that means,
-     * and every frequency in this table already hides an hour they were never
-     * told about (03:00, chosen to stay out of the backups' way).
+     * Published so the UI can show a concrete time instead of just "weekly" (03:00 is hidden).
      */
     public function nextRunAt(?DateTimeInterface $now = null): ?DateTimeInterface
     {
@@ -100,13 +94,8 @@ class DiskCleanerSchedule extends Model
         $previousSlot = (new CronExpression($this->cronExpression()))
             ->getPreviousRunDate($now, 0, true);
 
-        // Never run yet: count from the last save, not from the beginning of
-        // time. "Never run" used to mean "due now", so every new schedule ran
-        // within a minute of being saved, whatever slot was picked, while the
-        // screen said the next run was hours or days away (seen live
-        // 2026-09-23: hourly saved 11:12, shown "next 12:00", ran 11:13). The
-        // first run now lands on the first slot after the save — the time
-        // nextRunAt() already reports.
+        // Never run yet: count from the last save, so the first run lands on the first slot after
+        // it (the time nextRunAt() reports), not right away.
         $since = $this->last_run_at ?? $this->updated_at;
 
         return $since === null || $since < $previousSlot;

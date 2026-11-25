@@ -13,16 +13,9 @@ use App\Services\Server\Docker\OriginalNetwork;
 /**
  * Save a container site's structured fields and make them true on the box.
  *
- * The second half is the point. These values exist only as inputs to the
- * compose file, so a save that writes the row and stops leaves the panel
- * showing a network the container is not on — until some unrelated deploy
- * happens to rewrite the file, at which point the change lands with nothing to
- * connect it to. That is the shape of "built but not wired", and it is why the
- * apply is here rather than left to the next caller.
- *
- * `compose up -d` RECREATES the container when the file changed, so this is
- * brief downtime for that one site. The UI says so before the save; it is not
- * something to discover from a graph.
+ * The values only feed the compose file, so saving the row alone would leave the panel showing
+ * a network the container is not on. `compose up -d` RECREATES the container when the file
+ * changed: brief downtime for that one site (the UI warns before the save).
  */
 class UpdateContainerSettings
 {
@@ -44,9 +37,8 @@ class UpdateContainerSettings
         $application->forceFill($data)->save();
         $networkChanged = $application->wasChanged('docker_network');
 
-        // Nothing on disk to rewrite for a site that was never provisioned, and
-        // a disabled one is deliberately not running — bringing its container up
-        // as a side effect of saving a form would put the site back online.
+        // Nothing to rewrite for a never-provisioned site; a disabled one must not be brought
+        // back online by saving a form.
         $applies = $application->status === ApplicationStatus::Active
             && $application->disabled_at === null;
 
@@ -59,15 +51,9 @@ class UpdateContainerSettings
                     $this->provisioner->documentRoot($application),
                 );
             } catch (ProvisioningFailedException $e) {
-                // The row is already saved, deliberately: the settings the user
-                // asked for ARE what this site is configured to run, and reverting
-                // them would leave the compose file on disk disagreeing with the
-                // panel. What failed is making them true right now.
-                //
-                // Recorded and rethrown, so the caller gets a named reason instead
-                // of a 500. Reachable in practice since the registry became
-                // editable here: changing it re-pulls, and a wrong credential fails
-                // the apply — which used to answer "Server Error".
+                // The row stays saved on purpose (reverting would leave the compose file
+                // disagreeing with the panel); only applying failed. Recorded and rethrown so
+                // the caller gets a named reason instead of a 500.
                 $application->forceFill([
                     'failed_step' => $e->step,
                     'failed_reason' => $e->reason,
@@ -76,35 +62,27 @@ class UpdateContainerSettings
                 $failure = $e;
             }
 
-            // The site is on its new network now, so the one Compose made for it
-            // at create is nobody's (BUG-5). Only after a successful apply: until
-            // then the container may still be on it. Never fatal — see release().
+            // The old network is unused now. Only after a successful apply: until then the
+            // container may still be on it. Never fatal, see release().
             if ($failure === null && $networkChanged && $removePreviousNetwork) {
                 $this->originalNetwork->release($application);
             }
         }
 
         $this->activityLogger->log('application.container_updated', $application, [
-            // The renderer substitutes from PROPERTIES and nothing else —
-            // `ActivityLogResource` passes `$this->properties` to `__()` — so a
-            // sentence saying `:name` with no `name` property renders the
-            // placeholder verbatim. This one did.
+            // The renderer substitutes only from these properties (`ActivityLogResource`), so
+            // `:name` needs a `name` here.
             'name' => $application->name,
             'network' => $application->docker_network,
             'container_port' => $application->container_port,
             'memory_limit' => $application->memory_limit,
             'cpu_limit' => $application->cpu_limit,
             'volume_mounts' => count((array) ($application->volume_mounts ?? [])),
-            // Which credential, by id — the registry's name would be friendlier
-            // and would also go stale the moment it is renamed. The log records
-            // what was chosen, not what it was called at the time.
+            // By id: a registry name would go stale when renamed.
             'registry_id' => $application->registry_id,
-            // Recorded, because a save that only wrote the row and a save that
-            // recreated the container are different events and the log is where
-            // somebody will look to tell them apart.
+            // Tells a row-only save from one that recreated the container.
             'applied' => $applies,
-            // Distinguishes "saved and running" from "saved, but the container did
-            // not come back" — the second is the event somebody will be hunting.
+            // "Saved and running" vs "saved, but the container did not come back".
             'apply_failed' => $failure?->reason ?? ($failure !== null ? $failure->step : null),
         ]);
 

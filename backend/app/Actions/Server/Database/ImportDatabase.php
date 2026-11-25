@@ -18,27 +18,21 @@ use App\Services\Server\Databases\PgsqlEngine;
 use Throwable;
 
 /**
- * Replace a database's contents with an uploaded file (operator decision
- * 2026-10-14: replace, not merge — the result is always exactly the file).
+ * Replace a database's contents with an uploaded file (replace, not merge: the result is exactly
+ * the file).
  *
  * In this order, and nothing destructive before the third step:
  *
- *  1. **Check** the file: what it is by its bytes, and cleaned into what a
- *     database's own user can load ({@see ImportSanitizer}). A file refused
- *     here has changed nothing.
- *  2. **Back up** the database as it is now — an ordinary export, marked
- *     `import_safety`, kept until the user deletes it (Dipali, 2026-10-26:
- *     nothing deletes it on a schedule; it replaced RC-14's one week). Skipped when the user unticks it (Dipali,
- *     2026-10-26): faster and no extra disk, but a failed load then has
+ *  1. **Check** the file: what it is by its bytes, and cleaned into what a database's own user
+ *     can load ({@see ImportSanitizer}). A file refused here has changed nothing.
+ *  2. **Back up** the database as it is now: an ordinary export marked `import_safety`, kept
+ *     until the user deletes it. Skipped when the user unticks it, but then a failed load has
  *     nothing to put back.
- *  3. **Replace**: drop, recreate, give the users back, load the file as the
- *     database's own user.
- *  4. On a failed load, **put the backup back** the same way, as the panel —
- *     it is the panel's own dump.
+ *  3. **Replace**: drop, recreate, give the users back, load the file as the database's own user.
+ *  4. On a failed load, **put the backup back** the same way, as the panel.
  *
- * Drop-and-recreate rather than loading over the top for the reason restores
- * do it (RestoreDatabase): a table the file does not mention would otherwise
- * survive, and "the database is now this file" would not be true.
+ * Drop-and-recreate rather than loading over the top (as RestoreDatabase does): a table the file
+ * does not mention would otherwise survive.
  */
 class ImportDatabase
 {
@@ -51,9 +45,9 @@ class ImportDatabase
     ) {}
 
     /**
-     * The account an import runs as: a user of this database whose password the
-     * panel knows and who may connect from this server. Null when there is none
-     * — and the import is refused rather than run as the admin account.
+     * The account an import runs as: a user of this database whose password the panel knows and
+     * who may connect from this server. Null when there is none; the import is then refused
+     * rather than run as the admin account.
      */
     public static function account(Database $database): ?DatabaseUser
     {

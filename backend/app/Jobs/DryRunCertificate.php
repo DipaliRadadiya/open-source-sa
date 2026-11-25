@@ -16,22 +16,14 @@ use Throwable;
 /**
  * Rehearses an issuance and keeps nothing.
  *
- * Two stages, in the order that costs least. The panel's own reachability
- * check runs first: it writes a token, fetches it back, and is free — no ACME
- * traffic, so it can be run as often as a user needs while they fix DNS. Only
- * the names that survive it are handed to `certbot --dry-run`, which asks
- * Let's Encrypt's staging server the question the local check cannot: will the
- * CA itself issue for this name. A CAA record naming a different CA, a
- * rate limit already in force, an account problem — all pass the local check
- * and fail the real one, and finding that out here costs nothing.
+ * Two stages, cheapest first. The panel's own reachability check (writes a token, fetches it
+ * back; no ACME traffic) runs first. Only the names that pass go to `certbot --dry-run`, which
+ * asks Let's Encrypt's staging server what the local check cannot: will the CA itself issue
+ * (a CAA record naming another CA, a rate limit, an account problem).
  *
- * Queued for the same reason issuance is: a staging authorisation is a round
- * trip out to the CA and back to this box, and it outlasts a request.
+ * Queued like issuance: a staging authorisation outlasts a request.
  *
- * One attempt, no retries. The dry run spends the *staging* budget rather than
- * the production one, but a job that retried itself would still turn one click
- * into three authorisation attempts, and the whole point of this feature is to
- * stop a user burning attempts on a domain that is not ready.
+ * One attempt, no retries: a retry would turn one click into three authorisation attempts.
  */
 class DryRunCertificate implements ShouldQueue
 {
@@ -56,8 +48,7 @@ class DryRunCertificate implements ShouldQueue
         $application = Application::with('domains')->find($this->applicationId);
 
         if ($application === null) {
-            // Deleted between the click and the worker. Drop the state rather
-            // than leaving a result pinned to an application that is gone.
+            // Deleted between the click and the worker; drop the state.
             $store->forget($this->applicationId);
 
             return;
@@ -75,27 +66,20 @@ class DryRunCertificate implements ShouldQueue
         ));
 
         if ($passed === []) {
-            // Nothing worth asking the CA about. Stopping here is the point of
-            // running this stage first — certbot would spend a real
-            // authorisation failure to learn what a local HTTP request just
-            // established for free.
+            // Nothing worth asking the CA about: certbot would spend a real authorisation
+            // failure to learn what the local check already showed.
             $this->finish($application, $store, $activityLogger, [
                 'status' => 'failed',
                 'stage' => 'reachability',
                 'domains' => $results,
-                // No summary reason. Every name above already carries the
-                // sentence for its own failure, and each is a different fix;
-                // a "none of your domains are ready" line over the top of that
-                // adds no instruction and buries the ones that do.
+                // No summary reason: each name already carries its own failure sentence.
                 'reason' => null,
             ]);
 
             return;
         }
 
-        // Recorded before certbot runs, so a user polling mid-run sees which
-        // names got through and that the slow half has started, rather than an
-        // unexplained thirty seconds of spinner.
+        // Recorded before certbot runs, so a user polling mid-run sees which names got through.
         $store->finish($application->id, [
             'status' => 'running',
             'stage' => 'acme',
@@ -113,10 +97,8 @@ class DryRunCertificate implements ShouldQueue
 
         $output = $result->output().$result->errorOutput();
 
-        // Both halves required. A non-zero exit is a failure; a zero exit is
-        // not yet a success, because certonly also exits 0 when it decides
-        // there is nothing to do. Only certbot's own "the dry run was
-        // successful" says an authorisation actually completed.
+        // Both halves required: certonly also exits 0 when it decides there is nothing to do,
+        // so only certbot's "the dry run was successful" proves an authorisation completed.
         if (! $result->failed() && $certbot->confirmedDryRun($output)) {
             $this->finish($application, $store, $activityLogger, [
                 'status' => 'passed',
@@ -156,9 +138,8 @@ class DryRunCertificate implements ShouldQueue
     }
 
     /**
-     * A crash still has to leave a verdict the screen can read. Without this
-     * the state sits on `running` until the TTL expires and the only honest
-     * thing the dialog could show is a spinner that never stops.
+     * A crash must still leave a verdict the screen can read, or the state stays `running`
+     * until the TTL expires.
      */
     public function failed(?Throwable $exception): void
     {

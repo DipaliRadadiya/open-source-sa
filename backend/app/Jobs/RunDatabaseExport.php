@@ -15,16 +15,11 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Dumps a database out of the request cycle.
+ * Dumps a database out of the request cycle: `mysqldump` gets ten minutes, but nginx cuts the
+ * request at five (`fastcgi_read_timeout 300`).
  *
- * It used to run inline. `mysqldump` is given ten minutes, but nginx gives the
- * request five (`fastcgi_read_timeout 300`), so on any database big enough to
- * matter the browser was shown a failure while the dump carried on and quietly
- * succeeded. The user was told the wrong thing about work that had worked.
- *
- * One attempt, no retries. A dump that failed halfway has already written a
- * partial file, and a second attempt racing the first over the same path is a
- * worse outcome than a failure the user can see and repeat deliberately.
+ * One attempt, no retries: a failed dump leaves a partial file, and a second attempt racing it
+ * over the same path is worse than a visible failure the user repeats deliberately.
  */
 class RunDatabaseExport implements ShouldBeUnique, ShouldQueue
 {
@@ -33,36 +28,20 @@ class RunDatabaseExport implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 1;
 
-    /**
-     * Comfortably beyond the dump's own 600s ceiling, so the process decides
-     * when it has taken too long rather than the worker killing it partway and
-     * leaving a truncated file that looks complete.
-     */
+    /** Beyond the dump's own 600s ceiling, so the worker never kills it and leaves a truncated file. */
     public int $timeout = 900;
 
     public function __construct(
         public int $exportId,
         /**
-         * Carried alongside the export id purely so {@see uniqueId()} can answer
-         * without a query. Deriving it from the row would mean a lookup every
-         * time the lock is taken or released, and would return nothing at all
-         * for a row already deleted — which collapses every export onto one
-         * shared lock rather than one per database.
-         *
-         * Required, with no default. A default would be a value the lock could
-         * silently take when a caller forgot, and every export that forgot
-         * would then queue behind every other one.
+         * Lets {@see uniqueId()} answer without a query (a deleted row would collapse every export
+         * onto one lock). Required, no default: a default would queue forgetful callers together.
          */
         public int $databaseId,
     ) {}
 
     /**
-     * One dump per database at a time.
-     *
-     * Two `mysqldump` runs against the same database each write a full copy to
-     * the same disk, on a queue with a single worker, for no benefit — the
-     * second produces the same bytes as the first. Before this, a double-submit
-     * or a held-down button started as many as it was clicked.
+     * One dump per database at a time: a second run writes the same bytes to the same disk.
      */
     public function uniqueId(): string
     {
@@ -74,8 +53,7 @@ class RunDatabaseExport implements ShouldBeUnique, ShouldQueue
         $export = DatabaseExport::find($this->exportId);
 
         if ($export === null || $export->database === null) {
-            // The database was dropped between the request and the worker.
-            // Nothing to dump, and nothing worth failing loudly over.
+            // The database was dropped between the request and the worker: nothing to dump.
             $export?->update([
                 'status' => ExportStatus::Failed,
                 'reason' => 'database_missing',
@@ -101,11 +79,7 @@ class RunDatabaseExport implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    /**
-     * The job died outright — timeout, or the worker was killed. Without this
-     * the row sits at `running` forever and the screen shows a spinner that
-     * will never resolve.
-     */
+    /** The job died outright (timeout, worker killed); otherwise the row stays `running` forever. */
     public function failed(?Throwable $e): void
     {
         $reference = (string) Str::uuid();

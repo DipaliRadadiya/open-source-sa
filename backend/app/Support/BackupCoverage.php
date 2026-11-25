@@ -6,9 +6,8 @@ use App\Enums\BackupStatus;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Where each site (or standalone database) stands on backups, as ONE SQL
- * expression, so the filter, the sort, the counts and the row's `state` field
- * cannot disagree with each other.
+ * Where each site (or standalone database) stands on backups, as ONE SQL expression, so the
+ * filter, sort, counts and the row's `state` cannot disagree.
  *
  *   unprotected  no backup settings
  *   paused       settings exist, but switched off or `manual`
@@ -16,16 +15,12 @@ use Illuminate\Database\Eloquent\Builder;
  *   protected    on a schedule, and the latest backup did not fail
  *                (none yet, running, verified)
  *
- * "Latest backup" is the newest run of the owner's own target — scheduled or
- * "Back up now" — never a safety copy taken before a restore: a safety copy
- * failing says nothing about whether the schedule works.
+ * "Latest backup" is the newest run of the owner's own target, never a safety copy taken before
+ * a restore: that failing says nothing about the schedule.
  *
- * Computed in the database rather than in PHP, because the list it serves is
- * paged: filtering loaded rows is what lost every site past the first 100.
- * Built only from constants and the owner column given in code, never from the
- * request; the values it compares against go in as bindings. Correlated
- * subqueries with LIMIT and CASE, which SQLite, MySQL/MariaDB and PostgreSQL
- * all run the same way.
+ * Computed in the database because the list is paged (filtering loaded rows loses later pages).
+ * Built only from constants and the owner column given in code, never from the request; values
+ * go in as bindings. Portable across SQLite, MySQL/MariaDB and PostgreSQL.
  */
 class BackupCoverage
 {

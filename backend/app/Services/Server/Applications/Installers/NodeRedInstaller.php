@@ -10,22 +10,15 @@ use App\Services\Server\Applications\Installers\Concerns\UpdatesNpmApp;
 /**
  * Node-RED — flow-based automation.
  *
- * Installed **into the site**, not globally. Upstream's instructions say
- * `npm install -g node-red`, which is right for one machine running one
- * Node-RED and wrong here: a global install is one version shared by every
- * site on the box, upgraded for all of them at once, and owned by root rather
- * than by the site user whose process runs it.
+ * Installed into the site, not globally: a global install is one version shared by every site
+ * and owned by root rather than the site user.
  *
- * Two things this writes that upstream leaves to the user, because the panel
- * puts the site on a public domain and upstream assumes a home network:
+ * Two things this writes that upstream leaves to the user (the site sits on a public domain):
  *
- *  - **A password on the editor.** Node-RED ships with no authentication at
- *    all. Anyone who reaches the URL can edit flows, and a flow can run
- *    arbitrary code as the site user — so an unauthenticated Node-RED on a
- *    public domain is a remote shell. The panel refuses to create that.
- *  - **A user directory inside the site.** Node-RED defaults to `~/.node-red`,
- *    which the unit mounts read-only (`ProtectHome=read-only`), so the default
- *    would start and then fail to save a flow.
+ *  - **A password on the editor.** Node-RED has no authentication by default, and a flow can run
+ *    arbitrary code as the site user, so an open editor is a remote shell. The panel refuses that.
+ *  - **A user directory inside the site.** The default `~/.node-red` is read-only under the unit's
+ *    `ProtectHome=read-only`, so flows could not be saved.
  */
 class NodeRedInstaller extends AbstractNodeInstaller implements ApplicationUpdater
 {
@@ -58,8 +51,7 @@ class NodeRedInstaller extends AbstractNodeInstaller implements ApplicationUpdat
     {
         $settings = $application->installSettings();
 
-        // --omit=dev: the editor is shipped built, so the dev tree is a few
-        // hundred megabytes of nothing this will ever run.
+        // --omit=dev: the editor ships built; the dev tree is hundreds of MB nothing runs.
         $this->runWithNode('install_app', $application, [
             'npm', 'install', '--omit=dev', '--no-audit', '--no-fund',
             'node-red@'.config('server.installers.nodered.version', 'latest'),
@@ -78,9 +70,8 @@ class NodeRedInstaller extends AbstractNodeInstaller implements ApplicationUpdat
     /**
      * The settings module.
      *
-     * `uiPort` reads `PORT` because that is what the unit sets and what the
-     * reverse proxy was pointed at; the literal is only the fallback for
-     * someone running this by hand.
+     * `uiPort` reads `PORT` (set by the unit, targeted by the reverse proxy); the literal is only
+     * a fallback for running it by hand.
      */
     private function settings(string $username, string $password): string
     {

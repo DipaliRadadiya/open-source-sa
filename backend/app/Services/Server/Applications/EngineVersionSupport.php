@@ -5,28 +5,16 @@ namespace App\Services\Server\Applications;
 use App\Services\Server\Databases\DatabaseManager;
 
 /**
- * Whether a database engine on this server is new enough for an application
- * that declares a minimum.
+ * Whether a database engine on this server is new enough for an application that declares a
+ * minimum, so the panel can refuse early instead of the app's own installer dying on a
+ * missing feature.
  *
- * The failure this prevents is the one `acceptedEngines()` was built for, one
- * level down: a site provisions against a database the application supports in
- * principle and refuses in practice, then dies inside the application's own
- * installer with an error about a missing feature — long past the point where
- * the panel could have said something useful.
+ * The minimum is declared per installer, not as one central floor: the types accepting
+ * PostgreSQL disagree (Craft 13, Joomla 12, Moodle 14, Nextcloud 14).
  *
- * 📌 **Per installer, not one central floor.** The four types that accept
- * PostgreSQL do not agree on a number — Craft names 13, Joomla 12, Moodle 14
- * and Nextcloud 14 — so a single shared minimum would have to be the highest
- * of them, and would then refuse Craft and Joomla a cluster both run on
- * perfectly well. Declaring it on the installer is also what lets a type with
- * no such requirement stay out of it entirely rather than inheriting someone
- * else's floor.
- *
- * ⚠️ In practice this cannot fire on a database the panel installed: the panel
- * installs Ubuntu's `postgresql` package, and its oldest supported release
- * (22.04) carries 14. It exists for the two ways an older one arrives anyway —
- * a server adopted with a hand-installed cluster, and a connection pointed at
- * an external database through `PUT /databases/connections/{engine}`.
+ * It cannot fire on a panel-installed database (Ubuntu's oldest supported release carries 14).
+ * It exists for a server adopted with a hand-installed cluster and for external connections
+ * set through `PUT /databases/connections/{engine}`.
  */
 class EngineVersionSupport
 {
@@ -36,15 +24,10 @@ class EngineVersionSupport
     public function __construct(private DatabaseManager $databases) {}
 
     /**
-     * True when the engine meets the application's minimum, or when there is
-     * no minimum to meet.
+     * True when the engine meets the application's minimum, or there is no minimum.
      *
-     * 🔴 Also true when the version cannot be read. An engine that will not
-     * answer is a question we could not ask, not an answer of "too old", and
-     * refusing on it would turn an unreadable database into a server that
-     * cannot host a site — the same mistake as reading an empty PHP version
-     * list as "no PHP installed". The install then fails the way it did
-     * before this class existed, which is the honest outcome.
+     * Also true when the version cannot be read: an unanswered question is not "too old", and
+     * refusing would stop the server hosting any site. The install then fails the old way.
      *
      * @param  array<string, string>  $minimums  engine name => minimum version
      */
@@ -78,10 +61,8 @@ class EngineVersionSupport
     }
 
     /**
-     * PostgreSQL answers `SHOW server_version` with `16.4` on some builds and
-     * `16.4 (Ubuntu 16.4-0ubuntu0.24.04.2)` on others, and MySQL appends its
-     * own suffixes. Only the leading number is a version; handing the rest to
-     * `version_compare` compares packaging strings.
+     * Only the leading number is a version: PostgreSQL answers `16.4 (Ubuntu 16.4-0ubuntu0...)`
+     * on some builds and MySQL appends suffixes, which `version_compare` would mis-compare.
      */
     private function read(string $engine): ?string
     {

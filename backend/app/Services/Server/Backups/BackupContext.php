@@ -10,10 +10,7 @@ use App\Models\Database;
 /**
  * Everything one backup run carries between its steps.
  *
- * A mutable object rather than threading half a dozen values through each
- * step's signature: the steps genuinely accumulate state — the dump produces
- * a path the archive consumes, the archive produces a path the upload
- * consumes, the upload produces a key the verify consumes.
+ * Mutable on purpose: each step produces what the next consumes (dump, archive, upload key).
  */
 class BackupContext
 {
@@ -47,10 +44,7 @@ class BackupContext
         return $this->target->application;
     }
 
-    /**
-     * A database on its own (2026-10-16): only its dump is taken, uploaded
-     * under `databases/`, and nothing of any site is read.
-     */
+    /** A database on its own: only its dump is taken, uploaded under `databases/`. */
     public function isDatabaseTarget(): bool
     {
         return $this->target->isDatabaseTarget();
@@ -74,9 +68,7 @@ class BackupContext
     }
 
     /**
-     * Records a local file for cleanup. Every path a step creates goes through
-     * here — a dump left behind after a failed upload fills the disk the next
-     * attempt needs.
+     * Records a local file for cleanup. Every path a step creates goes through here.
      */
     public function track(string $path): string
     {
@@ -98,8 +90,7 @@ class BackupContext
     /**
      * A container site's volumes — the only part of it that cannot be recreated.
      *
-     * `config` is deliberately excluded: someone who asked for the compose file
-     * before editing it does not want to wait for 20GB of Postgres data.
+     * `config` is deliberately excluded so a config-only backup stays small.
      */
     public function wantsVolumes(): bool
     {
@@ -109,9 +100,8 @@ class BackupContext
     /**
      * Its compose files and `.env`.
      *
-     * These live in the document root, so `ArchiveFiles` is what actually packs
-     * them — this answers whether it should, for a site where `wantsFiles()` is
-     * false because the type is a container type.
+     * They live in the document root, so `ArchiveFiles` packs them; this says whether it should
+     * for a container type, where `wantsFiles()` is false.
      */
     public function wantsConfig(): bool
     {

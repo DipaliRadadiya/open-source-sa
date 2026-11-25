@@ -35,32 +35,16 @@ class JournalTarget extends AbstractCleanupTarget
     }
 
     /**
-     * What the clean would actually reclaim — not the size of the journal.
+     * What the clean would actually reclaim, not the size of the journal.
      *
-     * This used to report `journalctl --disk-usage`, which is *"archived and
-     * active journals"*: everything. But a time vacuum removes only
-     * **archived** files whose entries are older than the window. So the screen
-     * offered "Journal — 120 MB", the button freed nothing, and from outside
-     * that is indistinguishable from a cleaner that is broken. It is the shape
-     * of estimate this class exists to avoid: a number that promises what the
-     * action cannot deliver.
+     * A time vacuum removes only **archived** files (`@` in the name, e.g. `system@2cfa….journal`;
+     * the open `system.journal` is never removed). The trailing glob also catches `.journal~`.
+     * `journalctl --disk-usage` counts active files too, so it would promise more than the clean frees.
      *
-     * Archived files are the ones with `@` in the name — `system.journal` is
-     * the open one and a time vacuum never removes it, `system@2cfa…-000657….journal`
-     * is sealed. The trailing glob catches `.journal~`, which is a file journald
-     * gave up on and which a vacuum also collects.
+     * Delete all is priced as every archived file, whatever its age: the rotate replaces each open
+     * file with a new preallocated one, so those free nothing net.
      *
-     * Delete all is priced as every archived file, whatever its age — not the
-     * open ones too. The rotate seals and removes them, but journald replaces
-     * each with a new file preallocated to the same 8 MB, so they free nothing
-     * net. Measured on a fresh box (2026-10-26): pricing every file offered
-     * 56 MB and the clean freed 24 MB, the size of the archived files. Open
-     * files left behind by an earlier machine id are not archived and no
-     * vacuum removes them either.
-     *
-     * The modification time is not an approximation here: an archived
-     * journal's mtime is when it was last written, which is the same "newest
-     * entry" timestamp `--vacuum-time` compares against.
+     * An archived journal's mtime is its newest entry, the same timestamp `--vacuum-time` compares.
      */
     public function estimate(?int $keepDays = null): int
     {
@@ -81,11 +65,8 @@ class JournalTarget extends AbstractCleanupTarget
     /**
      * Delete all is a rotate then a size vacuum to one byte, in one call.
      *
-     * `--vacuum-time=1s` would race: the files the rotate has just sealed hold
-     * entries written a moment ago, so a one-second window can keep them. A
-     * size vacuum ignores time and removes archived files until the journal is
-     * under the limit, which one byte never is — so every archived file goes,
-     * and only the new, empty, open files remain.
+     * `--vacuum-time=1s` would race: just-sealed files hold fresh entries. A size vacuum ignores
+     * time, so every archived file goes and only the new, empty, open files remain.
      */
     public function clean(?int $keepDays = null): ServerOpsResult
     {
@@ -100,11 +81,7 @@ class JournalTarget extends AbstractCleanupTarget
         );
     }
 
-    /**
-     * The keep choice, with the week this category always kept standing in
-     * for a request or schedule from before the choice existed. Read once per
-     * call so the estimate and the clean cannot disagree.
-     */
+    /** The keep choice, defaulting to the recommended week for requests that predate the choice. */
     private function days(?int $keepDays): int
     {
         return $keepDays ?? KeepDays::RECOMMENDED;

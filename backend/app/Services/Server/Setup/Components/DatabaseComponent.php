@@ -7,11 +7,7 @@ use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
 
-/**
- * The database engine — the one pick-one row, and the only thing most people will
- * need before their first site. WordPress and the rest of the marketplace cannot
- * install without one.
- */
+/** The database engine: the one pick-one row, needed before WordPress and most marketplace apps. */
 class DatabaseComponent implements SetupComponent
 {
     public function __construct(
@@ -20,11 +16,7 @@ class DatabaseComponent implements SetupComponent
         private ServerCapabilities $capabilities,
     ) {}
 
-    /**
-     * Only where the box hosts something that could use one. A container-only
-     * server manages no engine — an application that wants a database brings
-     * one as a container — and the panel's own data is SQLite regardless.
-     */
+    /** Only where the box hosts something that could use one (a container-only server has no engine). */
     public function applies(): bool
     {
         return $this->capabilities->hosts('php') || $this->capabilities->hosts('node');
@@ -35,25 +27,15 @@ class DatabaseComponent implements SetupComponent
         return 'database';
     }
 
-    /**
-     * Any engine running counts. They are mutually exclusive on 3306, so "which
-     * one" is a detail of the row rather than a second question.
-     */
+    /** Any engine running counts; they are mutually exclusive on 3306. */
     public function installed(): bool
     {
         return collect($this->databases->detectedVersions())->contains(fn (?string $version) => $version !== null);
     }
 
     /**
-     * Only where something the box hosts could use one.
-     *
-     * This returned a hardcoded `true`, and nothing in the setup catalogue was
-     * stack-aware — so a Docker server, which hosts containers and manages no
-     * databases at all, was told to install MySQL before its first site. The
-     * panel's own data is SQLite; every engine here exists for *hosted sites*.
-     *
-     * Asked of the hosted profiles rather than the stack name, so a stack
-     * added later gets the right answer without editing this file.
+     * Only where something the box hosts could use one (the panel's own data is SQLite).
+     * Asked of the hosted profiles, not the stack name, so a new stack needs no edit here.
      */
     public function recommended(): bool
     {
@@ -77,8 +59,7 @@ class DatabaseComponent implements SetupComponent
         $engine = (string) $versions->keys()->first();
         $version = (string) $versions->first();
 
-        // "MariaDB 10.11.14", not the server's own string
-        // `10.11.14-MariaDB-0ubuntu0.24.04.1` after the label (FS-A9).
+        // "MariaDB 10.11.14", not the server's own `10.11.14-MariaDB-0ubuntu0.24.04.1`.
         if (preg_match('/^\d+(\.\d+){0,2}/', $version, $short) === 1) {
             $version = $short[0];
         }
@@ -88,28 +69,24 @@ class DatabaseComponent implements SetupComponent
 
     public function action(): ?array
     {
-        // The engine is chosen, so the endpoint is per-option rather than one
-        // button. See options().
+        // The endpoint is per-option, see options().
         return null;
     }
 
     /**
-     * One entry per engine, with its own endpoint. MongoDB comes back
-     * `installable: false` — it is operable but has no installer yet (it needs its
-     * own apt repository), and saying so beats a button that cannot work.
+     * One entry per engine, with its own endpoint. MongoDB comes back `installable: false`: it
+     * has no installer yet (it needs its own apt repository).
      */
     public function options(): array
     {
         $versions = $this->databases->detectedVersions();
-        // From the versions already detected, not a package question per
-        // engine: this page is held to one probe each.
+        // From the versions already detected: this page is held to one probe each.
         $installed = array_map(fn ($version) => $version !== null, $versions);
 
         return array_map(function (string $name) use ($versions, $installed) {
             $version = $versions[$name] ?? null;
-            // OLD-28: why an engine is not offered, in the words the
-            // Databases screen already uses — the vendor has no build for
-            // this release, or MySQL and MariaDB cannot share a server.
+            // Why an engine is not offered: no vendor build for this release, or MySQL and
+            // MariaDB cannot share a server.
             $unavailable = $this->installers->unavailableReason($name)
                 ?? $this->installers->conflictReason($name, $installed);
             $installable = $this->installers->canInstall($name) && $unavailable === null;
@@ -121,9 +98,7 @@ class DatabaseComponent implements SetupComponent
                 'version' => $version,
                 'installable' => $installable,
                 'unavailable' => $unavailable,
-                // MariaDB first, and pre-selected: it is what Ubuntu packages
-                // directly, so there is no third-party repository to add and no
-                // version that falls out of support with the release.
+                // Pre-selected: Ubuntu packages it directly, so no third-party repository to add.
                 'recommended' => $name === 'mariadb',
                 'action' => $installable
                     ? ['method' => 'POST', 'endpoint' => "/api/databases/engines/{$name}"]

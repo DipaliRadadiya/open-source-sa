@@ -10,24 +10,12 @@ use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
 
 /**
- * Rewrite one application's web-server configuration and put it live.
+ * Rewrite one application's web-server configuration and put it live: write, test, reload.
  *
- * Provisioning already does this as part of a longer sequence; a domain change
- * needs the same three steps on their own — write, test, reload — with the same
- * rule that a failed test puts the previous configuration back.
- *
- * Rolling back to the previous *contents* rather than removing the file, which
- * is what provisioning does: a new site has nothing to fall back to, but a live
- * site does, and taking its vhost away over a rejected domain would turn a
- * mistyped hostname into an outage.
- *
- * Those contents are read off disk. They used to be re-rendered from the
- * database, which is not the same thing and was wrong in both directions: the
- * render already reflects the change being applied — the new domain is saved
- * before this runs — so "restore the previous config" wrote the *rejected* one
- * back, and a file somebody had edited by hand was silently replaced by
- * template output the moment any unrelated action failed its config test. A
- * rollback that cannot reproduce what was serving is not a rollback.
+ * A failed test restores the previous *contents* rather than removing the file (as provisioning
+ * does), so a mistyped domain on a live site cannot become an outage. The contents are read off
+ * disk, not re-rendered: the render already holds the new domain, and it would overwrite
+ * hand-edited files.
  */
 class ApplyVhost
 {
@@ -45,15 +33,11 @@ class ApplyVhost
         $driver = $this->webServers->driver();
         $documentRoot = $this->provisioner->documentRoot($application);
 
-        // Keep whatever is currently serving, so a rejected config can be
-        // undone rather than merely deleted. Read, not rendered — see the note
-        // on the class.
+        // Keep whatever is currently serving, so a rejected config can be undone.
         $context = ['feature' => 'application', 'op' => 'read_config', 'application' => $application->id];
 
-        // Every file a change can touch — the vhost, its HTTPS half and the
-        // site's conf-folder rules — so a refused change puts all of them
-        // back, not just the first: a rule file left behind would keep the
-        // web server's config test failing for every site after this one.
+        // Every file a change can touch (vhost, HTTPS half, conf-folder rules): a rule file left
+        // behind would keep the config test failing for every other site.
         $previous = [];
 
         foreach (array_keys($driver->configFiles($application->load('domains'), $documentRoot)) as $path) {
@@ -82,15 +66,10 @@ class ApplyVhost
     }
 
     /**
-     * Put the previous configuration back and reload, so the site keeps
-     * serving what it was serving a moment ago.
+     * Put the previous configuration back and reload.
      *
-     * Does nothing when the previous contents could not be read. That is the
-     * normal case for a site whose vhost does not exist yet, and the dangerous
-     * one otherwise: writing an empty file over a live config, because `cat`
-     * was refused, would take the site down in the name of rescuing it. The
-     * rejected config stays on disk instead — untested and unreloaded, so it
-     * is not serving — and the caller's exception reports the failure.
+     * Does nothing when the previous contents could not be read: writing an empty file over a live
+     * config would take the site down. The rejected config stays on disk, but it is not reloaded.
      */
     /** @param  array<string, ServerOpsResult>  $previous */
     private function restore(Application $application, array $previous): void
@@ -106,9 +85,8 @@ class ApplyVhost
                 continue;
             }
 
-            // Not there before: whatever the change wrote goes again. Only on
-            // "no such file" — a read that failed for any other reason says
-            // nothing about whether the file was there.
+            // Not there before: remove what the change wrote. Only on "no such file"; any other read
+            // failure says nothing about whether the file existed.
             if (! str_contains($read->errorOutput(), 'No such file')) {
                 continue;
             }

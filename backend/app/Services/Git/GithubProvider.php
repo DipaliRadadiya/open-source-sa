@@ -82,14 +82,10 @@ class GithubProvider extends AbstractGitProvider
     /**
      * Search across every repository the account can see, not one page.
      *
-     * GitHub's /user/repos has no name filter, and this used to filter the
-     * one page it had fetched — so with 54 repositories, one on page 2 was
-     * never found (junior re-test #15). GitHub's search API would filter on
-     * their side but only covers what a `user:`/`org:` qualifier names, which
-     * misses repositories the account collaborates on. So the whole list is
-     * fetched, 100 at a time, capped, and kept for two minutes per account so
-     * typing a search does not refetch it on every keystroke. Only the mapped
-     * fields are cached; no token or response body is.
+     * GitHub's /user/repos has no name filter and its search API misses repositories the account
+     * collaborates on, so the whole list is fetched (100 at a time, capped) and cached per account
+     * for two minutes, so typing does not refetch it. Only the mapped fields are cached, never a
+     * token or response body.
      *
      * @return array{repositories: array<int, array<string, mixed>>, page: int, has_more: bool}
      */

@@ -6,25 +6,17 @@ use App\Models\Database;
 use Throwable;
 
 /**
- * Keeps `databases.size_bytes` honest.
+ * Keeps `databases.size_bytes` current.
  *
- * The column was written once, when a database was created or adopted, and
- * never touched again — so it reported the size at creation, which is
- * essentially zero, for the rest of the database's life. A 5 GB database read
- * as empty.
- *
- * The fix is refreshing it, not caching it: the column already *is* the cache,
- * and the list page reads it precisely so it does not have to query every
- * schema on every request. What was missing is anything that puts a current
- * number in it.
+ * The column is the cache the list page reads, so it does not query every schema per request;
+ * this class refreshes it.
  */
 class DatabaseSizes
 {
     public function __construct(private DatabaseManager $manager) {}
 
     /**
-     * Re-measure one database. Returns it either way — a size that could not be
-     * read is not a reason to fail the request that asked for the database.
+     * Re-measure one database. Returns it either way: an unreadable size must not fail the request.
      */
     public function refresh(Database $database): Database
     {
@@ -38,13 +30,10 @@ class DatabaseSizes
     }
 
     /**
-     * Re-measure one database and say why when it could not be (FS-C12):
-     * `engine_unreachable` when its engine does not answer at all, otherwise
-     * `unmeasured`; null when the stored size is now current.
+     * Re-measure one database and say why when it could not be: `engine_unreachable` when the
+     * engine does not answer, otherwise `unmeasured`; null when the stored size is now current.
      *
-     * The stored size is left as it was either way — on a stopped engine it is
-     * the last known figure, which for a new database is 0, and 0 sent as a
-     * fact read as "this database is empty".
+     * The stored size is left as it was either way (a new database's 0 would read as "empty").
      */
     public function refreshReporting(Database $database): ?string
     {
@@ -64,8 +53,7 @@ class DatabaseSizes
     /**
      * Re-measure everything the panel tracks.
      *
-     * Grouped by engine so an engine that is stopped costs one failed probe
-     * rather than one per database sitting on it.
+     * Grouped by engine so a stopped engine costs one failed probe, not one per database.
      *
      * @return int How many rows were updated.
      */
@@ -92,9 +80,8 @@ class DatabaseSizes
     }
 
     /**
-     * Null when the size could not be read, which is different from zero.
-     * Writing a failed probe as 0 would report every database on a stopped
-     * engine as empty — the same silent-wrong-answer the stale column gave.
+     * Null when the size could not be read, which is different from zero: writing a failed probe
+     * as 0 would report every database on a stopped engine as empty.
      */
     private function measure(Database $database): ?int
     {

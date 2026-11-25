@@ -8,21 +8,18 @@ use App\Services\Server\WebServers\SharedConfigFile;
 use App\Services\Server\WebServers\WebServerManager;
 
 /**
- * v7's own config files for one site's AI bot blocker, 7G/8G firewall or
- * (Apache) force HTTPS, taken away the first time the owner changes that
- * setting in v8 (Dipali, 2026-10-13: on change only, no bulk cleanup).
+ * v7's own config files for one site's AI bot blocker, 7G/8G firewall or (Apache) force HTTPS,
+ * taken away the first time the owner changes that setting in v8 (on change only, no bulk
+ * cleanup).
  *
- * v8 loads the site's `conf/` folder as v7 does and writes its own rules
- * there under v7's names (2026-11-11), but never over a file it did not write.
- * So v7's file keeps working until the owner changes the setting; then it is
- * moved aside here, first, and v8's takes its place — or, turned off, none.
- * The panel's own files (its marker on the first line) are never touched here.
+ * v8 loads the site's `conf/` folder as v7 does and writes its rules there under v7's names, but
+ * never over a file it did not write. So v7's file keeps working until the setting changes; then
+ * it is moved aside first and v8's takes its place (or none, when turned off). The panel's own
+ * files (its marker on the first line) are never touched.
  *
- * Moved, never deleted: into a backup folder, so a config test that fails
- * afterwards can put them back. A file goes only when it is at the exact
- * path v7 used for THIS site, is a regular file in a real directory (no
- * links), and carries v7's own marker for this site — a user's own file of
- * the same name stays.
+ * Moved, never deleted: into a backup folder, so a failed config test can put them back. A file
+ * goes only when it is at the exact path v7 used for THIS site, is a regular file in a real
+ * directory (no links), and carries v7's marker for this site; a user's own file stays.
  */
 class V7Leftovers
 {
@@ -75,9 +72,8 @@ class V7Leftovers
     }
 
     /**
-     * Of what remove() moved, the files that were not in the site's conf
-     * folder — nginx's conf.d maps and snippets, which other config can lean
-     * on and which the panel never writes in their place.
+     * Of what remove() moved, the files outside the site's conf folder: nginx's conf.d maps and
+     * snippets, which other config can lean on and the panel never rewrites.
      *
      * @param  array<int, array{from: string, to: string}>  $moved
      * @return array<int, array{from: string, to: string}>
@@ -112,8 +108,7 @@ class V7Leftovers
                     "/etc/nginx/conf.d/{$slug}-ai-bot-blocker.conf" => $mapsThis,
                     "{$root}/conf/nginx/ai-bot-blocker.conf" => $mapsThis,
                 ],
-                // `conf/apache`, as on a real v7 server — not `apache2`, which
-                // never matched one (found 2026-11-11).
+                // `conf/apache` as on a real v7 server, not `apache2`.
                 'apache' => ["{$root}/conf/apache/ai-bot-blocker.conf" => $rules],
                 'openlitespeed' => ["{$root}/conf/openlitespeed/rewrites/ai-bot-blocker.conf" => $rules],
                 default => [],
@@ -121,8 +116,7 @@ class V7Leftovers
         }
 
         if ($feature === 'force_https') {
-            // v7's Apache forceHttps.conf; nginx and OpenLiteSpeed redirect in
-            // the vhost itself, on v7 as here.
+            // v7's Apache forceHttps.conf; nginx and OpenLiteSpeed redirect in the vhost itself.
             return $driver === 'apache'
                 ? ["{$root}/conf/apache/forceHttps.conf" => fn (string $content): bool => str_contains($content, 'RewriteCond %{HTTPS} !=on')]
                 : [];

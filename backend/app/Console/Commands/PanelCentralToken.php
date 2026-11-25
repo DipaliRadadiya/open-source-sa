@@ -10,27 +10,10 @@ use Throwable;
 /**
  * Store the central-management token handed to `install.sh`.
  *
- * Exists because the installer used to do this itself, in shell, and got it
- * wrong three ways at once — none of which it could report, since the whole
- * block was best-effort and the panel has no screen that shows the token:
+ * A real command instead of shell in `install.sh`; the DB logic lives in CentralTokenManager.
  *
- *   1. The token was always empty. It was read as `${CENTRAL_TOKEN}` inside a
- *      SINGLE-quoted `sh -c` string, so the parent shell never expanded it; and
- *      even double-quoted it would have been gone, because sudo resets the
- *      environment by default.
- *   2. The PHP was a parse error. `\\'settings\\'` inside the single-quoted
- *      argument closed the quote rather than escaping anything, so tinker was
- *      handed `\DB::table(\settings\)`.
- *   3. It ran `php "$2" artisan`, where `$2` is the PHP binary — i.e.
- *      `php /usr/bin/php8.4 artisan`. Bare `php` is not even on PATH on the
- *      OpenLiteSpeed stack.
- *
- * So: a real command, with the DB logic in CentralTokenManager where the rest
- * of it already lives, and a test that proves the stored value.
- *
- * **The token is read from STDIN, never from an argument.** An argument is
- * world-readable in `ps` for as long as the process lives, and this installer
- * echoes failing commands into its log. Standard input is visible to neither.
+ * **The token is read from STDIN, never from an argument.** An argument is world-readable in
+ * `ps` while the process lives, and the installer echoes failing commands into its log.
  */
 class PanelCentralToken extends Command
 {
@@ -40,9 +23,7 @@ class PanelCentralToken extends Command
 
     public function handle(CentralTokenManager $tokens): int
     {
-        // `trim`, so the newline a shell herestring appends is not part of the
-        // credential. A token stored with a trailing newline fails every
-        // comparison central makes, and nothing on either side says why.
+        // `trim`: a herestring's newline would make every comparison central makes fail.
         $token = trim($this->rawInput());
 
         if ($token === '') {
@@ -54,8 +35,7 @@ class PanelCentralToken extends Command
         try {
             $tokens->store($token);
         } catch (Throwable $e) {
-            // The message, never the token — this output goes to the install
-            // log.
+            // The message, never the token: this output goes to the install log.
             $this->error('Could not store the central token: '.$e->getMessage());
 
             return self::FAILURE;
@@ -69,14 +49,8 @@ class PanelCentralToken extends Command
     /**
      * Everything on standard input.
      *
-     * Taken from the console input's own stream when one is set, and from
-     * `php://stdin` otherwise. That is Symfony's seam for exactly this — it is
-     * how the question helper reads answers — and it is the difference between
-     * a command that can be tested and one that cannot: `php://stdin` under the
-     * test runner blocks on a terminal that will never send EOF.
-     *
-     * The installer sets no stream, so it takes the second path and reads the
-     * herestring run() hands it.
+     * The console input's own stream when one is set (Symfony's seam; keeps tests from blocking
+     * on `php://stdin`), otherwise `php://stdin`, which is what the installer uses.
      */
     private function rawInput(): string
     {

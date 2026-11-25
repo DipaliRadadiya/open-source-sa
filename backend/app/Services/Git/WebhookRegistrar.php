@@ -9,21 +9,14 @@ use App\Services\Git\Webhooks\WebhookManager;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Adds, updates and removes the deploy webhook in the repository itself.
+ * Adds, updates and removes the deploy webhook in the repository itself, using the token of the
+ * account the site deploys from (and undoes it when deploy-on-push is off or the site is deleted).
  *
- * Deploy-on-push used to hand the user a URL and a secret to paste into
- * GitHub, GitLab or Bitbucket. The panel already holds a token for the
- * account the site deploys from, so it now does that step itself — and
- * undoes it when deploy-on-push is switched off or the site is deleted.
+ * Never fatal: anything that stops it (no account, a token without hook permission, an unreachable
+ * panel) falls back to the manual URL-and-secret step with the reason.
  *
- * Never fatal. Everything here is an improvement on a manual step that still
- * works, so anything that stops it — no account, a token without hook
- * permission, a panel the provider could not reach — falls back to the manual
- * step with the reason, rather than failing the switch the user pressed.
- *
- * The only host ever called is the account's own provider API (its
- * configured base URL, through AbstractGitProvider's hardened client). The URL
- * a provider is told to deliver to is the panel's own, never user input.
+ * Only the account's own provider API is ever called (its configured base URL, through
+ * AbstractGitProvider's hardened client). The delivery URL is the panel's own, never user input.
  */
 class WebhookRegistrar
 {
@@ -52,9 +45,8 @@ class WebhookRegistrar
     ) {}
 
     /**
-     * Make the repository's webhook match the application: created if the
-     * panel has none on record, updated otherwise (a rotated secret), and
-     * created again if it was deleted by hand.
+     * Make the repository's webhook match the application: created if none is on record, updated
+     * otherwise (a rotated secret), created again if deleted by hand.
      *
      * @return array{status: string, reason: ?string}
      */
@@ -100,9 +92,8 @@ class WebhookRegistrar
     }
 
     /**
-     * Remove the webhook the panel registered, if it registered one. The id is
-     * kept when removal fails, so switching deploy-on-push back on updates the
-     * same hook rather than adding a second one beside it.
+     * Remove the webhook the panel registered, if any. The id is kept when removal fails, so
+     * switching back on updates the same hook instead of adding a second.
      */
     public function unregister(Application $application): bool
     {
@@ -127,11 +118,9 @@ class WebhookRegistrar
     }
 
     /**
-     * Whether a provider on the internet could deliver to this URL: a host
-     * that resolves only to public addresses. `localhost`, a private or
-     * reserved address (a panel reached over a LAN or a VPN) would produce a
-     * hook whose every delivery fails, which is worse than the manual step
-     * because it looks done.
+     * Whether a provider on the internet could deliver to this URL: a host that resolves only to
+     * public addresses. `localhost` or a private/reserved address would give a hook whose every
+     * delivery fails, worse than the manual step because it looks done.
      */
     private function publiclyReachable(string $url): bool
     {

@@ -9,13 +9,10 @@ use Throwable;
 /**
  * Reads and writes single keys in the panel's own `.env`.
  *
- * Needed because some server-side changes are also changes to how the panel
- * connects to that service — set a Redis password and the panel's own
- * `REDIS_PASSWORD` has to move with it, or the next request fails NOAUTH and
- * the screen you would use to fix it is behind the same broken connection.
+ * Some server-side changes also change how the panel connects to that service: a new Redis
+ * password must move the panel's own `REDIS_PASSWORD` with it, or the next request fails NOAUTH.
  *
- * Written atomically. A half-written .env is a panel that will not boot at
- * all, which is worse than any value being wrong.
+ * Written atomically: a half-written .env is a panel that will not boot.
  */
 class EnvFile
 {
@@ -41,9 +38,7 @@ class EnvFile
     }
 
     /**
-     * Set (or add) a key, preserving every other line — comments, ordering
-     * and spacing included. This file is hand-edited by operators; rewriting
-     * it wholesale from a template would silently drop their changes.
+     * Set (or add) a key, preserving every other line (operators hand-edit this file).
      *
      * @throws RuntimeException
      */
@@ -51,9 +46,8 @@ class EnvFile
     {
         $path = $this->path();
 
-        // Callers should check writable() first and refuse before making the
-        // change this is meant to record — see RedisSettings, which will not
-        // set a password it cannot write down.
+        // Callers should check writable() first and refuse before making the change this
+        // records (see RedisSettings).
         if (! $this->writable()) {
             throw new RuntimeException("{$path} is not writable");
         }
@@ -76,16 +70,12 @@ class EnvFile
         $contents = implode("\n", $lines);
         $contents = rtrim($contents, "\n")."\n";
 
-        // Write beside the target then rename: rename is atomic on the same
-        // filesystem, so a crash mid-write leaves the old file intact rather
-        // than a truncated one the app cannot boot from.
+        // Write beside the target then rename (atomic on one filesystem): a crash mid-write
+        // leaves the old file intact.
         $temporary = $path.'.panel-tmp';
 
-        // Carry the existing mode and ownership across. Imposing a mode here
-        // is how the panel locks itself out of its own config: an earlier
-        // version forced 0640 on a file that was 0664 and group-writable, so
-        // the first write succeeded and every write after it was refused.
-        // Whatever the operator set is theirs to keep.
+        // Carry the existing mode and ownership across. Never impose a mode: forcing 0640 on a
+        // group-writable file locked the panel out of its own config on the next write.
         $mode = is_file($path) ? (fileperms($path) & 0777) : 0640;
         $owner = is_file($path) ? fileowner($path) : null;
         $group = is_file($path) ? filegroup($path) : null;
@@ -95,8 +85,7 @@ class EnvFile
             @chmod($temporary, $mode);
 
             if ($owner !== null && $group !== null) {
-                // Only possible when we already own the file or are root;
-                // failing is fine, the mode above is what keeps it writable.
+                // Only possible when we own the file or are root; failing is fine.
                 @chown($temporary, $owner);
                 @chgrp($temporary, $group);
             }
@@ -124,9 +113,8 @@ class EnvFile
     }
 
     /**
-     * Quote when the value contains anything dotenv would misread. A
-     * generated password can hold `#`, spaces or quotes, and an unquoted `#`
-     * silently truncates the value into a comment.
+     * Quote when the value contains anything dotenv would misread (an unquoted `#` truncates the
+     * value into a comment).
      */
     private function quote(string $value): string
     {

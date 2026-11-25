@@ -7,20 +7,12 @@ use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
- * The half of Google OAuth that does not care how consent was obtained.
+ * The half of Google OAuth that does not care how consent was obtained: trade the stored refresh
+ * token for an access token.
  *
- * A refresh token is a refresh token. Whether the operator approved a code on
- * their phone or came back through a browser redirect, what the panel stores is
- * identical and what it does with it afterwards is identical: trade it for an
- * access token, over and over, for as long as the grant lives.
- *
- * So this sits below both flows. {@see GoogleOauthRedirect} obtains the token;
- * {@see GoogleDriveOauthDriver}, {@see GoogleDriveWorkspace} and the
- * `google_oauth` disk all spend it through here. Keeping the spend path
- * separate from the acquire path is what lets the acquire path be replaced
- * without touching a single line that performs a backup.
- *
- * See `google-drive-oauth-design.md` §3b.
+ * {@see GoogleOauthRedirect} obtains the token; {@see GoogleDriveOauthDriver},
+ * {@see GoogleDriveWorkspace} and the `google_oauth` disk spend it through here. The acquire path
+ * can be replaced without touching any backup code.
  */
 class GoogleOauthTokens
 {
@@ -29,21 +21,16 @@ class GoogleOauthTokens
     /**
      * The only Drive scope this panel asks for.
      *
-     * `drive.file` grants access solely to files the app itself created, which
-     * is exactly a backup destination's business and no more. It is also
-     * non-sensitive, so an operator's own unverified OAuth app never faces the
-     * restricted-scope security assessment that full `drive` would trigger.
-     *
-     * The cost, which the UI states rather than hides: a destination cannot see
-     * archives uploaded by a *different* panel install.
+     * `drive.file` reaches only files the app itself created, which is all a backup destination
+     * needs. It is non-sensitive, so an unverified OAuth app avoids the restricted-scope review.
+     * Cost: a destination cannot see archives uploaded by a *different* panel install.
      */
     public const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
     /**
      * Trade the stored refresh token for an access token.
      *
-     * Used by the driver on every operation and by preflight to prove the grant
-     * is still alive before a backup is ever scheduled against it.
+     * Used on every driver operation and by preflight, to prove the grant is still alive.
      *
      * @return array{ok: bool, access_token: string|null, reason: string|null}
      */
@@ -69,11 +56,8 @@ class GoogleOauthTokens
             return ['ok' => true, 'access_token' => (string) $response->json('access_token'), 'reason' => null];
         }
 
-        // `invalid_grant` is the one that matters operationally: the operator
-        // revoked access, or left the OAuth app in "Testing", where Google
-        // expires refresh tokens after about a week. Both need a human, and
-        // both read identically from here — so the message names the likely
-        // cause rather than the error code.
+        // `invalid_grant`: access was revoked, or the OAuth app is in "Testing", where Google
+        // expires refresh tokens after about a week. Both need a human.
         return $this->failure(
             (string) $response->json('error') === 'invalid_grant'
                 ? 'storage.oauth.revoked'

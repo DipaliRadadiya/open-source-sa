@@ -38,10 +38,8 @@ class FirewallPresets
         foreach (self::PRESETS as $key => $preset) {
             $presets[] = [
                 'key' => $key,
-                // The 3306 preset is named for the engine on this server —
-                // MariaDB is a drop-in for MySQL on the same port, and a
-                // MariaDB server's owner reads "MySQL" as the wrong database.
-                // The key stays `mysql`: the rule is the same either way.
+                // The 3306 preset is named for the engine on this server; the key stays `mysql`
+                // because the rule is the same either way.
                 'label' => __('firewall.presets.'.($key === 'mysql' && $mariadb ? 'mariadb' : $key)),
                 'port' => $preset['port'],
                 'protocol' => $preset['protocol'],
@@ -54,15 +52,10 @@ class FirewallPresets
     /**
      * The port a service name refers to, or null if the term names no preset.
      *
-     * Matched against the preset **key**, not the localized label, and that is
-     * a measurement rather than a shortcut: every service name in each
-     * locale's `firewall.php` is the same ASCII string in all eight locales —
-     * only `custom` is translated. So a key lookup already answers for every
-     * language, and matching labels would add a translation pass that could
-     * only ever return the same rows.
+     * Matched against the preset key, not the localized label: every service name is the same
+     * ASCII string in all locales (only `custom` is translated).
      *
-     * `custom` is excluded by having no port of its own; it is the UI's
-     * "let me type one" entry, not a service.
+     * `custom` is excluded by having no port of its own.
      */
     public static function portFor(string $term): ?int
     {
@@ -72,9 +65,7 @@ class FirewallPresets
     }
 
     /**
-     * Other names a preset answers to in a rule search. MariaDB is a drop-in
-     * for MySQL on the same port; the preset is labelled for both, and
-     * searching for either finds the 3306 rules.
+     * Other names a preset answers to in a rule search: MariaDB and MySQL both find the 3306 rules.
      *
      * @var array<string, string>
      */

@@ -13,14 +13,8 @@ use Throwable;
 /**
  * Keeps only the newest `retention_count` verified backups.
  *
- * Runs last, and only after this backup verified, so the panel never deletes
- * an old backup to make room for one that then fails. That ordering is the
- * whole safety property: pruning first would mean a failed run could leave
- * fewer backups than the user asked to keep.
- *
- * Only *verified* backups count towards retention. A failed run is not one of
- * your three copies, and counting it as one would quietly erode the retention
- * the user configured.
+ * Runs last, and only after this backup verified, so a failed run can never leave fewer
+ * backups than the user asked to keep. Only *verified* backups count towards retention.
  */
 class PruneOldBackups implements BackupStep
 {
@@ -33,12 +27,8 @@ class PruneOldBackups implements BackupStep
 
     public function appliesTo(BackupContext $context): bool
     {
-        // Not for a restore's safety backup. It is not one of the N the user
-        // keeps, but this step counts the backup being made as one of them and
-        // keeps N-1 regular backups — so every restore deleted the oldest
-        // kept backup, row and artefact, including the one being restored when
-        // that was the oldest (found in code review 2026-09-29). Safety
-        // backups have their own limit (SafetyBackup::KEEP).
+        // Not for a restore's safety backup: it would count as one of the N kept and push out the
+        // oldest regular backup. Safety backups have their own limit (SafetyBackup::KEEP).
         return $context->target->retention_count > 0 && ! $context->backup->is_safety;
     }
 
@@ -49,35 +39,24 @@ class PruneOldBackups implements BackupStep
         $expired = Backup::query()
             ->where('backup_target_id', $context->target->id)
             ->where('status', BackupStatus::Verified->value)
-            // A safety backup is the only way back from a restore that turned
-            // out to be wrong. Letting retention delete one — to make room for
-            // a scheduled backup of the state the user is trying to escape —
-            // would remove the parachute at exactly the wrong moment.
+            // Never prune safety backups: they are the way back from a wrong restore.
             ->where('is_safety', false)
             ->whereKeyNot($context->backup->id)
             ->orderByDesc('id')
-            // Skip the ones we are keeping; everything after is surplus. The
-            // current backup is excluded above and counted separately, so the
-            // window is retention minus this one.
+            // Skip the ones we keep; the rest is surplus. The current backup counts as one of them.
             ->skip(max(0, $keep - 1))
             ->take(1000)
             ->get();
 
         $pruned = 0;
-        // Memoised per destination, not per backup: building a disk parses
-        // credentials, and a retention pass is up to a thousand rows that
-        // almost always share one destination.
+        // Memoised per destination: building a disk parses credentials.
         $disks = [];
 
         foreach ($expired as $backup) {
             $key = $backup->manifest['key'] ?? null;
 
-            // Each backup's own destination. One disk built from the target
-            // was the current setting applied to history: after a target was
-            // repointed, `exists()` asked the new bucket about an old key,
-            // answered false, nothing was deleted — and the row was removed
-            // anyway, orphaning the object with nothing left pointing at it.
-            // Unattended, on every scheduled run, and silent.
+            // Use each backup's own destination, not the target's current one: after a repoint,
+            // `exists()` would ask the new bucket, delete nothing and still drop the row.
             $destination = $backup->destination();
 
             if ($destination === null) {
@@ -91,19 +70,14 @@ class PruneOldBackups implements BackupStep
             }
 
             try {
-                // Inside the try: this backup has already been uploaded and
-                // verified, and a destination an *old* backup points at that
-                // can no longer be reached (credentials changed, removed) must
-                // not turn it into a failed one.
+                // Inside the try: an unreachable destination of an *old* backup must not fail this run.
                 $disk = $disks[$destination->id] ??= $this->disks->for($destination);
 
                 if (is_string($key) && $disk->exists($key)) {
                     $disk->delete($key);
                 }
             } catch (Throwable $e) {
-                // A remote object we cannot delete is a cost problem, not a
-                // correctness one. Losing the row would orphan the object
-                // permanently, so the row stays and the failure is logged.
+                // Keep the row: dropping it would orphan the remote object for good.
                 Log::channel('server-ops')->warning('backup prune could not delete a remote artefact', [
                     'feature' => 'backup',
                     'backup' => $backup->id,

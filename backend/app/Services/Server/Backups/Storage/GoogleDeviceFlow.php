@@ -20,8 +20,6 @@ use Throwable;
  * Google limits this flow to a small scope list; the Drive entries are `drive.appdata` and
  * `drive.file`. `drive.file` only reaches files the app created and is non-sensitive, so it
  * avoids the restricted-scope assessment full `drive` triggers.
- *
- * See `google-drive-oauth-design.md`.
  */
 class GoogleDeviceFlow
 {

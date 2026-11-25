@@ -7,17 +7,14 @@ use App\Services\Server\ServerOps;
 use JsonException;
 
 /**
- * Runs one addon binary and turns what it printed into an answer or an
- * AddonException.
+ * Runs one addon binary and turns what it printed into an answer or an AddonException.
  *
- * Both addons share one console contract (their docs/INTEGRATION.md §3): one
- * JSON document on stdout and exit 0 on success; one JSON error envelope on
- * stderr and exit 1 on failure, with `"code":"licence_required"` when the
- * server has not bought it. The answer is passed through unchanged — the
- * addon's JSON is the contract Central reads, so the panel does not reshape it.
+ * Both addons share one console contract (their docs/INTEGRATION.md §3): one JSON document on
+ * stdout and exit 0 on success; one JSON error envelope on stderr and exit 1 on failure, with
+ * `"code":"licence_required"` when the server has no licence. The answer is passed through
+ * unchanged: Central reads the addon's JSON.
  *
- * Always an argument list, never a string: values a caller sends (a search
- * term, a plugin URL) reach the addon as one argv element each.
+ * Always an argument list, never a string: caller values reach the addon as one argv element each.
  */
 abstract class AddonCli
 {
@@ -44,9 +41,8 @@ abstract class AddonCli
     }
 
     /**
-     * Present and executable. Read from the filesystem rather than by running
-     * it: `/usr/local/bin` is world-readable, and a check that starts the
-     * binary would also ask the licence API.
+     * Present and executable. Checked on the filesystem, not by running it: running the binary
+     * would also ask the licence API.
      */
     public function installed(): bool
     {
@@ -56,8 +52,7 @@ abstract class AddonCli
     }
 
     /**
-     * The binary's own version line, or null. `--version` is exempt from both
-     * addons' licence check.
+     * The binary's own version line, or null. `--version` skips the licence check.
      */
     public function version(): ?string
     {
@@ -75,9 +70,8 @@ abstract class AddonCli
     /**
      * Run the addon and return its decoded success document.
      *
-     * `$input` goes to the binary on stdin: a blueprint, Redis credentials --
-     * anything that must not appear on a command line, which every account on
-     * the server can read through the process list.
+     * `$input` goes to the binary on stdin: a blueprint, Redis credentials, anything that must
+     * not appear on a command line (every account can read the process list).
      *
      * @param  array<int, string>  $arguments
      * @return array<string, mixed>
@@ -104,9 +98,8 @@ abstract class AddonCli
 
         $stdout = $this->decode($result->output());
 
-        // A success document, whatever the exit code: wp-toolkit reports a
-        // checksum mismatch as an answer on stdout with exit 1, and that is
-        // the result, not a failure to get one.
+        // A success document wins whatever the exit code: wp-toolkit reports a checksum
+        // mismatch on stdout with exit 1.
         if ($stdout !== null && ($stdout['status'] ?? null) === 'success') {
             return $stdout;
         }
@@ -139,9 +132,8 @@ abstract class AddonCli
         try {
             $decoded = json_decode($text, true, 64, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
-            // Exactly one document is the contract; a PHP notice printed by a
-            // plugin ahead of it is the usual reason it is not. The last line
-            // is still the document when that happens.
+            // A PHP notice printed by a plugin ahead of the document is the usual cause; the
+            // last line is still the document.
             $last = trim((string) strrchr("\n".$text, "\n"));
 
             try {

@@ -8,23 +8,17 @@ use Illuminate\Support\Facades\Date;
 /**
  * Turns a stream of byte counts into a row the panel can render.
  *
- * Holds the running total in memory and writes it to the backup row at most
- * once every {@see self::WRITE_EVERY_SECONDS}. The filter feeding it fires per
- * stream bucket — a few kilobytes — so an unthrottled write would mean millions
- * of UPDATEs against SQLite for one archive, and a progress indicator that
- * costs more than the upload it is describing.
+ * Holds the running total in memory and writes it to the backup row at most once every
+ * {@see self::WRITE_EVERY_SECONDS}. The feeding filter fires per stream bucket (a few KB), so
+ * an unthrottled write would be millions of UPDATEs for one archive.
  *
- * `progress_at` is stamped on every write, and it is the column that matters
- * most. It is the heartbeat {@see StaleBackupReaper} reads to tell a slow
- * backup from a dead one — a distinction no wall-clock timeout can make,
- * because "three hours" is a normal duration for a large archive on a thin link
- * and an instant death for one whose socket has closed.
+ * `progress_at` is stamped on every write: it is the heartbeat {@see StaleBackupReaper} reads
+ * to tell a slow backup from a dead one, which no wall-clock timeout can.
  */
 class UploadProgressReporter
 {
     /**
-     * Long enough that the write cost is noise against the transfer, short
-     * enough that a human watching the panel sees it move.
+     * Long enough that the write cost is noise, short enough that the panel visibly moves.
      */
     private const WRITE_EVERY_SECONDS = 5;
 
@@ -57,11 +51,8 @@ class UploadProgressReporter
     /**
      * Record an absolute figure rather than an increment.
      *
-     * The resumable uploader reports what **Google has committed**, which is
-     * the only honest number on that path: after a resume the byte count can
-     * move backwards, because bytes we sent were never acknowledged. Adding
-     * deltas would keep counting those and drift past the file size, showing a
-     * backup 104% uploaded.
+     * The resumable uploader reports what **Google has committed**. After a resume that can move
+     * backwards (sent bytes were never acknowledged); adding deltas would drift past the file size.
      */
     public function set(int $transferred): void
     {
@@ -78,11 +69,8 @@ class UploadProgressReporter
     }
 
     /**
-     * Force the final figure out, whatever the throttle says.
-     *
-     * Without this the last partial interval is lost and a completed upload
-     * shows 97%, which reads as a backup that stopped just short rather than
-     * one that finished.
+     * Force the final figure out, whatever the throttle says, so a finished upload does not
+     * show 97%.
      */
     public function flush(): void
     {
@@ -95,11 +83,9 @@ class UploadProgressReporter
     }
 
     /**
-     * Written with a bare query rather than `$backup->update()` on purpose: the
-     * runner holds its own copy of this model for the whole backup and fills in
-     * the manifest, size and status at the end from it. Refreshing that
-     * in-memory instance from here would be a second writer to the same object,
-     * and the step that finishes last would quietly win.
+     * A bare query on purpose, not `$backup->update()`: the runner holds its own copy of the
+     * model and fills in manifest, size and status at the end, so a second writer to that
+     * object would let the last one silently win.
      */
     private function write(): void
     {

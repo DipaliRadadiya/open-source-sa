@@ -19,11 +19,9 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * apt install of a PHP version and its base extensions — minutes, not
- * milliseconds, so it does not hold a request open.
+ * apt install of a PHP version and its base extensions; queued because it takes minutes.
  *
- * Unique per version, because apt takes a lock: a second run for the same
- * version would sit waiting for the first and then repeat its work.
+ * Unique per version: apt takes a lock, so a second run would wait and then repeat the work.
  */
 class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
 {
@@ -34,12 +32,8 @@ class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
     public int $tries = 1;
 
     /**
-     * The work itself, plus apt's wait for a lock another package manager
-     * holds ({@see ServerOps::aptLockBudgetSeconds()}), as InstallDatabaseEngine
-     * does. A fresh server's installer now finishes while Ubuntu's first-boot
-     * updates may still hold the lock, so a job started straight away waits
-     * for it — and must not be killed by the worker mid-wait, which reads as
-     * "stopped unexpectedly" instead of "another install is running".
+     * The install plus apt's wait for a lock another package manager holds
+     * ({@see ServerOps::aptLockBudgetSeconds()}); the worker must not kill the job mid-wait.
      */
     public int $timeout;
 
@@ -60,11 +54,8 @@ class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
 
         try {
             $php->install($this->version, $progress === null ? null : function (string $chunk) use ($progress) {
-                // Written on a step change, not on every chunk: apt emits
-                // hundreds of them and a database write each would cost more
-                // than the install. The tail is carried in memory meanwhile
-                // and flushed below, so a failure still shows apt's last
-                // words even if no step boundary was crossed.
+                // Persisted on a step change only (apt emits hundreds of chunks); the tail stays
+                // in memory and is flushed on failure.
                 if ($progress->push($chunk)) {
                     $progress->persist();
                 }
@@ -85,13 +76,8 @@ class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
 
         // The version is on disk now, so the row has nothing left to say.
         $installs->succeed('php', $this->version);
-        // The runtime is on disk now, so the recorded capability has nothing
-        // left to say. Without this the row keeps whatever install.sh wrote —
-        // a `lamp` server records `'node' => false`, and installing Node never
-        // changed it, so the create-application screen went on insisting Node
-        // was not installed on a server that had it. `current()` only detects
-        // when there is no row at all, which is why nothing self-corrected.
-        // {@see InstallDatabaseEngine}, which has always done this.
+        // Re-detect capabilities: the row keeps what install.sh wrote until refreshed. Same as
+        // InstallDatabaseEngine.
         $capabilities->refresh();
         $log->log('php.installed', null, ['version' => $this->version], actor: $this->actor());
 
@@ -99,11 +85,8 @@ class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * v7 parity (2026-10-13, Dipali): when other PHP versions here have
-     * ionCube, the new one gets it too — otherwise moving a site with encoded
-     * files to the new version breaks it. Its own queued install, tracked on
-     * the version's ionCube card like a click would be. Never fatal: PHP is
-     * installed whatever happens here.
+     * When other PHP versions here have ionCube, the new one gets it too (moving a site with
+     * encoded files would break otherwise). Queued as its own tracked install; never fatal.
      */
     private function followIonCube(PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): void
     {
@@ -127,9 +110,7 @@ class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * The job died outright — timeout, or the worker was killed. Without this
-     * the row sits at `installing` forever and the screen spins on something
-     * that stopped running.
+     * The job died outright (timeout, worker killed); without this the row stays `installing`.
      */
     public function failed(?Throwable $e): void
     {

@@ -5,16 +5,9 @@ namespace App\Services\Server\Applications;
 /**
  * What kind of file this is, from its name.
  *
- * By extension, deliberately, and not by asking `file` what the bytes are.
- * A real mime sniff is one exec per file; on a site with a `node_modules` that
- * is a hundred thousand processes to answer one chart. The extension is what
- * the name claims, which is what somebody looking at a directory is reasoning
- * about anyway.
- *
- * The categories exist to answer "what is eating the disk" — so `code` covers
- * the many small files a dependency tree is made of, and `media` splits into
- * images/video/audio because those are the three that usually explain a large
- * number.
+ * By extension on purpose: sniffing with `file` is one exec per file, which on a
+ * `node_modules` is a hundred thousand processes for one chart. The categories answer
+ * "what is eating the disk".
  */
 class FileTypeBreakdown
 {
@@ -76,9 +69,8 @@ class FileTypeBreakdown
     /**
      * The category of one filename.
      *
-     * A dotfile with no other dot (`.env`, `.gitignore`) has no extension in
-     * the sense that matters: its leading dot is not a separator. Treating it
-     * as one would file `.gitignore` under an invented `gitignore` type.
+     * A dotfile with no other dot (`.env`, `.gitignore`) has no extension: its leading dot is
+     * not a separator.
      */
     public function categorise(string $name): string
     {
@@ -96,9 +88,8 @@ class FileTypeBreakdown
     /**
      * Total bytes and file count per category, largest first.
      *
-     * `other` is sorted with the rest rather than pinned last: if unrecognised
-     * files are what is filling the disk, that is the answer, and burying it
-     * under a "miscellaneous" convention would hide it.
+     * `other` is sorted with the rest, not pinned last: if unrecognised files fill the disk,
+     * that is the answer.
      *
      * @param  iterable<array{name: string, size: int}>  $files
      * @return array<int, array{key: string, bytes: int, count: int}>

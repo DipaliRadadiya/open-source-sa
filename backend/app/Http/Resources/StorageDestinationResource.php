@@ -9,15 +9,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * One storage destination, of whatever provider.
  *
- * Secrets are deliberately absent — not masked, not truncated. The whole
- * `config` column is encrypted at rest (`encrypted:array` cast), and the model
- * would *decrypt* it on access. So this resource never serialises `config`;
- * it asks the provider's driver for the non-secret subset instead, and the
- * driver is the only thing that knows which of its keys are credentials.
- *
- * `has_credentials` reports whether the provider's secrets are populated
- * without putting their values anywhere near the response, so the UI can show
- * a "credentials set" badge and a rotation prompt without ever seeing them.
+ * Secrets are absent, not masked: the model decrypts the `config` column on access, so this
+ * resource never serialises it. The provider's driver returns the non-secret subset, as only it
+ * knows which keys are credentials. `has_credentials` reports presence only, never values.
  */
 class StorageDestinationResource extends JsonResource
 {
@@ -32,32 +26,21 @@ class StorageDestinationResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
 
-            // The real provider, read from the column. This used to be a
-            // hardcoded `'s3'` and the frontend inferred the truth by
-            // matching the endpoint hostname — a guess that was wrong for a
-            // self-hosted S3 service and meaningless for an FTP host.
             'provider' => $this->provider->value,
             'provider_title' => $this->provider->title(),
 
-            // Addressing detail only: bucket and region for S3, host and port
-            // for FTP/SFTP. Never a credential — see the driver's
-            // `secretKeys()` for what is withheld.
+            // Addressing detail only (bucket/region, host/port); never a credential, see `secretKeys()`.
             'config' => $driver->publicConfig($this->resource),
 
             'prefix' => $this->prefix,
 
-            // True when every secret this provider needs is populated. The
-            // config is read once, already decrypted by the cast, and only
-            // its *emptiness* is reported — no value reaches the array.
+            // True when every secret this provider needs is populated; only emptiness is reported.
             'has_credentials' => $this->hasCredentials($driver->secretKeys()),
 
-            // The last connection probe, so "this destination works" survives
-            // a page reload. `last_test_success` is null when the panel has
-            // never asked — a different answer from "asked and it failed",
-            // which is why this is not a plain boolean.
+            // The last connection probe. `last_test_success` is null when never tested, which
+            // differs from "tested and failed".
             'last_tested_at' => $this->last_tested_at?->format('d-m-Y H:i:s'),
-            // Show the age, not just the verdict: a destination tested forty
-            // days ago is not a destination known to work today.
+            // Show the age too: an old successful test says little about today.
             'last_tested_at_human' => $this->last_tested_at?->diffForHumans(),
             'last_test_success' => $this->last_test_success,
             // Stable category — `invalid_credentials`, `unreachable`,
@@ -75,9 +58,7 @@ class StorageDestinationResource extends JsonResource
     /**
      * Whether every secret the provider requires is present.
      *
-     * SFTP is the reason this is "any of", not "all of": password and private
-     * key are alternatives, and a key-authenticated destination has no
-     * password without being incomplete.
+     * "Any of", not "all of": SFTP password and private key are alternatives.
      *
      * @param  list<string>  $keys
      */

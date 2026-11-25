@@ -5,21 +5,14 @@ namespace App\Services\Panel;
 /**
  * The panel's web interface unit, and the lines it must carry.
  *
- * Bug #15: install.sh set only `PORT`, and Next's standalone server binds
- * `process.env.HOSTNAME || '0.0.0.0'` — so the interface answered on every
- * address, with only the firewall between port 3100 and the internet. Every
- * web server the panel configures reaches it on 127.0.0.1 (install.sh's
- * nginx, Apache and OpenLiteSpeed blocks alike), so loopback is all it needs.
+ * Loopback: Next's standalone server binds `process.env.HOSTNAME || '0.0.0.0'`, so without
+ * `HOSTNAME` the interface answers on every address. Every web server reaches it on 127.0.0.1.
  *
- * Review finding S1: the unit runs as the panel account, whose sudo grant is
- * root-equivalent, and nothing stopped the interface's processes using it —
- * a code-execution bug in Next was `sudo -n sh` away from root. The interface
- * never needs sudo, so `NoNewPrivileges=yes` blocks setuid for this unit.
+ * `NoNewPrivileges=yes`: the unit runs as the panel account, whose sudo grant is root-equivalent;
+ * the interface never needs sudo, so a code-execution bug in Next must not reach root.
  *
- * Review finding R8: the asset copy before the start ended in `|| true`,
- * which covered the whole `&&` chain, so a failed copy of `.next/static`
- * started an interface with no CSS or JS and no error anywhere. Only the
- * optional `public/` copy may be skipped now.
+ * Strict asset copy: a trailing `|| true` covered the whole `&&` chain, so a failed copy of
+ * `.next/static` started an interface with no CSS or JS. Only the optional `public/` may be skipped.
  */
 class FrontendUnit
 {
@@ -29,7 +22,7 @@ class FrontendUnit
 
     public const ASSET_COPY = "ExecStartPre=/bin/sh -c 'mkdir -p .next/standalone/.next && rm -rf .next/standalone/.next/static .next/standalone/public && cp -a .next/static .next/standalone/.next/static && if [ -d public ]; then cp -a public .next/standalone/public; fi'";
 
-    /** The line install.sh wrote before R8, the only one replaced. */
+    /** The line install.sh wrote before the strict copy, the only one replaced. */
     public const LEGACY_ASSET_COPY = "ExecStartPre=/bin/sh -c 'mkdir -p .next/standalone/.next && rm -rf .next/standalone/.next/static .next/standalone/public && cp -a .next/static .next/standalone/.next/static && cp -a public .next/standalone/public 2>/dev/null || true'";
 
     public function service(): string
@@ -63,10 +56,9 @@ class FrontendUnit
     }
 
     /**
-     * The unit with the loopback line added after `Environment=PORT=`, or
-     * null when there is nothing to do: it is already there, the unit sets
-     * its own HOSTNAME (the operator's choice, left alone), or it has no
-     * PORT line to anchor on (not a unit install.sh wrote).
+     * The unit with the loopback line added after `Environment=PORT=`, or null when there is
+     * nothing to do: already there, the unit sets its own HOSTNAME (left alone), or it has no
+     * PORT line to anchor on.
      */
     public static function withLoopback(string $unit): ?string
     {

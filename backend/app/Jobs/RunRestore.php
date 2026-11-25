@@ -16,14 +16,11 @@ use Throwable;
 /**
  * Runs one restore off the queue.
  *
- * **Never retried.** A backup that fails can be re-run harmlessly; a restore
- * that fails has already changed the application, and a second automatic
- * attempt would start from that half-changed state rather than from the one
- * the safety backup describes. The next attempt has to be a person's decision.
+ * **Never retried.** A failed restore has already changed the application, so an automatic second
+ * attempt would start from that half-changed state; the next attempt is a person's decision.
  *
- * Unique per application, and held to completion rather than to pickup
- * (ShouldBeUniqueUntilProcessing releases at pickup) — two restores writing
- * the same site directory at once is the one thing worse than none.
+ * Unique per application, held to completion rather than to pickup (ShouldBeUniqueUntilProcessing
+ * releases at pickup): two restores writing the same site directory at once is worse than none.
  */
 class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -33,16 +30,11 @@ class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
     public int $tries = 1;
 
     /**
-     * The same ceiling as {@see RunBackup}, and for a stronger reason.
+     * The same ceiling as {@see RunBackup}: a restore is slower than the backup it came from, so
+     * an archive too large to back up in time would also fail to come back.
      *
-     * A restore downloads the archive, takes a full safety backup and imports a
-     * database, so it is legitimately slower than the backup it came from — and
-     * it carried the identical hardcoded 3600. Any archive large enough that
-     * backing it up hit the limit would hit it again coming back, which meant
-     * the recovery path failed precisely for the sites that most needed it.
-     *
-     * `retry_after` on the connection must exceed this; `config/queue.php`
-     * derives it from the same key.
+     * `retry_after` on the connection must exceed this; `config/queue.php` derives it from the
+     * same key.
      */
     public int $timeout;
 
@@ -71,8 +63,8 @@ class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
         }
 
         if ($restore->backup === null) {
-            // The source was pruned between queueing and running. Failing
-            // loudly beats restoring whatever the next-nearest thing is.
+            // The source was pruned between queueing and running; fail rather than restore
+            // something else.
             $restore->update([
                 'status' => RestoreStatus::Failed,
                 'reason' => 'missing_backup',
@@ -86,11 +78,8 @@ class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
 
         $succeeded = $restore->status === RestoreStatus::Succeeded;
 
-        // Bug #46. Undo is a restore of the safety backup an earlier restore
-        // took, and used to read as an ordinary restore. And the job runs on
-        // the queue with nobody signed in, so the entry was written without
-        // the person who pressed the button: anonymous in the panel-wide log,
-        // absent from their own.
+        // Undo is a restore of a safety backup, logged under its own action. The queue has no
+        // signed-in user, so the actor is passed explicitly.
         $activity->log(
             $restore->backup->is_safety
                 ? ($succeeded ? 'backup.undone' : 'backup.undo_failed')
@@ -107,9 +96,8 @@ class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
     }
 
     /**
-     * The job died outright — timeout, OOM, worker killed. Without this the
-     * row sits at `running` forever while the site may be mid-swap, which is
-     * the state an operator most needs to be told about.
+     * The job died outright (timeout, OOM, worker killed). Without this the row stays `running`
+     * forever while the site may be mid-swap.
      */
     public function failed(?Throwable $e): void
     {

@@ -19,56 +19,43 @@ class CertificateResource extends JsonResource
             'type_title' => $this->type->label(),
             'status' => $this->status->value,
 
-            // The names this certificate covers, which is not the same as the
-            // names the site answers to. They diverge the moment a domain is
-            // added, and that divergence is the failure the panel exists to
-            // catch — the browser reports it, the server logs nothing.
+            // The names the certificate covers, which diverge from the site's names once a domain is
+            // added; the browser reports that, the server logs nothing.
             'domains' => $this->domains ?? [],
             'missing_domains' => $this->missingDomains(),
 
-            // Names on the certificate the site no longer has. Not cosmetic:
-            // certbot fails a whole renewal if any one name in the lineage
-            // cannot be validated, so this is a certificate that has silently
-            // stopped renewing for domains that are perfectly fine.
+            // Names on the certificate the site no longer has: certbot fails the whole renewal if any
+            // one name cannot be validated.
             'stale_domains' => $this->staleDomains(),
 
             'force_https' => $this->force_https,
 
-            // Nothing can renew an uploaded or self-signed certificate. Say so
-            // rather than showing a renewal date that will never happen.
+            // Nothing renews an uploaded or self-signed certificate; don't show a renewal date.
             'auto_renew' => $this->auto_renew,
             'renewable' => $this->type->renewable(),
 
             'issued_at' => $this->issued_at?->format('d-m-Y H:i:s'),
             'issued_at_human' => $this->issued_at?->diffForHumans(),
             'expires_at' => $this->expires_at?->format('d-m-Y H:i:s'),
-            // In days, not Carbon's rounded "1 month" for 59 (APP-2): an
-            // expiry date is read to the day, and the warning threshold is in
-            // days. Day-level precision always, months never.
+            // In days, never Carbon's rounded months: the warning threshold is in days.
             'expires_at_human' => $this->expiresInWords(),
-            // What the web server is actually presenting, as opposed to what
-            // is on disk. They agree on a healthy site; when they do not, the
-            // file renewed and the running server never picked it up, so the
-            // countdown above is reassuring and every visitor gets a warning.
+            // What the web server presents, as opposed to what is on disk. When they differ the
+            // file renewed but the running server never picked it up.
             'served_expires_at' => $this->served_expires_at?->format('d-m-Y H:i:s'),
             'served_checked_at' => $this->served_checked_at?->format('d-m-Y H:i:s'),
-            // True = serving something older than the file. Null = nobody has
-            // managed to look, which is not the same as agreement and must not
-            // render as a tick.
+            // True = serving something older than the file. Null = could not be checked, which
+            // is not agreement and must not render as a tick.
             'serving_stale' => $this->servingStale(),
             'days_remaining' => $this->daysRemaining(),
             'expired' => $this->expired(),
 
-            // Its own flag rather than left to the frontend to compute from
-            // days_remaining, so the threshold is one decision made in one
-            // place — and so it can move when certificate lifetimes shrink.
+            // Its own flag so the threshold is decided in one place, not by the frontend.
             'expiring_soon' => $this->daysRemaining() !== null
                 && ! $this->expired()
                 && $this->daysRemaining() <= (int) config('server.certificates.expiry_warning_days'),
 
-            // A classified code plus the sentence for it in the *viewer's*
-            // locale. Never certbot's own output: it carries paths, order URLs
-            // and occasionally the account key location, and it is unreadable.
+            // A classified code plus its sentence in the viewer's locale. Never certbot's own
+            // output: it carries paths, order URLs and sometimes the account key location.
             'reason' => $this->when($this->status === CertificateStatus::Failed, $this->reason),
             'message' => $this->message(),
             'reference' => $this->when($this->status === CertificateStatus::Failed, $this->reference),
@@ -76,12 +63,10 @@ class CertificateResource extends JsonResource
     }
 
     /**
-     * The expiry in days, the same number as `days_remaining` (APP-2).
+     * The expiry in days, the same number as `days_remaining`.
      *
-     * Carbon's single-unit sentence said "1 month" for anything from 45 to
-     * 60 days, which is the whole band where somebody decides whether to act;
-     * and its floor, read a moment after `now`, said 44 for a 45 the field
-     * beside it reported. Built from the days so the two cannot disagree.
+     * Carbon's single-unit sentence says "1 month" for 45 to 60 days, and its floor can read 44
+     * for 45; built from the days so the two fields cannot disagree.
      */
     private function expiresInWords(): ?string
     {

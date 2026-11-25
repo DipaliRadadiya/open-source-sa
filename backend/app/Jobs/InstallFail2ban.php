@@ -15,13 +15,10 @@ use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
 /**
- * Installs fail2ban. Queued because apt is far too slow to hold a request
- * open for, and `$tries = 1` for the same reason as the other server jobs:
- * an automatic retry of a package install just repeats a failure the operator
- * needs to read.
+ * Installs fail2ban. Queued because apt is too slow for a request; `$tries = 1` because a retry
+ * of a package install only repeats a failure the operator needs to read.
  *
- * Only the SSH jail is enabled here, as Debian's own package and v7 do
- * (bug #3); every other jail stays a deliberate click.
+ * Only the SSH jail is enabled here; every other jail stays a deliberate click.
  */
 class InstallFail2ban implements ShouldBeUnique, ShouldQueue
 {
@@ -30,9 +27,7 @@ class InstallFail2ban implements ShouldBeUnique, ShouldQueue
     use TracksActor;
 
     /**
-     * There is one fail2ban and apt decides its version, so the tracker's
-     * (runtime, version) key needs a constant rather than a choice. `latest`
-     * is what apt actually installs, so it is also true.
+     * apt decides fail2ban's version, so the tracker's (runtime, version) key uses a constant.
      */
     public const RUNTIME = 'fail2ban';
 
@@ -41,12 +36,8 @@ class InstallFail2ban implements ShouldBeUnique, ShouldQueue
     public int $tries = 1;
 
     /**
-     * The work itself, plus apt's wait for a lock another package manager
-     * holds ({@see ServerOps::aptLockBudgetSeconds()}), as InstallDatabaseEngine
-     * does. A fresh server's installer now finishes while Ubuntu's first-boot
-     * updates may still hold the lock, so a job started straight away waits
-     * for it — and must not be killed by the worker mid-wait, which reads as
-     * "stopped unexpectedly" instead of "another install is running".
+     * The install plus apt's wait for a lock another package manager holds
+     * ({@see ServerOps::aptLockBudgetSeconds()}); the worker must not kill the job mid-wait.
      */
     public int $timeout;
 
@@ -71,11 +62,8 @@ class InstallFail2ban implements ShouldBeUnique, ShouldQueue
         );
 
         if ($result->failed()) {
-            // Recorded, not just logged. This used to `return` after an
-            // activity-log line, and the screen reports only `installed`
-            // — a boolean derived from the package being present. So a failed
-            // install was indistinguishable from one still running, for the
-            // ten minutes apt is allowed and then forever.
+            // Recorded, not just logged: the screen only knows `installed`, so a failed install
+            // would look like one still running.
             $installs->fail(
                 self::RUNTIME,
                 self::VERSION,
@@ -89,30 +77,23 @@ class InstallFail2ban implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Write our drop-in so the installed service has the panel's settings
-        // from the start. The SSH jail is on, as Debian's own default and v7
-        // have it: installing fail2ban and protecting nothing, while Setup said
-        // "You're all set", was bug #3. Every other jail stays off until asked
-        // for. The jail bans on the port SSH really uses (jailOptions()), and
-        // loopback is always ignored.
+        // Write our drop-in so the service has the panel's settings from the start. The SSH jail
+        // is on, every other jail off until asked for. It bans on the port SSH really uses
+        // (jailOptions()); loopback is always ignored.
         $fail2ban->write(
             (array) config('server.fail2ban.defaults'),
             [],
             ['sshd' => true] + array_fill_keys(array_column((array) config('server.fail2ban.jails', []), 'name'), false),
         );
 
-        // Installed and configured: the package is on disk now, which is the
-        // answer `GET /fail2ban` already reads, so the row has nothing left
-        // to say.
+        // The package is on disk now, which is what `GET /fail2ban` reads.
         $installs->succeed(self::RUNTIME, self::VERSION);
 
         $log->log('fail2ban.installed', null, ['version' => $fail2ban->version() ?? '—'], actor: $this->actor());
     }
 
     /**
-     * The job died outright — apt hit the 600s timeout, or the worker was
-     * killed. Without this the row sits at `installing` and the screen spins
-     * on something that stopped running.
+     * The job died outright (apt timeout, worker killed); without this the row stays `installing`.
      */
     public function failed(?Throwable $e): void
     {

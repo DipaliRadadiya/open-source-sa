@@ -42,9 +42,7 @@ class DatabaseExport extends Model
     /**
      * Remove the dump file, then the row.
      *
-     * basename() as well as the column, because this path is built from
-     * stored data and a file value is still a file value however it got
-     * there — one guard at the point of deletion, not a trust assumption.
+     * basename() guards the path, which is built from stored data, at the point of deletion.
      */
     public function deleteWithFile(): void
     {
@@ -73,18 +71,13 @@ class DatabaseExport extends Model
     /**
      * Whether this row is old enough that nothing can still be working on it.
      *
-     * `RunDatabaseExport::failed()` normally closes a dying job out, but a
-     * worker killed outright — `kill -9`, an OOM, a reboot — never reaches it,
-     * and the row is stranded in flight. That matters now that starting an
-     * export refuses while one is running: without this, one stranded row would
-     * mean that database could never be exported again, which is precisely the
-     * failure the backup feature shipped with.
+     * `RunDatabaseExport::failed()` normally closes a dying job out, but a killed worker (OOM,
+     * `kill -9`, reboot) never reaches it, and a stranded in-flight row would block exporting
+     * that database again, since starting an export refuses while one runs.
      *
-     * The bound is the job's own timeout plus the grace {@see ExpiresUniqueLock}
-     * uses for the queue lock, so the lock and the row cannot disagree about
-     * whether a dump is alive. Measured from `started_at` when there is one and
-     * `created_at` otherwise — a job dispatched while the queue was down never
-     * starts at all, and that is one of the ways a row gets stranded.
+     * The bound is the job's timeout plus the grace {@see ExpiresUniqueLock} uses for the queue
+     * lock, so lock and row agree. Measured from `started_at`, else `created_at` (a job
+     * dispatched while the queue was down never starts).
      */
     public function isStale(): bool
     {
@@ -104,10 +97,8 @@ class DatabaseExport extends Model
     }
 
     /**
-     * The localized sentence for a failure, in the *viewer's* locale rather
-     * than the locale of whoever started the export — the same rule the
-     * activity log and runtime installs follow, and why `reason` is a stored
-     * code instead of a finished string.
+     * The localized sentence for a failure, in the *viewer's* locale, which is why `reason` is
+     * a stored code and not a finished string.
      */
     public function message(): ?string
     {
@@ -117,17 +108,15 @@ class DatabaseExport extends Model
 
         $key = 'database.export_failed.'.($this->reason ?: 'unknown');
 
-        // Falls back to the generic sentence rather than rendering the key at
-        // the user when a new reason code has no translation yet.
+        // Falls back to the generic sentence when a new reason code has no translation yet.
         return __($key) === $key ? __('database.export_failed.unknown') : __($key);
     }
 
     /**
      * Whether the file this row describes is still on disk.
      *
-     * Asked rather than assumed: someone can delete an export by hand, and a
-     * list offering a download that 404s is worse than one that says the file
-     * has gone.
+     * Asked, not assumed: an export can be deleted by hand, and a download that 404s is worse
+     * than saying the file is gone.
      */
     public function fileExists(): bool
     {

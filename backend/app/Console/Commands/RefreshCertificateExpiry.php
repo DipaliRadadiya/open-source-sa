@@ -11,19 +11,13 @@ use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Console\Command;
 
 /**
- * Keeps the certificate expiry on the SSL screen honest, and keeps renewal
- * actually reaching the running web server.
+ * Keeps the certificate expiry on the SSL screen honest, and keeps renewal reaching the running
+ * web server.
  *
- * Renewal is certbot's timer, not ours: it swaps the file on disk roughly every
- * sixty days and tells nothing. Without this the panel counts down from the date
- * captured at issuance and eventually reports "expired" on a site whose
- * certificate was renewed correctly weeks earlier.
- *
- * Daily, because the number it maintains is measured in days.
- *
- * No activity log entry: "we re-read a date" is not an event anybody needs to
- * find later, and on a daily tick across every site it would bury the ones that
- * are.
+ * Certbot's timer renews the file on disk and tells nothing; without this the panel keeps
+ * counting down from the issuance date and reports "expired" on a renewed certificate.
+ * Daily, because the number it maintains is measured in days. No activity log entry: a daily
+ * "re-read a date" would bury real events.
  */
 class RefreshCertificateExpiry extends Command
 {
@@ -46,36 +40,22 @@ class RefreshCertificateExpiry extends Command
     /**
      * Make sure a renewal actually reaches the running web server.
      *
-     * certbot writes the new certificate and stops there. Without a deploy hook
-     * the web server goes on serving the old one out of memory until something
-     * unrelated reloads it, so the site shows an expired certificate while the
-     * files on disk are current — a failure that surfaces weeks after the thing
-     * that caused it, on a site nobody touched.
+     * Without a deploy hook the web server keeps serving the old certificate from memory after
+     * certbot renews it. Issuing through the panel installs the hook; certificates adopted by
+     * Server Sync or issued before the hook existed do not have it.
      *
-     * Issuing a certificate through the panel installs the hook. Two routes
-     * never did: a certificate **adopted from a migrated server** by Server
-     * Sync, which is the case this panel exists to serve, and one issued before
-     * the hook existed. Both renew silently and stop being served.
-     *
-     * Written here rather than at adoption because it is one file for the whole
-     * machine, `install -d` and a write are cheap, and doing it on a daily tick
-     * repairs every server that already has the problem instead of only the
-     * ones adopted from now on.
+     * Written here on the daily tick (one file per machine, cheap) so existing servers get
+     * repaired too.
      */
     private function ensureRenewalHook(CertbotClient $certbot, WebServerManager $webServers): void
     {
-        // Active only, matching what the expiry refresh looks at. A pending or
-        // failed certificate has nothing on disk for certbot to renew, so
-        // writing a hook for it would be a privileged command run for nothing.
+        // Active only: a pending or failed certificate has nothing on disk for certbot to renew.
         $renewable = Certificate::query()
             ->where('type', CertificateType::LetsEncrypt->value)
             ->where('status', CertificateStatus::Active->value)
             ->exists();
 
-        // Or anything certbot itself renews. The panel's own certificate has
-        // no row: on OpenLiteSpeed install.sh issues it with certonly
-        // --webroot, which reloads nothing, and every server installed before
-        // the installer wrote this hook itself renews it unserved.
+        // Or anything certbot itself renews: the panel's own certificate has no row.
         $renewable = $renewable
             || ! empty(glob(rtrim((string) config('server.certificates.renewal_dir'), '/').'/*.conf'));
 

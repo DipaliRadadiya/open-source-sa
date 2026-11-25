@@ -16,23 +16,15 @@ use Illuminate\Http\Request;
 /**
  * Databases running as containers, for the container sites to connect to.
  *
- * Server-level, with the networks and volumes, because that is what they are: a
- * shared object a site points at. Not applications — see the model for why a
- * database cannot be a site in a panel where every site has a domain and a vhost.
+ * Server-level, like networks and volumes: a shared object a site points at, not an application
+ * (see the model).
  *
- * **The parameter is `$dockerDatabase`, matching `{dockerDatabase}` in the route,
- * and that is not a style choice.** Implicit binding matches on the NAME: called
- * `$database`, Laravel binds nothing and resolves an empty model from the
- * container instead — so the credentials endpoint answered null for every database
- * and the delete route removed an unsaved row while returning 200. No 404, no
- * error, just endpoints operating on nothing.
+ * The parameter must be named `$dockerDatabase` to match `{dockerDatabase}` in the route. Implicit
+ * binding matches on the name; otherwise Laravel injects an empty model and the endpoints silently
+ * act on nothing.
  *
- * There is no update endpoint, and that is deliberate rather than unfinished.
- * Every value an engine image reads — the password, the user, the database name —
- * applies to an EMPTY data directory and is ignored afterwards, so a form that
- * appeared to change one would change the file and not the engine. Growing a
- * database means a new one; changing its password means the engine's own
- * `ALTER USER`.
+ * There is no update endpoint on purpose: an engine image reads the password, user and database
+ * name only for an EMPTY data directory, so changing them would not reach the engine.
  */
 class DockerDatabaseController extends Controller
 {
@@ -42,19 +34,14 @@ class DockerDatabaseController extends Controller
             'databases' => DockerDatabaseResource::collection(
                 DockerDatabase::query()->orderBy('name')->get()
             ),
-            // The catalog, so the create form offers what this panel can actually
-            // render rather than a list the frontend keeps in step by hand.
+            // The catalog, so the create form offers only what this panel can render.
             'engines' => collect((array) config('server.docker_databases.engines'))
                 ->map(fn (array $engine, string $key): array => [
                     'name' => $key,
                     'label' => (string) $engine['label'],
                     'port' => (int) $engine['port'],
-                    // Cast to strings, because PHP turns a numeric array key into
-                    // an int: `'18' => ...` keys as 18 while `'8.4' => ...` stays a
-                    // string, so the same field would arrive as a number for
-                    // Postgres and a string for MySQL. A client echoing `18` back
-                    // as a number then fails a `string` rule with a message about
-                    // a type it never chose.
+                    // Strings: PHP turns a numeric key like `'18'` into an int, so the same field
+                    // would be a number for Postgres and a string for MySQL.
                     'versions' => array_map('strval', array_keys((array) $engine['versions'])),
                 ])
                 ->values()
@@ -67,9 +54,7 @@ class DockerDatabaseController extends Controller
         try {
             $database = $action->execute($request->validated());
         } catch (DatabaseContainerFailedException $e) {
-            // The row and the container were both rolled back by the action, so
-            // this says so — "it failed" otherwise leaves somebody wondering
-            // whether a half-made database is holding a port.
+            // The action rolled back both the row and the container.
             return response()->json([
                 'message' => __('errors/docker.database_start_failed', ['step' => $e->step]),
                 'step' => $e->step,
@@ -83,12 +68,9 @@ class DockerDatabaseController extends Controller
     /**
      * The password, from its own endpoint.
      *
-     * Not on the listing, for the reason a container site's generated credentials
-     * are not on its payload: a value that rides in every response is a value in
-     * every browser cache and proxy log on the way. Gated on `manage` rather than
-     * `view` — reading a database password is not a read-only act in any sense
-     * that matters — throttled hard, and logged before the response returns,
-     * because a response that is never read still handed the value over.
+     * Kept off the listing so it does not sit in every browser cache and proxy log. Gated on
+     * `manage`, throttled, and logged before the response returns: an unread response still
+     * handed the value over.
      */
     public function credentials(DockerDatabase $dockerDatabase, ActivityLogger $log): JsonResponse
     {
@@ -110,8 +92,7 @@ class DockerDatabaseController extends Controller
         try {
             $action->execute($dockerDatabase, $request->boolean('remove_data'));
         } catch (DatabaseContainerFailedException $e) {
-            // Still listed, on purpose: the container or its data is still on
-            // the server, and the row is what lets the user try again.
+            // Still listed: the container or its data remains, and the row lets the user retry.
             return response()->json([
                 'message' => __('errors/docker.database_delete_failed', ['step' => $e->step]),
                 'step' => $e->step,

@@ -8,22 +8,15 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Fetches an addon binary Central offers and proves it is the one Central
- * built, before anything is installed from it.
+ * Fetches an addon binary Central offers and proves it is the one Central built, before
+ * anything is installed from it.
  *
- * Three checks, each for a different failure:
+ *   - SHA-256 from Central: not a truncated or swapped download;
+ *   - Ed25519 signature against a key configured on this server: Central chose this file, not
+ *     someone who merely holds the central token. Without a key nothing is installed;
+ *   - ELF magic: a Linux executable, not an error page that happens to have been signed.
  *
- *   - the SHA-256 Central sent: the file is the one the request named, not a
- *     truncated or swapped download;
- *   - an Ed25519 signature over the file's bytes, against a key configured on
- *     this server: Central, and nobody who merely holds this server's central
- *     token, chose this file. Without a key nothing is installed at all;
- *   - the ELF magic: it is a Linux executable, not an error page that happens
- *     to have been signed.
- *
- * Per `laravel13-security-hardening-research-v2.md [1003–1087]` (the pattern
- * IonCubeLoader follows): TLS only, bounded time and size, and nothing about
- * the response trusted beyond the bytes on disk.
+ * Same pattern as IonCubeLoader: TLS only, bounded time and size, nothing trusted beyond the bytes.
  */
 class AddonPackage
 {
@@ -67,16 +60,13 @@ class AddonPackage
      */
     public function fetch(AddonCli $addon, string $url, string $sha256, ?string $signature, string $to): void
     {
-        // The addons are built for x86-64 only. On an ARM server the file
-        // downloads, passes every check below and then cannot run, which
-        // Central could only show as a broken install (QA, 2026-11-17). Refused
-        // first, under the code Central reads as "unsupported CPU".
+        // x86-64 only: on an ARM server the file would pass every check below and then not run.
+        // Refused first, under the code Central reads as "unsupported CPU".
         if (! self::hostSupported()) {
             throw AddonException::of('no_build_for_architecture', $addon->label());
         }
 
-        // Checked first, and before the download: no key means no install, so
-        // there is nothing to fetch. Test mode excepted.
+        // Before the download: no key means no install. Test mode excepted.
         $key = self::signingKey();
 
         if ($key === null && self::signatureRequired()) {
@@ -89,14 +79,11 @@ class AddonPackage
             throw AddonException::of('addon_checksum_mismatch', $addon->label());
         }
 
-        // Test mode skips the signature only when there is nothing to check:
-        // no signature sent, or no key to check it against.
+        // Test mode skips the signature only when there is nothing to check (no signature or no key).
         if (self::signatureRequired() || ($key !== null && $signature !== null && $signature !== '')) {
             $decoded = base64_decode((string) $signature, true);
 
-            // Ed25519 signs the message itself, not a digest of it, so the whole
-            // file is read. It is size-capped above, and the PHP CLI the queue
-            // runs under has no memory limit by default.
+            // Ed25519 signs the message itself, so the whole (size-capped) file is read.
             if (! is_string($decoded) || strlen($decoded) !== SODIUM_CRYPTO_SIGN_BYTES
                 || ! sodium_crypto_sign_verify_detached($decoded, (string) file_get_contents($to), (string) $key)) {
                 throw AddonException::of('addon_signature_invalid', $addon->label());

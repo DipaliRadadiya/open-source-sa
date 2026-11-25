@@ -17,9 +17,8 @@ class ProcessKillException extends Exception
     }
 
     /**
-     * The PID is not running. A 404 rather than a quiet success, because PIDs
-     * are recycled: reporting "killed" for a PID that has already exited would
-     * be indistinguishable from having killed whatever now holds that number.
+     * The PID is not running. A 404, not a quiet success: PIDs are recycled, so "killed" would be
+     * indistinguishable from having killed whatever holds that number now.
      */
     public static function notFound(): self
     {
@@ -27,9 +26,7 @@ class ProcessKillException extends Exception
     }
 
     /**
-     * PID 1, or a process belonging to a service the panel protects. Refused
-     * for the same reason those services can't be stopped from the Services
-     * screen — a PID is not a way around that.
+     * PID 1, or a process of a service the panel protects (a PID is no way around that).
      */
     public static function protectedProcess(): self
     {
@@ -37,8 +34,7 @@ class ProcessKillException extends Exception
     }
 
     /**
-     * A database server. Stopping it takes every site's database offline;
-     * the Services screen restarts it instead.
+     * A database server: killing it takes every site's database offline.
      */
     public static function databaseEngine(): self
     {
@@ -51,8 +47,7 @@ class ProcessKillException extends Exception
     }
 
     /**
-     * The panel's own process. Killing it would end the request doing the
-     * killing, and take away the way back in.
+     * The panel's own process: killing it would end the request doing the killing.
      */
     public static function self(): self
     {
@@ -74,9 +69,7 @@ class ProcessKillException extends Exception
     }
 
     /**
-     * TERM was delivered and the process is still there (bug #6). A 409 so
-     * the screen's existing error path offers Force stop — the process is in
-     * a state the request did not change, not one it may not touch.
+     * TERM was delivered and the process is still there. A 409 so the screen offers Force stop.
      */
     public static function stillRunning(): self
     {
@@ -84,9 +77,8 @@ class ProcessKillException extends Exception
     }
 
     /**
-     * KILL cannot be ignored, so a process that survives it is stuck inside
-     * the kernel (usually waiting on a disk or network mount). There is no
-     * stronger signal to offer.
+     * KILL cannot be ignored, so a survivor is stuck in the kernel (usually a disk or network
+     * mount). There is no stronger signal.
      */
     public static function survivedKill(): self
     {
@@ -99,8 +91,7 @@ class ProcessKillException extends Exception
     }
 
     /**
-     * The user-facing sentence, for a caller that reports the refusal
-     * rather than throwing it — the process list's `reason`.
+     * The user-facing sentence, for a caller that reports the refusal instead of throwing it.
      */
     public function reason(): string
     {
@@ -108,9 +99,8 @@ class ProcessKillException extends Exception
     }
 
     /**
-     * A fixed code for a caller that has to tell the refusals apart without
-     * reading a translated sentence — Central (QA, 2026-11-24). From the
-     * message key: `errors/process.not_found` → `process_not_found`.
+     * A fixed code for callers that cannot read a translated sentence, from the message key:
+     * `errors/process.not_found` → `process_not_found`.
      */
     public function code(): string
     {
