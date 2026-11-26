@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Globe, Info } from "lucide-react";
-import { addDomainFormSchema, REDIRECT_STATUSES } from "@/lib/schemas/domain";
+import { addDomainFormSchema } from "@/lib/schemas/domain";
 import { isValidApplicationDomain, suggestApplicationDomain } from "@/lib/schemas/application";
 import { addDomain } from "@/lib/api/domains";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
@@ -23,13 +23,7 @@ import {
   FormDescription,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { DomainTypeFields } from "@/components/applications/domains/domain-type-fields";
 
 export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, certificate = null }) {
   const t = useTranslations("applications.domains");
@@ -44,7 +38,6 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
     defaultValues: { domain: "", type: "alias", redirect_to: "", redirect_status: 301 },
   });
 
-  const type = useWatch({ control: form.control, name: "type" });
   const typedDomain = useWatch({ control: form.control, name: "domain" });
   const suggestedDomain = isValidApplicationDomain(typedDomain) ? null : suggestApplicationDomain(typedDomain);
 
@@ -128,74 +121,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="type"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel hint={t("add.typeHint")}>{t("add.type")}</FormLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue>
-                      <span className="min-w-0 truncate">{t(`type.${field.value}`)}</span>
-                    </SelectValue>
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="alias">{t("type.alias")}</SelectItem>
-                  <SelectItem value="redirect">{t("type.redirect")}</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {type === "redirect" ? t("add.redirectHint") : t("add.aliasHint")}
-              </p>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {type === "redirect" ? (
-          <>
-            <FormField
-              control={form.control}
-              name="redirect_to"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel required hint={t("add.redirectToHint")}>{t("add.redirectTo")}</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com" autoComplete="off" spellCheck={false} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="redirect_status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel hint={t("add.redirectStatusHint")}>{t("add.redirectStatus")}</FormLabel>
-                  <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {REDIRECT_STATUSES.map((code) => (
-                        <SelectItem key={code} value={String(code)}>
-                          {t(`add.redirectStatusOption.${code}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        ) : null}
+        <DomainTypeFields form={form} />
 
         <div className="flex items-start gap-2.5 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
           <Info className="mt-px size-3.5 shrink-0" aria-hidden />

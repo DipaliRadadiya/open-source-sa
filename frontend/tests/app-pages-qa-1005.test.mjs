@@ -36,9 +36,7 @@ test("saves on Domains and Password Protection name what failed", () => {
 });
 
 test("the selected domain type truncates instead of being cut", () => {
-  for (const f of ["components/applications/domains/add-domain-dialog.jsx", "components/applications/domains/edit-domain-dialog.jsx"]) {
-    assert.match(read(f), /<SelectValue>\s*<span className="min-w-0 truncate">\{t\(`type\.\$\{field\.value\}`\)\}<\/span>/, f);
-  }
+  assert.match(read("components/applications/domains/domain-type-fields.jsx"), /<SelectValue>\s*<span className="min-w-0 truncate">\{t\(`type\.\$\{field\.value\}`\)\}<\/span>/);
 });
 
 test("PHP budget shows a dash for a half-typed memory limit", () => {
