@@ -9,12 +9,8 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * MongoDB is the one engine that is not in Ubuntu's archive and ships with
- * authentication switched off, so its installer does two things the SQL one
- * never has to: add a repository, and close a door that the package left open.
- *
- * Both are ways to leave a server worse than it was found, which is what these
- * tests are actually about.
+ * MongoDB is not in Ubuntu's archive and ships with authentication off, so its installer must
+ * add a repository and close the open door the package leaves.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -65,8 +61,7 @@ function fakeMongoBox(array &$seen, string $installedPackage = '', bool $authOn 
             $script = (string) $process->input;
             $unauthenticated = ! str_contains($script, '@127.0.0.1');
 
-            // With auth on, an unauthenticated privileged command is refused —
-            // which is exactly how the installer probes for it.
+            // With auth on, an unauthenticated privileged command is refused: the installer's probe.
             if ($authOn && $unauthenticated && str_contains($script, 'getUsers')) {
                 return Process::result(errorOutput: 'MongoServerError: command usersInfo requires authentication', exitCode: 1);
             }
@@ -91,9 +86,8 @@ describe('a fresh install', function () {
         $update = $order->search(fn (string $c) => $c === implode(' ', aptCommand('update')));
         $install = $order->search(fn (string $c) => str_starts_with($c, 'apt-get install'));
 
-        // The list on disk is not the index. Without the update in between,
-        // apt fails with "Unable to locate package mongodb-org" — which reads
-        // as a broken panel rather than a stale index.
+        // The list on disk is not the index: without the update, apt fails with
+        // "Unable to locate package mongodb-org".
         expect($list)->not->toBeFalse()
             ->and($update)->not->toBeFalse()
             ->and($install)->not->toBeFalse()
@@ -129,10 +123,8 @@ describe('a fresh install', function () {
         $line = collect($seen)->first(fn ($p) => ($p->command[0] ?? '') === 'tee'
             && str_contains((string) ($p->command[1] ?? ''), 'sources.list.d'));
 
-        // A key in the global store signs for *every* repository on the box,
-        // not just this one. MongoDB publishes an armoured key, so its `.asc`
-        // extension is also part of the contract: naming it `.gpg` makes apt
-        // parse it as a binary keyring and report NO_PUBKEY.
+        // A key in the global store signs for every repository. The key is armoured, so it must
+        // be `.asc`: named `.gpg`, apt parses it as a binary keyring and reports NO_PUBKEY.
         expect($line->input)->toContain('signed-by=/etc/apt/keyrings/')
             ->and($line->input)->toContain('mongodb-server-8.0.asc')
             ->and($line->input)->not->toContain('mongodb-server-8.0.gpg')
@@ -263,8 +255,7 @@ describe('a fresh install', function () {
         $line = collect($seen)->first(fn ($p) => ($p->command[0] ?? '') === 'tee'
             && str_contains((string) ($p->command[1] ?? ''), 'sources.list.d'));
 
-        // A codename MongoDB does not publish for adds as a perfectly valid
-        // list that then carries no packages at all.
+        // A codename MongoDB does not publish makes a valid list that carries no packages.
         expect($line->input)->toContain('ubuntu jammy/mongodb-org/');
     });
 
@@ -279,8 +270,7 @@ describe('a fresh install', function () {
         $createUser = $order->search(fn (string $c) => str_contains($c, 'createUser'));
         $enableAuth = $order->search(fn (string $c) => str_contains($c, 'authorization: enabled'));
 
-        // After the door closes there is only the localhost exception to get
-        // back in, and that is a narrower door than it looks.
+        // Once auth is on, only the narrow localhost exception remains to get back in.
         expect($createUser)->not->toBeFalse()
             ->and($enableAuth)->not->toBeFalse()
             ->and($createUser)->toBeLessThan($enableAuth);
@@ -295,8 +285,7 @@ describe('a fresh install', function () {
         $write = collect($seen)->first(fn ($p) => ($p->command[0] ?? '') === 'tee'
             && in_array('-a', $p->command, true));
 
-        // Off by default means every site on a shared box can read every other
-        // site's collections — the hole per-app FPM pools were built to close.
+        // Auth off lets every site on a shared box read every other site's collections.
         expect($write->input)->toContain('authorization: enabled');
 
         expect(collect($seen)->contains(fn ($p) => $p->command === ['systemctl', 'restart', 'mongod']))->toBeTrue();
@@ -314,8 +303,7 @@ describe('a fresh install', function () {
             ->and($connection->password)->not->toBeEmpty()
             ->and($connection->port)->toBe(27017);
 
-        // Anything on argv is readable from /proc for the life of the process,
-        // and this account holds `root` on every database.
+        // argv is readable from /proc, and this account holds `root` on every database.
         $password = (string) $connection->password;
 
         foreach ($seen as $process) {
@@ -340,9 +328,7 @@ describe('a server that already had MongoDB', function () {
 
         mongoInstaller()->install();
 
-        // Their config is not ours to rewrite, and something is already
-        // connecting to this server — turning auth on underneath it would take
-        // that something down.
+        // Something already connects to this server; turning auth on would take it down.
         expect(collect($seen)->contains(fn ($p) => ($p->command[0] ?? '') === 'tee'
             && in_array('-a', $p->command, true)))->toBeFalse();
     });
@@ -355,10 +341,8 @@ describe('a server that already had MongoDB', function () {
 
         $connection = DatabaseConnection::query()->where('engine', 'mongodb')->firstOrFail();
 
-        // MongoEngine builds `mongodb://user:pass@host` whenever a username is
-        // set, and a server with authentication off *rejects* credentials
-        // rather than ignoring them. Storing one here would break every later
-        // operation against a database that works perfectly well.
+        // MongoEngine builds `mongodb://user:pass@host` whenever a username is set, and a server
+        // with authentication off rejects credentials rather than ignoring them.
         expect($connection->username)->toBeNull()
             ->and($connection->password)->toBeNull()
             ->and($connection->port)->toBe(27017);
@@ -368,8 +352,7 @@ describe('a server that already had MongoDB', function () {
         $seen = [];
         fakeMongoBox($seen, installedPackage: 'mongodb-org-server', authOn: true);
 
-        // Guessing at the setup of a server somebody else configured is how you
-        // take their database down. Say so instead.
+        // Never guess at a server somebody else configured: refuse instead.
         expect(fn () => mongoInstaller()->install())
             ->toThrow(EngineInstallException::class);
 
@@ -403,9 +386,8 @@ it('refuses to rewrite a config it could not read', function () {
         return Process::result(exitCode: 0);
     });
 
-    // Unreadable is not the same as empty: appending to a path we could not
-    // read leaves a config holding nothing but our security block — no dbPath,
-    // no bindIp — and mongod never starts again.
+    // Unreadable is not empty: appending would leave a config with only our security block
+    // (no dbPath, no bindIp) and mongod would never start again.
     expect(fn () => mongoInstaller()->install())->toThrow(EngineInstallException::class);
 
     expect(collect($seen)->contains(fn ($p) => ($p->command[0] ?? '') === 'tee'
@@ -415,15 +397,13 @@ it('refuses to rewrite a config it could not read', function () {
 it('reports the server package as what decides "installed", not the shell', function () {
     $seen = [];
 
-    // `mongosh` alone is a box that talks to somebody else's MongoDB. Treating
-    // that as installed would have the panel offer databases it cannot make.
+    // `mongosh` alone is a box that talks to somebody else's MongoDB.
     fakeMongoBox($seen, installedPackage: 'mongodb-mongosh');
 
     expect(mongoInstaller()->installed())->toBeFalse();
 });
 
 it('is offerable in the setup page now that it has an installer', function () {
-    // The one config value that turns the card from greyed to clickable.
     expect(app(EngineInstallerManager::class)->canInstall('mongodb'))->toBeTrue();
 });
 
@@ -453,10 +433,8 @@ it('repairs the panel-created MongoDB key before the bootstrap installer updates
 
 describe('a retry after a part-finished install', function () {
     it('still enables authentication, because the first attempt found nothing here', function () {
-        // The failure this prevents: attempt one installs the package and then
-        // dies. Attempt two asks the box, is told MongoDB is already present,
-        // concludes it belongs to somebody else, and skips enabling auth — on a
-        // database the panel then reports as successfully installed.
+        // Attempt one installs the package then dies; attempt two sees MongoDB present and
+        // must not conclude it belongs to somebody else and skip enabling auth.
         $ran = [];
 
         Process::fake(function ($process) use (&$ran) {
@@ -482,9 +460,8 @@ describe('a retry after a part-finished install', function () {
     });
 
     it('leaves a genuinely pre-existing server alone', function () {
-        // The other half, and the reason this is not just "always configure":
-        // a server that already had MongoDB is a server something already
-        // connects to, and rewriting its config would break whatever that is.
+        // Not "always configure": a server that already had MongoDB has clients, and rewriting
+        // its config would break them.
         $ran = [];
 
         Process::fake(function ($process) use (&$ran) {

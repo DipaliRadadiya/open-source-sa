@@ -12,14 +12,9 @@ use Illuminate\Support\Facades\Queue;
 uses(RefreshDatabase::class);
 
 /*
- * An export copies an entire database off the server and writes a full copy to
- * disk. It had none of the guards its neighbours have: `optimize` and `repair`
- * two lines above in the same route file require `manage`, and every other
- * expensive operation in the panel is throttled and made unique.
- *
- * So a read-only database user could take a complete copy of every database,
- * download all of them, and — with nothing rate-limiting the button — fill the
- * disk while doing it.
+ * An export copies a whole database to disk, so it needs the guards the other expensive
+ * operations have: `manage` permission, one dump at a time, and unique jobs. Without them a
+ * read-only user could download every database and fill the disk.
  */
 
 beforeEach(function () {
@@ -51,10 +46,7 @@ function exportRow(ExportStatus $status, int $minutes = 0): DatabaseExport
 
 describe('who may take a copy of a database', function () {
 
-    /*
-     * The heart of it. Reading the list of databases is not the same as being
-     * handed their contents, and this endpoint hands over the contents.
-     */
+    // Reading the list of databases is not the same as being handed their contents.
     it('refuses to start an export for a read-only database user', function () {
         grantPermission($this->user, 'database');
 
@@ -71,11 +63,7 @@ describe('who may take a copy of a database', function () {
         Queue::assertPushed(RunDatabaseExport::class);
     });
 
-    /*
-     * Downloading is the other half of the same exposure — the dump is only a
-     * file on disk until somebody can fetch it. Matches the backup download,
-     * which is on `manage` for the identical reason.
-     */
+    // Downloading is the other half of the exposure; the backup download is on `manage` too.
     it('refuses the download to a read-only user but not the listing', function () {
         grantPermission($this->user, 'database');
 
@@ -91,11 +79,8 @@ describe('one dump at a time', function () {
         grantPermission($this->user, 'database', view: true, manage: true);
     });
 
-    /*
-     * Two mysqldump runs against the same database each write a full copy to
-     * the same disk, on a queue with one worker, and the second produces the
-     * same bytes as the first. Before this, a double-submit started both.
-     */
+    // Two dumps of one database write the same bytes to the same disk; a double-submit must
+    // not start both.
     it('refuses a second export while one is in flight', function () {
         exportRow(ExportStatus::Running);
 
@@ -119,23 +104,15 @@ describe('one dump at a time', function () {
         $this->postJson("/api/databases/{$other->id}/export")->assertStatus(202);
     });
 
-    /*
-     * The job is unique per database, so the lock has to be per database too.
-     * One shared key would make every export in the panel queue behind every
-     * other one.
-     */
+    // A shared key would queue every export in the panel behind every other one.
     it('locks per database rather than globally', function () {
         expect((new RunDatabaseExport(1, 7))->uniqueId())
             ->toBe('database-export-7')
             ->not->toBe((new RunDatabaseExport(1, 8))->uniqueId());
     });
 
-    /*
-     * Without an expiry the lock is taken with no TTL, so a worker killed
-     * mid-dump would block that database's exports permanently — the exact
-     * failure ExpiresUniqueLock exists to prevent, and the one the backup
-     * feature shipped with.
-     */
+    // Without an expiry (see ExpiresUniqueLock) a worker killed mid-dump blocks that database's
+    // exports forever.
     it('gives the lock an expiry past the job\'s own timeout', function () {
         $job = new RunDatabaseExport(1, 1);
 
@@ -149,11 +126,7 @@ describe('a dump stranded by a killed worker', function () {
         grantPermission($this->user, 'database', view: true, manage: true);
     });
 
-    /*
-     * The in-flight guard above is new, so this hazard is new with it: a row
-     * nothing will ever finish would otherwise mean this database could never
-     * be exported again.
-     */
+    // Otherwise a row nothing will ever finish would block this database's exports forever.
     it('is closed out, and the next export goes through', function () {
         $stranded = exportRow(ExportStatus::Running, 24 * 60);
 
@@ -193,16 +166,10 @@ describe('a dump stranded by a killed worker', function () {
 });
 
 it('closes out a stranded export when the list is read, not only when one is started', function () {
-    // The job is unique per database, and a lock outliving the worker that held
-    // it makes Laravel discard the next dispatch silently — no exception, no
-    // failed_jobs row. The controller has already written a `queued` row and
-    // answered 202, so the screen polls something that will never arrive.
-    //
-    // `export()` reaped these, which unblocks the database for whoever tries
-    // again — but the reader watching the spinner has no reason to try. This is
-    // the list the screen polls, so it is where a stranded row has to resolve.
-    // Aged past the job's own timeout plus its grace, which is the only bound
-    // this feature has for "nothing can still be working on it".
+    // A lock outliving its worker makes Laravel silently discard the next dispatch (no exception,
+    // no failed_jobs row), yet a `queued` row was written and 202 answered. The screen polls this
+    // list, so a stranded row must resolve here, not only when someone starts another export.
+    // Aged past the job's timeout plus grace: the only bound for "nothing can still be working".
     grantPermission($this->user, 'database');
 
     $export = exportRow(ExportStatus::Queued, (int) ceil((new RunDatabaseExport(0, 0))->uniqueFor() / 60) + 1);
@@ -214,9 +181,7 @@ it('closes out a stranded export when the list is read, not only when one is sta
 });
 
 it('leaves a genuinely running export alone', function () {
-    // The bound is the job's own timeout plus a grace. Reaping early would fail
-    // a dump that is still writing, and the row is the only thing telling the
-    // user it is.
+    // Reaping before the job's timeout plus grace would fail a dump that is still writing.
     grantPermission($this->user, 'database');
 
     $export = exportRow(ExportStatus::Running, 0);

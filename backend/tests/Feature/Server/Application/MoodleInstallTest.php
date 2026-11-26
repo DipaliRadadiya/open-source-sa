@@ -83,9 +83,8 @@ it('keeps the database password out of every command line', function () {
 
     $config = collect($runs)->first(fn ($run) => in_array('tee', $run['command'], true) && str_ends_with((string) end($run['command']), 'config.php'));
 
-    // Moodle's own installers take database credentials as arguments. Writing
-    // config.php ourselves is what keeps them off the command line, where
-    // `ps` would show them to every user on the machine.
+    // Moodle's installers take database credentials as arguments; writing config.php ourselves
+    // keeps them off the command line, where `ps` shows them to every user.
     expect($config)->not->toBeNull()
         ->and($config['input'])->toContain('$CFG->dbpass');
 
@@ -111,8 +110,8 @@ it('writes a config that is actually PHP', function () {
 it('never puts the user\'s password on a command line', function () {
     $runs = installMoodle();
 
-    // install_database.php has no prompt and refuses to run without
-    // --adminpass, so it gets a throwaway; the real one arrives on stdin.
+    // install_database.php refuses to run without --adminpass, so it gets a throwaway; the real
+    // one arrives on stdin.
     foreach ($runs as $run) {
         expect(implode(' ', $run['command']))->not->toContain('MoodlePass1!');
     }
@@ -127,12 +126,11 @@ it('installs with a throwaway password that is replaced immediately after', func
     $install = moodleRun($runs, 'admin/cli/install_database.php');
     $adminpass = collect($install['command'])->first(fn ($a) => str_starts_with((string) $a, '--adminpass='));
 
-    // Random, belonging to nobody, and invalid moments later — so its brief
-    // appearance in `ps` discloses nothing.
+    // Random and invalid moments later, so its brief appearance in `ps` discloses nothing.
     expect($adminpass)->not->toContain('MoodlePass1!')
         ->and(strlen((string) $adminpass))->toBeGreaterThan(24);
 
-    // And the replacement must come after, or the site is left on it.
+    // The replacement must come after, or the site is left on the throwaway.
     $order = collect($runs)->pluck('command')->map(fn ($c) => implode(' ', $c));
     expect($order->search(fn ($c) => str_contains($c, 'reset_password.php')))
         ->toBeGreaterThan($order->search(fn ($c) => str_contains($c, 'install_database.php')));
@@ -141,14 +139,11 @@ it('installs with a throwaway password that is replaced immediately after', func
 it('gives Moodle a data directory outside the web root', function () {
     $runs = installMoodle();
 
-    // Beside public_html inside the site, not next to the site in the user's
-    // home — `{home}/{slug}/moodledata`. Outside the web root, still the
-    // site's own, which is what document roots becoming slug-based settled.
+    // `{home}/{slug}/moodledata`: beside public_html, outside the web root, still the site's own.
     $dataDir = "{$this->home}/courses/moodledata";
     $config = collect($runs)->first(fn ($run) => in_array('tee', $run['command'], true) && str_ends_with((string) end($run['command']), 'config.php'))['input'];
 
-    // It holds every file every student uploads; inside the document root
-    // each one is a URL.
+    // It holds every uploaded file; inside the document root each one would be a URL.
     expect($config)->toContain("\$CFG->dataroot  = '{$dataDir}'")
         ->and(collect($runs)->pluck('command'))->toContain(['chmod', '0750', $dataDir]);
 });
@@ -170,25 +165,21 @@ it('agrees to the licence, which Moodle refuses to install without', function ()
 });
 
 it('raises max_input_vars on the interpreter, which Moodle refuses to install without', function () {
-    // Moodle's environment check reports this one as "this test must pass" —
-    // unlike the database-version line beside it, which is advisory — and the
-    // CLI default is 1000. Without it the install dies at the last step, on a
-    // site whose files and database are already created.
+    // Moodle's environment check marks this "must pass" and the CLI default is 1000; without it
+    // the install dies at the last step, after files and database are created.
     $runs = installMoodle();
 
     $install = collect($runs)->first(
         fn ($run) => in_array('admin/cli/install_database.php', $run['command'], true),
     );
 
-    // The value, not the first `-d`: the interpreter also carries the
-    // installer's memory limit now, so this looks for its own pair.
+    // Look for the value, not the first `-d`: the interpreter also carries the memory limit.
     $value = array_search('max_input_vars=5000', $install['command'], true);
     $flag = $value === false ? false : $value - 1;
 
     expect($flag)->not->toBeFalse()
         ->and($install['command'][$flag])->toBe('-d')
-        // Before the script, or PHP reads it as one of the script's own
-        // arguments and applies nothing.
+        // Before the script, or PHP reads it as a script argument and applies nothing.
         ->and($flag)->toBeLessThan(array_search('admin/cli/install_database.php', $install['command'], true));
 });
 
@@ -202,14 +193,12 @@ function moodleConfig(ArrayObject $runs): string
 it('writes PostgreSQL\'s driver, and a config that is still valid PHP', function () {
     $config = moodleConfig(installMoodle('postgresql'));
 
-    // `pgsql` per config-dist.php's own list. Moodle distinguishes engines
-    // where most applications don't, so there is no value that covers both.
+    // `pgsql` per config-dist.php's own list; no single value covers both engines.
     expect($config)->toContain("\$CFG->dbtype    = 'pgsql'")
         ->not->toContain('mysqli');
 
-    // The collation branch is inside a Blade @if in a generated PHP file —
-    // the one place a stray directive would produce a config.php that parses
-    // nowhere but looks fine in a diff.
+    // The collation branch is a Blade @if inside generated PHP: a stray directive would give a
+    // config.php that does not parse but looks fine in a diff.
     $path = tempnam(sys_get_temp_dir(), 'mdlpg').'.php';
     file_put_contents($path, $config);
     exec('php -l '.escapeshellarg($path).' 2>&1', $out, $status);
@@ -218,22 +207,19 @@ it('writes PostgreSQL\'s driver, and a config that is still valid PHP', function
 });
 
 it('drops dbcollation for PostgreSQL, which upstream says to remove', function () {
-    // config-dist.php:66 says the option "should be removed for all other
-    // databases". Left in, a PostgreSQL connection is handed
-    // `utf8mb4_unicode_ci` — a collation that does not exist there.
+    // config-dist.php says the option "should be removed for all other databases"; left in,
+    // PostgreSQL is handed `utf8mb4_unicode_ci`, a collation that does not exist there.
     expect(moodleConfig(installMoodle('postgresql')))->not->toContain('dbcollation');
 });
 
 it('keeps dbcollation on MySQL, where it is the reason the option is there', function () {
-    // The half a new branch quietly breaks: every Moodle the panel has made
-    // is on MySQL and needs this line.
+    // The half a new engine branch quietly breaks: MySQL needs this line.
     expect(moodleConfig(installMoodle()))->toContain("'dbcollation' => 'utf8mb4_unicode_ci'");
 });
 
 it('writes a moved MySQL port, which Moodle would otherwise assume is 3306', function () {
-    // The bug this fixes: the panel's connection is editable, so a managed
-    // MySQL on 25060 was handed a config saying 3306 — a site that provisions,
-    // reports Active, and cannot reach its own database.
+    // The panel's connection is editable: a managed MySQL on 25060 must not get a config saying
+    // 3306, which provisions as Active but cannot reach its database.
     expect(moodleConfig(installMoodle(null, 25060)))->toContain("'dbport' => '25060'");
 });
 
@@ -242,28 +228,22 @@ it('writes a moved PostgreSQL port too', function () {
 });
 
 it('leaves the port empty on a stock MySQL, as every existing Moodle has it', function () {
-    // 3306 is what Moodle's driver assumes, so naming it says nothing and
-    // would change the config on every install path that works today.
+    // 3306 is what Moodle's driver assumes, so naming it would change every working config.
     //
-    // Separate test rather than one assertion per engine on purpose: the two
-    // engines cannot share a `Process::fake`. With psql falling through to a
-    // bare success, `available()` reads the engine as reachable while
-    // `identifierAvailable()` reads its empty output as "name taken", so
-    // allocation walks twenty candidates and the install dies at
-    // create_database — which is what happened when these were one test.
+    // A separate test per engine: the two cannot share a `Process::fake`. With psql falling
+    // through to a bare success, `identifierAvailable()` reads empty output as "name taken" and
+    // the install dies at create_database.
     expect(moodleConfig(installMoodle()))->toContain("'dbport' => ''");
 });
 
 it('leaves the port empty on a stock PostgreSQL as well', function () {
-    // 5432 is PostgreSQL's own default; the rule is one rule for every engine.
+    // 5432 is PostgreSQL's own default; the same rule applies to every engine.
     expect(moodleConfig(installMoodle('postgresql')))->toContain("'dbport' => ''");
 });
 
 it('writes the port when only the PANEL\'s default has moved, not the application\'s', function () {
-    // 🔴 The guard on the comparison itself. `default_port` is the panel's and
-    // is env-overridable (SERVER_POSTGRES_PORT); Moodle's driver still assumes
-    // 5432. Compare against the panel's value and this exact case — the one
-    // that most needs the port written — is the one that stays silent.
+    // `default_port` is the panel's and env-overridable (SERVER_POSTGRES_PORT), while Moodle's
+    // driver still assumes 5432: comparing against the panel's value would skip writing the port.
     config(['server.databases.engines.postgresql.default_port' => 5433]);
 
     expect(moodleConfig(installMoodle('postgresql')))->toContain("'dbport' => '5433'");

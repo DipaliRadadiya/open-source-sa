@@ -45,8 +45,8 @@ beforeEach(function () {
 /**
  * Answer `test -f` with success for exactly the given absolute paths.
  *
- * Everything else exits 1, which is the real shape of this probe: on any given
- * site five of the six signatures are absent.
+ * Everything else exits 1, the real shape of this probe: five of the six signatures are absent
+ * on any given site.
  */
 function fakeFiles(array $present): void
 {
@@ -73,9 +73,8 @@ it('recognises WordPress by its config file', function () {
 });
 
 it('reports nothing recognisable as php at low confidence', function () {
-    // Not "static": serving a PHP application as a directory of files
-    // publishes its source, and the reverse mistake only costs a redundant
-    // handler. Inherited from the sync discoverer, deliberately unchanged.
+    // Not "static": serving a PHP application as a directory of files publishes its source, while
+    // the reverse mistake only costs a redundant handler.
     fakeFiles([]);
 
     $verdict = app(SiteTypeDetector::class)->detect($this->application);
@@ -89,15 +88,14 @@ it('prefers the more specific signature over the generic one', function () {
     $root = $this->application->documentRoot();
     fakeFiles([$root.'/wp-config.php', $root.'/index.php']);
 
-    // A WordPress install has PHP files everywhere; `index.php` matches on
-    // every PHP site in existence. The distinguishing file has to win.
+    // A WordPress install has PHP files everywhere and `index.php` matches every PHP site, so the
+    // distinguishing file has to win.
     expect(app(SiteTypeDetector::class)->detect($this->application)->siteType)->toBe('wordpress');
 });
 
 it('finds wp-config.php one level above the web root', function () {
-    // Moving wp-config.php out of the web root is long-standing WordPress
-    // hardening advice. A detector that only looked at the document root
-    // would fail on exactly the sites whose owners know what they are doing.
+    // Moving wp-config.php out of the web root is standard WordPress hardening; a detector that
+    // only looked at the document root would miss exactly those sites.
     $this->application->update(['web_root' => '/public']);
 
     $documentRoot = $this->application->fresh()->documentRoot();
@@ -114,10 +112,8 @@ it('probes rather than runs, so a missing file is not a failed operation', funct
 
     app(SiteTypeDetector::class)->detect($this->application);
 
-    // `probe()` passes expectedExitCodes: [1]. Without it every absent
-    // signature — five of six on any real site — is logged as a failed
-    // operation, which is what made the server-ops log unreadable for the
-    // one case that was real.
+    // `probe()` passes expectedExitCodes: [1]. Without it every absent signature is logged as a
+    // failed operation and the server-ops log becomes unreadable.
     Process::assertRan(fn ($process) => ($process->command[0] ?? null) === 'test');
 });
 
@@ -134,11 +130,9 @@ it('offers a suggestion for a custom php site that now holds WordPress', functio
 });
 
 it('suggests nothing for the signature every php site matches', function () {
-    // `index.php` matches at 40 on every PHP site in existence, and resolves
-    // to `php` — which is what this site already says it is. Suppressed
-    // because it is not a change, not because of the confidence floor; the
-    // floor is exercised separately below, since a test that passes for a
-    // reason other than the one in its name guards nothing.
+    // `index.php` matches at 40 on every PHP site and resolves to `php`, which is what this site
+    // already says it is. Suppressed because it is not a change, not because of the confidence
+    // floor, which is exercised separately below.
     fakeFiles([$this->application->documentRoot().'/index.php']);
 
     $response = $this->actingAs($this->admin)
@@ -150,11 +144,9 @@ it('suggests nothing for the signature every php site matches', function () {
 });
 
 it('suggests nothing when confidence is below the floor', function () {
-    // No signature in the table currently lands a *suggestable* type under 60
-    // — WordPress is 95 and Joomla is exactly 60 — so the floor is raised here
-    // rather than found a case for. That is the point of testing it: the floor
-    // exists for the signature table's next edit, and this fails the moment
-    // somebody removes it.
+    // No signature currently lands a *suggestable* type under 60 (WordPress is 95, Joomla exactly
+    // 60), so the floor is raised here instead. It exists for the signature table's next edit,
+    // and this fails the moment someone removes it.
     config(['server.site_type_detection.min_confidence' => 96]);
 
     fakeFiles([$this->application->documentRoot().'/wp-config.php']);
@@ -170,11 +162,9 @@ it('suggests nothing when confidence is below the floor', function () {
 });
 
 it('never offers git, however confidently it is detected', function () {
-    // 🔴 The detector resolves `artisan` to `git` at 80 — over the floor, on a
-    // generic site, a different type from the current one. Every condition for
-    // a suggestion is met, and offering it would tell the user to change their
-    // site to `git`: the one transition that cannot work, because `git` means a
-    // repository, branch, deploy script and webhook the panel owns, none of
+    // 🔴 The detector resolves `artisan` to `git` at 80: over the floor, on a generic site, a
+    // different type. Every condition for a suggestion is met, yet changing a site to `git` cannot
+    // work: it means a repository, branch, deploy script and webhook the panel owns, none of
     // which exist on disk. The allowlist is what stops it.
     fakeFiles([$this->application->documentRoot().'/artisan']);
 
@@ -200,9 +190,8 @@ it('suggests nothing for a git site, and does not even look', function () {
     expect($response->json('site_type_detection.suggested'))->toBeNull();
     expect($response->json('site_type_detection.detected'))->toBeNull();
 
-    // And the probe never ran. Not a detail: a stored verdict of "wordpress,
-    // confidence 95" against a git site is a finding the next person reads as
-    // an offer, whether or not this screen renders it as one.
+    // And the probe never ran: a stored "wordpress, confidence 95" verdict against a git site
+    // would be read as an offer, whether or not this screen renders it as one.
     Process::assertNothingRan();
     expect($this->application->fresh()->settings['type_detection'] ?? null)->toBeNull();
 });

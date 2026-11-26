@@ -14,12 +14,10 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Google Drive destinations, authenticated by a service account.
  *
- * The thing worth testing here is not the upload — it is the **refusal**. A
- * service account has no Drive storage quota of its own, so a personal-Drive
- * folder can accept a small file and reject a real archive: the probe goes
- * green and the first backup fails at 3am. `preflight()` asks the API where the
- * folder lives instead of inferring it from a write, and these tests pin that
- * it runs *before* anything is written and that its answer is believed.
+ * What matters here is the **refusal**. A service account has no Drive quota of its own, so a
+ * personal-Drive folder can accept a small probe file and reject a real archive. `preflight()`
+ * asks the API where the folder lives instead of inferring it from a write; these tests pin
+ * that it runs *before* anything is written and that its answer is believed.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -47,11 +45,9 @@ function serviceAccountJson(string $email = 'panel-backups@demo.iam.gserviceacco
 }
 
 /**
- * A Drive service whose `files->get()` answers with whatever metadata the test
- * wants — or throws, for the failure paths.
+ * A Drive service whose `files->get()` answers with the metadata the test wants, or throws.
  *
- * `driveId` present means a Shared Drive; absent means "My Drive", which is the
- * case the whole feature turns on.
+ * `driveId` present means a Shared Drive; absent means "My Drive".
  */
 function fakeDriveFolder(?string $driveId, string $mimeType = 'application/vnd.google-apps.folder', ?Throwable $throws = null): GoogleDriveFolder
 {
@@ -75,10 +71,7 @@ function fakeDriveFolder(?string $driveId, string $mimeType = 'application/vnd.g
                         throw $this->throws;
                     }
 
-                    // The real API omits `driveId` entirely unless asked to
-                    // support Shared Drives. A test that let this pass without
-                    // the flag would be asserting against a laxer API than the
-                    // one production talks to.
+                    // The real API omits `driveId` unless asked to support Shared Drives.
                     expect($params['supportsAllDrives'] ?? false)->toBeTrue();
 
                     return new class($this->driveId, $this->mimeType)
@@ -108,9 +101,7 @@ function fakeDriveFolder(?string $driveId, string $mimeType = 'application/vnd.g
 
 function driveProber(GoogleDriveFolder $folders, ?callable $diskBuilder = null): StorageConnectionProber
 {
-    // Bound in the container, not passed in: the driver resolves its own
-    // collaborator, so replacing it here is what a Drive destination actually
-    // gets rather than a shape only this test can produce.
+    // Bound in the container: the driver resolves its own collaborator.
     app()->instance(GoogleDriveFolder::class, $folders);
 
     return new StorageConnectionProber(
@@ -138,7 +129,7 @@ it('refuses a folder on a personal Drive, because a service account has no quota
     $written = false;
 
     $prober = driveProber(
-        // No driveId — the folder is in My Drive.
+        // No driveId: the folder is in My Drive.
         fakeDriveFolder(driveId: null),
         function (array $config) use (&$written) {
             $written = true;
@@ -152,9 +143,8 @@ it('refuses a folder on a personal Drive, because a service account has no quota
     expect($result['success'])->toBeFalse()
         ->and($result['error_class'])->toBe('drive_personal');
 
-    // The refusal has to come *before* the write. A small probe file can be
-    // accepted where a 4 GB archive is not, so a write that succeeded here
-    // would prove nothing and would have been reported as success.
+    // The refusal has to come *before* the write: a small probe file can be accepted where a
+    // 4 GB archive is not.
     expect($written)->toBeFalse();
 });
 
@@ -167,16 +157,14 @@ it('accepts a folder in a Shared Drive and records which one', function () {
 
     $destination->refresh();
 
-    // Recorded so the row can name the Shared Drive instead of showing an
-    // opaque id, and so the operator can see the address the folder has to be
+    // Recorded so the row can name the Shared Drive and show the address the folder must be
     // shared with.
     expect($destination->configValue('drive_name'))->toBe('Company Backups')
         ->and($destination->configValue('client_email'))->toBe('panel-backups@demo.iam.gserviceaccount.com');
 });
 
 it('refuses an id that points at a file rather than a folder', function () {
-    // Copying the wrong link is easy, and backing up "into" a spreadsheet
-    // fails in a way that names nothing.
+    // A wrong link (e.g. a spreadsheet) must be refused up front, not fail later.
     $result = driveProber(
         fakeDriveFolder(driveId: '0ABC', mimeType: 'application/vnd.google-apps.spreadsheet'),
     )->probe(makeDriveDestination());
@@ -189,9 +177,8 @@ it('separates a missing folder from one it simply cannot see', function () {
         fakeDriveFolder(null, throws: new RuntimeException('{"error":{"code":404,"message":"File not found: abc"}}')),
     )->probe(makeDriveDestination(name: 'Missing folder'));
 
-    // Wrong id and "you never shared it with the service account" are
-    // different mistakes with different fixes, and the second is the one
-    // people actually make.
+    // A wrong id and "never shared with the service account" are different mistakes with
+    // different fixes.
     $forbidden = driveProber(
         fakeDriveFolder(null, throws: new RuntimeException('{"error":{"code":403,"message":"Forbidden"}}')),
     )->probe(makeDriveDestination(name: 'Unshared folder'));
@@ -233,9 +220,7 @@ it('creates a Drive destination without ever returning the key', function () {
 });
 
 it('refuses a pasted folder URL, which is the mistake people actually make', function () {
-    // The id is the part after /folders/. Storing the whole link saves fine
-    // and then fails at the first backup with a "file not found" naming
-    // nothing useful.
+    // The id is the part after /folders/: storing the whole link would fail at the first backup.
     $this->withHeaders(driveHeaders())->postJson('/api/integrations/storage/destinations', [
         'name' => 'Pasted URL',
         'provider' => 'google_drive',
@@ -263,9 +248,8 @@ it('requires both the key and the folder', function () {
 });
 
 it('reports a quota refusal as a quota refusal, not as bad credentials', function () {
-    // What a personal Drive answers when the preflight has been bypassed —
-    // a shared folder that later moves, say. The key is valid and the host is
-    // reachable, so both of the obvious categories would be wrong.
+    // What a personal Drive answers when the preflight was bypassed (e.g. the folder moved
+    // later). The key is valid and the host reachable, so neither obvious category fits.
     $result = driveProber(
         fakeDriveFolder(driveId: '0ABC'),
         fn (array $config) => new class
@@ -281,8 +265,7 @@ it('reports a quota refusal as a quota refusal, not as bad credentials', functio
 });
 
 it('does not run the SFTP host-key reader for a Drive destination', function () {
-    // The fake throws if touched. Cheap, but it pins that the per-provider
-    // steps stay per-provider as more of them arrive.
+    // The fake throws if touched: pins that the per-provider steps stay per-provider.
     $result = driveProber(fakeDriveFolder(driveId: '0ABC'))->probe(makeDriveDestination());
 
     expect($result['success'])->toBeTrue();
@@ -291,14 +274,9 @@ it('does not run the SFTP host-key reader for a Drive destination', function () 
 /*
 | What the folder in somebody's personal Drive is called.
 |
-| 🔴 This had no test, and the gap showed: the name carried a hardcoded
-| 'ServerAvatar' fallback, which turned WhiteLabelTest red for two days and,
-| more to the point, would have created a folder named after the vendor in a
-| reseller customer's own Drive — next to their photos.
-|
-| The brand belongs in config/branding.php, which exists so a deployment can
-| name itself and which WhiteLabelTest exempts for that reason. Anywhere else
-| it is a leak.
+| A hardcoded vendor-name fallback would create a folder named after the vendor in a
+| reseller customer's own Drive. The brand belongs in config/branding.php, which
+| WhiteLabelTest exempts; anywhere else it is a leak.
 */
 
 it('names the folder from configurable branding, not a literal', function () {
@@ -318,10 +296,8 @@ it('names the folder from configurable branding, not a literal', function () {
 });
 
 it('takes the folder name straight from branding, with no second opinion', function () {
-    // config/branding.php resolves the name once and never returns empty, so
-    // there is nothing here to fall back to. The value is used directly — a
-    // fallback could only ever disagree with the resolved value, and the
-    // disagreement is what put the vendor's name on a customer's Drive.
+    // config/branding.php resolves the name once and never returns empty, so the value is used
+    // directly: a fallback could only disagree with it.
     config([
         'branding.name' => 'Reseller One',
         'server.storage.panel_url' => 'https://panel.acme.test',

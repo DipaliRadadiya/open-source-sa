@@ -10,16 +10,13 @@ use Illuminate\Support\Facades\Process;
 uses(RefreshDatabase::class);
 
 /*
- * Creating a cron job runs seven privileged steps: make the log directory,
- * create the log, hand it to the right account, lock its mode, install the
- * rotation policy, write the cron.d file, lock its mode. Every one of them
- * produced the same sentence — "Failed to apply the cron job on the server" —
- * so a full disk, a missing group and a read-only /etc were indistinguishable
- * to the person who had to fix one of them.
+ * Creating a cron job runs seven privileged steps: make the log directory, create the log, hand it
+ * to the right account, lock its mode, install the rotation policy, write the cron.d file, lock
+ * its mode. A failure must name the step, so a full disk, a missing group and a read-only /etc
+ * are distinguishable.
  *
- * And nothing recorded the attempt. The row is deleted on failure, so a failed
- * creation left no trace anywhere in the panel: a reference number, and an
- * activity log that showed nobody had ever tried.
+ * The attempt must also be recorded: the row is deleted on failure, so without a reference number
+ * and an activity entry a failed creation leaves no trace.
  */
 
 beforeEach(function () {
@@ -65,8 +62,7 @@ function cronPayload(array $overrides = []): array
 describe('when a step fails', function () {
 
     /*
-     * The step is the whole point. Without it every one of these returns the
-     * same words and the user is left guessing which of seven things broke.
+     * The step is the point: without it every failure returns the same words.
      */
     it('names the log directory when that is what could not be made', function () {
         failCronStep('mkdir');
@@ -88,9 +84,8 @@ describe('when a step fails', function () {
     });
 
     /*
-     * Rotation is worth its own sentence: the job is refused *because* its
-     * output would grow without limit, which is a decision rather than a
-     * malfunction, and the message should say so.
+     * Rotation gets its own sentence: the job is refused *because* its output would grow without
+     * limit, which is a decision rather than a malfunction.
      */
     it('names log rotation, and explains why that stops the job', function () {
         failCronStep('logrotate');
@@ -128,8 +123,7 @@ describe('what the failure leaves behind', function () {
     });
 
     /*
-     * The row goes, because a cron job the server does not have is worse than
-     * no cron job: the panel would list a schedule nothing runs.
+     * The row goes: a cron job the server does not have would show a schedule nothing runs.
      */
     it('leaves no half-made job behind', function () {
         failCronStep('tee /etc/cron.d');
@@ -150,10 +144,9 @@ describe('what the failure leaves behind', function () {
 });
 
 /*
- * A group of the same name as the user exists for root and for every account
- * the panel creates — but this feature accepts any account `getent` resolves,
- * and `nobody`'s group on Debian is `nogroup`. `chown nobody:nobody` fails, and
- * took the whole creation with it at step three.
+ * A same-named group exists for root and every panel-created account, but this feature accepts any
+ * account `getent` resolves, and `nobody`'s group on Debian is `nogroup`, so `chown nobody:nobody`
+ * fails at step three.
  */
 it('chowns the log to the user without assuming a group of the same name', function () {
     $commands = [];

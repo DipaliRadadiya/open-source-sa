@@ -7,17 +7,15 @@ use PhpParser\NodeFinder;
 use PhpParser\ParserFactory;
 
 /*
-| Every activity sentence, rendered with the properties its call site really
-| logs, must come out with no `:placeholder` left in it (FS-C22 #21).
+| Every activity sentence, rendered with the properties its call site really logs, must come out
+| with no `:placeholder` left in it.
 |
-| Laravel leaves a placeholder it has no value for exactly as written, so a
-| sentence asking for `:name` on an event that logs `application` shows
-| "Deleted :name" to every viewer, and nothing fails anywhere.
-| ActivityTranslationTest proves each event HAS a sentence; this proves the
-| sentence and the event agree.
+| Laravel leaves a placeholder it has no value for as written, so a sentence asking for `:name` on
+| an event that logs `application` shows "Deleted :name" and nothing fails.
+| ActivityTranslationTest proves each event has a sentence; this proves sentence and event agree.
 |
-| The properties are read from the source, the way ActivityTranslationTest
-| reads the keys: a maintained list is the thing that drifts.
+| The properties are read from the source, like ActivityTranslationTest reads the keys: a
+| maintained list would drift.
 */
 
 /**
@@ -29,8 +27,7 @@ use PhpParser\ParserFactory;
 function activityPropertiesByHand(): array
 {
     return [
-        // `$killed` is ProcessKiller::kill()'s return value; its declared
-        // shape is `array{pid, command, user, signal}`.
+        // `$killed` is ProcessKiller::kill()'s return value, declared `array{pid, command, user, signal}`.
         'app/Http/Controllers/API/Server/DashboardController.php:server.process_killed' => ['pid', 'command', 'user', 'signal'],
     ];
 }
@@ -215,8 +212,7 @@ function activityArrayKeys(Node\Expr $expr, ?Node\FunctionLike $scope, NodeFinde
 it('finds the activity calls it is meant to check', function () {
     $sites = activityCallSites();
 
-    // Several hundred today. A handful would mean the scan broke, not that
-    // the code stopped logging.
+    // A handful would mean the scan broke, not that the code stopped logging.
     expect(count($sites))->toBeGreaterThan(200);
 
     $unread = array_values(array_map(
@@ -224,9 +220,8 @@ it('finds the activity calls it is meant to check', function () {
         array_filter($sites, fn (array $site): bool => $site['props'] === null),
     ));
 
-    // A call whose properties cannot be read is a call this test cannot
-    // check. Give it a literal array, or say its shape in
-    // activityPropertiesByHand().
+    // A call whose properties cannot be read cannot be checked: give it a literal array, or
+    // declare its shape in activityPropertiesByHand().
     expect($unread)->toBe([], 'activity calls with unreadable properties: '.implode('; ', $unread));
 });
 
@@ -257,10 +252,8 @@ it('fills every placeholder of every activity sentence, in every locale', functi
 });
 
 it('declares each activity sentence once per locale', function () {
-    // A PHP array literal keeps the LAST of two equal keys, silently.
-    // `application.updated` was written twice — the settings save and the
-    // version update — and the version update's ":name from :from to :to" was
-    // what every settings save showed.
+    // A PHP array literal silently keeps the LAST of two equal keys, so a duplicated sentence
+    // shadows the first one.
     foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
         preg_match_all("/^\s*'([a-z0-9_]+\.[a-z0-9_]+)'\s*=>/m", (string) file_get_contents(lang_path("{$locale}/activity.php")), $m);
 

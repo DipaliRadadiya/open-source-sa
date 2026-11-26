@@ -12,13 +12,11 @@ use Symfony\Component\Console\Output\BufferedOutput;
 uses(RefreshDatabase::class);
 
 /*
- * A server Central builds (2026-10-17): the first administrator created during
- * the install, progress reported to Central, a details file left on the box.
+ * A server Central builds: the first administrator created during the install, progress reported
+ * to Central, a details file left on the box.
  *
- * Why the first of these matters: a fresh panel is open for registration and
- * its first account becomes the administrator. A server Central built has a
- * public address before its owner ever opens it, so whoever got there first
- * owned the panel — reproduced on a fresh install the same day.
+ * The first matters most: a fresh panel is open for registration and its first account becomes
+ * the administrator, so whoever registers before the owner arrives would own the panel.
  */
 
 /** @return array{0: int, 1: string} */
@@ -116,9 +114,8 @@ describe('install.sh', function () {
             fn (string $line): bool => str_contains($line, '$PANEL_ADMIN_PASSWORD') || str_contains($line, '${PANEL_ADMIN_PASSWORD'),
         ));
 
-        // The default, the validation, the one herestring, and the list of
-        // secrets the log lines a failure shows are cleaned of. Anything else —
-        // an argument, a log line, a progress field — is a leak.
+        // Allowed: the default, the validation, the one herestring, and the secrets list that
+        // failure log lines are cleaned of. Anything else (argument, log line, progress field) leaks.
         foreach ($uses as $line) {
             expect(
                 str_contains($line, 'PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD:-}"')
@@ -157,10 +154,8 @@ describe('install.sh', function () {
     });
 
     it('keeps needrestart from restarting the install halfway through', function () {
-        // On a fresh 24.04 server needrestart restarted the install's own unit
-        // three times after apt upgraded libraries; each restart began again
-        // at step one (2026-10-17). Exported at the top level, so every apt
-        // the script runs inherits it.
+        // Without it needrestart restarts the install's own unit after apt upgrades libraries and
+        // each restart begins again at step one. Top-level export, so every apt inherits it.
         $top = substr(installerCode(), 0, (int) strpos(installerCode(), 'main() {'));
 
         expect($top)->toMatch('/^export NEEDRESTART_SUSPEND=1$/m');
@@ -174,9 +169,8 @@ describe('install.sh', function () {
     });
 
     it('sends seq in milliseconds on every Ubuntu, not with %3N', function () {
-        // Ubuntu 26.04's date (uutils) ignores the width in %3N and prints all
-        // nine digits — seen on a fresh 26.04 install, 2026-10-17. A number that
-        // size cannot be held exactly by a JavaScript client.
+        // uutils `date` (Ubuntu 26.04) ignores the width in %3N and prints all nine digits, which
+        // a JavaScript client cannot hold exactly.
         $code = implode("\n", array_filter(explode("\n", installerFn('send_progress')), fn ($l) => ! str_starts_with(ltrim($l), '#')));
 
         expect($code)->not->toContain('%3N')
@@ -327,9 +321,8 @@ it('checks Central\'s inputs before anything happens', function (array $env, ?st
 ]);
 
 it('keeps needrestart away from the install\'s own service, and only from it', function () {
-    // Ubuntu's unattended-upgrades, running on its own minutes after first
-    // boot, called needrestart and restarted the install's systemd unit
-    // (2026-10-17) — NEEDRESTART_SUSPEND cannot reach another process's apt.
+    // unattended-upgrades runs its own apt and calls needrestart, which could restart the install's
+    // unit; NEEDRESTART_SUSPEND cannot reach another process's apt.
     $dir = sys_get_temp_dir().'/nr-'.bin2hex(random_bytes(4));
     mkdir($dir.'/confd', 0777, true);
     file_put_contents($dir.'/cgroup', "0::/system.slice/run-u42.service\n");
@@ -365,7 +358,7 @@ it('sets the guard before the first apt run and lifts it once installed', functi
     $main = installerFn('main');
     $finish = installerFn('finish');
 
-    // Found first: a missing call is `false`, and false < any position.
+    // Checked first: a missing call is `false`, and false < any position.
     expect(strpos($main, 'protect_from_needrestart'))->toBeInt()
         ->and(strpos($finish, 'release_needrestart'))->toBeInt();
 

@@ -9,12 +9,9 @@ use Illuminate\Support\Facades\Process;
 /*
  * This one runs the migration for real, against a real checkout on disk.
  *
- * Not out of thoroughness — out of experience. Five green assertions over
- * rendered shell said PanelReleases::prune() was correct; running it deleted
- * the release being served. String assertions cannot see a `mv` that moves the
- * wrong thing, a `find` that skips dotfiles, or a symlink chain that does not
- * resolve. Those are the entire risk surface here, on a command whose job is
- * to rearrange a server that is currently working.
+ * String assertions over rendered shell cannot see a `mv` that moves the wrong thing, a `find`
+ * that skips dotfiles, or a symlink chain that does not resolve: the whole risk surface of a
+ * command that rearranges a server that is currently working.
  */
 
 function fakePanel(): string
@@ -42,8 +39,8 @@ function fakePanel(): string
 
 function migrationFor(string $root): PanelMigration
 {
-    // As a real install has it: install.sh writes this absolute path into
-    // .env, and databaseFile() reads the connection rather than guessing.
+    // As a real install has it: install.sh writes this absolute path into .env, and
+    // databaseFile() reads the connection rather than guessing.
     config()->set('database.connections.sqlite.database', $root.'/backend/database/database.sqlite');
 
     $layout = new PanelLayout($root.'/backend');
@@ -80,20 +77,18 @@ it('rearranges a real checkout into the release layout', function () {
 
     $release = $root.'/releases/20260822-093000';
 
-    // PHP caches realpath(), and every path below was a directory when this
-    // test created it. Without this the assertions read the tree as it was
-    // before the migration and pass or fail for the wrong reason.
+    // PHP caches realpath(); without clearing it the assertions read the tree as it was before the
+    // migration.
     clearstatcache(true);
 
-    // The live symlink points at the release, and the old paths still resolve
-    // — which is the whole reason no unit, vhost, pool or cron line had to be
-    // rewritten on a working server.
+    // The live symlink points at the release and the old paths still resolve, so no unit, vhost,
+    // pool or cron line has to be rewritten on a working server.
     expect(readlink($root.'/current'))->toBe($release)
         ->and(realpath($root.'/backend'))->toBe($release.'/backend')
         ->and(realpath($root.'/frontend'))->toBe($release.'/frontend');
 
-    // The real .env survived, and it is the shared one — not a copy that would
-    // drift, and not a release-local file that would generate an APP_KEY.
+    // The real .env survived and it is the shared one, not a copy that would drift or a
+    // release-local file that would generate an APP_KEY.
     expect(file_get_contents($root.'/shared/.env'))->toContain('REAL-KEY-DO-NOT-LOSE')
         ->and(is_link($release.'/backend/.env'))->toBeTrue()
         ->and(file_get_contents($release.'/backend/.env'))->toContain('REAL-KEY-DO-NOT-LOSE');
@@ -118,10 +113,9 @@ it('rearranges a real checkout into the release layout', function () {
 });
 
 it('moves dotfiles, which a glob would silently leave behind', function () {
-    // `mv *` does not match .git or .env. Both would be stranded in the old
-    // root: the update would find no repository, and the release would have no
-    // env — so the first thing to run in it generates an APP_KEY and every
-    // encrypted column becomes unreadable.
+    // `mv *` does not match .git or .env. Stranded in the old root, the update would find no
+    // repository and the release no env, so the first artisan call would generate an APP_KEY and
+    // every encrypted column would become unreadable.
     $root = fakePanel();
     config()->set('panel_update.root', $root);
 
@@ -155,9 +149,8 @@ it('refuses when there is no env to share', function () {
     config()->set('panel_update.root', $root);
     unlink($root.'/backend/.env');
 
-    // Migrating without it hands the release no APP_KEY, and the first artisan
-    // call generates one — storage secrets, git tokens and database passwords
-    // all become unreadable, with nothing to undo it.
+    // Migrating without it hands the release no APP_KEY; the first artisan call generates one and
+    // storage secrets, git tokens and database passwords become unreadable.
     expect(migrationFor($root)->preflight())->toContain('no_env');
 });
 
@@ -169,9 +162,8 @@ it('points the database at shared, not back through the symlinks', function () {
 
     $env = migrationFor($root)->environment();
 
-    // Through `current` it would depend on two symlinks the update itself
-    // manipulates, and SQLite creates a missing file rather than failing — so
-    // a broken link produces an empty panel and a successful-looking update.
+    // Through `current` it would depend on two symlinks the update itself manipulates, and SQLite
+    // creates a missing file rather than failing: a broken link gives an empty panel.
     expect($env['DB_DATABASE'])->toBe($root.'/shared/database/database.sqlite')
         ->and($env['DB_DATABASE'])->not->toContain('/current/')
         // Recorded because a migrated panel cannot infer it: its own path

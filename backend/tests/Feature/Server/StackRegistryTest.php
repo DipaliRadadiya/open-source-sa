@@ -5,26 +5,17 @@ use App\Services\Server\Capabilities\ServerCapabilities;
 /*
  * `install.sh` and the panel must agree on what a stack is.
  *
- * They did not. `--stack=docker` was added to the installer's own case arm and
- * not to `ServerCapabilities::STACKS`, so the install ran all the way through
- * package installation, composer, migrations and seeding — thirteen steps —
- * and then died on the last call it makes:
+ * A stack added only to the installer's case arm lets the install run to the last step and then
+ * die with `ERROR Unknown stack [docker]. Expected one of: lemp, lamp, ols, mern.`
  *
- *     ERROR Unknown stack [docker]. Expected one of: lemp, lamp, ols, mern.
- *
- * A wasted server, and the failure arrives at the point of maximum sunk cost.
- *
- * This is the same duplication that produced every privilege bug this panel
- * has had, which `privilege.binaries` fixed by becoming the one list. The stack
- * list cannot be collapsed the same way — one side is bash, the other PHP — so
- * it gets a test that reads the installer instead.
+ * The two lists cannot be collapsed (one side is bash, the other PHP), so this test reads the
+ * installer instead.
  */
 
 /**
  * The stacks `install.sh` will accept, read out of its own case arm.
  *
- * Parsed rather than hardcoded, because a hardcoded copy here would be a third
- * list and this test exists to object to the second.
+ * Parsed rather than hardcoded: a hardcoded copy would be a third list.
  *
  * @return list<string>
  */
@@ -32,9 +23,8 @@ function installerStacks(): array
 {
     $script = file_get_contents(base_path('../install.sh'));
 
-    // The mapping arm: `lemp|mern|docker) WEB_SERVER="nginx" ;;`. Every stack
-    // the installer honours appears here, because this is where it decides the
-    // web server — a stack missing from it dies as "unknown stack" anyway.
+    // The mapping arm: `lemp|mern|docker) WEB_SERVER="nginx" ;;`. Every stack the installer
+    // honours appears here, since this is where it picks the web server.
     preg_match_all('/^\s*([a-z|]+)\)\s*WEB_SERVER=/m', $script, $matches);
 
     $stacks = [];
@@ -45,9 +35,8 @@ function installerStacks(): array
         }
     }
 
-    // `ols` sets WEB_SERVER inside a multi-line arm rather than on the same
-    // line, so it is matched separately — its absence here would be a false
-    // pass, which is the one outcome this test must not produce.
+    // `ols` sets WEB_SERVER inside a multi-line arm, so it is matched separately; missing it
+    // would be a false pass.
     if (str_contains($script, 'ols)') && ! in_array('ols', $stacks, true)) {
         $stacks[] = 'ols';
     }
@@ -56,8 +45,7 @@ function installerStacks(): array
 }
 
 it('finds the stacks the installer accepts', function () {
-    // Without this the comparison below passes on an empty list, which is how
-    // a guard becomes decoration.
+    // Without this the comparison below passes on an empty list.
     expect(installerStacks())->not->toBeEmpty()
         ->and(installerStacks())->toContain('lemp');
 });
@@ -73,9 +61,8 @@ it('accepts in the panel every stack the installer offers', function () {
 });
 
 it('offers in the installer every stack the panel accepts', function () {
-    // The other direction, and it matters too: a stack the panel knows about
-    // but the installer cannot build is a value only reachable by running the
-    // artisan command by hand, which means it is untested on every real box.
+    // The other direction: a stack the installer cannot build is only reachable by running the
+    // artisan command by hand, so it is untested on real servers.
     $unreachable = array_diff(ServerCapabilities::stacks(), installerStacks());
 
     expect($unreachable)->toBe([], implode("\n", array_merge(
@@ -85,8 +72,7 @@ it('offers in the installer every stack the panel accepts', function () {
 });
 
 it('gives every stack a web server the panel can actually drive', function () {
-    // A preset naming a web server with no driver would record a server the
-    // panel cannot write vhosts for — sites would be creatable and dead.
+    // A preset naming a web server with no driver would let sites be created that cannot get a vhost.
     $drivers = array_keys((array) config('server.web_server_drivers'));
 
     foreach (ServerCapabilities::stacks() as $stack) {

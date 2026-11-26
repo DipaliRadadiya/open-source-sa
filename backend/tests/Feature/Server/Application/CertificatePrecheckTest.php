@@ -42,10 +42,9 @@ beforeEach(function () {
         'status' => 'active',
     ]);
 
-    // Deliberately *not* verified. The whole point of the dry run is that the
-    // stored flag is written when a domain is added — usually before the user
-    // has touched their registrar — so relying on it leaves the button
-    // disabled long after the problem is fixed.
+    // Deliberately *not* verified: the stored flag is written when a domain is added, usually
+    // before the user touches their registrar, so relying on it keeps the button disabled long
+    // after the problem is fixed. The dry run decides.
     $this->primary = $this->application->domains()->create([
         'domain' => 'shop.example.com',
         'type' => DomainType::Primary,
@@ -59,8 +58,8 @@ beforeEach(function () {
 });
 
 /**
- * Point every domain at this server, and have the challenge path answer with
- * whatever the caller asks for.
+ * Point every domain at this server, and have the challenge path answer with what the caller
+ * asks for.
  */
 function fakeDns(string $ip): void
 {
@@ -81,8 +80,7 @@ function fakeDns(string $ip): void
 it('issues when the challenge path actually answers, even though DNS was never verified', function () {
     fakeDns($this->serverIp);
 
-    // The token comes back exactly — the only thing that proves Let's Encrypt
-    // will succeed.
+    // The token comes back exactly: the only proof Let's Encrypt will succeed.
     Http::fake(function ($request) {
         $token = basename(parse_url($request->url(), PHP_URL_PATH));
 
@@ -99,8 +97,7 @@ it('issues when the challenge path actually answers, even though DNS was never v
 it('refuses and blames the rewrite rules when the site answers with the wrong body', function () {
     fakeDns($this->serverIp);
 
-    // A WordPress 404 page returned with HTTP 200 — which is why the body is
-    // compared rather than just the status.
+    // A WordPress 404 page returned with HTTP 200: the body is compared, not just the status.
     Http::fake(fn () => Http::response('<html>Not found</html>', 200));
 
     $this->actingAs($this->admin)
@@ -135,8 +132,8 @@ it('names the address rather than fetching a stranger when DNS points elsewhere'
 
     expect($response->json('errors.domain.0'))->toContain('198.51.100.5');
 
-    // Never fetched: the check only ever talks to this server's own address,
-    // so a domain pointed at somebody else cannot make the panel call them.
+    // Never fetched: the check only talks to this server's own address, so a domain pointed at
+    // somebody else cannot make the panel call them.
     Http::assertNothingSent();
 });
 
@@ -175,9 +172,8 @@ it('issues for the domains that pass and leaves the ones that do not', function 
         return Http::response(basename(parse_url($request->url(), PHP_URL_PATH))."\n", 200);
     });
 
-    // Blocking the whole request over the slower of two DNS records helps
-    // nobody — the site gets HTTPS today and `missing_domains` says what is
-    // left.
+    // Blocking the request over the slower of two DNS records helps nobody: the site gets HTTPS
+    // now and `missing_domains` says what is left.
     $response = $this->actingAs($this->admin)
         ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
         ->assertStatus(202);
@@ -207,9 +203,8 @@ it('tells the user to pause Cloudflare rather than reporting a generic failure',
 it('lets the user override the dry run for a server behind NAT', function () {
     fakeDns($this->serverIp);
 
-    // The dry run fails because the box cannot reach its own public address —
-    // while the real challenge, arriving from outside, would succeed. Refusing
-    // outright would make the feature unusable on those servers.
+    // The dry run fails because the box cannot reach its own public address, while the real
+    // challenge from outside would succeed: refusing would make the feature unusable there.
     Http::fake(fn () => throw new ConnectionException('connection refused'));
 
     $this->actingAs($this->admin)
@@ -237,10 +232,8 @@ describe('test hostnames', function () {
             return Http::response($token."\n", 200);
         });
 
-        // The panel used to refuse these outright, which made a second class of
-        // domain it would not protect. The dry run is the only thing that
-        // decides — and a wildcard-DNS name passes it, because it resolves here
-        // by construction.
+        // Not refused outright: the dry run decides, and a wildcard-DNS name passes it because
+        // it resolves here by construction.
         $this->actingAs($this->admin)
             ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
             ->assertStatus(202);
@@ -268,8 +261,7 @@ describe('test hostnames', function () {
         fakeDns($this->serverIp);
         Http::fake(fn () => Http::response('<html>Not found</html>', 200));
 
-        // Removing the suffix rule removed a *policy*, not the check. What
-        // decides is whether Let's Encrypt could really validate the name.
+        // What decides is whether Let's Encrypt could really validate the name, not the suffix.
         $this->actingAs($this->admin)
             ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
             ->assertStatus(422);
@@ -281,8 +273,8 @@ describe('test hostnames', function () {
 it('does not run the dry run for a self-signed certificate', function () {
     Http::fake();
 
-    // Unresolvable names are the entire point of self-signing — an internal or
-    // staging hostname Let's Encrypt could never validate.
+    // Unresolvable names are the point of self-signing: an internal or staging hostname Let's
+    // Encrypt could never validate.
     $this->actingAs($this->admin)
         ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'self_signed'])
         ->assertStatus(202);
@@ -299,8 +291,7 @@ it('cleans up the token it wrote', function () {
         ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
         ->assertStatus(202);
 
-    // Leaving them behind would fill the challenge directory with one file per
-    // click, forever.
+    // Leftovers would fill the challenge directory with one file per click.
     Process::assertRan(fn ($process) => in_array('rm', $process->command, true)
         && collect($process->command)->contains(fn ($part) => str_contains((string) $part, 'acme-challenge/')));
 });
@@ -320,8 +311,7 @@ describe('a server behind NAT', function () {
                 return $domain;
             });
 
-            // `ip route get` reports the interface address, which behind NAT is
-            // private — so the panel cannot know its own public address at all.
+            // `ip route get` reports the interface address, which behind NAT is private.
             $mock->shouldReceive('serverIp')->andReturnNull();
         });
     }
@@ -329,9 +319,7 @@ describe('a server behind NAT', function () {
     it('issues when the token comes back, even though the public IP is unknowable', function () {
         fakeNatDns('203.0.113.10');
 
-        // The token returning is proof this is the right server, whatever the
-        // interface thinks its address is. This used to be refused before the
-        // fetch was even attempted, on most of AWS, GCP and Azure.
+        // The token returning proves this is the right server, whatever the interface address.
         Http::fake(fn ($request) => Http::response(
             basename(parse_url($request->url(), PHP_URL_PATH))."\n",
             200,
@@ -355,8 +343,7 @@ describe('a server behind NAT', function () {
             ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
             ->assertStatus(422);
 
-        // The user must be pointed at Issue anyway — not sent to check a
-        // firewall that is fine or DNS that was never wrong.
+        // The user must be pointed at Issue, not sent to check a fine firewall or DNS.
         expect(implode(' ', $response->json('errors.domain')))
             ->toContain('NAT')
             ->not->toContain('port 80');
@@ -374,8 +361,8 @@ describe('a server behind NAT', function () {
     it('refuses a domain resolving into a private network', function () {
         fakeDns('10.0.0.5');
 
-        // Nothing public can hold a certificate for it, and fetching would
-        // have the panel reach into the internal network on request.
+        // Nothing public can hold a certificate for it, and fetching would make the panel reach
+        // into the internal network.
         $response = $this->actingAs($this->admin)
             ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt'])
             ->assertStatus(422);
@@ -387,9 +374,8 @@ describe('a server behind NAT', function () {
 
 describe('test hostnames behind NAT', function () {
     /*
-     * Ubuntu 22.04 check, 28 Oct: on a box whose interface address is private
-     * (AWS, GCP, Azure, LXD), `serverIp()` is null, and a nip.io name was
-     * answered "does not resolve at all" — a name that resolves by definition.
+     * On a box whose interface address is private (AWS, GCP, Azure, LXD), `serverIp()` is
+     * null: a nip.io name must not be answered "does not resolve at all".
      */
     beforeEach(function () {
         $this->primary->update(['domain' => 'shop.203-0-113-10.nip.io', 'is_test' => true]);

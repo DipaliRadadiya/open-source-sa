@@ -5,10 +5,8 @@ use Illuminate\Support\Facades\Process;
 /*
  * The panel's backup of its own database, before an update migrates it.
  *
- * `UpdateScript` runs this step unguarded under `set -e` with a rollback trap,
- * so a driver with no arm here does not quietly skip its backup — it makes
- * every update on that panel fail and roll back. That is what a PostgreSQL
- * panel did until 2026-09-14.
+ * `UpdateScript` runs this step under `set -e` with a rollback trap, so a driver with no arm
+ * here makes every update fail and roll back.
  */
 
 beforeEach(function () {
@@ -26,14 +24,9 @@ afterEach(function () {
 });
 
 /**
- * Describe the default connection as PostgreSQL, rather than repointing
- * `database.default` at the pgsql connection.
+ * Describe the default connection as PostgreSQL, rather than repointing `database.default`.
  *
- * The command reads the driver of whatever `database.default` names, so this
- * exercises the same branch — and switching the default mid-test makes
- * `RefreshDatabase` try to roll back a transaction on a connection it never
- * opened ("cannot start a transaction within a transaction", then a refused
- * connection to a PostgreSQL that is not there).
+ * Switching the default mid-test makes `RefreshDatabase` roll back on a connection it never opened.
  */
 function describedAsPostgres(): void
 {
@@ -70,8 +63,7 @@ it('keeps the password out of argv and in a file only its owner can read', funct
     $passFileContents = null;
 
     Process::fake(function ($process) use (&$mode, &$passFileContents) {
-        // Read while the command is "running" — the file is unlinked in a
-        // `finally` the moment it returns.
+        // Read while the command is "running": the file is unlinked in a `finally` on return.
         $file = $process->environment['PGPASSFILE'] ?? null;
 
         if (is_string($file) && is_file($file)) {
@@ -84,16 +76,13 @@ it('keeps the password out of argv and in a file only its owner can read', funct
 
     $this->artisan('panel:backup-database', ['--path' => $this->dir])->assertSuccessful();
 
-    // Measured behaviour this mirrors: a pgpass file with group or world access
-    // is warned about and then ignored, so 0600 is the difference between
-    // authenticating and not.
+    // PostgreSQL ignores a pgpass file with group or world access, so 0600 is required.
     expect($mode)->toBe('0600');
 
-    // The colon and backslash in the password are escaped, or every field after
-    // them shifts and the client authenticates as somebody else, or nobody.
+    // Colon and backslash in the password are escaped, or every field after them shifts.
     expect($passFileContents)->toBe("127.0.0.1:5432:panel:panel_admin:pa\\:ss\\\\word\n");
 
-    // argv is world-readable through /proc for the life of the process.
+    // argv is world-readable through /proc, so the password must not be in it.
     foreach (test()->state->seen as $process) {
         expect(implode(' ', (array) $process->command))->not->toContain('pa:ss');
     }
@@ -109,8 +98,7 @@ it('reports a failed dump as a failure rather than a silent skip', function () {
 });
 
 it('still refuses a driver it genuinely cannot back up', function () {
-    // The arm that stays: an update must not proceed believing it has a
-    // rollback it does not have.
+    // An update must not proceed believing it has a rollback it does not have.
     config(['database.connections.'.config('database.default').'.driver' => 'sqlsrv']);
 
     Process::fake();
@@ -120,10 +108,8 @@ it('still refuses a driver it genuinely cannot back up', function () {
 });
 
 it('has an arm for every driver the panel offers', function () {
-    // The guard against this gap reappearing. `config/database.php` is what an
-    // operator reads when choosing, so anything it offers has to be backed up
-    // — and `sqlsrv` is Laravel's default scaffolding rather than something
-    // this panel documents or installs.
+    // Anything `config/database.php` offers must be backed up; `sqlsrv` is Laravel scaffolding
+    // the panel does not document or install.
     $offered = array_diff(
         array_keys((array) config('database.connections')),
         ['sqlsrv'],
@@ -139,9 +125,8 @@ it('has an arm for every driver the panel offers', function () {
 });
 
 /*
- * One dump before every update, and nothing removed any (2026-10-18). Older
- * than a week goes; the newest stays however old it is, because it is the one
- * an update's rollback reads.
+ * One dump before every update. Dumps older than a week are removed; the newest stays however old,
+ * because an update's rollback reads it.
  */
 describe('removing old dumps', function () {
     /** pg_dump that really writes its file, so the dump just made is on disk. */
@@ -190,7 +175,7 @@ describe('removing old dumps', function () {
         $only = dumpAged($this->dir, 40);
         $older = dumpAged($this->dir, 50);
         describedAsPostgres();
-        // A failed dump removes nothing at all — the old ones are all there is.
+        // A failed dump removes nothing: the old ones are all there is.
         Process::fake(fn () => Process::result(exitCode: 1));
 
         $this->artisan('panel:backup-database', ['--path' => $this->dir])->assertFailed();

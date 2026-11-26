@@ -22,9 +22,8 @@ beforeEach(function () {
 });
 
 /**
- * Resolution is stubbed rather than left to the real resolver: a check that
- * calls out to DNS is a test whose result depends on the network it runs on,
- * and this one asserted "no drift" while actually resolving example.com.
+ * Resolution is stubbed rather than left to the real resolver: a check that calls out to DNS
+ * depends on the network the test runs on.
  */
 function fakeDns(?string $resolvesTo): void
 {
@@ -149,14 +148,9 @@ it('does not flag a certificate with more than 30 days remaining', function () {
 });
 
 /*
- * The state every application passes through on creation: auto-issue writes a
- * pending row before certbot runs, so `expires_at` is null. Reported from a
- * real panel as a brand new site announcing "SSL certificate expires in 0
- * days" at critical severity — `null * -1` is 0, and 0 is inside every
- * threshold below.
- *
- * Every certificate case above pins Active, which is exactly why the suite
- * stayed green through it.
+ * The state every application passes through on creation: auto-issue writes a pending row before
+ * certbot runs, so `expires_at` is null. It must not report "expires in 0 days" at critical
+ * severity (`null * -1` is 0, which is inside every threshold below).
  */
 it('does not flag a pending certificate that has no expiry yet', function () {
     Certificate::factory()->create([
@@ -197,9 +191,8 @@ it('does not flag a failed certificate as expiring', function () {
 });
 
 /*
- * Carbon 3 returns a float from `diffInDays`, and the `?int` return truncated
- * it toward zero — so a certificate with hours left reported the same "0 days"
- * as the pending row above, for an entirely different reason.
+ * Carbon 3 returns a float from `diffInDays`, and the `?int` return truncated it toward zero, so
+ * a certificate with hours left reported "0 days" like the pending row above.
  */
 it('reports a certificate with hours left as one day, not zero', function () {
     Certificate::factory()->create([
@@ -226,8 +219,7 @@ it('does not flag a stopped worker when the app has no start command', function 
 });
 
 /**
- * What `systemctl show` prints for the unit — it exits 0 whatever the state,
- * which is exactly what the check used to get wrong.
+ * What `systemctl show` prints for the unit — it exits 0 whatever the state.
  */
 function fakeUnitState(string $state): void
 {

@@ -146,9 +146,8 @@ it('reports a PID that is no longer running as not found', function () {
 });
 
 /*
- * QA 2026-11-24: a process that finished between the look and the signal
- * (the user clicked Stop on a list a moment old) made `kill` fail, and that
- * was a 500 with a support reference. It is the same answer as never there.
+ * A process that finished between the look and the signal (Stop clicked on a stale list) makes
+ * `kill` fail; that is the same answer as never there, not a 500.
  */
 it('reports a process that exited just before the signal as not found, not as a failure', function () {
     $runs = new ArrayObject;
@@ -183,8 +182,7 @@ it('still reports a kill that failed on a process that is still there', function
 it('answers not found for a PID no process can have (bug #8)', function (string $pid) {
     $runs = fakeProcess('sleep');
 
-    // Past PHP_INT_MAX this was a 500: the route promised digits, and the
-    // controller asked for an int the value could not fit.
+    // Past PHP_INT_MAX the route still matches digits, but the value no longer fits an int.
     test()->withHeader('Authorization', 'Bearer '.test()->token)
         ->deleteJson("/api/server/processes/{$pid}")
         ->assertNotFound()
@@ -229,9 +227,8 @@ it('denies a user with view-only access', function () {
 });
 
 describe('processes inside a unit the server needs', function () {
-    // On the nginx test server this screen stopped the SSH daemon and the
-    // panel's own queue worker with a 200: neither name is on the configured
-    // list, so the name check let both through.
+    // The SSH daemon and the panel's own queue worker are not on the configured name list, so the
+    // name check alone would let both through; the unit they run in must refuse them.
     function fakeProcessInUnit(string $command, string $unit): ArrayObject
     {
         $runs = new ArrayObject;
@@ -285,8 +282,8 @@ describe('processes inside a unit the server needs', function () {
 });
 
 describe('database servers (bug #5)', function () {
-    // One click on MariaDB took every site's database offline. Operator's
-    // call: refused outright, like SSH; the Services screen restarts them.
+    // One click would take every site's database offline: refused outright, like SSH; the
+    // Services screen restarts them.
     it('refuses a database server by its process name', function (string $command) {
         $runs = fakeProcess($command, 'mysql');
 
@@ -330,8 +327,7 @@ describe('the operating system\'s own services (bug #5)', function () {
         ['rsyslogd', 'rsyslog.service'],
     ]);
 
-    // PK-01 (old QA list): a Dashboard-only role killed fail2ban-server, which
-    // the Services screen had refused it, and fail2ban stayed down.
+    // A Dashboard-only role must not kill what the Services screen refuses it (fail2ban-server).
     it('refuses the services that guard or run everything else', function (string $command, string $unit) {
         $runs = fakeProcessInUnit($command, $unit);
 

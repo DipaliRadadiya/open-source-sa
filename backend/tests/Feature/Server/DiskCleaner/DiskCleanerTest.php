@@ -14,8 +14,8 @@ beforeEach(function () {
     $this->admin = User::factory()->admin()->create();
     $this->token = $this->admin->createToken('t')->plainTextToken;
 
-    // Temp "service logs" pointed at a writable dir → service_logs is the one
-    // fully-deterministic target (its estimate reads real filesizes).
+    // Temp "service logs" pointed at a writable dir: service_logs is the one fully
+    // deterministic target (its estimate reads real filesizes).
     $this->logDir = sys_get_temp_dir().'/sv-oss-dc-'.uniqid();
     File::ensureDirectoryExists($this->logDir);
     File::put($this->logDir.'/access.log', str_repeat('x', 4096));
@@ -150,9 +150,8 @@ it('denies a user without the permission from previewing', function () {
 });
 
 it('never deletes a database binary log when clearing rotated logs', function () {
-    // The predicate is the risky part, so it is run for real against a tree
-    // shaped like /var/log rather than asserted on the argv. Only the root is
-    // substituted; the patterns are exactly the ones that ship.
+    // The predicate is the risky part, so it runs for real against a tree shaped like /var/log
+    // instead of being asserted on argv. Only the root is substituted.
     $root = sys_get_temp_dir().'/sv-oss-varlog-'.uniqid();
     File::ensureDirectoryExists($root.'/nginx');
     File::ensureDirectoryExists($root.'/mysql');
@@ -209,8 +208,7 @@ it('never deletes a database binary log when clearing rotated logs', function ()
 });
 
 it('refuses to schedule the package removal', function () {
-    // Every other category removes files that come back; this one removes
-    // packages, and does it on apt's flags rather than anyone's intent.
+    // Every other category removes files that come back; this one removes packages.
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->putJson('/api/disk-cleaner/schedule', [
             'enabled' => true,
@@ -233,9 +231,8 @@ it('still offers the package removal for a manual clean', function () {
 
 describe('the journal estimate', function () {
     /**
-     * Fake whose journal directory holds one open file and two archived ones,
-     * a fresh one and one 10 days old, answered per -name pattern the way
-     * find would.
+     * Fake whose journal directory holds one open file and two archived ones (a fresh one and
+     * one 10 days old), answered per -name pattern the way find would.
      */
     function dcFakeJournal(ArrayObject $ran): void
     {
@@ -263,8 +260,8 @@ describe('the journal estimate', function () {
                     ->implode(''));
             }
 
-            // Deliberately large: if the estimate still asked journalctl,
-            // this is the number that would come back.
+            // Deliberately large: the number that would come back if the estimate still asked
+            // journalctl.
             return match ($args[0] ?? '') {
                 'journalctl' => Process::result(output: 'Archived and active journals take up 200.0M in the file system.'),
                 default => Process::result(exitCode: 0),
@@ -276,10 +273,8 @@ describe('the journal estimate', function () {
         $ran = new ArrayObject;
         dcFakeJournal($ran);
 
-        // No choice = the week it always kept: only the archived file past 7
-        // days. `system.journal` is the open one and a time vacuum never
-        // removes it. The old estimate reported the whole journal, so the
-        // screen offered 200 MB and the button freed nothing.
+        // No choice = the default week: only the archived file past 7 days. `system.journal` is
+        // the open one and a time vacuum never removes it, so the estimate must not count it.
         expect(app(JournalTarget::class)->estimate())->toBe(2048);
     });
 
@@ -288,8 +283,8 @@ describe('the journal estimate', function () {
         dcFakeJournal($ran);
 
         expect(app(JournalTarget::class)->estimates([0, 1, 7, 14]))->toBe([
-            // Delete all: every archived file. The open one is rotated away
-            // too, but journald preallocates its replacement to the same size.
+            // Delete all: every archived file. The open one is rotated away too, but journald
+            // preallocates its replacement to the same size.
             0 => 1024 + 2048,
             1 => 2048,
             7 => 2048,
@@ -312,8 +307,7 @@ describe('the journal estimate', function () {
     });
 
     it('deletes all by rotating and vacuuming to one byte, not by a time window', function () {
-        // `--vacuum-time=1s` races the rotate: the files it just sealed hold
-        // entries from a moment ago and can survive a one-second window.
+        // `--vacuum-time=1s` races the rotate: files it just sealed can survive the window.
         $ran = new ArrayObject;
         dcFakeJournal($ran);
 
@@ -326,8 +320,8 @@ describe('the journal estimate', function () {
 
 describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
     /**
-     * The server's answer for root-only directories the test process cannot
-     * list itself — which is the whole point: PHP's glob() saw nothing there.
+     * The server's answer for root-only directories the test process cannot list itself
+     * (PHP's glob() saw nothing there).
      *
      * @param  array<string, string>  $listings  directory => find output
      */
@@ -337,9 +331,8 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
             $ran?->append($process->command);
             $cmd = $process->command;
 
-            // Answered like find would: only the lines whose name matches the
-            // -name pattern, so a listing of current logs is not also handed
-            // back as their rotated copies.
+            // Answered like find: only lines matching the -name pattern, so current logs are not
+            // also returned as rotated copies.
             if ($cmd[0] === 'find' && isset($listings[$cmd[1]])) {
                 $pattern = $cmd[array_search('-name', $cmd, true) + 1];
 
@@ -360,8 +353,7 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
     }
 
     it("includes OpenLiteSpeed's logs, which the panel account cannot list", function () {
-        // /usr/local/lsws/logs is root:nogroup 0750. With glob() the scan
-        // offered Redis and UFW and none of OpenLiteSpeed's 4 MB.
+        // /usr/local/lsws/logs is root:nogroup 0750: glob() could not see it.
         config(['server.disk_cleaner.service_log_globs' => ['/usr/local/lsws/logs/*.log']]);
         fakeRootOnly(['/usr/local/lsws/logs' => "1088468\t1761400000\t/usr/local/lsws/logs/error.log\n3082438\t1761400000\t/usr/local/lsws/logs/access.log\n"]);
 
@@ -373,8 +365,7 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
     });
 
     it("cleans every site's own logs, as its own category", function () {
-        // The cleaner looked in /usr/local/lsws/conf/vhosts/*/logs, where no
-        // site's logs have lived since they moved into {home}/{slug}/logs.
+        // Site logs live in {home}/{slug}/logs, not /usr/local/lsws/conf/vhosts/*/logs.
         $user = SystemUser::create(['username' => 'shopuser', 'home_path' => '/home/shopuser', 'shell' => '/bin/bash']);
         Application::forceCreate([
             'system_user_id' => $user->id, 'name' => 'Shop', 'slug' => 'shop', 'domain' => 'shop.test',
@@ -403,8 +394,8 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
         ]);
         fakeRootOnly(['/home/shopuser/shop/logs' => "70541\t1761400000\t/home/shopuser/shop/logs/access.log\n"]);
 
-        // It was manual-only because emptying a site's logs is its visitor
-        // history. The keep choice is what makes it acceptable unattended.
+        // Emptying a site's logs erases its visitor history: only the keep choice makes it
+        // acceptable unattended.
         $this->withHeader('Authorization', "Bearer {$this->token}")
             ->putJson('/api/disk-cleaner/schedule', ['enabled' => true, 'frequency' => 'weekly', 'categories' => ['site_logs'], 'keep_days' => 7])
             ->assertOk()
@@ -414,9 +405,9 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
 });
 
 /*
- * Bug #24: "Service logs", marked safe and schedulable, emptied ufw.log and
- * fail2ban.log — the record of attacks, and the log fail2ban's recidive jail
- * reads. v7 never empties a live log.
+ * "Service logs" is safe and schedulable, so it must never empty ufw.log or fail2ban.log: they
+ * are the record of attacks, and fail2ban's recidive jail reads them. A live log is never
+ * emptied.
  */
 it('never empties the security logs', function () {
     $globs = (require base_path('config/server.php'))['disk_cleaner']['service_log_globs'];

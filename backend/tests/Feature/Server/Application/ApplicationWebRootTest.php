@@ -12,14 +12,11 @@ use Illuminate\Support\Facades\Process;
 /**
  * Changing the web root has to change what the server actually serves.
  *
- * The column and its validation already existed; nothing applied them. A user
- * could move the web root, get a 200, and keep being served the old directory
- * until the next re-provision — the panel reporting a change it had not made.
+ * Otherwise a user could move the web root, get a 200, and keep being served the old directory.
  *
- * What these cover: the directory is created before anything points at it, the
- * vhost is tested before it is reloaded, a failed test puts the previous root
- * back, and a site that is pending or disabled stores the value without being
- * re-published (or, for a disabled site, resurrected).
+ * What these cover: the directory must exist before anything points at it, the vhost is tested
+ * before it is reloaded, a failed test puts the previous root back, and a site that is pending
+ * or disabled stores the value without being re-published (or, for a disabled site, resurrected).
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -123,10 +120,9 @@ it('switches to an existing folder, re-renders the vhost and reloads', function 
 
     expect($this->application->fresh()->web_root)->toBe('public');
 
-    // No mkdir or chown as root on the site user's path any more (WR-01):
-    // both followed symlinks the user planted. The folder must exist (#8).
-    // Nothing as root under public_html, which the site user controls; the
-    // panel's own folders beside it (logs, .panel) are root-owned and locked.
+    // No mkdir or chown as root on the site user's path: both follow symlinks the user planted.
+    // Nothing as root under public_html, which the site user controls; the panel's own folders
+    // beside it (logs, .panel) are root-owned and locked.
     expect(webRootRan(fn ($args) => in_array($args[0] ?? '', ['mkdir', 'chown'], true)
         && str_contains(implode(' ', $args), '/public_html')))->toBeFalse();
 
@@ -134,8 +130,8 @@ it('switches to an existing folder, re-renders the vhost and reloads', function 
 });
 
 it('refuses a web root reached through a symlink, at any depth, and touches nothing (WR-01)', function (string $webRoot, string $link) {
-    // Old QA list WR-01: public_html/pub -> /opt/target, then web root "pub",
-    // made root chown /opt/target to the site user.
+    // public_html/pub -> /opt/target, then web root "pub", would make root chown /opt/target to
+    // the site user.
     fakeWebRootServer(linkAt: $link);
 
     $this->withHeaders(webRootHeaders())
@@ -153,8 +149,8 @@ it('refuses a web root reached through a symlink, at any depth, and touches noth
 ]);
 
 it('refuses a folder that does not exist, and leaves the site alone', function () {
-    // Junior re-test #8: `/etc` was saved as public_html/etc, created empty,
-    // and the live site answered 403 with no warning.
+    // A missing folder (`/etc` saved as public_html/etc) must be refused, or the live site
+    // answers 403 with no warning.
     fakeWebRootServer(folderTest: 1);
 
     $this->withHeaders(webRootHeaders())

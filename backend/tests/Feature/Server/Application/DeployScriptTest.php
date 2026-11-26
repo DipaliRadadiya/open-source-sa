@@ -59,10 +59,8 @@ function scriptCommand(): ?string
     Process::assertRan(function ($process) use (&$found) {
         $command = $process->command;
 
-        // `set -e` alone is no longer enough to identify it: seeding the .env
-        // from the repository's .env.example is also a `set -e` script run
-        // through runuser, and it runs first. The `cd` into the checkout is
-        // what makes this one the deploy script.
+        // `set -e` alone is not enough: seeding the .env is also a `set -e` runuser script.
+        // The `cd` into the checkout identifies the deploy script.
         if (in_array('runuser', $command, true)
             && str_contains(end($command), 'set -e')
             && str_contains(end($command), "\ncd ")) {
@@ -82,9 +80,8 @@ it('runs the deploy script as the site user, never as root', function () {
 
     deployNow();
 
-    // `application:manage` must not be a route to running commands as root.
-    // The script is whatever the user typed, so the privilege drop is the
-    // control that matters here — not a denylist of characters.
+    // `application:manage` must not be a route to running commands as root; the script is
+    // whatever the user typed, so the privilege drop is the control, not a character denylist.
     Process::assertRan(fn ($process) => in_array('runuser', $process->command, true)
         && in_array('-u', $process->command, true)
         && in_array('scriptuser', $process->command, true));
@@ -97,9 +94,8 @@ it('stops at the first failing line', function () {
 
     deployNow();
 
-    // Without `set -e` a failed composer install is followed cheerfully by the
-    // migration, and the deploy reports success on a half-updated site — worse
-    // than the failure it hid.
+    // Without `set -e` a failed composer install is followed by the migration and the deploy
+    // reports success on a half-updated site.
     expect(scriptCommand())->toStartWith('set -e');
 });
 
@@ -117,9 +113,7 @@ it('substitutes the placeholders', function () {
 });
 
 it('falls back to the old build command when no script is written', function () {
-    // An application configured before the Deployment screen existed keeps
-    // deploying exactly as it did — silently changing what runs on someone's
-    // production site is not an upgrade.
+    // An application configured before the Deployment screen existed must keep deploying as it did.
     $this->application->update(['deploy_script' => null, 'build_command' => 'npm run build']);
 
     expect(app(GitDeployer::class)->script($this->application))->toBe('npm run build');
@@ -143,10 +137,8 @@ it('runs nothing extra when neither is set', function () {
 
     deployNow();
 
-    // "Nothing extra" means nothing of the *user's*. Seeding the .env from the
-    // repository's own .env.example runs on every deploy by design, and is
-    // also a runuser script — so the test for the absence of a deploy script
-    // has to name the deploy script rather than the mechanism it shares.
+    // "Nothing extra" means nothing of the user's: .env seeding always runs and is also a runuser
+    // script, so match the deploy script by its `cd` rather than the shared mechanism.
     Process::assertNotRan(fn ($process) => in_array('runuser', $process->command, true)
         && str_contains((string) end($process->command), "\ncd "));
 });
@@ -162,7 +154,7 @@ it('saves a script and reports what will run', function () {
     expect($response->json('settings.deploy_script'))->toContain('artisan migrate')
         ->and($response->json('settings.deploy_script_customised'))->toBeTrue()
         ->and($response->json('settings.branch'))->toBe('main')
-        // Sent rather than hardcoded in the frontend, like the cron presets.
+        // Sent by the API, not hardcoded in the frontend, like the cron presets.
         ->and($response->json('settings.placeholders'))->toContain('{path}');
 
     $this->assertDatabaseHas('activity_logs', [
@@ -178,8 +170,8 @@ it('strips carriage returns from a script pasted on Windows', function () {
         ])
         ->assertOk();
 
-    // `sh` reads the \r as part of the command, producing "command not found:
-    // composer\r" — an error that is impossible to see in a terminal.
+    // `sh` reads the \r as part of the command ("command not found: composer\r"), invisible in a
+    // terminal.
     expect($this->application->fresh()->deploy_script)->not->toContain("\r");
 });
 
@@ -222,8 +214,7 @@ it('offers a starting script suited to the runtime', function () {
         ->getJson("/api/applications/{$this->application->id}/deployments")
         ->assertOk();
 
-    // A starting point, not a policy — it is the user's file the moment they
-    // open the screen.
+    // A starting point, not a policy: it is the user's file once they open the screen.
     expect($response->json('settings.default_deploy_script'))->toStartWith('cd {path}')
         ->and($response->json('settings.deploy_script_customised'))->toBeFalse();
 });
@@ -231,9 +222,8 @@ it('offers a starting script suited to the runtime', function () {
 it('offers no starting script that pulls from git itself', function (array $attributes) {
     $this->application->update($attributes);
 
-    // The panel has fetched the branch with the account's credential before
-    // the script runs. A pull inside the script has no credential and failed
-    // on every private repository (measured 2026-10-01).
+    // The panel fetches the branch with the account's credential before the script runs; a pull
+    // inside the script has no credential and fails on private repositories.
     $default = $this->actingAs($this->admin)
         ->getJson("/api/applications/{$this->application->id}/deployments")
         ->json('settings.default_deploy_script');
@@ -287,9 +277,7 @@ it('offers a PHP starting script that installs composer packages only when there
         ->getJson("/api/applications/{$this->application->id}/deployments")
         ->json('settings.default_deploy_script');
 
-    // Guarded, so the same script deploys a PHP repository with no
-    // composer.json instead of failing on "Composer could not find a
-    // composer.json file".
+    // Guarded, so a PHP repository with no composer.json does not fail.
     expect($default)->toContain("if [ -f composer.json ]; then\n    composer install --no-dev");
 });
 
@@ -307,8 +295,8 @@ it('lists each deploy stage once, however many commands it took', function () {
 });
 
 /*
- * v7's `{PHP81}`-style variables (operator, 2026-10-01: many sites come from
- * v7). One per installed version; a version that is not installed is refused.
+ * v7's `{PHP81}`-style variables: one per installed version; a version that is not installed is
+ * refused.
  */
 describe('v7 {PHPxx} variables', function () {
     beforeEach(function () {
@@ -343,7 +331,7 @@ describe('v7 {PHPxx} variables', function () {
     });
 
     it('stops a deploy before anything runs when the version has gone since', function () {
-        // Saved while 7.4 was installed; removed since.
+        // Saved while 7.4 was installed, removed since.
         $this->application->update(['deploy_script' => '{PHP74} artisan migrate']);
 
         deployNow();

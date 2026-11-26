@@ -12,15 +12,10 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /**
- * A pasted compose file that publishes a host port another application holds
- * (RC-43).
+ * A pasted compose file that publishes a host port another application holds.
  *
- * `applications.app_port` is UNIQUE, because two sites on one port means the
- * proxy sends one site's traffic to the other. The form accepted such a file with
- * a 201, and the provisioning job then died on that index when it recorded the
- * port the file publishes — so the site showed `failed` and said nothing about
- * why. Measured on 2026-10-15: `cmp2-docker` publishing 127.0.0.1:18080:80 while
- * `cmp-docker` already had 18080.
+ * `applications.app_port` is UNIQUE (two sites on one port would mix traffic). The form must
+ * refuse such a file, not accept it and let the provisioning job die on that index with no reason.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -35,9 +30,8 @@ beforeEach(function () {
 });
 
 /**
- * `docker compose config` answering with these published ports, each
- * `[host, container]` on loopback. `$running` is a box the provisioning job can
- * get all the way through: the account exists and the container comes up.
+ * `docker compose config` answering with these published ports, each `[host, container]` on
+ * loopback. `$running` is a box the provisioning job gets all the way through.
  *
  * @param  list<array{0: int|string, 1: int}>  $ports
  */
@@ -104,8 +98,7 @@ it('refuses a pasted compose whose port another application already uses', funct
 });
 
 it('refuses a clash on a port the file publishes besides the proxied one', function () {
-    // nginx proxies to 18081 here, but the file also binds 18080 — and the other
-    // application is listening there, so this container could never start.
+    // nginx proxies to 18081, but the file also binds 18080, which the other application holds.
     rc43Holder(18080);
     rc43Box([[18081, 80], [18080, 9090]]);
 
@@ -151,7 +144,7 @@ it('still creates the same file when nothing else uses its port', function () {
 });
 
 it('fails the job with a reason, not on the unique index, when a row bypassed the form', function () {
-    // Written directly, so no form saw it: a restore, an import, an edit by hand.
+    // Written directly, so no form saw it (restore, import, hand edit).
     rc43Holder(18080);
     rc43Box([[18080, 80]], running: true);
 
@@ -163,7 +156,7 @@ it('fails the job with a reason, not on the unique index, when a row bypassed th
         'compose' => "services:\n  web:\n    image: nginx:alpine\n    ports:\n      - \"127.0.0.1:18080:80\"\n",
     ]);
 
-    // Would throw a QueryException out of handle() before the fix.
+    // Must not throw a QueryException out of handle().
     (new ProvisionApplication($app->id))->handle(
         app(ApplicationProvisioner::class),
         app(ActivityLogger::class),
@@ -176,7 +169,7 @@ it('fails the job with a reason, not on the unique index, when a row bypassed th
         ->and($app->failed_reason)->toBe('compose_port_taken')
         ->and($app->app_port)->toBe(20001);
 
-    // Titled for the app page in the viewer's language, like every other reason.
+    // Titled in the viewer's language, like every other reason.
     $this->actingAs($this->admin)
         ->getJson('/api/applications/'.$app->id)
         ->assertOk()
@@ -201,11 +194,8 @@ it('translates the refusal in every locale, with both placeholders', function ()
 });
 
 describe('a port something on the server is already listening on', function () {
-    // Found in Docker QA on a real box: a pasted file publishing "80:80" was
-    // accepted (201), rewritten to 127.0.0.1:80, and failed at "Container start"
-    // with no reason — the server-ops log said `bind host port 127.0.0.1:80/tcp:
-    // address already in use`, nginx holding 0.0.0.0:80. The form only knew the
-    // panel's own applications.
+    // The form must know more than the panel's own applications: a file publishing "80:80" while
+    // nginx holds port 80 would otherwise fail at "Container start" with no reason.
 
     it('refuses it before anything is created, naming the port', function () {
         rc43Box([[80, 80]], listening: [22, 80, 443]);
@@ -293,8 +283,8 @@ describe('editing the file of a site that is already running', function () {
     }
 
     it('does not refuse the ports its own container holds', function () {
-        // While it runs, the listener on its port IS the site. Refusing that would
-        // refuse every save of an unchanged file.
+        // While it runs, the listener on its port is the site itself; refusing it would block
+        // every save of an unchanged file.
         $site = rc43EditBox(18080, own: [18080], listening: [22, 18080]);
 
         $this->actingAs($this->admin)

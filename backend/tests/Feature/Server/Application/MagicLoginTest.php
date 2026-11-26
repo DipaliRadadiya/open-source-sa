@@ -79,8 +79,7 @@ function fakeWpCli(array $admins, bool $multisite = false, bool $listFails = fal
                 : Process::result(output: json_encode($admins));
         }
 
-        // The mint script (FS-C16): answers the way the script would, from
-        // the payload it carries on stdin.
+        // The mint script: answers the way the script would, from the payload it carries on stdin.
         if (str_contains($command, 'eval-file -')) {
             if ($multisite) {
                 return Process::result(output: "\n".json_encode(['error' => 'multisite']));
@@ -116,9 +115,8 @@ it('lists only the administrators wordpress reports', function () {
     expect($response->json('administrators'))->toHaveCount(2);
     expect($response->json('administrators.0.login'))->toBe('owner');
 
-    // The screen needs a name to pick between accounts and nothing more.
-    // Shipping every administrator's address to it widens what this endpoint
-    // discloses for no gain.
+    // The screen needs only a name to pick between accounts; sending every administrator's
+    // address would disclose more for no gain.
     expect($response->json('administrators.0'))->not->toHaveKey('email');
 });
 
@@ -258,8 +256,7 @@ it('mints in one WP-CLI run, not three (FS-C16)', function () {
         ->assertStatus(201)
         ->assertJsonPath('magic_login.user.login', 'owner');
 
-    // Every WP-CLI run boots WordPress, 1–2 s each — three of them were
-    // past the point where the browser still opens the new tab.
+    // Each WP-CLI run boots WordPress (1–2 s); several runs make the browser block the new tab.
     Process::assertRanTimes(fn ($process) => str_contains(implode(' ', (array) $process->command), '/wp '), 1);
 });
 
@@ -270,8 +267,7 @@ it('installs the loader from this repository and never from a url', function () 
         ->postJson("/api/applications/{$this->application->id}/magic-login", ['wp_user_id' => 1])
         ->assertStatus(201);
 
-    // The implementation this replaces took a URL as a request parameter and
-    // wget'd it into the customer's document root. Nothing here may fetch.
+    // The loader comes from this repository; a URL taken from the request must never be fetched.
     Process::assertNotRan(function ($process) {
         $command = is_array($process->command) ? implode(' ', $process->command) : (string) $process->command;
 
@@ -334,10 +330,8 @@ it('is offered on wordpress and on nothing else', function () {
 });
 
 it('writes the loader as the site user, never as root', function () {
-    // `wp-content` belongs to the site user, and so does every name in it. As
-    // root, `install -d` + `tee` + `chown` followed whatever `mu-plugins` or
-    // the loader's own name pointed at — this button became a way to have
-    // root write a file anywhere and hand it to the user (2026-09-23).
+    // `wp-content` belongs to the site user, and so does every name in it. As root, a planted
+    // link at `mu-plugins` or the loader's name would let the user have root write anywhere.
     fakeWpCli(admins());
 
     $this->actingAs($this->admin)

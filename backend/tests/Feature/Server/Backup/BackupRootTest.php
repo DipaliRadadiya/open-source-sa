@@ -19,22 +19,19 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 
 /*
- * A backup is of the application, not of the directory the web server happens
- * to hand out. The two are the same for most site types and differ for exactly
- * the ones where it matters most — a Laravel or Craft site serves `public`, so
- * archiving the served directory captured the public folder and none of the
- * application, and restored cleanly while doing it.
+ * A backup is of the application, not of the directory the web server hands out. They differ
+ * for sites like Laravel or Craft that serve `public`: archiving the served directory would
+ * capture the public folder and none of the application.
  *
- * The archive's top-level entry changed with that, so the other half of this
- * file is the compatibility rule: an archive written before the change still
- * restores to the directory it was made from.
+ * The archive's top-level entry changed with that, so an archive written before the change must
+ * still restore to the directory it was made from.
  */
 
 beforeEach(function () {
     $this->fakeDisk = Storage::fake('destination');
 
-    // The disk is built per-destination and never registered globally, so the
-    // fake has to be injected the same way production builds the real one.
+    // The disk is built per destination and never registered globally, so inject the fake the
+    // way production builds the real one.
     $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
         app(StorageDriverFactory::class),
         fn (array $config) => $this->fakeDisk,
@@ -61,9 +58,8 @@ afterEach(function () {
 });
 
 /**
- * A site served from a subdirectory of itself — the shape this whole file is
- * about. `public_html` holds the application; `public_html/public` is all the
- * web server ever sees.
+ * A site served from a subdirectory of itself: `public_html` holds the application and
+ * `public_html/public` is all the web server sees.
  */
 function servedFromSubdirectory(string $webRoot = 'public'): Application
 {
@@ -86,10 +82,8 @@ function servedFromSubdirectory(string $webRoot = 'public'): Application
 }
 
 /**
- * An ArrayObject, not an array: a `use (&$ref)` closure returned from a helper
- * hands the caller the value as it was when the helper returned — empty — and
- * every assertion then reads nothing and says so in a way that looks like the
- * code under test.
+ * An ArrayObject, not an array: a `use (&$ref)` closure returned from a helper hands the caller
+ * the value as it was when the helper returned (empty).
  */
 function recordedTarCommands(): ArrayObject
 {
@@ -98,11 +92,8 @@ function recordedTarCommands(): ArrayObject
     Process::fake(function ($process) use ($commands) {
         $commands[] = $process->command;
 
-        // Everything here runs through ServerOps, so the command that arrives
-        // is `sudo -n tar …`. Read arguments by the flag they follow rather
-        // than by position — a fixed index silently matches nothing the day a
-        // prefix is added, and a fake that writes the archive to the wrong
-        // path fails the step under test for a reason that is not the step.
+        // Commands arrive as `sudo -n tar …` through ServerOps. Read arguments by the flag they
+        // follow, not by position: a fixed index silently matches nothing once a prefix is added.
         $archive = argumentAfter($process->command, '-czf');
 
         if ($archive !== null) {
@@ -155,9 +146,8 @@ it('archives the application, not the directory the web server serves', function
 
     $tar = commandRunning($commands, 'tar');
 
-    // `-C <parent> <entry>`: the entry is the site's own directory, and the
-    // parent is what it sits in. Archiving `public` under `public_html` would
-    // have produced a tarball with no application in it at all.
+    // `-C <parent> <entry>`: the entry is the site's own directory. Archiving `public` under
+    // `public_html` would leave the application out of the tarball.
     expect($tar)->toContain($application->rootPath())
         ->and($tar)->toContain('public_html')
         ->and($tar)->not->toContain($application->publicHtmlPath());
@@ -169,9 +159,7 @@ it('records which directory the archive was made from', function () {
 
     $backup = app(BackupRunner::class)->run(targetFor($application));
 
-    // Without this on the row, a restore has no way to tell an archive of the
-    // application from an archive of the served directory — they differ only
-    // in the name of an entry inside them.
+    // The two archive kinds differ only in an entry name, so a restore needs this on the row.
     expect($backup->manifest['root_kind'])->toBe(BackupRoot::APPLICATION);
 });
 
@@ -196,8 +184,7 @@ it('leaves a site served from its own root exactly where it was', function () {
 
     $tar = commandRunning($commands, 'tar');
 
-    // The ordinary case — where the document root and the application are the
-    // same directory — must not move at all.
+    // Document root and application are the same directory: nothing may move.
     expect($tar)->toContain($application->rootPath())
         ->and($tar)->toContain('public_html');
 });
@@ -205,8 +192,7 @@ it('leaves a site served from its own root exactly where it was', function () {
 it('resolves an archive with no recorded kind to the served directory', function () {
     $application = servedFromSubdirectory();
 
-    // Every backup taken before this feature existed. The absent key is the
-    // answer, not a missing one.
+    // Backups taken before `root_kind` existed: the absent key means the served directory.
     expect(app(BackupRoot::class)->forRestore($application, ['key' => 'backups/x/y.tar.gz']))
         ->toBe($application->documentRoot())
         ->and(app(BackupRoot::class)->forRestore($application, null))
@@ -270,9 +256,8 @@ it('unpacks an old archive beside the directory it was made from', function () {
 
     app(ExtractArchive::class)->run($context);
 
-    // Beside `public_html/public`, not beside `public_html`. Get this wrong and
-    // the step throws "the archive does not contain the site directory" on a
-    // perfectly good backup.
+    // Beside `public_html/public`, not `public_html`; otherwise the step throws "the archive does
+    // not contain the site directory" on a good backup.
     expect($context->stagingDirectory)->toBe($application->publicHtmlPath().'/.restore-'.$restore->id);
 });
 
@@ -314,17 +299,15 @@ it('swaps an archive of the application over the application', function () {
 
     app(SwapFiles::class)->run($context);
 
-    // The live application moves aside and the restored one takes its place —
-    // both at `public_html`, never at `public_html/public`.
+    // The live application moves aside and the restored one takes its place, both at
+    // `public_html`, never `public_html/public`.
     expect($moves->getArrayCopy())->toContain([$application->publicHtmlPath(), $application->rootPath().'/.rollback-'.$restore->id])
         ->and($moves->getArrayCopy())->toContain([$staging.'/public_html', $application->publicHtmlPath()]);
 });
 
 it('lifts the site root lock around each move of a restore, and puts it back', function () {
-    // Both ends of every move are entries of the site root, which is
-    // immutable once the site is set up ({@see SiteRootLock}) — a restore
-    // that did not lift it would fail at its first `mv`, and one that did
-    // not put it back would leave the root renamable by its user.
+    // Every move is between entries of the site root, which is immutable ({@see SiteRootLock}):
+    // a restore must lift the lock for each `mv` and put it back, or the user could rename the root.
     $application = servedFromSubdirectory();
 
     $backup = Backup::create([

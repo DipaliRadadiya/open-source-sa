@@ -48,9 +48,8 @@ it('answers with the newest npm each node version can actually run', function ()
 
     $catalog = app(NpmCatalog::class);
 
-    // The reason this class exists. npm 12 needs Node ^22.22.2, so on 24 it
-    // is the answer and on 20 it is not — publishing the registry's `latest`
-    // on every row would leave the button lit forever on Node 18 and 20.
+    // The reason this class exists: npm 12 needs Node ^22.22.2, so on 24 it is the answer and on
+    // 20 it is not. The registry's `latest` on every row would light the button forever on Node 18/20.
     expect($catalog->latestFor('24.19.0'))->toBe('12.0.2')
         ->and($catalog->latestFor('22.9.0'))->toBe('11.19.1')
         ->and($catalog->latestFor('20.17.0'))->toBe('11.19.1')
@@ -63,10 +62,8 @@ it('reads the whole range, not just the major', function () {
 
     $catalog = app(NpmCatalog::class);
 
-    // Both of these are Node 20, and they get different answers: npm 11 needs
-    // `^20.17.0`, so 20.11 is a Node 20 that cannot run the newest npm 11.
-    // Keying the catalog on majors — the obvious shortcut — gets this wrong
-    // and offers an npm that will not start.
+    // Both are Node 20 with different answers: npm 11 needs `^20.17.0`, so 20.11 cannot run the
+    // newest npm 11. Keying the catalog on majors gets this wrong.
     expect($catalog->latestFor('20.17.0'))->toBe('11.19.1')
         ->and($catalog->latestFor('20.11.0'))->toBe('10.9.9');
 });
@@ -93,9 +90,8 @@ it('compares versions as semver, not as strings', function () {
 
     $catalog = app(NpmCatalog::class);
 
-    // '9.8.1' string-compares as greater than '10.9.9'. A client doing this
-    // itself would report the newest npm on Node 18 as an available update
-    // and the older one as current — backwards, both ways.
+    // '9.8.1' string-compares as greater than '10.9.9'; a client comparing itself would get the
+    // update and current versions backwards.
     expect($catalog->updateAvailable('18.20.4', '9.8.1'))->toBeTrue()
         ->and($catalog->updateAvailable('18.20.4', '10.9.9'))->toBeFalse();
 });
@@ -134,12 +130,9 @@ it('asks the registry for the abbreviated document', function () {
 });
 
 it('is primed by both the installer and the panel update script', function () {
-    // `npm_latest` is read from this table, and an empty table is reported as
-    // null — which the panel correctly reads as "we do not know" and so keeps
-    // the Update button offered on an npm that is already current. This
-    // command is the only thing that fills it, and it was scheduled daily and
-    // called from nowhere else, so every fresh install and every update spent
-    // up to a day in exactly that state.
+    // `npm_latest` is read from this table, and an empty table is reported as null ("we do not
+    // know"), which keeps the Update button offered on an npm that is already current. Only this
+    // command fills it, so install and update must call it, not wait for the daily schedule.
     expect(file_get_contents(base_path('../install.sh')))->toContain('artisan runtimes:refresh-npm')
         ->and(UpdateScript::STEPS)->toContain('refresh_npm_catalogue');
 
@@ -149,10 +142,8 @@ it('is primed by both the installer and the panel update script', function () {
 });
 
 it('does not fail an install or an update when the registry is unreachable', function () {
-    // The npm registry is a third party. A panel that refuses to finish
-    // updating because someone else's API was down is worse than one whose
-    // Update button is briefly over-eager, so both call sites guard the exit
-    // code — and the command itself must not report failure either.
+    // The npm registry is a third party: an update must not fail because its API is down, so both
+    // call sites guard the exit code and the command itself must not report failure either.
     Http::fake(fn () => Http::response('', 500));
 
     $this->artisan('runtimes:refresh-npm')->assertSuccessful();

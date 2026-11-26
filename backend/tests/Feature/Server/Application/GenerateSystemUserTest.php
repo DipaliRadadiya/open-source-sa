@@ -16,10 +16,8 @@ beforeEach(function () {
     $this->seed(PermissionSeeder::class);
     $this->admin = User::factory()->admin()->create();
 
-    // `getent passwd <name>` exits 2 when the account is absent, which is the
-    // *answer*, not a failure. Everything else — useradd above all — succeeds.
-    // A blanket `exitCode: 2` fake would make account creation fail too, and
-    // the test would be asserting against a broken server rather than the code.
+    // `getent passwd <name>` exits 2 when the account is absent: that is the answer, not a failure.
+    // A blanket `exitCode: 2` fake would make useradd fail too.
     Process::fake(fn ($process) => str_contains(commandOf($process), 'getent passwd')
         ? Process::result(exitCode: 2)
         : Process::result(exitCode: 0));
@@ -50,14 +48,12 @@ it('records the owner with the application, and writes nothing to the server', f
     $user = SystemUser::find($application->system_user_id);
 
     expect($user)->not->toBeNull();
-    // Named after the site, because this string is what somebody reads in `ps`
-    // or `ls -l` while working out which site an account belongs to.
+    // Named after the site: this is what someone reads in `ps` or `ls -l` to tell which site an
+    // account belongs to.
     expect($user->username)->toBe('company-blog');
 
-    // The account is NOT created here. This action records what the user asked
-    // for; every server write belongs to provisioning, and the first version of
-    // this feature put a useradd in the one place the class promises there is
-    // none.
+    // The account is NOT created here: this action only records the request; every server write
+    // belongs to provisioning.
     Process::assertNotRan(fn ($process) => str_contains(commandOf($process), 'useradd'));
 });
 
@@ -68,8 +64,7 @@ it('creates the account during provisioning, beside the directory that needs it'
 
     $application = Application::find($response->json('application.id'));
 
-    // `getent` says absent, so the step creates it rather than failing — which
-    // is also the repair for an adopted box or a rebuilt server.
+    // `getent` says absent, so the step creates it (also the repair for an adopted or rebuilt server).
     app(CreateSystemUser::class)
         ->ensureOnServer($application->systemUser);
 
@@ -97,10 +92,8 @@ it('does not useradd blindly when the server cannot be asked', function () {
         'username' => 'probe-me', 'home_path' => '/home/probe-me', 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    // sudo refusing, or getent missing: stderr is non-empty, so ServerOps does
-    // not count it as an answer. Creating the account on that basis would be a
-    // write against a server we cannot see — the step should fail with its own
-    // reference instead.
+    // sudo refusing, or getent missing: stderr is non-empty, so ServerOps does not count it as an
+    // answer. Creating the account on that basis would be a write against a server we cannot see.
     Process::fake(fn () => Process::result(errorOutput: 'sudo: a password is required', exitCode: 1));
 
     app(CreateSystemUser::class)->ensureOnServer($user);
@@ -109,9 +102,8 @@ it('does not useradd blindly when the server cannot be asked', function () {
 });
 
 it('rolls the account row back when the application cannot be created', function () {
-    // A name collision committed between validation and insert. The row and the
-    // application are one transaction, so there is no orphan to tidy up — which
-    // is the cleanup code this replaced.
+    // A name collision committed between validation and insert. Row and application share one
+    // transaction, so there is no orphan to tidy up.
     Application::factory()->create(['name' => 'Taken Name', 'domain' => 'taken.example.com']);
 
     $before = SystemUser::count();
@@ -139,9 +131,8 @@ it('still accepts an existing system user', function () {
 
     expect(Application::find($response->json('application.id'))->system_user_id)->toBe($existing->id);
 
-    // Nothing is created here for either path now — but especially not for
-    // this one: an id the caller chose is not an invitation to make another
-    // account, at create time or at provision time.
+    // Nothing is created for either path: an id the caller chose is not an invitation to make
+    // another account.
     Process::assertNotRan(fn ($process) => str_contains(
         is_array($process->command) ? implode(' ', $process->command) : (string) $process->command,
         'useradd'
@@ -153,8 +144,8 @@ it('refuses both at once rather than silently honouring one', function () {
         'username' => 'picked', 'home_path' => '/home/picked', 'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    // A client that sends both is confused about its own intent, and picking
-    // one for it is how a site ends up owned by an account nobody chose.
+    // A client that sends both is confused about its intent; picking one could leave a site owned
+    // by an account nobody chose.
     $this->actingAs($this->admin)
         ->postJson('/api/applications', createPayload(['system_user_id' => $existing->id]))
         ->assertStatus(422)
@@ -187,7 +178,7 @@ it('refuses to generate for someone who may not create system users', function (
 
     expect($response->json('errors.generate_system_user.0'))->toContain('permission');
 
-    // And nothing was created on the box for a request that was refused.
+    // Nothing was created for the refused request.
     Process::assertNotRan(fn ($process) => str_contains(
         is_array($process->command) ? implode(' ', $process->command) : (string) $process->command,
         'useradd'
@@ -236,9 +227,8 @@ describe('the generated name', function () {
     });
 
     it('suffixes around a name that exists only on the box', function () {
-        // The panel's table and /etc/passwd can disagree — an account made by
-        // hand has no row here. Checking only the table would hand out a name
-        // useradd then refuses, turning a solvable collision into a failure.
+        // The panel's table and /etc/passwd can disagree: an account made by hand has no row here.
+        // Checking only the table would hand out a name useradd then refuses.
         Process::fake(function ($process) {
             $command = commandOf($process);
 
@@ -271,10 +261,8 @@ describe('the generated name', function () {
     });
 
     it('refuses to guess when the probe cannot answer', function () {
-        // sudo refusing, or getent missing. Reading that as "the name is free"
-        // means a useradd that fails for a reason nobody can see — so every
-        // candidate reads as taken, the attempts run out, and the user gets a
-        // sentence rather than a 500 or a colliding account.
+        // sudo refusing, or getent missing, must not read as "the name is free": every candidate
+        // reads as taken, the attempts run out, and the user gets a sentence, not a 500.
         Process::fake(fn () => Process::result(errorOutput: 'sudo: a password is required', exitCode: 1));
 
         expect(fn () => app(SystemUsernameGenerator::class)->forApplication('Company Blog'))

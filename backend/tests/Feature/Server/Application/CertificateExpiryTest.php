@@ -43,8 +43,8 @@ beforeEach(function () {
 });
 
 it('picks up a renewal that happened outside the panel', function () {
-    // certbot's timer replaced the file and told nobody. Without this the
-    // screen counts down to zero and reports "expired" on a healthy site.
+    // certbot's timer replaces the file without telling the panel; otherwise the screen counts
+    // down to "expired" on a healthy site.
     Process::fake(fn () => Process::result(output: 'notAfter=Dec 31 23:59:59 2030 GMT'));
 
     $this->artisan('certificates:refresh-expiry')->assertSuccessful();
@@ -54,9 +54,8 @@ it('picks up a renewal that happened outside the panel', function () {
 });
 
 it('reports a certificate whose file has gone rather than leaving it active', function () {
-    // The vhost still points at the path, so the site is serving something
-    // that is not there. Recorded, not repaired — reissuing on a schedule
-    // would spend rate limit on a problem nobody has looked at.
+    // The vhost still points at the missing path. Recorded, not repaired: reissuing on a schedule
+    // would burn rate limit on a problem nobody has looked at.
     Process::fake(fn () => Process::result(errorOutput: 'No such file or directory', exitCode: 1));
 
     $this->artisan('certificates:refresh-expiry')->assertSuccessful();
@@ -89,18 +88,15 @@ it('surfaces the refreshed date and the warning flag through the API', function 
         ->getJson("/api/applications/{$this->application->id}/certificate")
         ->assertOk();
 
-    // The warning threshold is computed server-side so the rule lives in one
-    // place — certificate lifetimes are shrinking and it will have to move.
+    // The warning threshold is computed server-side so the rule lives in one place.
     expect($response->json('certificate.expiring_soon'))->toBeFalse()
         ->and($response->json('certificate.expired'))->toBeFalse()
         ->and($response->json('certificate.days_remaining'))->toBeGreaterThan(1000);
 });
 
 /*
- * Null is the honest answer for a certificate with no expiry date, and it has
- * to survive all the way to the client: `expiring_soon` guards on
- * `daysRemaining() !== null`, a check that could never fire while the method
- * turned a null expiry into 0.
+ * Null is the honest answer for a certificate with no expiry date and must reach the client:
+ * `expiring_soon` guards on `daysRemaining() !== null`, which never fires if null becomes 0.
  */
 it('reports no days remaining for a certificate that has no expiry yet', function () {
     $this->certificate->update([
@@ -126,17 +122,14 @@ it('does not touch certificates that are not active', function () {
 
     $this->artisan('certificates:refresh-expiry')->assertSuccessful();
 
-    // A pending certificate has no file behind it yet; reading one would be
-    // asking a question that has no answer.
+    // A pending certificate has no file behind it yet, so there is nothing to read.
     Process::assertNothingRan();
 });
 
 it('repairs a missing renewal hook on a server whose certificates were adopted', function () {
-    // Server Sync adopts certificates from a migrated box, and adoption never
-    // installed the deploy hook — only issuing through the panel did. Without
-    // it certbot renews, the files on disk are current, and the web server goes
-    // on serving the old certificate out of memory until something unrelated
-    // reloads it. The site shows an expired certificate weeks later.
+    // Server Sync adopts certificates without installing the deploy hook (only issuing through the
+    // panel did). Without it certbot renews on disk but the web server keeps serving the old
+    // certificate from memory.
     Process::fake();
 
     Certificate::updateOrCreate(['application_id' => $this->application->id], [
@@ -148,15 +141,13 @@ it('repairs a missing renewal hook on a server whose certificates were adopted',
 
     $this->artisan('certificates:refresh-expiry')->assertSuccessful();
 
-    // Daily and idempotent, so every server already in this state repairs
-    // itself rather than only the ones adopted from now on.
+    // Daily and idempotent, so servers already in this state repair themselves too.
     Process::assertRan(fn ($p) => in_array('tee', $p->command, true)
         && str_contains(implode(' ', $p->command), 'renewal-hooks'));
 });
 
 it('writes no hook when nothing on the server renews', function () {
-    // An uploaded certificate is not certbot's to renew, so a privileged write
-    // here would be a command run for no reason on every tick.
+    // An uploaded certificate is not certbot's to renew, so no privileged write is needed.
     Process::fake();
 
     Certificate::updateOrCreate(['application_id' => $this->application->id], [
@@ -203,9 +194,8 @@ describe('what the site actually serves', function () {
     }
 
     it('notices when the server is still serving the certificate it renewed away from', function () {
-        // The file renewed sixty days forward; the running web server was never
-        // reloaded and is still presenting the old one. Nothing else in the
-        // panel can see this — every other check reads the file.
+        // The file renewed but the web server was never reloaded and still presents the old one.
+        // Only the handshake check can see this; every other check reads the file.
         fakeCertDates('Nov 20 12:00:00 2026 GMT', 'Aug 22 12:00:00 2026 GMT');
 
         $certificate = activeServedCertificate();
@@ -224,8 +214,8 @@ describe('what the site actually serves', function () {
     });
 
     it('says it does not know rather than showing a tick when nothing answers', function () {
-        // Nothing listening on 443. That tells us nothing about the
-        // certificate, and "unknown" must not render as agreement.
+        // Nothing listening on 443 says nothing about the certificate; "unknown" must not render
+        // as agreement.
         fakeCertDates('Nov 20 12:00:00 2026 GMT', null);
 
         $certificate = activeServedCertificate();
@@ -235,8 +225,7 @@ describe('what the site actually serves', function () {
 
         expect($fresh->servingStale())->toBeNull()
             ->and($fresh->served_expires_at)->toBeNull()
-            // Stamped even on failure, so the screen can tell "looked and could
-            // not see" from "never looked".
+            // Stamped even on failure: "looked and could not see" differs from "never looked".
             ->and($fresh->served_checked_at)->not->toBeNull();
     });
 
@@ -246,8 +235,8 @@ describe('what the site actually serves', function () {
         activeServedCertificate();
         $this->artisan('certificates:refresh-expiry')->assertSuccessful();
 
-        // Without SNI a server hosting several sites answers with whichever
-        // certificate is default — reading another site's expiry as this one's.
+        // Without SNI a multi-site server answers with its default certificate, which would be
+        // read as this site's.
         Process::assertRan(fn ($p) => in_array('-servername', $p->command, true)
             && in_array('shop.example.com', $p->command, true)
             && in_array('127.0.0.1:443', $p->command, true));
@@ -255,10 +244,8 @@ describe('what the site actually serves', function () {
 });
 
 it('repairs the renewal hook for a certificate the panel has no row for', function () {
-    // The panel's own certificate on OpenLiteSpeed: issued by install.sh with
-    // certbot certonly --webroot, which reloads nothing on renewal, and never
-    // a row here. Servers installed before install.sh wrote the hook itself
-    // renewed it on disk and kept serving the old one (review finding R4).
+    // The panel's own certificate on OpenLiteSpeed is issued by install.sh with
+    // `certbot certonly --webroot`, which reloads nothing on renewal, and has no row here.
     Process::fake();
 
     $this->certificate->update(['type' => CertificateType::Custom]);

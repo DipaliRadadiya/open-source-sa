@@ -1,28 +1,17 @@
 <?php
 
 /*
- * The installer must decide PHP is available by asking apt, not by looking for
- * a filename.
+ * The installer must decide PHP is available by asking apt, not by looking for a filename.
  *
- * A user's nginx install on Ubuntu 24.04 died with:
- *
- *   PHP 8.4 is not available from apt on Ubuntu 24.04.4 LTS.
- *   The PHP repository was added but carries no php8.4 for noble.
- *
- * Both sentences were wrong. ondrej publishes php8.4 for noble — verified
- * against the live index, `php8.4-fpm 8.4.25-1+ubuntu24.04.1+deb.sury.org+1`.
- * What had actually happened is that apt never fetched that index: the old
- * flow decided the repository was configured because a file matching
- * `ondrej*php*` existed, and skipped refreshing it.
- *
- * Two ways to get there, and the installer could not tell them apart:
+ * A repository file matching `ondrej*php*` does not mean apt has the index, and the installer
+ * must tell these apart:
  *   - a previous run interrupted after `add-apt-repository` wrote the file
- *   - a refresh that failed to download — `apt-get update` exits **0** on an
- *     unreachable repository, printing only `W: Failed to fetch`
+ *   - a refresh that failed to download — `apt-get update` exits **0** on an unreachable
+ *     repository, printing only `W: Failed to fetch`
  *
- * A source scan rather than a live install, because a real reproduction needs
- * a fresh Ubuntu box in a broken apt state. These assertions pin the shape of
- * the fix; they do not prove an install succeeds.
+ * A source scan rather than a live install, because a real reproduction needs a fresh Ubuntu box
+ * in a broken apt state. These assertions pin the shape of the fix; they do not prove an install
+ * succeeds.
  */
 it('decides PHP availability by asking apt, not by matching a filename', function () {
     $source = installerSource();
@@ -31,22 +20,18 @@ it('decides PHP availability by asking apt, not by matching a filename', functio
     expect($source)->toContain('ensure_php_available')
         ->and($source)->toContain('php_candidate');
 
-    // The old entry point is gone rather than left beside the new one — two
-    // functions answering "is PHP available" is how the first one drifted.
+    // The old entry point is gone rather than left beside the new one.
     expect($source)->not->toContain('assert_php_available');
 });
 
 it('refreshes the PHP repository even when its sources file already exists', function () {
-    // The specific regression. `add-apt-repository` writes the file before the
-    // download succeeds, so "the file exists" never meant "apt has the index".
-    // Skipping the refresh on that basis is what produced a configured
+    // `add-apt-repository` writes the file before the download succeeds, so "the file exists"
+    // never meant "apt has the index". Skipping the refresh on that basis leaves a configured
     // repository with no packages behind it.
     //
-    // Since 2026-11-02 the refresh is not add_php_repository's own: every
-    // source is written first and install_packages refreshes them all at once.
-    // So the guard is now that the one refresh comes after the sources and is
-    // not inside any condition — it runs whether the file was just written or
-    // was already there — and that PHP is asked of apt only after it.
+    // The refresh belongs to install_packages, not add_php_repository: the guard is that the one
+    // refresh comes after the sources, is not inside any condition, and PHP is asked of apt only
+    // after it.
     $add = installerFn('add_php_repository');
 
     expect($add)->toContain('compgen -G "/etc/apt/sources.list.d/ondrej*php*"')
@@ -67,15 +52,12 @@ it('refreshes the PHP repository even when its sources file already exists', fun
 });
 
 it('does not tell the user the repository lacks the package', function () {
-    // It has it. Saying otherwise sends someone to wait for a publication that
-    // already happened, and the real causes — a failed download, a stale
-    // source for another release — go unconsidered.
+    // It has it. Saying otherwise hides the real causes — a failed download, a stale source for
+    // another release.
     $source = installerSource();
 
-    // Scoped to the `die` text, not the whole file: the comment above the
-    // function quotes the old wording to explain why it was wrong, and a
-    // whole-file scan cannot tell an explanation from a claim. That false
-    // positive is why this reads the message rather than the source.
+    // Scoped to the `die` text, not the whole file: a comment above the function may quote the
+    // old wording, and a whole-file scan cannot tell an explanation from a claim.
     $message = substr(
         $source,
         strpos($source, 'die "apt cannot install PHP'),
@@ -84,7 +66,6 @@ it('does not tell the user the repository lacks the package', function () {
 
     expect($message)->not->toContain('carries no php')
         ->and($message)->toContain('the repository index failed to download')
-        // Names the stale-source case too, which the old message never
-        // considered and which no amount of waiting for ondrej would fix.
+        // Names the stale-source case too, which waiting for ondrej would not fix.
         ->and($message)->toContain('different Ubuntu release');
 });

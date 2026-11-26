@@ -11,12 +11,10 @@ use Illuminate\Support\Facades\Process;
 /**
  * Re-pointing a git application at a different account.
  *
- * The account was create-time only. Disconnecting one used to succeed and
- * the foreign key is `nullOnDelete`, so its applications kept a repository
- * and a branch and lost the credential that could read them — with no way
- * back. Disconnecting an account in use is now refused, but sites stranded
- * before that still need this. Recovery meant deleting the site and building it again, which is not a
- * recovery.
+ * The account was set at create time only. The foreign key is `nullOnDelete`, so a site whose
+ * account was disconnected kept its repository and branch but lost the credential, with no way
+ * back short of rebuilding the site. Disconnecting an account in use is now refused, but
+ * stranded sites still need this.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -57,8 +55,7 @@ function relinkRepoBranches(array $names): void
 }
 
 it('re-links an application whose account was disconnected', function () {
-    // The case this exists for: the account is gone, the site still knows its
-    // repository, and nothing could put a credential back.
+    // The case this exists for: the account is gone but the site still knows its repository.
     $application = relinkGitApp(['git_account_id' => null]);
 
     $replacement = GitAccount::forceCreate([
@@ -84,10 +81,8 @@ it('re-links an application whose account was disconnected', function () {
 });
 
 it('attaches an account with nothing but its id', function () {
-    // The common case by a distance: the site is deployed and correct, the URL
-    // and branch are right, and the only thing missing is a credential that can
-    // read the repository. Making the user restate `owner/repo` they never
-    // changed is friction and a chance to typo a working site into a broken one.
+    // The common case: URL and branch are right and only the credential is missing. The user
+    // must not have to restate `owner/repo`.
     $application = relinkGitApp(['git_account_id' => null]);
 
     $replacement = GitAccount::forceCreate([
@@ -113,9 +108,8 @@ it('attaches an account with nothing but its id', function () {
 });
 
 it('still verifies the existing repository when only an account is sent', function () {
-    // The bare payload must not skip the check — "attach this account" is only
-    // safe because the account is asked whether it can read what this site
-    // already deploys.
+    // The bare payload must not skip the check: the account is asked whether it can read what
+    // this site already deploys.
     $application = relinkGitApp(['git_account_id' => null]);
 
     $useless = GitAccount::forceCreate([
@@ -136,9 +130,8 @@ it('still verifies the existing repository when only an account is sent', functi
 });
 
 it('refuses a credential that cannot reach the repository, without storing it', function () {
-    // Storing first would move the failure to the next deploy, where it reads
-    // as a deployment problem — and would leave the site pointing at something
-    // worse than what it had.
+    // Storing first would move the failure to the next deploy and leave the site pointing at
+    // something worse than before.
     $application = relinkGitApp();
 
     $other = GitAccount::forceCreate([
@@ -180,10 +173,9 @@ it('refuses a branch the repository does not have', function () {
 });
 
 /**
- * Answer `git ls-remote` the way real git does for a public URL, measured on a
- * test server (FS-C22 #24): a repository that does not exist asks for a
- * username GIT_TERMINAL_PROMPT forbids, and exits 128; a missing branch is
- * an empty success.
+ * Answer `git ls-remote` the way real git does for a public URL: a repository that does not
+ * exist asks for a username GIT_TERMINAL_PROMPT forbids, and exits 128; a missing branch is an
+ * empty success.
  */
 function relinkRemote(string $answer = 'present'): void
 {
@@ -216,9 +208,8 @@ it('switches an account-backed site to a public URL', function () {
 
     $fresh = $application->fresh();
 
-    // Exactly one path is live at a time — leaving the old account and
-    // repository set would make `remoteUrl()` prefer them and ignore the URL
-    // the user just chose.
+    // Exactly one path is live at a time: a leftover account and repository would make
+    // `remoteUrl()` ignore the URL the user just chose.
     expect($fresh->git_account_id)->toBeNull()
         ->and($fresh->repository)->toBeNull()
         ->and($fresh->repository_url)->toBe('https://github.com/octo/public.git');
@@ -228,8 +219,8 @@ it('switches an account-backed site to a public URL', function () {
 });
 
 it('refuses a public URL that does not answer, and saves nothing', function (string $answer, string $field, string $key) {
-    // FS-C22 #24: any URL was stored, and the next deploy failed on it. The
-    // account path already asked the provider; this path asked nobody.
+    // The account path asks the provider; the URL path must also check, or a bad URL is stored
+    // and the next deploy fails on it.
     $application = relinkGitApp();
     relinkRemote($answer);
 
@@ -270,8 +261,8 @@ it('checks the site\'s own branch when the request names none', function () {
 });
 
 it('does not reach the git host for a user who may not change deployment', function () {
-    // Deny first: the probe goes out to the network, so it must never run on
-    // behalf of someone the request would refuse anyway.
+    // Deny first: the probe goes out to the network, so it must never run for someone the
+    // request would refuse anyway.
     $application = relinkGitApp();
     relinkRemote();
 
@@ -302,9 +293,8 @@ it('does not reach the git host when the URL itself is refused', function () {
 });
 
 it('disables deploy-on-push when the provider changes', function () {
-    // A webhook verifies signatures against the scheme of the provider it was
-    // configured for. Moving GitHub -> GitLab leaves it rejecting every
-    // delivery, silently, as though the remote had stopped sending them.
+    // A webhook verifies signatures against the scheme of the provider it was configured for:
+    // moving GitHub -> GitLab would silently reject every delivery.
     $application = relinkGitApp([
         'webhook_enabled' => true,
         'webhook_provider' => 'github',
@@ -333,14 +323,13 @@ it('disables deploy-on-push when the provider changes', function () {
     $fresh = $application->fresh();
 
     expect($fresh->webhook_enabled)->toBeFalse()
-        // Kept: it is the public part of the delivery URL and is unique, so
-        // discarding it changes the site's address for nothing.
+        // Kept: it is the public part of the delivery URL, so discarding it changes the address.
         ->and($fresh->webhook_identifier)->toBe('hook-abc');
 });
 
 it('reports an application whose account was disconnected', function () {
-    // Nothing said so before: the site looked exactly like a public-repository
-    // one until the next deploy ran `git remote add origin ""` and failed.
+    // Otherwise the site looks like a public-repository one until the next deploy fails on
+    // `git remote add origin ""`.
     $orphan = relinkGitApp(['git_account_id' => null]);
 
     $this->actingAs($this->admin)
@@ -350,8 +339,7 @@ it('reports an application whose account was disconnected', function () {
 });
 
 it('does not call a public-URL site broken', function () {
-    // A public repository legitimately has no account. Deriving the flag from
-    // a null account alone would flag every one of them.
+    // A public repository legitimately has no account: a null account alone must not flag it.
     $public = relinkGitApp([
         'slug' => 'pub', 'domain' => 'pub.test', 'name' => 'Pub',
         'git_account_id' => null, 'repository' => null,
@@ -372,8 +360,7 @@ it('is not reachable on an application that is not a git site', function () {
         'php_version' => '8.4', 'status' => 'active', 'web_root' => '/',
     ]);
 
-    // 404 rather than 403: for this site the screen does not exist, which is a
-    // different statement from "you may not".
+    // 404 rather than 403: for this site the screen does not exist.
     $this->actingAs($this->admin)
         ->putJson("/api/applications/{$wordpress->id}/git-account", [
             'git_source' => 'account',

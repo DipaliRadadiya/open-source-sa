@@ -47,9 +47,8 @@ beforeEach(function () {
  *                               that has only that one
  */
 /**
- * The run that wrote the project's `.env`. The installer writes it as the site
- * user, so the command is `runuser -u <user> -- tee <path>` and the path is
- * the last argument rather than the second.
+ * The run that wrote the project's `.env`: `runuser -u <user> -- tee <path>`, so the path is
+ * the last argument.
  *
  * @return array{command: array<int, string>, input: string, path: ?string}|null
  */
@@ -99,16 +98,13 @@ it('builds into an empty directory, not the project root Composer would refuse',
     $composer = collect($runs)->first(fn ($run) => in_array('create-project', $run['command'], true))['command'];
     $target = $composer[array_search('create-project', $composer, true) + 2];
 
-    // The provisioner has already made {$projectRoot}/web and written a
-    // placeholder into it, so create-project pointed at the project root dies
-    // with "Project directory ... is not empty" — which is what made one-click
-    // Craft fail every single time.
+    // The provisioner has already made {$projectRoot}/web with a placeholder in it, so
+    // create-project at the project root would die with "Project directory ... is not empty".
     expect($target)->not->toBe($this->projectRoot)
         ->and($target)->not->toBe("{$this->projectRoot}/web");
 
-    // ...and the build is then copied into the project root.
-    // As the site user: root's `cp` wrote through a link planted at the
-    // destination (the `.panel` class of bug, 2026-09-29).
+    // ...and the build is then copied into the project root, as the site user: root's `cp`
+    // would write through a link planted at the destination.
     $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'runuser'
         && ($run['command'][4] ?? '') === 'cp'
         && in_array($this->projectRoot, $run['command'], true));
@@ -120,29 +116,25 @@ it('runs Composer as the site user, never as the panel', function () {
     $composer = collect(installCraft())
         ->first(fn ($run) => in_array('create-project', $run['command'], true))['command'];
 
-    // Composer executes the project's own post-install scripts; run as the
-    // panel they would run as root.
+    // Composer runs the project's own post-install scripts: as the panel they would run as root.
     expect(array_slice($composer, 0, 4))->toBe(['runuser', '-u', 'crftuser', '--']);
 });
 
 it('serves from web/, so the application source is not published', function () {
-    // Pointing the web server at the project root would put `.env`, with the
-    // database password in it, on a URL.
+    // Serving the project root would put `.env` (with the database password) on a URL.
     expect($this->application->web_root)->toBe('/web');
 
     $runs = installCraft();
     $env = craftEnvWrite($runs);
 
     expect(end($env['command']))->toBe("{$this->projectRoot}/.env")
-        // Written as the site user: root's `tee` followed a `.env` that had
-        // been replaced by a link (the `.panel` class of bug, 2026-09-29).
+        // As the site user: root's `tee` would follow a `.env` replaced by a link.
         ->and(array_slice($env['command'], 0, 5))->toBe(['runuser', '-u', $this->application->systemUser->username, '--', 'tee']);
 });
 
 it('keeps the database credentials off the command line', function () {
-    // Two kinds of secret, and only this one can still be kept off argv. The
-    // database credentials go into `.env`, which Craft reads for itself, so
-    // `craft install` is never told them.
+    // The database credentials go into `.env`, which Craft reads itself, so `craft install`
+    // is never told them and they stay off argv.
     $runs = installCraft();
 
     foreach ($runs as $run) {
@@ -154,23 +146,14 @@ it('keeps the database credentials off the command line', function () {
 });
 
 it('passes the admin password as an option, because the prompt no longer reads a pipe', function () {
-    // It used to be piped: omitting --password made Craft prompt, and Yii's
-    // prompt was a plain read from stdin. With stdin not a TTY the prompt is
-    // never made, the password is taken as empty, and the install dies on
-    // Craft's own validation of a value nobody supplied — naming an option the
-    // command line did not contain:
-    //
-    //     Invalid options:
-    //      --password: New Password should contain at least 6 characters.
-    //
-    // So this is a deliberate exception, asserted so nobody restores the pipe
-    // by reading the rule without the reason. The cost is real: `ps` shows it
-    // to every user on the box while the install runs.
+    // Deliberate exception: the admin password is passed on argv, not piped. Without a TTY
+    // Craft never prompts, takes the password as empty and fails validation. The cost is that
+    // `ps` shows it to every user while the install runs.
     $install = collect(installCraft())->first(fn ($run) => in_array('install', $run['command'], true)
         && in_array('craft', $run['command'], true));
 
     expect($install['command'])->toContain('--password=CraftPass1!')
-        // Nothing left on stdin for a prompt that is not going to be made.
+        // Nothing is left on stdin for a prompt.
         ->and($install['input'])->toBe('');
 });
 
@@ -183,8 +166,8 @@ it('generates a distinct security key and app id per installation', function () 
     preg_match('/CRAFT_SECURITY_KEY=(\S+)/', $first, $a);
     preg_match('/CRAFT_SECURITY_KEY=(\S+)/', $second, $b);
 
-    // The security key signs and encrypts everything Craft stores; shared
-    // between installs, one site's data is readable from another's.
+    // The security key signs and encrypts everything Craft stores: shared between installs,
+    // one site's data would be readable from another's.
     expect($a[1])->not->toBe($b[1])
         ->and(strlen($a[1]))->toBe(32);
 });
@@ -202,24 +185,19 @@ it('tells Craft to speak PostgreSQL when that is the database it was given', fun
 
     $env = craftEnvWrite($runs)['input'];
 
-    // `pgsql` is DbConfig::DRIVER_PGSQL — Craft validates this value against
-    // its own two constants, so anything else stops its installer.
+    // `pgsql` is DbConfig::DRIVER_PGSQL: Craft validates the value against its own constants.
     expect($env)->toContain('CRAFT_DB_DRIVER=pgsql')
-        // Widening acceptedEngines() without this line would hand a
-        // PostgreSQL database to a site configured for MySQL: created,
-        // reported Active, and dead at Craft's own setup.
+        // Without this, a PostgreSQL database would be handed to a site configured for MySQL.
         ->not->toContain('CRAFT_DB_DRIVER=mysql')
-        // The real port off the engine's connection record, not MySQL's.
+        // The real port from the engine's connection record, not MySQL's.
         ->toContain('CRAFT_DB_PORT=5432')
-        // PostgreSQL's own default schema, and the reason this line could sit
-        // in the template unused until now.
+        // PostgreSQL's default schema.
         ->toContain('CRAFT_DB_SCHEMA=public');
 });
 
 it('still tells Craft to speak MySQL on a MySQL server', function () {
-    // The half that a new branch quietly breaks. Every Craft site the panel
-    // has already made is on MySQL, and a driver that only ever produces the
-    // new value would take all of them down on the next install.
+    // Existing Craft sites are on MySQL: a driver that only ever produced `pgsql` would break
+    // them on the next install.
     $env = craftEnvWrite(installCraft())['input'];
 
     expect($env)->toContain('CRAFT_DB_DRIVER=mysql')

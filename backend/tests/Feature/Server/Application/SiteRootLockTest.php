@@ -13,12 +13,10 @@ use Illuminate\Support\Facades\Process;
 /**
  * The site root is made immutable so its own user cannot rename it away.
  *
- * `{home}/{slug}` is root's, but it sits in the user's home, and renaming needs
- * write permission on the parent only. On a real server (2026-09-23) the site
- * user moved it aside and substituted a directory holding a symlink; enabling
- * Basic Auth then had root write and chown the link's target. `chattr +i` makes
- * the rename impossible — these tests guard the lock itself and every panel
- * operation that has to lift it.
+ * `{home}/{slug}` is root's but sits in the user's home, and renaming needs write permission on
+ * the parent only. Without the lock the user could swap in a directory holding a symlink and
+ * make root write and chown its target. These tests guard the lock and every operation that
+ * has to lift it.
  */
 beforeEach(function () {
     $this->user = SystemUser::create([
@@ -205,8 +203,8 @@ describe('operations that change the top of the site root', function () {
     });
 
     it('handles a .env beside the code as the site user, and never as root', function () {
-        // Inside public_html every name is the user's; as root, the editor
-        // wrote, chowned and read back whatever a planted link pointed at.
+        // Inside public_html every name is the user's; as root, the editor would follow a planted
+        // link.
         $beside = $this->site->codePath().'/.env';
         $this->fs->present = [$beside];
         fakeLockedSiteRoot();
@@ -360,10 +358,8 @@ describe('a missing top-level directory', function () {
 });
 
 it('does not log a new site\'s missing root as an error', function () {
-    // Provisioning lifts the lock before it creates anything, so on a brand
-    // new site the root is not there yet and `stat` exits 1. That is the
-    // normal answer, and it was landing on the admin error dashboard as an
-    // ERROR on every site creation (seen live, 2026-09-23).
+    // Provisioning lifts the lock before it creates anything, so on a brand new site the root is
+    // not there yet and `stat` exits 1. That is normal and must not be logged as an error.
     $logger = Mockery::spy();
     Log::shouldReceive('channel')->with('server-ops')->andReturn($logger);
     Process::fake(['*' => Process::result(errorOutput: "stat: cannot stat '/home/siteowner/shop': No such file or directory", exitCode: 1)]);

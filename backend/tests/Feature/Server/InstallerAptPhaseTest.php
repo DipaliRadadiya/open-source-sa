@@ -1,17 +1,14 @@
 <?php
 
 /*
- * Every apt operation of the install happens in one block, the package step,
- * and none after it.
+ * Every apt operation of the install happens in one block, the package step, and none after it.
  *
- * Measured on seven fresh 4 GB servers (2026-11-01): Ubuntu's first-boot
- * unattended-upgrades queues behind our package work, takes the lock in the
- * first gap of a few seconds, and holds it for 6–9 minutes. The next apt call
- * of ours (Postfix, or certbot) waited all of that. With every package in
- * first, Ubuntu's updates run beside the configuration and the build instead.
+ * Ubuntu's first-boot unattended-upgrades takes the apt lock in the first gap between our calls
+ * and holds it for minutes, so a later apt call (Postfix, certbot) would wait on it. With every
+ * package in first, those updates run beside the configuration and the build instead.
  *
- * These hold that shape: the guard, the order, the one list per stack, one
- * refresh then one install, and the work done while the lock is held anyway.
+ * These hold that shape: the guard, the order, the one list per stack, one refresh then one
+ * install, and the work done while the lock is held anyway.
  */
 
 /** @return array{code: int, out: string} */
@@ -225,8 +222,8 @@ describe('the package step', function () {
         $installs = array_values(array_filter($recs, fn ($r) => str_starts_with($r, 'apt-get install')));
         $updates = array_values(array_filter($recs, fn ($r) => str_starts_with($r, 'apt-get update')));
 
-        // ONE install, Postfix in it: a gap before a call of its own is where
-        // Ubuntu's updates took the lock on a real server (2026-11-02).
+        // ONE install, Postfix in it: a gap before a call of its own is where Ubuntu's updates
+        // take the lock.
         expect($updates)->toBe(['apt-get update -qq'])
             ->and($installs)->toHaveCount(1)
             ->and($installs[0])->toStartWith('apt-get install -y software-properties-common')
@@ -268,8 +265,8 @@ describe('the package step', function () {
 
         expect($run['code'])->toBe(0, $run['out'])
             ->and($run['out'])->toContain('warn: one of the optional packages')
-            // R7: the panel's own lsphp core is required (fatal), the sites'
-            // database drivers are not, so they are two separate calls.
+            // The panel's own lsphp core is required (fatal), the sites' database drivers are not,
+            // so they are two separate calls.
             ->and($m[1])->toHaveCount(6)
             ->and($m[1][1])->toContain(' openlitespeed')->not->toContain('postfix')->not->toContain('lsphp')
             ->and($m[1][2])->toBe('apt-get install -y postfix')

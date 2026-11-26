@@ -24,13 +24,11 @@ use Illuminate\Support\Str;
  * How a restore gets the archive off the destination.
  *
  * `readStream()` is not always a stream. The FTP adapter implements it as
- * `fopen('php://temp')` + `ftp_fget`, which buffers the whole object before
- * the caller sees a byte — and `php://temp` spills into the system temp dir,
- * a tmpfs of ~3 GB on a normal install. A 24 GB restore failed with "Unable
- * to read file" while the transfer itself finished in 34 seconds.
+ * `fopen('php://temp')` + `ftp_fget`, which buffers the whole object before the caller sees a
+ * byte, and `php://temp` spills into the system temp dir (a small tmpfs): a large restore
+ * fails with "Unable to read file".
  *
- * The sibling test in `StorageDestinationTest` already pins that S3's
- * `readStream()` really streams, for the same reason. Nobody had checked FTP.
+ * `StorageDestinationTest` pins the same property for S3.
  */
 beforeEach(function () {
     $this->home = storage_path('framework/testing/dl-home-'.getmypid());
@@ -49,8 +47,7 @@ beforeEach(function () {
         'config' => ['host' => 'h', 'username' => 'u', 'password' => 'p'],
     ]);
 
-    // Not `$this->target`: HigherOrderTapProxy owns that name, so `test()->target`
-    // hands back the test case instead of the row — documented in RestoreRunTest.
+    // Not `$this->target`: HigherOrderTapProxy owns that name (see RestoreRunTest).
     $this->restoreTarget = BackupTarget::create([
         'application_id' => $this->application->id,
         'storage_destination_id' => $this->ftpDestination->id,
@@ -80,16 +77,15 @@ it('asks the driver for a direct download before falling back to a stream', func
             return true;
         }
 
-        // False, as the real FTP driver does: there is no resumable upload
-        // protocol to drive, so the caller falls back to `writeStream()`.
+        // False, as the real FTP driver: no resumable upload protocol, so the caller falls back
+        // to `writeStream()`.
         public function uploadFrom(StorageDestination $d, string $key, string $path, ?callable $onProgress = null): bool
         {
             return false;
         }
 
-        // Null, as the real FTP driver does: there is no URL a browser could
-        // fetch an archive from over FTP, and the caller reports that Download
-        // is unavailable rather than inventing one.
+        // Null, as the real FTP driver: no URL a browser could fetch from over FTP, so the
+        // caller reports Download as unavailable.
         public function downloadUrl(StorageDestination $d, string $key): ?string
         {
             return null;
@@ -141,10 +137,9 @@ it('asks the driver for a direct download before falling back to a stream', func
 });
 
 /*
- * Only FTP needs the special path. A driver whose `readStream()` genuinely
- * streams must say so, or the restore would take a slower route for no reason
- * — and worse, a driver that returned true without writing anything would hand
- * the restore an empty archive.
+ * Only FTP needs the special path. A driver whose `readStream()` really streams must say so,
+ * and a driver that returned true without writing anything would hand the restore an empty
+ * archive.
  */
 it('leaves the streaming drivers alone', function () {
     $destination = new StorageDestination;
@@ -154,18 +149,16 @@ it('leaves the streaming drivers alone', function () {
 });
 
 /*
- * The whole point, asserted on the source: the FTP driver must not reach for
- * the buffered path the adapter uses. `ftp_fget` writes to whatever handle it
- * is given, so handing it the destination file removes the buffer entirely.
+ * Asserted on the source: the FTP driver must not reach for the buffered path the adapter
+ * uses. `ftp_fget` writes to whatever handle it is given, so handing it the destination file
+ * removes the buffer.
  */
 it('downloads FTP archives straight to disk, never through php://temp', function () {
     $source = file_get_contents(
         app_path('Services/Server/Backups/Storage/Drivers/FtpDriver.php')
     );
 
-    // Comments stripped first: the docblock names `php://temp` to explain the
-    // bug, and asserting against prose would fail on the explanation rather
-    // than the behaviour.
+    // Comments stripped first: the docblock names `php://temp` in prose.
     $code = preg_replace(['#/\*.*?\*/#s', '#//[^\n]*#'], '', $source);
 
     expect($code)->toContain('ftp_fget')
@@ -190,11 +183,8 @@ it('is the FTP driver that overrides it, not the shared base', function () {
 });
 
 /*
- * The wiring, not just the method.
- *
- * Deleting the `downloadTo()` call from `DownloadArtifact` left every test
- * above green, because they all exercise the driver directly. That one line is
- * the whole fix — the same gap the `heal()` work had, caught the same way.
+ * The wiring, not just the method: the tests above exercise the driver directly, so deleting
+ * the `downloadTo()` call from `DownloadArtifact` would leave them green.
  */
 it('uses the direct download when running the restore step', function () {
     $dir = storage_path('framework/testing/dl-'.getmypid());
@@ -206,9 +196,8 @@ it('uses the direct download when running the restore step', function () {
     $used = new \stdClass;
     $used->direct = false;
 
-    // A driver that can do it directly, and a disk whose readStream would
-    // blow up if the step fell back — so "it took the direct path" is proved
-    // by the run completing, not merely by a flag.
+    // A driver that can do it directly, and a disk whose readStream would blow up if the step
+    // fell back: the run completing proves the direct path.
     app()->bind(StorageDriverFactory::class, fn () => new class($used) extends StorageDriverFactory
     {
         public function __construct(private \stdClass $used) {}
@@ -230,9 +219,8 @@ it('uses the direct download when running the restore step', function () {
         }
     });
 
-    // A real Filesystem holding DIFFERENT bytes. If the step ever falls back
-    // to readStream, the archive will contain these instead — so the assertion
-    // on content proves which path ran, without needing the disk to throw.
+    // A real Filesystem holding DIFFERENT bytes: if the step falls back to readStream, the
+    // archive contains these instead, so the content assertion proves which path ran.
     $fake = Storage::fake('dl-destination');
     $fake->put('app/archive.tar.gz', 'streamed-bytes');
 
@@ -266,7 +254,7 @@ it('uses the direct download when running the restore step', function () {
 
     expect($used->direct)->toBeTrue()
         ->and(file_get_contents($context->archivePath))->toBe('archive-bytes')
-        // Not the disk's copy: the direct download won, which is the point.
+        // Not the disk's copy: the direct download won.
         ->and(file_get_contents($context->archivePath))->not->toBe('streamed-bytes');
 
     File::deleteDirectory($dir);

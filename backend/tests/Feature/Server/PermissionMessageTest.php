@@ -9,17 +9,15 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
 
 /*
- * Two reports from the frontend team, verified and fixed together because both
- * are the same shape: the server knew something specific and said something
- * useless.
+ * Both cases share one shape: the server knew something specific and said something useless.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
 });
 
 it('names the permission a refusal was about, instead of an empty message', function () {
-    // `abort(403)` sends `{"message": ""}`. The panel then had to invent
-    // wording for every refusal, without being told what had been refused.
+    // `abort(403)` sends `{"message": ""}`, so the panel has to invent wording without being told
+    // what was refused.
     $stranger = User::factory()->create();
     $token = $stranger->createToken('t')->plainTextToken;
 
@@ -33,14 +31,11 @@ it('names the permission a refusal was about, instead of an empty message', func
 });
 
 it('says something for a refusal raised without a message at all', function () {
-    // 115 FormRequests return false from authorize(), which produces an empty
-    // 403 the middleware never sees. A generic sentence is not as good as a
-    // specific one, but it beats the empty string they were getting.
+    // FormRequests returning false from authorize() produce an empty 403 the middleware never
+    // sees. A generic sentence beats the empty string.
     //
-    // Driven through a real route rather than asserted against the translation
-    // file: the first version of this test only checked the string existed,
-    // which passed with the render hook deleted — it was testing the lang file,
-    // not the behaviour.
+    // Driven through a real route: asserting the translation file would pass with the render hook
+    // deleted.
     Route::middleware('api')->get('/api/_test_bare_forbidden', fn () => abort(403));
 
     $this->getJson('/api/_test_bare_forbidden')
@@ -63,10 +58,8 @@ it('keeps a specific refusal instead of overwriting it with the generic one', fu
 });
 
 it('reports the database engine that is actually running, not a client binary', function () {
-    // The dashboard read `mysql --version` under a hardcoded `mysql` key. On a
-    // MariaDB box that is the *client* reporting its own version, so a server
-    // with no MySQL showed "MySQL 15.2" while /databases/engines said MariaDB
-    // 11.8.6 on the same server.
+    // `mysql --version` on a MariaDB box is the *client* reporting its own version, so a server
+    // with no MySQL would show "MySQL 15.2" while /databases/engines says MariaDB.
     Process::fake(function ($process) {
         $command = $process->command;
         if (($command[0] ?? null) === 'sudo') {
@@ -98,27 +91,22 @@ it('omits the database entirely when no engine answers', function () {
 });
 
 it('reports the PHP the panel is running, without shelling out for it', function () {
-    // The probe ran `php -r` and resolved `php` from PATH. The web process
-    // does not have the PATH the CLI does: measured on OpenLiteSpeed, lshttpd
-    // runs with PATH=/bin:/usr/bin while the interpreter sits at
-    // /usr/local/bin/php, so the dashboard showed PHP as blank on a server
-    // where `php -r` from a shell answered 8.4.25.
+    // The web process does not have the CLI's PATH: on OpenLiteSpeed, lshttpd runs with
+    // PATH=/bin:/usr/bin while the interpreter sits at /usr/local/bin/php, so resolving `php`
+    // from PATH shows PHP as blank.
     Process::fake(fn () => Process::result(exitCode: 1));
 
     $runtimes = (fn () => $this->runtimes())->call(app(ServerMetrics::class));
 
-    // Correct even with every subprocess failing, which is the point: the
-    // answer no longer depends on a command succeeding.
+    // Correct even with every subprocess failing: the answer does not depend on a command.
     expect($runtimes['php'])->toBe(PHP_VERSION);
 
     Process::assertNotRan(fn ($p) => in_array('php', $p->command, true));
 });
 
 it('reports every database engine that is running, not just the first', function () {
-    // This returned the first engine only, copied from the web-server version
-    // where one-only is right. A server can run MariaDB and PostgreSQL at
-    // once — and the one this was written against does, so PostgreSQL was
-    // installed, running, and missing from the dashboard.
+    // A server can run MariaDB and PostgreSQL at once, so every engine is listed, not only the
+    // first (one-only is right for the web server).
     Process::fake(function ($process) {
         $command = $process->command;
         if (($command[0] ?? null) === 'sudo') {
@@ -142,9 +130,8 @@ it('reports every database engine that is running, not just the first', function
 });
 
 it('refuses a name long enough to break the config filename', function () {
-    // A 255-character slug plus `.conf` cannot be created — measured, not
-    // taken from the constant — so the site would provision and then fail
-    // when the vhost was written.
+    // A 255-character slug plus `.conf` cannot be created, so the site would provision and then
+    // fail when the vhost was written.
     $this->seed(PermissionSeeder::class);
     $admin = User::factory()->admin()->create();
     $token = $admin->createToken('t')->plainTextToken;
@@ -160,8 +147,7 @@ it('refuses a name long enough to break the config filename', function () {
 });
 
 it('keeps every name the filesystem can actually hold', function () {
-    // The counterweight: a cap that refuses ordinary names would be worse
-    // than the overflow it prevents.
+    // The counterweight: a cap that refuses ordinary names is worse than the overflow.
     expect(Application::MAX_NAME_LENGTH)->toBeGreaterThan(200);
 
     $slug = Application::uniqueSlug(str_repeat('a', Application::MAX_NAME_LENGTH));

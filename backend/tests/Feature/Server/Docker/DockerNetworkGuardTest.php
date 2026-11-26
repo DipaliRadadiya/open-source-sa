@@ -12,15 +12,13 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * Which networks a container may be put on (RC-28).
+ * Which networks a container may be put on.
  *
- * Every field that names a network asked only whether it exists, and `host`,
- * `none` and another site's private network all exist. So a site could be moved
- * onto the server's own network, or next to another site's database. These pin
- * the refusal on each way in — the Container card, the create form, a Docker
- * database, a new network's name, a pasted compose file — and that what a site
- * legitimately does (its own network, a network made to share, the one it is on)
- * still works.
+ * `host`, `none` and another site's private network all exist, so an existence check alone would
+ * let a site onto the server's own network or next to another site's database. These pin the
+ * refusal on each way in (Container card, create form, Docker database, new network name, pasted
+ * compose file) and that legitimate uses (its own network, a shared network, the one it is on)
+ * still work.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -180,9 +178,8 @@ it('lets a site move onto a network a user made to share', function () {
 });
 
 it('lets a site stay on the network it is already on', function () {
-    // The card sends the current network back with every save. A site put on
-    // another one's network before this rule existed can still change its
-    // memory limit — the rule refuses moves, not what is already there.
+    // The card sends the current network back with every save, so a site already on another's
+    // network can still change its memory limit: the rule refuses moves, not what is there.
     netGuardBox();
     $this->application->forceFill(['docker_network' => $this->otherNetwork])->save();
 
@@ -253,8 +250,7 @@ it('refuses Docker\'s own and sites\' private networks for a database', function
 })->with(['host', 'bridge', 'other']);
 
 it('accepts a shared network for a database', function () {
-    // Refused on the engine, so nothing is created — the point is only that the
-    // network field itself passes.
+    // Refused on the engine, so nothing is created; the point is that the network field passes.
     netGuardBox();
 
     $this->withHeaders(netGuardHeaders())
@@ -294,8 +290,8 @@ function netGuardResolved(array $networks): string
 }
 
 it('refuses a pasted compose file that joins Docker\'s own or another site\'s network', function (string $network) {
-    // Not serving, so an accepted file would be stored without touching the box —
-    // the refusal is the only thing that can keep it out.
+    // Not serving, so an accepted file would be stored without touching the server; only the
+    // refusal keeps it out.
     $this->application->forceFill(['status' => 'pending'])->save();
     $name = $network === 'other' ? $this->otherNetwork : $network;
 

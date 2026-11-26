@@ -247,7 +247,6 @@ it('relocates the cron.d file when the job is renamed', function () {
         ->assertJsonPath('cronjob.name', 'New name')
         ->assertJsonPath('cronjob.slug', 'new-name');
 
-    // old-slug file removed, new-slug file written
     Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/old-name']);
     Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/cron.d/new-name']);
 });
@@ -359,7 +358,6 @@ it('rejects a command with an unresolved {path} placeholder', function () {
         ->assertUnprocessable()
         ->assertJsonValidationErrors('command');
 
-    // a resolved command is accepted
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->postJson('/api/cronjobs', [
             'name' => 'Resolved',
@@ -423,7 +421,7 @@ it('removes the cron.d files when the owning system user is deleted via the API'
 
     // both the file and the row are gone
     Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/owned-job']);
-    // …and its output log, which outlived every user deletion before.
+    // …and its output log.
     Process::assertRan(fn ($p) => $p->command === ['rm', '-f', rtrim((string) config('server.cronjob_log_dir'), '/').'/owned-job.log']);
     expect(Cronjob::find($job->id))->toBeNull();
 
@@ -466,8 +464,7 @@ it('reports the next scheduled run in the server timezone', function () {
 });
 
 it('shifts the next run when the server timezone is not UTC', function () {
-    // 03:00 in Kolkata is 21:30 UTC the previous day — the whole point of
-    // computing against the OS timezone rather than the app's.
+    // 03:00 in Kolkata is 21:30 UTC the previous day: computed against the OS timezone, not the app's.
     fakeServerTimezone('Asia/Kolkata');
     Carbon::setTestNow(Carbon::parse('2026-07-29 09:15:00', 'UTC'));
 
@@ -527,10 +524,8 @@ it('removes the file an adopted job was imported from when it is edited', functi
 });
 
 /*
- * A job adopted from a user's crontab lives inside a file the panel does not
- * own. The first edit wrote the panel's copy and left the crontab line, so the
- * job ran twice (found on a real server, 2026-09-24). Only that line goes;
- * the rest of the crontab is the user's.
+ * A job adopted from a user's crontab lives inside a file the panel does not own. Editing it must
+ * remove that line (or the job runs twice) and leave the rest of the crontab alone.
  */
 function fakeUserCrontab(string $contents): Collection
 {
@@ -644,8 +639,7 @@ it('keeps the job when the imported file cannot be removed', function () {
         ->deleteJson("/api/cronjobs/{$cronjob->id}")
         ->assertStatus(500);
 
-    // Reporting it deleted while the original still runs is the failure this
-    // whole change is about.
+    // Reporting it deleted while the original still runs would be wrong.
     expect(Cronjob::find($cronjob->id))->not->toBeNull();
 });
 
@@ -665,8 +659,7 @@ it('changes the account a job runs as', function () {
         ->assertJsonPath('cronjob.username', 'runner');
 
     expect($cronjob->fresh()->username)->toBe('runner');
-    // The cron.d file carries the run-as user in its own column, so it has to
-    // be rewritten — the row alone changing would be a lie.
+    // The cron.d file carries the run-as user, so it must be rewritten, not just the row.
     Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/cron.d/move-me']);
 });
 
@@ -701,7 +694,6 @@ it('creates a job scoped to an application', function () {
         ->assertCreated()
         ->assertJsonPath('cronjob.application_id', $application->id);
 
-    // The filter existed before anything could set the column.
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->getJson("/api/cronjobs?filter[application_id]={$application->id}")
         ->assertOk()
@@ -709,8 +701,8 @@ it('creates a job scoped to an application', function () {
 });
 
 /*
- * Bug #16: typing `root` in "Runs as" gave anyone with "manage Cron Jobs" a
- * root shell. The admin keeps v7's freedom; nobody else does.
+ * Typing `root` in "Runs as" must not give anyone with "manage Cron Jobs" a root shell.
+ * Only the admin may.
  */
 describe('who a cron job may run as', function () {
     beforeEach(function () {

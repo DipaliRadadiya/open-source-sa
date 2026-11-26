@@ -18,15 +18,9 @@ use Illuminate\Testing\TestResponse;
 /**
  * Installing the waiting security updates on demand.
  *
- * The panel had no way to do this at all: the `updates` group wrote an
- * apt.conf.d drop-in and apt's own timer decided when anything happened. So a
- * server with a published kernel fix waited for a schedule nobody could see,
- * and the only way to patch now was SSH.
- *
- * What is actually under test is the in-between: apt takes a box-wide lock, the
- * upgrade restarts services the panel itself runs under, and the worker
- * executing it can be one of them. Every assertion here is about a run whose
- * outcome arrives late, twice, or not at all.
+ * Under test is the in-between: apt takes a box-wide lock, the upgrade restarts services the
+ * panel itself runs under, and the worker executing it can be one of them. Every assertion is
+ * about a run whose outcome arrives late, twice, or not at all.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -67,9 +61,8 @@ it('queues a run and records it before the worker sees it', function () {
 
     Queue::assertPushed(InstallSecurityUpdates::class);
 
-    // Written before dispatch on purpose: started inside the job, there is a
-    // window between the 202 and the worker where the run exists and nothing
-    // can see it.
+    // Written before dispatch: started inside the job, a run would exist between the 202 and
+    // the worker with nothing able to see it.
     expect(SecurityUpdateRun::query()->count())->toBe(1)
         ->and(SecurityUpdateRun::query()->first()->status)->toBe(SecurityUpdateStatus::Running)
         ->and(SecurityUpdateRun::query()->first()->user_id)->toBe($this->admin->id);
@@ -80,8 +73,8 @@ it('refuses a second run while one is open', function () {
 
     startRun()->assertStatus(202);
 
-    // 409, not 422: nothing about the request is wrong. apt's lock means a
-    // second run could only wait behind the first and then repeat it.
+    // 409, not 422: nothing about the request is wrong; a second run could only wait on apt's
+    // lock and then repeat the first.
     startRun()
         ->assertStatus(409)
         ->assertJsonPath('security_update.status', 'running');
@@ -96,8 +89,7 @@ it('refuses when unattended-upgrades is not installed', function () {
 
     startRun()->assertStatus(422);
 
-    // No row, no job: a queued run that fails a minute later gives an operator
-    // a red card with nothing connecting it to a missing package.
+    // No row, no job: a run failing later would leave a red card unconnected to the missing package.
     expect(SecurityUpdateRun::query()->count())->toBe(0);
     Queue::assertNothingPushed();
 });
@@ -121,8 +113,7 @@ it('records the packages it upgraded and that a reboot is now wanted', function 
 
     Process::fake(function ($process) use ($binary, $dir) {
         if (in_array($binary, $process->command, true)) {
-            // The upgrade is what creates this file, so it appears during the
-            // run rather than before it.
+            // The upgrade creates this file, so it appears during the run.
             File::put($dir.'/reboot-required', '');
 
             return Process::result(output: implode("\n", [
@@ -177,9 +168,7 @@ it('classifies a dpkg failure rather than calling it unknown', function () {
 
     $run->refresh();
 
-    // The most actionable failure there is, and the one whose detail lives in
-    // the dpkg log rather than this output — so it must not be flattened into
-    // 'unknown'.
+    // The detail lives in the dpkg log, not this output, so it must not be flattened into 'unknown'.
     expect($run->status)->toBe(SecurityUpdateStatus::Failed)
         ->and($run->reason)->toBe('dpkg')
         ->and($run->exit_code)->toBe(1)
@@ -189,8 +178,7 @@ it('classifies a dpkg failure rather than calling it unknown', function () {
 it('says apt was busy rather than blaming the upgrade', function () {
     $binary = $this->binary;
 
-    // One attempt only, so the test does not sit through the real ten minutes
-    // of lock waiting.
+    // One attempt only, so the test skips the real ten minutes of lock waiting.
     config(['server.apt.lock_attempts' => 1, 'server.apt.lock_delay_ms' => 100]);
 
     Process::fake(function ($process) use ($binary) {
@@ -211,15 +199,13 @@ it('says apt was busy rather than blaming the upgrade', function () {
         app(ActivityLogger::class),
     );
 
-    // apt's own timer running the very thing being asked for is the common
-    // case here, not an edge one, and "it failed" would be the wrong word.
+    // apt's own timer running the same upgrade is the common case, and "it failed" is the wrong word.
     expect($run->refresh()->reason)->toBeIn(['locked', 'stale_lock']);
 });
 
 it('gives up on a run whose worker disappeared', function () {
-    // The upgrade restarts the panel's services and the queue worker is one of
-    // them. Nothing settles the row in that case, and the screen would poll a
-    // run that can never advance — while every new run is refused behind it.
+    // The upgrade restarts the panel's services, the queue worker among them. Nothing then
+    // settles the row: the screen would poll a run that never advances while new runs are refused.
     $run = app(SecurityUpdateTracker::class)->start(null);
 
     $run->forceFill([
@@ -233,7 +219,7 @@ it('gives up on a run whose worker disappeared', function () {
     expect($status->json('security_update.status'))->toBe('failed')
         ->and($status->json('security_update.reason'))->toBe('worker');
 
-    // And the refusal is lifted, or the button would be dead forever.
+    // The refusal is lifted, or the button would stay dead.
     Queue::fake();
     startRun()->assertStatus(202);
 });
@@ -245,8 +231,7 @@ it('does not let a late worker rewrite a run age already settled', function () {
     $run->forceFill(['started_at' => now()->subSeconds($tracker->staleAfter() + 60)])->save();
     $tracker->reconcile();
 
-    // The job finishing afterwards must not quietly replace the account the
-    // screen has already given.
+    // The job finishing afterwards must not replace the outcome the screen already showed.
     $tracker->succeed($run, 0, 2, false);
 
     expect($run->refresh()->status)->toBe(SecurityUpdateStatus::Failed)
@@ -258,8 +243,7 @@ it('marks the row failed when the job itself dies', function () {
 
     (new InstallSecurityUpdates($run->getKey()))->failed(null);
 
-    // Without this the row waits out the whole staleness window before anyone
-    // is told, and the button stays refused for that long.
+    // Otherwise the row waits out the whole staleness window and the button stays refused.
     expect($run->refresh()->status)->toBe(SecurityUpdateStatus::Failed)
         ->and($run->reason)->toBe('worker');
 });
@@ -274,8 +258,8 @@ it('withholds the captured output from a viewer who cannot manage settings', fun
     test()->withHeader('Authorization', 'Bearer '.$viewer->createToken('t')->plainTextToken)
         ->getJson('/api/settings/updates/run')
         ->assertOk()
-        // Watching is allowed; reading apt's output is not. It can carry
-        // conffile diffs, debconf answers and mirror URLs.
+        // Watching is allowed; reading apt's output is not: it can carry conffile diffs,
+        // debconf answers and mirror URLs.
         ->assertJsonPath('security_update.output', null)
         ->assertJsonPath('security_update.status', 'running');
 });
@@ -287,8 +271,8 @@ it('carries the run on the settings payload, so the first paint is not blank', f
     test()->withHeaders(runHeaders())
         ->getJson('/api/settings')
         ->assertOk()
-        // The most likely moment to open this page is just after pressing the
-        // button, and waiting for the first poll would show no run at all.
+        // The page is most likely opened right after pressing the button; waiting for the first
+        // poll would show no run.
         ->assertJsonPath('settings.updates.security_update.status', 'running');
 });
 
@@ -313,9 +297,7 @@ it('runs unattended-upgrades own binary, not apt-get upgrade', function () {
 
     $invoked = collect($runs)->first(fn ($call) => in_array($binary, $call['command'], true));
 
-    // The button sits under a toggle promising "security patches only" and a
-    // count produced by apt-check. `apt-get upgrade` would upgrade everything
-    // on the box — a larger promise than the card makes.
+    // The card promises "security patches only"; `apt-get upgrade` would upgrade everything.
     expect($invoked)->not->toBeNull()
         ->and($invoked['command'])->toContain('-v')
         ->and(collect($runs)->pluck('command')->flatten()->all())->not->toContain('dist-upgrade')
@@ -324,8 +306,7 @@ it('runs unattended-upgrades own binary, not apt-get upgrade', function () {
 
 it('is unique box-wide, because apt is', function () {
     expect((new InstallSecurityUpdates(1))->uniqueId())->toBe('security-updates')
-        // The unique lock must expire, or a dead worker black-holes every
-        // future run for this id forever.
+        // The unique lock must expire, or a dead worker blocks every future run for this id.
         ->and((new InstallSecurityUpdates(1))->uniqueFor())
         ->toBeGreaterThan((new InstallSecurityUpdates(1))->timeout);
 });
@@ -340,15 +321,13 @@ it('keeps the output bounded and redacted', function () {
     $text = $output->text();
 
     expect(strlen($text))->toBeLessThanOrEqual(SecurityUpdateOutput::MAX_BYTES)
-        // Bounded from the end: what the run said last is the part worth
-        // reading, so the oldest lines are what goes.
+        // Bounded from the end: the last lines are the ones worth reading, so the oldest go.
         ->and($text)->toContain('All upgrades installed')
         ->and($text)->not->toContain('repo.example.com')
-        // And never a fragment — a half line reads as a complete statement.
+        // Never a fragment: a half line reads as a complete statement.
         ->and($text)->toStartWith('padding that goes on and on');
 
-    // And the credential never reaches the buffer, even on a line that is not
-    // the error.
+    // The credential never reaches the buffer, even on a line that is not the error.
     $fresh = new SecurityUpdateOutput;
     $fresh->push('Fetched https://deploy:s3cr3t@repo.example.com/ubuntu');
 
@@ -360,14 +339,12 @@ it('reports no package count when the run did not say', function () {
     $output = new SecurityUpdateOutput;
     $output->push("Starting unattended upgrades script\nNo packages found that can be upgraded unattended\n");
 
-    // Null, not zero: "it did not report" and "it upgraded nothing" are
-    // different answers and only the second is a claim.
+    // Null, not zero: "did not report" differs from "upgraded nothing", and only the second is a claim.
     expect($output->packagesUpgraded())->toBeNull();
 });
 
 describe('counting the packages of a real-sized run', function () {
-    // The line comes near the start and the buffer keeps the last 8 KB, so a
-    // 109-package run on the Apache test server reported null.
+    // The line comes near the start and the buffer keeps the last 8 KB, so a long run reported null.
     it('still counts them after the line has scrolled out of the buffer', function () {
         $output = new SecurityUpdateOutput;
         $output->push("Packages that will be upgraded: curl libc6 openssl\n");

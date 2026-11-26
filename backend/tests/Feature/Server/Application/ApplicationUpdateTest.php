@@ -21,8 +21,8 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * One-click update of a site's own software (v7 parity): Moodle, Mautic,
- * Statamic, Craft CMS, Uptime Kuma, phpMyAdmin, Adminer.
+ * One-click update of a site's own software: Moodle, Mautic, Statamic, Craft CMS, Uptime Kuma,
+ * phpMyAdmin, Adminer.
  *
  * What matters here: an update stays inside the installed major, every
  * command runs as the site's user on the site's own PHP, the files that hold
@@ -313,7 +313,7 @@ it('updates Moodle: maintenance on, new code of its branch, upgrade, maintenance
         ->and(UpdateHost::ran('admin/cli/maintenance.php --enable'))->toBeTrue()
         ->and(UpdateHost::ran('admin/cli/maintenance.php --disable'))->toBeTrue();
 
-    // As the site's user, on the site's PHP — not the server default v7 used.
+    // As the site's user, on the site's PHP, not the server default.
     $upgrade = UpdateHost::run('admin/cli/upgrade.php');
     expect(array_slice($upgrade['command'], 0, 3))->toBe(['runuser', '-u', 'siteuser'])
         ->and(implode(' ', $upgrade['command']))->toContain('8.3')
@@ -508,9 +508,8 @@ it('creates and drops its table', function () {
 });
 
 /*
- * n8n and Node-RED (v7's update-n8n / update-node-red). Installed from npm
- * into the site, so the version is read from the site's node_modules and the
- * update is an npm install there — as the site user, with the site's Node,
+ * n8n and Node-RED: installed from npm into the site, so the version is read from the site's
+ * node_modules and the update is an npm install there, as the site user with the site's Node,
  * inside the installed major, never to a pre-release npm tags `next`.
  */
 function npmApp(string $type, string $installed, ?string $node = '24.11.0'): Application
@@ -637,13 +636,11 @@ it('puts n8n back when the new version never comes up', function () {
         ->and(UpdateHost::ran("mv -- {$root}/.node_modules.pre-update {$root}/node_modules"))->toBeTrue();
 });
 
-// ---------------------------------------------------------------- the step while it runs (RC-12)
+// ---------------------------------------------------------------- the step while it runs
 
 /**
- * `step` used to be set only when an update failed, so a running update read
- * `status: running` and nothing else — for the several minutes Moodle's
- * package and upgrade take. It now follows the update: each phase is written
- * to the row as it starts, and the same field says where a failure stopped.
+ * `step` follows the update: each phase is written to the row as it starts, and the same field
+ * says where a failure stopped.
  */
 it('shows the phase an update is in while it runs, and moves it as each phase starts', function () {
     $application = updateApp('moodle');

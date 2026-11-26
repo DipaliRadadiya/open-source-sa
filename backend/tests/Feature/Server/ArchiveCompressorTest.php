@@ -16,19 +16,11 @@ use Illuminate\Support\Str;
 uses(RefreshDatabase::class);
 
 /*
- * `tar -czf` is gzip level 6 on exactly one core.
+ * `tar -czf` is gzip level 6 on exactly one core. `pigz` produces the same format across all
+ * cores, so `tar -tzf`, the verify step and existing archives keep working.
  *
- * Measured on a 103 GB site, 8 cores: 67 minutes, gzip pinned at 99.5% of one
- * core with seven idle, and the output was 99.46% of the input. An hour of CPU
- * for a 0.54% saving, because the data was already-compressed media.
- *
- * `pigz` is the same format across all cores. The artefact does not change —
- * `tar -tzf`, the verify step and every archive already sitting in a bucket
- * keep working, confirmed against GNU tar 1.35 before this shipped.
- *
- * The fallback is the load-bearing part: the updater ships code, never
- * packages, so a build that *required* pigz would work on every fresh install
- * and break every existing one.
+ * The fallback is the load-bearing part: the updater ships code, never packages, so a build that
+ * *required* pigz would work on every fresh install and break every existing one.
  */
 
 function archiveContext(): BackupContext
@@ -64,12 +56,9 @@ function archiveContext(): BackupContext
 /**
  * Run the step against a stubbed ServerOps and hand back the argv it built.
  *
- * `ServerOps` is mocked rather than the Process facade: the step is what
- * assembles the command, and mocking one layer lower would test Laravel's
- * process plumbing instead. The stub also has to leave a real file behind —
- * the step does `is_file($archive)` afterwards, so a fake that records the
- * call and writes nothing would assert against the error path rather than the
- * command. See `feedback_a-static-fake-is-not-a-server`.
+ * `ServerOps` is mocked rather than the Process facade: the step assembles the command, and
+ * mocking lower would test Laravel's process plumbing. The stub must leave a real file behind,
+ * because the step does `is_file($archive)` afterwards.
  *
  * @return list<string>
  */
@@ -111,9 +100,8 @@ it('compresses with pigz when it is installed', function () {
 });
 
 it('falls back to gzip when pigz is absent', function () {
-    // The case that matters on upgrade. The updater ships code, never
-    // packages, so an existing panel gets this build with no pigz on disk —
-    // and it must still take backups.
+    // The case that matters on upgrade: an existing panel gets this build with no pigz on disk and
+    // must still take backups.
     config()->set('server.backups.compressor', 'gzip');
     config()->set('server.backups.compression_level', 1);
 
@@ -121,9 +109,8 @@ it('falls back to gzip when pigz is absent', function () {
 });
 
 it('clamps a nonsense level instead of failing every backup', function () {
-    // gzip and pigz both reject anything outside 1-9. A typo in an env file
-    // should not take the whole box's backups down with a message about
-    // command-line syntax.
+    // gzip and pigz both reject anything outside 1-9; a typo in an env file must not take every
+    // backup down with a message about command-line syntax.
     config()->set('server.backups.compressor', 'gzip');
     config()->set('server.backups.compression_level', 99);
 
@@ -135,11 +122,8 @@ it('clamps a nonsense level instead of failing every backup', function () {
 });
 
 it('does not cap the archive step at its own hidden hour', function () {
-    // A second hardcoded 3600 lived here, independent of the job timeout. A
-    // 103 GB site takes ~67 minutes to archive with plain gzip, so raising the
-    // job ceiling to six hours still left the *step* to be killed at sixty
-    // minutes — the same backup failing one minute later for a different
-    // reason.
+    // A hardcoded step timeout is independent of the job timeout: raising only the job ceiling
+    // would still kill the *step* at sixty minutes on a very large site.
     $source = file_get_contents(base_path('app/Services/Server/Backups/Steps/ArchiveFiles.php'));
 
     expect($source)->not->toMatch('/timeout:\s*3600/')

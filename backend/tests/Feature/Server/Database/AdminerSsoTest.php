@@ -182,8 +182,7 @@ describe('POST /databases/{database}/adminer-sso', function () {
 
         $root = $this->adminer->rootPath().'/public_html';
 
-        // As root, `tee` would follow a link the site user planted at either
-        // path (the `.panel` class of bug, 2026-09-29).
+        // As root, `tee` would follow a link the site user planted at either path.
         expect($this->ranCommands)->toContain(asAdminerUser("tee {$root}/index.php"))
             ->and($this->ranCommands)->toContain(asAdminerUser("tee {$root}/sso.php"))
             ->and(collect($this->ranCommands)->contains(fn (string $c) => str_starts_with($c, 'tee ')))->toBeFalse();

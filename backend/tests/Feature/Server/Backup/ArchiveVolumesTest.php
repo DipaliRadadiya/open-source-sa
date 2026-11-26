@@ -19,21 +19,17 @@ use Illuminate\Support\Str;
 uses(RefreshDatabase::class);
 
 /*
- * Real tar on real directories, with sudo off — the same approach the excludes
- * tests take, and for the same reason: what tar does with a path is the thing
- * under test, and no fake can show it. Only volume *discovery* is stubbed,
- * because that part needs a Docker daemon; `VolumeSizesDiscoverTest` pins the
- * shape this stub stands in for, so the stub cannot drift from the real one
- * without something failing.
+ * Real tar on real directories, with sudo off: what tar does with a path is the thing under test
+ * and no fake can show it. Only volume *discovery* is stubbed, because that needs a Docker daemon;
+ * `VolumeSizesDiscoverTest` pins the shape the stub stands in for.
  */
 beforeEach(function () {
     config(['server.privilege.sudo' => false]);
 
     $this->tmp = sys_get_temp_dir().'/sv-archive-volumes-'.Str::random(8);
 
-    // Two volumes with distinguishable contents, including a dotfile — an
-    // application's "already initialised" marker is usually a dotfile, and
-    // losing it means first-run setup happens again on restore.
+    // Two volumes with distinguishable contents, including a dotfile: an application's "already
+    // initialised" marker is usually a dotfile, and losing it re-runs first-run setup on restore.
     File::makeDirectory("{$this->tmp}/mounts/data/_data/nested", 0755, true);
     File::put("{$this->tmp}/mounts/data/_data/content.txt", 'the real data');
     File::put("{$this->tmp}/mounts/data/_data/.initialised", 'yes');
@@ -76,8 +72,8 @@ afterEach(function () {
 /**
  * Stands in for the one call that needs a Docker daemon.
  *
- * `find()` is what the step asks (S-02: null, Docker did not answer, is not
- * "no volumes"); `discover()` is the same answer with null folded to `[]`.
+ * `find()` is what the step asks (null, Docker did not answer, is not "no volumes");
+ * `discover()` is the same answer with null folded to `[]`.
  */
 function stubDiscovery(?array $volumes): void
 {
@@ -90,10 +86,8 @@ function stubDiscovery(?array $volumes): void
 /**
  * Run the step and hand back the context it filled in.
  *
- * Takes its state as arguments rather than reaching through `test()`: a helper
- * that reads the test case's properties is a helper that only works from one
- * place, and the failure when it does not is an undefined-property error
- * pointing at the test class rather than at the mistake.
+ * Takes its state as arguments rather than reaching through `test()`, so it works from any
+ * place and fails at the call, not with an undefined property on the test class.
  */
 function runArchiveVolumes(BackupTarget $target, string $working): BackupContext
 {
@@ -144,9 +138,8 @@ it('writes one tar per volume, holding the volume contents at the archive root',
 
     $listing = shell_exec('tar -tf '.escapeshellarg($tar));
 
-    // Relative to the mountpoint, not `/var/lib/docker/volumes/...`. An archive
-    // of absolute paths can only ever be poured back where it came from, and a
-    // restore runs against a volume whose host path is a different string.
+    // Relative to the mountpoint, not `/var/lib/docker/volumes/...`: an archive of absolute paths
+    // can only be restored where it came from, and a restore volume has a different host path.
     expect($listing)->toContain('./content.txt')
         ->and($listing)->toContain('./nested/deep.txt')
         // The dotfile, which `find -delete`-then-extract on restore depends on.
@@ -224,8 +217,8 @@ it('records an empty volume list rather than nothing at all', function () {
 });
 
 it('fails a volumes-only run of a site with no volumes, saying so (S-02)', function () {
-    // IT-Tools declares no volumes. Before, the step found nothing, the archive
-    // step after it refused an empty tar, and the row blamed the disk.
+    // A site that declares no volumes must fail here with that reason, not later with the archive
+    // step refusing an empty tar and the row blaming the disk.
     $this->target->update(['type' => 'volumes']);
     stubDiscovery([]);
 

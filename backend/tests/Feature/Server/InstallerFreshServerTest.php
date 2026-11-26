@@ -1,16 +1,12 @@
 <?php
 
 /*
- * install.sh's fresh-server check, run for real: preflight() against a file
- * tree laid out like a server under a temporary root, with every command it
- * asks (ss, systemctl, mysql, psql, mongosh, redis-cli, docker) stubbed.
+ * install.sh's fresh-server check, run for real: preflight() against a file tree laid out
+ * like a server under a temporary root, with every command it asks (ss, systemctl, mysql,
+ * psql, mongosh, redis-cli, docker) stubbed.
  *
- * Why (2026-10-18): the one-command install was run by mistake on a busy dev
- * server — 26 sites, MariaDB, Redis, PHP-FPM pools — and preflight accepted
- * it. The installer upgraded packages, installed Docker and Postfix, rewrote
- * redis.conf and restarted Redis, and changed that server's PHP-FPM, before
- * failing at step 14. Adarsh: "the installer should stop on the servers that
- * aren't fresh. Also, we don't want false positives."
+ * The installer must stop on a server that is not fresh (no changes made), and must not give
+ * false positives on a stock cloud image.
  */
 
 /** Ubuntu release => [codename, PHP]. */
@@ -45,11 +41,10 @@ function freshAnswer(array $box, string $name, ?string $content, int $exit = 0):
 }
 
 /**
- * A stock cloud image of this release with everything §3 of the card lists as
- * harmless on it: snapd and lxd, cloud-init, unattended-upgrades, every
- * provider's guest agent, a swap file, ufw and fail2ban, sshd drop-ins, extra
- * sudo users, an MTA, Python, Node and PHP CLIs, Docker Engine with nothing
- * in it, an empty MariaDB (or MySQL), PostgreSQL, MongoDB and Redis, PHP-FPM
+ * A stock cloud image of this release with everything that is harmless on it: snapd and lxd,
+ * cloud-init, unattended-upgrades, every provider's guest agent, a swap file, ufw and
+ * fail2ban, sshd drop-ins, extra sudo users, an MTA, Python, Node and PHP CLIs, Docker Engine
+ * with nothing in it, an empty MariaDB (or MySQL), PostgreSQL, MongoDB and Redis, PHP-FPM
  * with only `www`, and nginx and Apache serving only their default pages.
  *
  * @return array{dir: string, root: string, bin: string, answers: string}
@@ -509,10 +504,8 @@ describe('a re-run', function () {
         'the panel\'s checkout' => [fn ($r) => freshPanelCheckout($r), 'the panel in '],
     ]);
 
-    // Review finding R2. `panel` is a generic name: a directory at
-    // /var/www/panel or an account called panel used to be enough to skip the
-    // check, and the installer then deleted that directory as a leftover
-    // clone. Somebody else's application there is not ours.
+    // `panel` is a generic name: a directory at /var/www/panel or an account called panel must
+    // not skip the check, or the installer would delete somebody else's application.
     it('does not take :dataset for a re-run', function (Closure $mark) {
         $box = freshImage();
         freshPut($box['root'], '/etc/nginx/sites-enabled/customer.example.com', "server {}\n");

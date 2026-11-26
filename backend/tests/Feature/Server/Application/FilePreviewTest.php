@@ -12,16 +12,12 @@ use Tests\Support\FakeCommandPipe;
 /**
  * The file manager can show an image.
  *
- * Before this endpoint it could not: `files/content` refuses anything binary,
- * and `files/download` deliberately labels every file `application/octet-stream`
- * so that nothing the panel returns can be interpreted by the browser. A
- * picture in a site's uploads folder was listed and never viewable.
+ * `files/content` refuses anything binary, and `files/download` labels every file
+ * `application/octet-stream` so the browser never interprets it.
  *
- * This is therefore the one response here a browser is asked to render, and
- * the tests below are mostly about keeping that narrow: the content type comes
- * from the file's own bytes, an SVG is refused, an oversized file is refused
- * before it is read, and the headers say the browser may not second-guess any
- * of it.
+ * This is the one response a browser is asked to render, so the tests keep it narrow: the
+ * content type comes from the file's own bytes, an SVG is refused, an oversized file is
+ * refused before it is read, and the headers forbid the browser from second-guessing it.
  */
 class PreviewFake
 {
@@ -65,9 +61,8 @@ beforeEach(function () {
         'php_version' => '8.4',
     ]);
 
-    // The recorded stack, for the reason ApplicationFileTest gives: without it
-    // the browser detects one by reading /etc on whatever machine runs the
-    // suite.
+    // The recorded stack, as in ApplicationFileTest: otherwise the browser detects one by
+    // reading /etc on the machine running the suite.
     ServerCapability::query()->delete();
     ServerCapability::query()->create([
         'stack' => 'lemp',
@@ -83,16 +78,13 @@ beforeEach(function () {
 /**
  * A server holding one file, whose bytes are whatever the test set.
  *
- * `head` returns a prefix rather than the whole thing, like the real one: the
- * sniff has to work on the first few hundred bytes, and a fake that answered
- * with the entire file would hide it if it ever stopped.
+ * `head` returns a prefix rather than the whole file, like the real one: the sniff has to
+ * work on the first few hundred bytes.
  */
 function fakePreviewServer(): void
 {
-    // The `cat` that produces the image streams through `proc_open`, which
-    // `Process::fake()` cannot intercept — without this it would run
-    // `sudo runuser … cat` against the machine running the suite. Same bytes
-    // as the Process fake below, from the same place.
+    // The `cat` that produces the image streams through `proc_open`, which `Process::fake()`
+    // cannot intercept: without this it would run `sudo runuser … cat` on the test machine.
     FakeCommandPipe::reset();
     FakeCommandPipe::$resolver = fn (): array => [PreviewFake::$content, 0];
 
@@ -143,18 +135,14 @@ it('serves an image with its own content type', function () {
         ->assertHeader('x-content-type-options', 'nosniff')
         ->assertHeader('content-security-policy', "default-src 'none'; sandbox");
 
-    // `rtrim`, and only here: Laravel's fake process appends a newline to the
-    // output it was handed, which `cat` does not. The bytes either side of it
-    // are the file's own, which is what this asserts.
+    // `rtrim`, only here: Laravel's fake process appends a newline that `cat` does not.
     expect($response->headers->get('content-disposition'))->toStartWith('inline;')
         ->and(rtrim($response->streamedContent(), "\n"))->toBe(pngBytes());
 });
 
 it('reads the type from the bytes, never from the name', function () {
-    // The whole reason this endpoint may set a real content type at all. A
-    // file named `.png` holding markup must not come back as an image — a
-    // browser that sniffs past our header would then run it on the API's own
-    // origin.
+    // A file named `.png` holding markup must not come back as an image: a browser that
+    // sniffs past our header would run it on the API's own origin.
     PreviewFake::$content = '<html><script>alert(1)</script></html>';
 
     previewResponse('avatar.png')
@@ -163,9 +151,8 @@ it('reads the type from the bytes, never from the name', function () {
 });
 
 it('refuses an SVG, and says that is why', function () {
-    // Its own message rather than "not an image": an SVG *is* an image, and
-    // the user needs to know it was withheld deliberately. It is refused
-    // because it can carry script and this response is inline and same-origin.
+    // Its own message rather than "not an image": an SVG is refused deliberately, because it can
+    // carry script and this response is inline and same-origin.
     PreviewFake::$content = '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"></svg>';
 
     previewResponse('icon.svg')
@@ -174,8 +161,7 @@ it('refuses an SVG, and says that is why', function () {
 });
 
 it('does not mistake other XML for an SVG', function () {
-    // A sitemap is not an image and not an SVG, and telling someone their XML
-    // was withheld for carrying script would be a confident wrong answer.
+    // A sitemap is not an SVG: saying its XML was withheld for carrying script would be wrong.
     PreviewFake::$content = '<?xml version="1.0"?><urlset><url><loc>https://shop.test</loc></url></urlset>';
 
     previewResponse('sitemap.xml')
@@ -191,8 +177,7 @@ it('refuses an oversized image without reading it', function () {
         ->assertStatus(422)
         ->assertJsonPath('message', __('errors/application.file_too_large_to_preview'));
 
-    // Checked against the stat, so an image too big to show costs a refusal
-    // rather than a transfer.
+    // Checked against the stat, so an oversized image costs a refusal, not a transfer.
     expect(PreviewFake::$ran)->not->toContain('cat /home/siteowner/shop/logo.png');
 });
 
@@ -206,9 +191,8 @@ it('takes the cap from configuration', function () {
 });
 
 it('refuses a caller without file permission', function () {
-    // A user with a different permission entirely, not a user with none: the
-    // question is whether this route is gated on `app_file`, and a caller who
-    // can do nothing at all would pass that test for the wrong reason.
+    // A user with a different permission, not none: a caller who can do nothing would pass
+    // for the wrong reason, and the point is that the route is gated on `app_file`.
     $outsider = User::factory()->create();
     grantPermission($outsider, 'app_backup');
 

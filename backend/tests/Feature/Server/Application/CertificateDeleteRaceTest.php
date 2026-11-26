@@ -22,23 +22,17 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /*
- * Issuing a site's certificate while the site is being deleted (2026-10-21,
- * found live on the Apache test server).
+ * Issuing a site's certificate while the site is being deleted: `certbot delete` fails on
+ * certbot's own lock, the site goes, then the issuance leaves a lineage for a site that no
+ * longer exists.
  *
- * The delete's `certbot delete` failed with "Another instance of Certbot is
- * already running" because the issuance held certbot's own lock; the delete
- * went on and removed the site; certbot then finished and created a lineage
- * for a site that no longer existed, and the job crashed reading it — a failed
- * job and a certificate renewing forever for nothing.
+ * Pinned here: the two take turns on the site's name (CertificateLock); a job finding the lock
+ * held goes back on the queue rather than waiting in the worker; whatever an issuance made for
+ * a site deleted some other way is removed (unless a live site now owns that name) and never by
+ * guessing at another site's certificate.
  *
- * Pinned here: the two take turns on the site's name (CertificateLock); a job
- * finding the lock held goes back on the queue rather than waiting inside the
- * worker; whatever an issuance made for a site deleted some other way is
- * removed — unless a live site now owns that name — and never by guessing at
- * another site's certificate.
- *
- * Nothing here runs certbot: every process goes to the fake host below, which
- * creates a lineage only when `certonly` finishes, as certbot does.
+ * Nothing here runs certbot: every process goes to the fake host below, which creates a
+ * lineage only when `certonly` finishes, as certbot does.
  */
 class CertRaceHost
 {
@@ -308,8 +302,7 @@ describe('a site delete while its certificate is being issued', function () {
 
         runRaceJob(new IssueCertificate($certificate->id));
 
-        // Nothing at all ran for the delete — not even the stranded-install
-        // close or a read of the server.
+        // Nothing ran for the delete, not even the stranded-install close or a server read.
         expect($seen['status'])->toBe(503)
             ->and($seen['code'])->toBe('server_busy')
             ->and($seen['reference'])->toBeString()->not->toBe('')
@@ -334,8 +327,7 @@ describe('a site delete while its certificate is being issued', function () {
         $certificate = pendingCertificate($this->application);
         $during = null;
 
-        // The job is picked up while the delete is removing the site's vhost —
-        // after the certificate step, before the row is gone.
+        // Picked up while the delete removes the vhost: after the certificate step, before the row goes.
         CertRaceHost::$on['sites-available/shop.conf'] = function () use ($certificate, &$during) {
             $before = count(CertRaceHost::$commands);
             runRaceJob((new IssueCertificate($certificate->id))->onQueue('high'));
@@ -667,10 +659,9 @@ function activeRaceCertificate(Application $application): Certificate
 }
 
 /*
- * Uploading or removing a site's certificate while it is being issued
- * (2026-10-22). Both revoke the site's Let's Encrypt lineage, the same
- * `certbot delete` the site delete lost to certbot's lock, so they take the
- * same turn on the site's name.
+ * Uploading or removing a site's certificate while it is being issued. Both revoke the site's
+ * Let's Encrypt lineage with the same `certbot delete`, so they take the same turn on the
+ * site's name.
  */
 describe('removing or uploading a certificate while one is being issued', function () {
     $keyPair = function (string $commonName): array {
@@ -692,8 +683,7 @@ describe('removing or uploading a certificate while one is being issued', functi
             $seen = [
                 'status' => $response->status(),
                 'code' => $response->json('code'),
-                // Anything that changes the server; a read such as `which node`
-                // from request setup is not part of the removal.
+                // Only commands that change the server; a read such as `which node` is not removal.
                 'commands' => array_values(array_filter(
                     array_slice(CertRaceHost::lines(), $before),
                     fn (string $line): bool => preg_match('#certbot|^tee |^rm |^mv |sites-available|systemctl#', $line) === 1,

@@ -60,12 +60,9 @@ it('records a deploy that succeeded, with its commit', function () {
         return match (true) {
             in_array('rev-parse', $process->command, true) => Process::result(output: 'a1b2c3d4e5f6'),
             in_array('log', $process->command, true) => Process::result(output: "Fix the checkout bug\nAda Lovelace"),
-            // A deploy now ends by curling the deployed URL and treating a
-            // non-2xx as failure — "deployed" and "working" are the same thing
-            // to the user. `--write-out %{http_code}` means the status code is
-            // the command's entire stdout, and a fake that returns nothing
-            // reads as HTTP 0: this test recorded a *failed* deploy for
-            // reasons that had nothing to do with what it was testing.
+            // A deploy ends by curling the deployed URL and fails on non-2xx. With
+            // `--write-out %{http_code}` the code is the whole stdout, so a fake returning nothing
+            // reads as HTTP 0 and records a failed deploy.
             ($process->command[0] ?? '') === 'curl' => Process::result(output: '200'),
             default => Process::result(exitCode: 0),
         };
@@ -88,8 +85,7 @@ it('records a deploy that succeeded, with its commit', function () {
 
 it('keeps the record of a deploy that failed, and says where', function () {
     Process::fake(function ($process) {
-        // The fetch fails — the site keeps serving what it was serving, and
-        // the row is the only evidence anything happened.
+        // The fetch fails: the site keeps serving what it served, and the row is the only evidence.
         return in_array('fetch', $process->command, true) || in_array('clone', $process->command, true)
             ? Process::result(errorOutput: 'fatal: repository not found', exitCode: 128)
             : Process::result(exitCode: 0);
@@ -104,18 +100,15 @@ it('keeps the record of a deploy that failed, and says where', function () {
 
     expect($deployment->status)->toBe(DeploymentStatus::Failed)
         ->and($deployment->failed_step)->not->toBeNull()
-        // And why, in words (FS-C22): this used to stay null.
+        // And why, in words.
         ->and($deployment->failed_reason)->toBe('git_repository_unreachable')
-        // The output is the whole point: "failed" without it is an invitation
-        // to guess.
+        // "Failed" without the output leaves the user guessing.
         ->and($deployment->output)->toContain('repository not found');
 });
 
 it('records the commit on a deploy that failed after checking it out', function () {
-    // The commit was written only on success, so every deploy that failed at
-    // the script, a restart or the verify showed "No commit message" for code
-    // that had definitely been pulled — at the exact moment somebody needs to
-    // know which revision they are looking at.
+    // A deploy failing at the script, a restart or the verify has already pulled the code, so
+    // its commit must be shown (not "No commit message").
     Process::fake(function ($process) {
         return match (true) {
             in_array('rev-parse', $process->command, true) => Process::result(output: 'a1b2c3d4e5f6'),
@@ -141,9 +134,8 @@ it('records the commit on a deploy that failed after checking it out', function 
 });
 
 it('records no commit when the deploy failed before checking one out', function () {
-    // The other half, and it is not a gap. A deploy that could not fetch has
-    // no revision to name, and inventing one — the previous release, say —
-    // would point somebody at code that was never the problem.
+    // A deploy that could not fetch has no revision to name; inventing one would point at
+    // code that was never the problem.
     Process::fake(function ($process) {
         return in_array('fetch', $process->command, true) || in_array('clone', $process->command, true)
             ? Process::result(errorOutput: 'fatal: repository not found', exitCode: 128)
@@ -164,8 +156,7 @@ it('records no commit when the deploy failed before checking one out', function 
 it('never stores a credential that leaked into the output', function () {
     $recorder = app(DeploymentRecorder::class);
 
-    // Every one of these is a real shape: a git remote carrying a token, a
-    // package manager printing an auth header, a provider's own token format.
+    // Real shapes: a git remote carrying a token, a package manager auth header, a provider token.
     $dirty = <<<'OUT'
     fatal: could not read from https://oauth2:ghp_AbCdEfGhIjKlMnOpQrStUvWxYz012345@github.com/acme/app.git
     npm ERR! authorization: Bearer npm_9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c
@@ -179,8 +170,7 @@ it('never stores a credential that leaked into the output', function () {
         ->not->toContain('npm_9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c')
         ->not->toContain('hunter2correcthorse')
         ->not->toContain('glpat-XxYyZz1234567890ab')
-        // Still readable — a redaction that eats the whole message would make
-        // the feature useless.
+        // Still readable: redaction must not eat the whole message.
         ->toContain('could not read from')
         ->toContain('github.com/acme/app.git');
 });
@@ -194,8 +184,7 @@ it('keeps only the most recent deploys', function () {
         $recorder->open($this->application, DeploymentTrigger::Manual, $this->admin->id);
     }
 
-    // Unbounded, this is the table that quietly fills a self-hosted SQLite
-    // database — every row carries build output.
+    // Every row carries build output; unbounded, this table fills a self-hosted SQLite database.
     expect(Deployment::count())->toBe(3);
 });
 
@@ -227,8 +216,7 @@ it('opens the row before queueing so the screen has something to show', function
         ->postJson("/api/applications/{$this->application->id}/deployments")
         ->assertStatus(202);
 
-    // Without this the user clicks Deploy, sees nothing for a few seconds, and
-    // clicks again.
+    // Without the row the user sees nothing after clicking Deploy and clicks again.
     expect($response->json('deployment.status'))->toBe('queued')
         ->and($response->json('deployment.in_flight'))->toBeTrue();
 
@@ -250,8 +238,7 @@ it('closes the row when the worker dies outright', function () {
     (new DeployApplication($this->application->id, $this->admin->id, $deployment->id))
         ->failed(new RuntimeException('worker died'));
 
-    // Left running, the screen shows a spinner that never stops on a deploy
-    // that is not happening.
+    // Left running, the screen shows a spinner for a deploy that is not happening.
     expect($deployment->fresh()->status)->toBe(DeploymentStatus::Failed);
 });
 
@@ -267,8 +254,7 @@ it('keeps the output off the list and on the detail view', function () {
         ->getJson("/api/applications/{$this->application->id}/deployments")
         ->assertOk();
 
-    // Fifty deploys each carrying a full build log is a response nobody asked
-    // for.
+    // Fifty full build logs would bloat the list response.
     expect($list->json('deployments.0'))->not->toHaveKey('output');
 
     $this->actingAs($this->admin)
@@ -325,11 +311,9 @@ it('has no deployment screen at all on a site that cannot deploy', function () {
 });
 
 /*
- * Deploys are in place: the checkout replaces the files before the script,
- * the dependency check and the verify run. A deploy that failed in one of
- * those left the new commit live while `last_commit` (success only) still
- * named the old one, and the panel reported the old code as running. Found
- * on a real server, 2026-09-24.
+ * Deploys are in place: the checkout replaces the files before the script, the dependency check
+ * and the verify run. A deploy failing in one of those leaves the new commit live while
+ * `last_commit` (success only) still names the old one.
  */
 describe('which commit is on disk', function () {
     /** Deploy with `rev-parse` answering $commit; `$failChown` fails it after the checkout. */
@@ -406,9 +390,8 @@ describe('which commit is on disk', function () {
 });
 
 /*
- * What the Deployment screen polls while it is open. A deploy started by a
- * push ran behind the page, which only polled after its own button, so the
- * history stayed stale until a reload (reported 2026-09-24).
+ * What the Deployment screen polls while it is open: a deploy started by a push runs behind the
+ * page, which otherwise only polls after its own button.
  */
 describe('the newest deploy', function () {
     function latestUrl(): string
@@ -431,8 +414,7 @@ describe('the newest deploy', function () {
             ->assertJsonPath('latest.trigger', 'webhook');
 
         expect($response->json('latest'))->not->toHaveKey('output')
-            // The same keys as a row of the history, so the screen can put it
-            // straight at the top.
+            // The same keys as a history row, so the screen can put it straight at the top.
             ->and(array_keys($response->json('latest')))->toBe(array_keys(
                 $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}/deployments")->json('deployments.0'),
             ));
@@ -460,9 +442,8 @@ describe('the newest deploy', function () {
 });
 
 it('joins the deploy already waiting instead of leaving a row nothing will run', function () {
-    // DeployApplication is unique until processing, so Laravel drops a second
-    // dispatch while one waits. The row used to be opened regardless — a push
-    // during a queued deploy on the Apache test box left one `queued` forever.
+    // DeployApplication is unique until processing, so Laravel drops a second dispatch while one
+    // waits; opening a row regardless would leave it `queued` forever.
     Queue::fake();
 
     $first = $this->actingAs($this->admin)
@@ -496,8 +477,8 @@ it('queues a fresh deploy once the waiting one has been picked up', function () 
         ->postJson("/api/applications/{$this->application->id}/deployments")
         ->json('deployment.id');
 
-    // A push during a *running* deploy must still queue one behind it — that
-    // deploy started before the new commit existed.
+    // A push during a running deploy must still queue one behind it: that deploy started before
+    // the new commit existed.
     expect($second)->not->toBe($first)
         ->and($this->application->deployments()->count())->toBe(2);
 

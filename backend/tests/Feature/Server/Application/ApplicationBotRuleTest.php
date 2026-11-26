@@ -9,18 +9,10 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * Custom bot rules: a site's own additions to, and exemptions from, the
- * built-in AI bot list.
+ * Custom bot rules: a site's own additions to, and exemptions from, the built-in AI bot list.
  *
- * The built-in list is curated and carries a review date, which is another
- * way of saying it will be wrong for somebody. Without an exemption the only
- * way to get one crawler back was to switch the whole policy off and unblock
- * all 23; without an addition, the SEO scrapers people actually complain
- * about had nowhere to go.
- *
- * The two things these lock down: the value is refused rather than sanitised
- * (it lands in an elevated-process config file), and a generic value like
- * `bot` — which would also match Googlebot — is refused by name.
+ * A value is refused rather than sanitised (it lands in an elevated-process config file), and a
+ * generic value like `bot` — which would also match Googlebot — is refused by name.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -244,10 +236,8 @@ it('still accepts the real crawler names people actually type', function (string
 })->with(['SemrushBot', 'AhrefsBot', 'BLEXBot', 'anthropic-ai', 'SemrushBot-OCOB', 'GPTBot/1.3']);
 
 it('refuses a robots.txt-only token, which no visitor ever sends', function (string $value) {
-    // Google-Extended and Applebot-Extended were accepted here, and in the
-    // training list, on the belief that blocking them opts a site out of
-    // Gemini/Apple AI training. They are robots.txt tokens: Google and Apple
-    // crawl as Googlebot/Applebot, so a user-agent block on them never matches.
+    // Google-Extended and Applebot-Extended are robots.txt tokens, not user agents: the crawlers
+    // identify as Googlebot/Applebot, so a user-agent block on them never matches.
     fakeBotRuleServer();
 
     $this->withHeaders(botRuleHeaders())
@@ -322,11 +312,9 @@ describe('the rules a reload has to survive', function () {
     });
 
     it('survives the reload-then-save that used to delete every rule', function () {
-        // The whole chain, in one test. Save rules, reload the page, save
-        // again with exactly what the reload returned. Before the relation was
-        // loaded the reload returned nothing, the screen sent `[]`, and the
-        // API — correctly, since absent means "leave alone" and empty means
-        // "none" — deleted them all.
+        // The whole chain: save rules, reload, save again with what the reload returned. Without
+        // the relation loaded the reload returned nothing, the screen sent `[]`, and the API
+        // deleted every rule.
         fakeBotRuleServer();
 
         $this->withHeaders(botRuleHeaders())
@@ -355,9 +343,8 @@ describe('the rules a reload has to survive', function () {
 });
 
 /*
- * Bug #85: a block rule matches anywhere in the user agent, so `Chrome`,
- * `Windows`, `Android` or `Googlebot/2.1` were accepted and blocked every
- * real visitor — or Google. Tested against real user agents, not a word list.
+ * A block rule matches anywhere in the user agent, so `Chrome`, `Windows`, `Android` or
+ * `Googlebot/2.1` would block every real visitor — or Google. Tested against real user agents.
  */
 it('refuses a block that would match real browsers or search engines', function (string $value, string $who) {
     fakeBotRuleServer();

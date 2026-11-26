@@ -5,10 +5,9 @@ use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\Process;
 
 /*
- * `useradd: cannot lock /etc/passwd; try again later.` — reported from a real
- * server moments after install.sh finished, while apt was still holding the
- * account lock. The command never started, so it was a hard error for
- * something that would have worked seconds later.
+ * `useradd: cannot lock /etc/passwd; try again later.` right after install.sh finishes, while apt
+ * still holds the account lock. The command never started, so it must be retried, not reported as
+ * a hard error.
  */
 
 beforeEach(function () {
@@ -79,8 +78,7 @@ it('does not retry a genuine failure', function () {
 
     $result = $this->ops->run(['useradd', '-m', 'deploy']);
 
-    // Retrying this would waste the user's time and change nothing — and for
-    // a command that had half-completed it could do real damage.
+    // Retrying would change nothing, and for a half-completed command it could do damage.
     expect($result->failed())->toBeTrue()
         ->and($attempt)->toBe(1)
         ->and($result->busy)->toBeFalse();
@@ -124,9 +122,8 @@ it('answers a busy system with 503 and a retryable code, not a 500', function ()
 
     $response = $exception->render(request());
 
-    // 500 tells the operator their server is broken. It is merely occupied,
-    // and the frontend needs a stable code to offer "try again" without
-    // matching translated prose.
+    // 500 would say the server is broken; it is merely occupied. The stable code lets the frontend
+    // offer "try again" without matching translated prose.
     expect($response->getStatusCode())->toBe(503)
         ->and($response->getData(true)['code'])->toBe('server_busy')
         ->and($response->getData(true)['message'])->toBe(__('errors/server.busy'))
@@ -159,10 +156,8 @@ it('has the busy message in every locale', function () {
 
 describe('a lock nobody holds', function () {
     it('reports a stale lock apart from a busy system', function () {
-        // Same stderr either way. What separates them is that this one
-        // survived every retry, which means the "holder" is a corpse: a lock
-        // file an interrupted useradd left behind, blocking all user
-        // management until someone deletes it.
+        // Same stderr as a busy system, but it survived every retry: the "holder" is a lock file an
+        // interrupted useradd left behind, blocking user management until someone deletes it.
         Process::fake(['*' => Process::result(
             errorOutput: 'useradd: cannot lock /etc/passwd; try again later.',
             exitCode: 1,
@@ -175,8 +170,7 @@ describe('a lock nobody holds', function () {
     });
 
     it('does not call an apt lock stale', function () {
-        // dpkg's lock really is held by a running apt, and really will free
-        // itself. Telling the operator to delete it would be dangerous advice.
+        // dpkg's lock is held by a running apt and will free itself; advising deletion would be dangerous.
         Process::fake(['*' => Process::result(
             errorOutput: 'E: Could not get lock /var/lib/dpkg/lock-frontend',
             exitCode: 1,
@@ -197,9 +191,8 @@ describe('a lock nobody holds', function () {
         $response = $exception->render(request());
         $body = $response->getData(true);
 
-        // 503 means "come back later". Nobody is coming to free this lock, so
-        // that is advice which can never come true — this is a fault on the
-        // server that needs a person.
+        // 503 means "come back later", but nothing will free this lock: it is a fault that needs a
+        // person.
         expect($response->getStatusCode())->toBe(500)
             ->and($body['code'])->toBe('server_stale_lock')
             ->and($body['message'])->toBe(__('errors/server.stale_lock'));
@@ -216,12 +209,9 @@ describe('a lock nobody holds', function () {
 
 describe('apt', function () {
     it('waits far longer than a passwd lock would justify', function () {
-        // `run()` already retries `could not get lock` — but on the budget a
-        // passwd lock needs, where the holder is a competing useradd that
-        // finishes in seconds. apt's holder on a freshly booted server is
-        // unattended-upgrades, which runs for minutes, so the generic budget
-        // expires long before the lock frees. That is the whole bug: install
-        // MongoDB on a new box, fail, retry ten minutes later, succeed.
+        // `run()` retries `could not get lock` on a budget sized for a passwd lock (seconds). apt's
+        // holder on a fresh server is unattended-upgrades, which runs for minutes, so apt needs a
+        // far longer budget.
         config([
             'server.transient.attempts' => 3,
             'server.apt.lock_attempts' => 12,
@@ -252,9 +242,8 @@ describe('apt', function () {
             return Process::result(output: 'done');
         });
 
-        // No probe before the command, so a free lock is one call and no wait.
-        // A check-then-run would also be racy: anything can take the lock in
-        // between, where apt takes it atomically.
+        // No probe before the command, so a free lock is one call and no wait; check-then-run would
+        // also be racy.
         expect(app(ServerOps::class)->apt(['apt-get', 'update'], ['feature' => 'test'])->ok)->toBeTrue()
             ->and($attempts)->toBe(1);
     });
@@ -274,18 +263,16 @@ describe('apt', function () {
             },
         );
 
-        // So the install screen can say why it is sitting there. A silent
-        // ten-minute wait is indistinguishable from a hung install.
+        // So the install screen can say why it is waiting; a silent wait looks like a hung install.
         expect($waits)->toBe(2);
     });
 });
 
 describe('apt\'s own lock wait (S-09)', function () {
     it('tells apt-get not to wait on the lock itself', function () {
-        // install.sh leaves a `DPkg::Lock::Timeout "900"` drop-in behind, so
-        // apt-get waited on unattended-upgrades' lock for the whole 900 s
-        // install timeout, was killed, and the retry above never ran.
-        // Switched off on the command line, the panel's bounded loop waits.
+        // install.sh leaves a `DPkg::Lock::Timeout "900"` drop-in, so apt-get would wait out the whole
+        // install timeout and be killed before the retry runs. It is switched off on the command line
+        // so the panel's bounded loop does the waiting.
         Process::fake(fn () => Process::result(output: 'done'));
 
         app(ServerOps::class)->apt(['apt-get', 'install', '-y', 'mariadb-server'], ['feature' => 'test']);

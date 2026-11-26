@@ -13,14 +13,11 @@ use Illuminate\Support\Facades\DB;
 /**
  * The central panel calling this server with its token.
  *
- * Before this, the token could be minted, stored, masked, revoked and
- * validated — and reached nothing. `CentralSystemGuard` was registered and
- * applied to zero routes, so every call central made got a 401 from Sanctum,
- * which does not know about a raw token kept in `settings`.
+ * Sanctum does not know about a raw token kept in `settings`, so `CentralSystemGuard` has to be
+ * applied to the API routes or every call central makes gets a 401.
  *
- * Two halves matter here and they pull in opposite directions: the token has
- * to reach the whole API, and *nothing else* may become easier to reach
- * because of it.
+ * Two halves matter and they pull in opposite directions: the token has to reach the whole API,
+ * and *nothing else* may become easier to reach because of it.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -118,8 +115,8 @@ it('issues a new token that works and retires the old one', function () {
 });
 
 /*
- * The half that matters more: this middleware now runs on every API request
- * in the panel, so the branch that does nothing has to genuinely do nothing.
+ * The half that matters more: this middleware runs on every API request in the panel, so the
+ * branch that does nothing has to genuinely do nothing.
  */
 describe('nothing else became easier to reach', function () {
     it('refuses a wrong token exactly as before', function () {
@@ -162,9 +159,9 @@ describe('nothing else became easier to reach', function () {
 });
 
 /*
- * Bug #50: central signs in as an administrator, so with one leaked key it
- * could reset an administrator's password, create a new administrator or
- * hand out roles. Who runs this panel is decided on it, not by central.
+ * Central signs in as an administrator, so with one leaked key it could reset an administrator's
+ * password, create a new administrator or hand out roles. Who runs this panel is decided on it,
+ * not by central.
  */
 it('cannot change the panel\'s users or roles', function () {
     $admin = User::where('is_admin', true)->first();

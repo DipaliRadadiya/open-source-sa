@@ -10,19 +10,13 @@ use Illuminate\Support\Facades\Log;
 /*
 | Every activity event the code logs must have a sentence to show for it.
 |
-| 🔴 Found on a real server, 2026-09-21: the ionCube events had no translation
-| in any locale, so the activity log rendered the raw key —
+| Laravel returns the key verbatim when it cannot find a translation, so a missing one fails
+| silently: the log renders "activity.php.ioncube_installed" and only a person reading the
+| screen can tell.
 |
-|     php.ioncube_installed  ->  "activity.php.ioncube_installed"
-|
-| Laravel returns the key verbatim when it cannot find a translation, so this
-| fails silently: the feature works, the log is written, and only a person
-| reading the screen can tell. Four events had been shipping that way.
-|
-| It also reaches further than the sentence. `GET /admin/activity-log/filters`
-| builds its dropdowns from THESE keys rather than from a DISTINCT over the
-| table, so an event with no key is absent from the filter list as well — the
-| rows exist and cannot be filtered to.
+| It also reaches further than the sentence: `GET /admin/activity-log/filters` builds its
+| dropdowns from THESE keys rather than from a DISTINCT over the table, so an event with no key
+| is absent from the filter list and its rows cannot be filtered to.
 */
 
 it('has an English sentence for every event the code logs', function () {
@@ -42,9 +36,8 @@ it('has an English sentence for every event the code logs', function () {
 
 it('has a sentence for every event a log call can choose, not only the first literal', function () {
     // `$wasEnabled !== $enabled ? ($enabled ? 'firewall.rule_enabled' : 'firewall.rule_disabled') : …`
-    // and `match` arms name several events in one call; the check above saw
-    // only one, so a missing sentence in the second arm reached the screen as
-    // `activity.x.y`.
+    // and `match` arms name several events in one call; the check above sees only the first, so a
+    // missing sentence in a later arm would reach the screen as `activity.x.y`.
     $translations = require lang_path('en/activity.php');
     $missing = [];
 
@@ -57,9 +50,8 @@ it('has a sentence for every event a log call can choose, not only the first lit
             }
         }
 
-        // A key built from a prefix (`'application.process_'.$action`): at
-        // least one event has to begin with it, or every value it can take is
-        // a raw key on the screen.
+        // A key built from a prefix (`'application.process_'.$action`): at least one event has to
+        // begin with it, or every value it can take is a raw key on the screen.
         preg_match_all("/'([a-z0-9_]+\.[a-z0-9_]*_)'\s*\./", $argument, $prefixes);
 
         foreach ($prefixes[1] as $prefix) {
@@ -73,10 +65,8 @@ it('has a sentence for every event a log call can choose, not only the first lit
 });
 
 it('knows every log call whose event it cannot read, so a new one is looked at', function () {
-    // A key from a variable or a method cannot be checked from the source.
-    // Each one here was read by hand: every value it can take has a sentence
-    // (the families are checked one by one below). A new one fails this test
-    // until someone does the same.
+    // A key from a variable or a method cannot be checked from the source. Each one here was read
+    // by hand (the families are checked below); a new one fails until someone does the same.
     $reviewed = [
         'Actions/Auth/ChangeUserPassword.php',          // user.password_changed / user.password_reset_by_admin
         'Actions/Server/DiskCleaner/RunCleanupAction.php', // verb(): disk_cleaner.{cleaned,clean_failed,auto_cleaned,auto_clean_failed}
@@ -112,8 +102,7 @@ it('has a sentence for every value of the events built at run time', function ()
 });
 
 it('uses the same placeholders in every language', function () {
-    // A translation that drops `:name` shows less; one that spells it
-    // `:nom` shows the placeholder itself.
+    // A translation that drops `:name` shows less; one that spells it `:nom` shows the placeholder.
     $placeholders = fn (string $text) => collect(preg_match_all('/(?<![\w:]):([a-z_]+)/', $text, $m) ? $m[1] : [])->unique()->sort()->values()->all();
     $english = require lang_path('en/activity.php');
     $wrong = [];
@@ -195,8 +184,7 @@ describe('what the activity screen shows for a row', function () {
 /**
  * Every `'<type>.<action>'` passed to ActivityLogger::log() in app/.
  *
- * Read from the source rather than from a list someone maintains, because a
- * maintained list is the thing that drifts — which is how this was missed.
+ * Read from the source rather than from a maintained list, which drifts.
  *
  * @return array<int, string>
  */
@@ -211,14 +199,11 @@ function loggedActivityKeys(): array
             continue;
         }
 
-        // ->log('php.ioncube_installed', …) — the first argument only, and
-        // only literals: a key built from a variable cannot be checked here
-        // and is deliberately out of scope rather than guessed at.
-        // The closing quote must be followed by a comma or a closing paren —
-        // i.e. the whole first argument is a literal. Two call sites build the
-        // key by concatenation (`'application.worker_'.$action`), and matching
-        // those yielded the half-key `application.worker_`, which exists in no
-        // locale and never will. A prefix is not an event.
+        // ->log('php.ioncube_installed', …): the first argument only, and only literals. A key
+        // built from a variable cannot be checked here.
+        // The closing quote must be followed by a comma or a closing paren, i.e. the whole first
+        // argument is a literal: matching a concatenation (`'application.worker_'.$action`) would
+        // yield the half-key `application.worker_`. A prefix is not an event.
         preg_match_all(
             "/->log\(\s*'([a-z0-9_]+\.[a-z0-9_]+)'\s*[,)]/i",
             (string) file_get_contents($file->getPathname()),

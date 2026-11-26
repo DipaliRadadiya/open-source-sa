@@ -4,15 +4,12 @@ use App\Services\Panel\PanelPhpBinary;
 use Illuminate\Support\Facades\File;
 
 /*
- * The panel's self-update called `/usr/bin/php{version}`, which does not exist
- * on an OpenLiteSpeed server — that stack installs no ondrej PHP and runs the
- * panel on LSPHP under /usr/local/lsws. Every OLS install was therefore unable
- * to update itself, which means unable to receive a security fix.
+ * `/usr/bin/php{version}` does not exist on an OpenLiteSpeed server: that stack installs no
+ * ondrej PHP and runs the panel on LSPHP under /usr/local/lsws.
  *
- * These tests are mostly about the ORDER of the fallbacks, because getting it
- * backwards fixes OLS and quietly breaks the two stacks that already worked.
- * Both candidate paths are injected so that order is exercised for real rather
- * than asserted against whatever the machine running the suite happens to have.
+ * These tests are mostly about the ORDER of the fallbacks: the wrong order fixes OLS and breaks
+ * the other two stacks. Both candidate paths are injected so the order is exercised for real,
+ * not against whatever the machine running the suite has.
  */
 
 beforeEach(function () {
@@ -38,19 +35,16 @@ it('uses the configured binary above everything else', function () {
 });
 
 it('ignores an empty or whitespace configured value rather than returning it', function (string $value) {
-    // env() hands back '' for a key that is present but unset, and an empty
-    // binary path would be executed as the empty string — a failure naming
-    // nothing at all.
+    // env() hands back '' for a key that is present but unset, and an empty binary path would
+    // fail with a message naming nothing.
     config(['panel_update.php_binary' => $value, 'panel_update.php_version' => '8.4']);
 
     expect(app(PanelPhpBinary::class)->path())->toStartWith('/');
 })->with(['', '   ']);
 
 it('prefers the versioned path when BOTH exist, so nginx and Apache do not move', function () {
-    // THE REGRESSION GUARD, and the reason the order is not the shorter rule.
-    // /usr/local/bin/php is not ours on those stacks — nothing in install.sh
-    // creates it there, so it is whatever the operator put in, plausibly a
-    // different major version than the panel needs.
+    // Regression guard for the order: on those stacks /usr/local/bin/php is not ours (install.sh
+    // does not create it), so it may be a different major version than the panel needs.
     $versioned = ($this->makeExecutable)('php8.4');
     $fallback = ($this->makeExecutable)('php');
 
@@ -104,20 +98,16 @@ it('names the real LSPHP symlink as its fallback', function () {
 });
 
 /*
- * The PHP screen's "make default" button now owns /usr/local/bin/php on the
- * LSPHP stack, because that symlink — not the alternatives group — is what
- * `php` resolves through on an OLS box. Measured on a real one.
+ * The PHP screen's "make default" button owns /usr/local/bin/php on the LSPHP stack, because that
+ * symlink — not the alternatives group — is what `php` resolves through on an OLS box.
  *
- * Which makes the order below load-bearing in a new way: if the panel still
- * resolved its own interpreter through that symlink, changing the CLI default
- * would change the PHP the panel updates itself with, up to and including a
- * version that cannot run it.
+ * So the order below is load-bearing: if the panel resolved its own interpreter through that
+ * symlink, changing the CLI default would change the PHP the panel updates itself with.
  */
 
 it('prefers the interpreter it is running under over the shared symlink', function () {
-    // Both exist, as they do on an OLS box after a default change. The tree the
-    // panel is executing from is the answer; the shared symlink is now a user
-    // setting.
+    // Both exist, as on an OLS box after a default change. The tree the panel is executing from
+    // is the answer; the shared symlink is a user setting.
     $tree = $this->dir.'/lsphp84/bin';
     File::makeDirectory($tree, 0755, true);
     File::put($tree.'/lsphp', "#!/bin/sh\n");
@@ -140,9 +130,8 @@ it('prefers the interpreter it is running under over the shared symlink', functi
 });
 
 it('refuses the two shared paths as a sibling, whatever is running', function () {
-    // Reaching either here would reintroduce exactly the coupling this breaks:
-    // both are links somebody else may move. `/usr/bin/php` is the alternatives
-    // group the button sets; `/usr/local/bin/php` is the PATH winner it moves.
+    // Reaching either here would reintroduce the coupling: both are links somebody else may move
+    // (`/usr/bin/php` is the alternatives group, `/usr/local/bin/php` the PATH winner).
     $fallback = ($this->makeExecutable)('fallback-php');
 
     config(['panel_update.php_binary' => '', 'panel_update.php_version' => '8.4']);

@@ -34,8 +34,8 @@ afterEach(function () {
 });
 
 /**
- * `tee` and `rm` really run here rather than being faked, because the point
- * of the change is that these writes go through ServerOps at all.
+ * `tee` and `rm` really run here rather than being faked: the point is that these writes go
+ * through ServerOps at all.
  */
 function schedule(array $body): TestResponse
 {
@@ -68,17 +68,15 @@ it('records the reboot in the activity log before performing it', function () {
 
     expect($line)
         ->toContain('server:log-scheduled-reboot')
-        // The log runs first; a record written after the machine has gone down
-        // is a record that never gets written.
+        // The log runs first; a record written after the machine has gone down is never written.
         ->and(strpos($line, 'log-scheduled-reboot'))->toBeLessThan(strpos($line, 'shutdown'));
 });
 
 it('separates the log command from the reboot with ; so logging cannot cancel it', function () {
     schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
 
-    // `&&` here would make an audit record a precondition of the restart: a
-    // database the panel cannot reach would silently cancel the maintenance
-    // the administrator scheduled.
+    // `&&` here would make the audit record a precondition of the restart: an unreachable
+    // database would silently cancel the scheduled maintenance.
     expect(cronLine())
         ->toContain('; /sbin/shutdown')
         ->not->toContain('&& /sbin/shutdown');
@@ -109,7 +107,7 @@ it('still reads back a schedule written with the log command', function () {
 it('logs the scheduled reboot with no actor', function () {
     $this->artisan('server:log-scheduled-reboot')->assertSuccessful();
 
-    // Nobody pressed anything — this reads as System, not as an admin.
+    // Nobody pressed anything: this reads as System, not as an admin.
     $this->assertDatabaseHas('activity_logs', [
         'type' => 'setting',
         'action' => 'auto_rebooted',
@@ -132,8 +130,8 @@ it('writes a monthly reboot on the chosen date', function () {
 it('uses the operator\'s minute when one is configured', function () {
     schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
 
-    // The default is on the hour, as v7; SERVER_REBOOT_SCHEDULE_MINUTE moves
-    // it off the hour for a box whose backups also run at :00.
+    // The default is on the hour; SERVER_REBOOT_SCHEDULE_MINUTE moves it off the hour for a box
+    // whose backups also run at :00.
     expect(cronLine())->toStartWith('10 3 ');
 });
 
@@ -152,8 +150,7 @@ it('deletes the file when disabled rather than commenting it out', function () {
 
     schedule(['enabled' => false])->assertOk();
 
-    // A disabled schedule left in /etc/cron.d is one uncomment away from an
-    // unexpected reboot.
+    // A disabled schedule left in /etc/cron.d is one uncomment away from an unexpected reboot.
     expect(File::exists($this->file))->toBeFalse();
 });
 
@@ -182,14 +179,12 @@ it('reports when the next reboot will actually happen', function () {
 
     expect($values['next_run'])->toMatch('/^\d{2}-\d{2}-\d{4} 03:10:00$/')
         ->and($values['next_run_human'])->not->toBeNull()
-        // cron runs in server-local time; saying which removes the "why did
-        // it fire an hour early" ticket.
+        // cron runs in server-local time; saying which avoids "why did it fire an hour early".
         ->and($values['timezone'])->not->toBeEmpty();
 });
 
 it('refuses a free-form cron expression', function () {
-    // Every other scheduling surface takes one. This one restarts the server,
-    // and `* * * * *` is a reboot loop nobody can log in to stop.
+    // This one restarts the server, and `* * * * *` is a reboot loop nobody can log in to stop.
     schedule(['enabled' => true, 'frequency' => '* * * * *', 'hour' => 3])
         ->assertUnprocessable()->assertJsonValidationErrors('frequency');
 
@@ -205,8 +200,7 @@ it('refuses an hour that is not an hour', function () {
 });
 
 it('caps the monthly day at 28 so it fires every month', function () {
-    // The 31st silently skips February and the short months — a "monthly"
-    // reboot that happens seven times a year.
+    // The 31st silently skips February and the short months: a "monthly" reboot seven times a year.
     schedule(['enabled' => true, 'frequency' => 'monthly', 'hour' => 3, 'day_of_month' => 31])
         ->assertUnprocessable()->assertJsonValidationErrors('day_of_month');
 });
@@ -230,9 +224,8 @@ it('reports a write failure with a reference instead of leaking the path', funct
 
     $response = schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertStatus(500);
 
-    // Not `file_put_contents(/etc/cron.d/panel-reboot): Failed to open
-    // stream` — that hands an internal path to the caller and leaves support
-    // nothing to trace.
+    // Not `file_put_contents(/etc/cron.d/panel-reboot): Failed to open stream`: that hands an
+    // internal path to the caller.
     expect($response->json('reference'))->not->toBeEmpty()
         ->and($response->json('message'))->not->toContain('/etc/')
         ->and($response->json('message'))->not->toContain('file_put_contents');
@@ -261,9 +254,8 @@ it('does not reboot under a logged-in administrator unless asked', function () {
         'reboot_time' => '02:00',
     ])->assertOk();
 
-    // unattended-upgrades defaults Automatic-Reboot-WithUsers to true, which
-    // restarts the box under an admin mid-SSH-session. Absent from the
-    // request means false here — the surprising behaviour has to be chosen.
+    // unattended-upgrades defaults Automatic-Reboot-WithUsers to true, which restarts the box
+    // under an admin mid-SSH-session. Absent from the request means false here.
     expect(File::get($path))->toContain('Unattended-Upgrade::Automatic-Reboot-WithUsers "false"');
 
     $this->withHeader('Authorization', 'Bearer '.$this->token)->putJson('/api/settings/updates', [
@@ -279,9 +271,8 @@ it('does not reboot under a logged-in administrator unless asked', function () {
 });
 
 it("logs the reboot with the panel's own PHP, not a distro path that may not exist", function () {
-    // On OpenLiteSpeed there is no /usr/bin/php8.4; PHP is under lsws. The
-    // log half of the line failed on every scheduled reboot and the reboot
-    // went unrecorded (seen live 2026-09-23).
+    // On OpenLiteSpeed there is no /usr/bin/php8.4; PHP is under lsws. Otherwise the log half of
+    // the line fails and the reboot goes unrecorded.
     config(['panel_update.php_binary' => '/usr/local/lsws/lsphp84/bin/php']);
 
     schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
@@ -349,8 +340,8 @@ it('labels the schedule with the zone cron runs in when /etc/timezone is absent'
 });
 
 /*
- * Bug #8: picking 04:00 restarted at 04:11 — the schedule sat at :10 and
- * shutdown waited one more minute. v7 restarts at the hour picked.
+ * Picking 04:00 must restart at 04:00, not 04:11: the schedule sat at :10 and shutdown waited
+ * one more minute.
  */
 it('restarts at the hour picked, not ten minutes after it', function () {
     expect((require base_path('config/server.php'))['reboot_schedule']['minute'])->toBe(0);

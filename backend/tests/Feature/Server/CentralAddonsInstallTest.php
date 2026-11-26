@@ -729,9 +729,8 @@ it('reports no health for Log Monitoring Suite when it is not installed', functi
 });
 
 /*
- * QA, 2026-11-17: on an ARM server the x86-64 build downloaded, passed every
- * check and then could not run. Refused cleanly instead, under the code
- * Central shows as "unsupported CPU".
+ * On an ARM server the x86-64 build would download, pass every check and then not run: it is
+ * refused up front, under the code Central shows as "unsupported CPU".
  */
 it('refuses to install on a server whose CPU the addons are not built for', function () {
     config(['server.addons.host_machine' => 'aarch64']);

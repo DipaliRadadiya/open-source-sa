@@ -19,17 +19,12 @@ use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 /**
  * No job may outlive its own reservation.
  *
- * `retry_after` is how long the queue waits before deciding a reserved job is
- * dead and handing it to someone else. A job that runs longer than that is not
- * retried — it is dispatched a second time as a fresh reservation, which
- * `$tries = 1` does nothing about. These jobs change the server: a backup
- * running twice is waste, a restore running twice re-extracts an archive over
- * a site somebody may already be using again.
+ * `retry_after` is how long the queue waits before deciding a reserved job is dead and handing
+ * it to someone else. A job running longer is dispatched a second time as a fresh reservation,
+ * which `$tries = 1` does nothing about. These jobs change the server: a restore running twice
+ * re-extracts an archive over a site that may be in use again.
  *
- * A test for this existed and checked exactly one number — the provisioning
- * budget. `RunBackup` and `RunRestore` declare 3600 against a window of 2400
- * and sailed past it for that reason. This checks every job there is, so the
- * next one to declare a long timeout cannot slip through the same gap.
+ * This checks every job, so a new job declaring a long timeout cannot slip through.
  */
 /**
  * @return array<string, int> job class => timeout in seconds
@@ -54,9 +49,8 @@ function jobTimeouts(): array
         $instance = $reflection->newInstanceWithoutConstructor();
         $property = $reflection->getProperty('timeout');
 
-        // Jobs that size themselves from the work they are about to do set
-        // this in the constructor, so there is nothing to read here. Those are
-        // covered below by asserting the sources they compute from.
+        // Jobs that size their timeout in the constructor have nothing to read here; they are
+        // covered below.
         if (! $property->isInitialized($instance)) {
             continue;
         }
@@ -68,16 +62,9 @@ function jobTimeouts(): array
 }
 
 it('finds the jobs it is meant to be checking', function () {
-    // Without this the test below passes on an empty list, which is how a
-    // guard becomes decoration.
-    //
-    // It used to name `RunBackup` here. That stopped being true when the
-    // backup timeout moved into the constructor to read `job_timeout`, and
-    // the assertion failed loudly — correctly, because reflection can no
-    // longer read the value, so `RunBackup` silently left the list this test
-    // exists to police. The fix is not to drop the name: it is to keep a
-    // non-empty list here AND cover the constructor-computed jobs below,
-    // which is what the next test now does.
+    // Without this the test below passes on an empty list. Jobs that compute their timeout in
+    // the constructor (e.g. `RunBackup`) leave this list silently, so they are covered by the
+    // next test instead.
     expect(jobTimeouts())->not->toBeEmpty();
 });
 
@@ -102,22 +89,17 @@ it('keeps the jobs that size themselves inside it too', function (string $connec
     expect(app(ProvisioningBudget::class)->longest())->toBeLessThan($retryAfter)
         ->and((new InstallDatabaseEngine('mysql'))->timeout)->toBeLessThan($retryAfter);
 
-    // RunBackup and RunRestore, the two jobs this whole file was written for.
-    // They read `job_timeout` in their constructors, so the reflection pass
-    // above cannot see them and they were covered by nothing at all between
-    // that change and this one. Asserted on the instances rather than on the
-    // config key, so a job that stops reading the key is caught too.
+    // RunBackup and RunRestore read `job_timeout` in their constructors, so the reflection pass
+    // cannot see them. Asserted on the instances, so a job that stops reading the key is caught.
     expect((new RunBackup(1))->timeout)->toBeLessThan($retryAfter)
         ->and((new RunRestore(1, 1))->timeout)->toBeLessThan($retryAfter)
-        // Pull and redeploy (D5): `compose pull` + `compose up`.
+        // Pull and redeploy: `compose pull` + `compose up`.
         ->and((new RedeployContainerApplication(1))->timeout)->toBeLessThan($retryAfter);
 })->with(['database', 'redis', 'beanstalkd']);
 
-// Every job that runs apt through ServerOps::apt(), which waits out a lock
-// another package manager holds for up to aptLockBudgetSeconds(). A fresh
-// server's installer now finishes while Ubuntu's first-boot updates can still
-// hold that lock, so a job started straight away waits — and a timeout shorter
-// than the wait plus the work kills it mid-wait as "stopped unexpectedly".
+// Every job that runs apt through ServerOps::apt(), which waits out a package-manager lock for
+// up to aptLockBudgetSeconds(). A timeout shorter than the wait plus the work kills the job
+// mid-wait as "stopped unexpectedly".
 dataset('apt jobs', fn () => [
     'InstallDatabaseEngine' => [fn () => new InstallDatabaseEngine('mysql'), 900],
     'InstallPhpVersion' => [fn () => new InstallPhpVersion('8.3'), 900],
@@ -174,11 +156,9 @@ it('finds the unique jobs it is meant to be checking', function () {
 });
 
 it('gives every unique job a lock that expires', function () {
-    // `Illuminate\Bus\UniqueLock` falls back to 0 seconds, and RedisLock reads
-    // that as `setnx` with no TTL. The lock is released on completion or
-    // failure, so a worker killed outright — OOM, systemctl kill, a reboot —
-    // leaves a key that never expires and every later dispatch for that id is
-    // silently dropped. Ten of eleven jobs shipped that way.
+    // `Illuminate\Bus\UniqueLock` falls back to 0 seconds, which RedisLock reads as `setnx` with
+    // no TTL: a worker killed outright (OOM, reboot) leaves a key that never expires, and every
+    // later dispatch for that id is silently dropped.
     foreach (uniqueJobs() as $class) {
         expect(method_exists($class, 'uniqueFor'))->toBeTrue(
             "{$class} claims a unique lock but never says when it expires, so a worker "
@@ -188,9 +168,8 @@ it('gives every unique job a lock that expires', function () {
 });
 
 it('holds each unique lock for longer than the job may run', function () {
-    // Expiring late costs one delayed run. Expiring early costs two of these
-    // running at once — two archives of the same site, or two restores
-    // extracting over each other.
+    // Expiring late costs one delayed run; expiring early lets two run at once (two archives of
+    // one site, or two restores extracting over each other).
     foreach (uniqueJobs() as $class) {
         $job = (new ReflectionClass($class))->newInstanceWithoutConstructor();
         $timeout = (new ReflectionClass($class))->getProperty('timeout');

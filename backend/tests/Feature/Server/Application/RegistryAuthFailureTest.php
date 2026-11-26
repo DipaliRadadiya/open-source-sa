@@ -10,21 +10,16 @@ use Illuminate\Support\Facades\Process;
 /**
  * A container site whose image the registry would not hand over.
  *
- * The panel cannot sign in to a registry yet, so a private image is a site that
- * provisions, writes its compose file, and then fails at `compose up` with
- * Docker's own wording buried in pull progress. Before this the step was
- * `container_start` with a log reference — true, and no help at all: the reader
- * is told the container did not start, when what happened is that the image
- * never arrived.
+ * The panel cannot sign in to a registry yet, so a private image fails at `compose up` with
+ * Docker's wording buried in pull progress. The reason must say the image never arrived, not
+ * just that the container did not start.
  *
- * **Every output string below was captured on a real box** (Docker 29.8.1,
- * Compose 5.5.1, box `.85`, 2026-09-29), not written from memory. Each registry
- * words this differently and the differences are the whole reason the classifier
- * needs four needles instead of one.
+ * The output strings below were captured from real Docker/Compose runs. Each registry words the
+ * refusal differently, which is why the classifier needs four needles instead of one.
  */
 
 /*
- * The four phrasings, as measured.
+ * The four registry phrasings.
  */
 
 it('names the Docker Hub refusal', function () {
@@ -47,8 +42,8 @@ it('names the Docker Hub refusal', function () {
 it('names the GHCR refusal, which says only `denied`', function () {
     Process::fake();
 
-    // The output that made a bare `denied` needle tempting and wrong: the word
-    // appears alone on its own line here, and in unrelated daemon errors too.
+    // A bare `denied` needle would be wrong: the word appears alone on a line here and in
+    // unrelated daemon errors.
     $result = new ServerOpsResult(
         ok: false,
         reference: 'ref-901',
@@ -100,8 +95,8 @@ it('names a registry v2 401, which is what GitLab and Harbor answer', function (
 it('finds it in compose output, where it is one line of pull progress', function () {
     Process::fake();
 
-    // How it actually arrives: compose prints its own per-image progress, so the
-    // line that matters is neither first nor last, and `up` adds a repeat of it.
+    // Compose prints per-image progress, so the line that matters is neither first nor last, and
+    // `up` repeats it.
     $result = new ServerOpsResult(
         ok: false,
         reference: 'ref-904',
@@ -117,9 +112,8 @@ it('finds it in compose output, where it is one line of pull progress', function
 });
 
 /*
- * The two failures that reach the same step and are NOT this. Both measured on
- * the same box, and both would send someone to look for a credential that was
- * never the problem — which is this classifier's own stated failure mode.
+ * Two failures that reach the same step but are not registry auth. Misclassifying them would send
+ * someone looking for a credential that was never the problem.
  */
 
 it('does not blame a credential for a tag that does not exist', function () {
@@ -155,9 +149,7 @@ it('does not blame a credential for a registry it could not reach', function () 
 });
 
 /*
- * The wiring. A classifier nothing calls is the failure shape this codebase has
- * already paid for twice -- fully written, fully unit-tested, never reached --
- * so the supervisor is asserted here beside it.
+ * The wiring: a classifier nothing calls is dead code, so the supervisor is asserted here too.
  */
 
 it('reaches the classifier from the supervisor, not only from a unit test', function () {
@@ -171,8 +163,8 @@ it('reaches the classifier from the supervisor, not only from a unit test', func
         'status' => 'provisioning',
     ]);
 
-    // Faked per command, and only `compose up` fails: a blanket failure would
-    // break the file write first and assert against a step this is not about.
+    // Faked per command, and only `compose up` fails: a blanket failure would break the file
+    // write first.
     Process::fake(function ($process) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
@@ -208,11 +200,8 @@ it('has the reason translated in every locale', function () {
 });
 
 it('does not claim the image is private, because Docker cannot tell', function () {
-    // Docker Hub answers "no such repository" and "yours, log in" with the same
-    // sentence, so a typo in a public name lands on this reason too. The text has
-    // to name both possibilities or it sends half its readers to fix the wrong
-    // thing -- and it has to say the panel cannot store credentials yet, since
-    // that is the part a reader cannot discover for themselves.
+    // Docker Hub answers "no such repository" and "private, log in" with the same sentence, so the
+    // text must name both causes and say the panel cannot store credentials yet.
     $line = __('application.failure_reason.registry_auth', [], 'en');
 
     expect($line)->toContain('name or tag is wrong')

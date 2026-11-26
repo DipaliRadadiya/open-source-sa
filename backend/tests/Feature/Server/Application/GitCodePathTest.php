@@ -10,19 +10,14 @@ use Illuminate\Support\Facades\Process;
 /**
  * Where a git checkout lands, and where its `.env` goes.
  *
- * A checkout always arrives at `public_html`; `web_root` selects what the web
- * server serves *inside* it. Those are two questions and the code answered
- * them with one value, so a repository whose front controller lives in
- * `public/` — every Laravel application — had no working configuration:
+ * A checkout always arrives at `public_html`; `web_root` selects what the web server serves
+ * *inside* it. These are two questions and must not share one value, or a repository whose front
+ * controller lives in `public/` (every Laravel application) breaks:
  *
- *  - `web_root` empty: served directory has no index, and the whole source
- *    tree including `.env` is published.
- *  - `web_root` `/public`: the checkout moves down too, so the application's
- *    own `public/` lands one level deeper than the served directory, which now
- *    contains `artisan` and `app/`.
- *
- * Both 403. Confirmed against the real path arithmetic before this was
- * written, not inferred.
+ *  - `web_root` empty: the served directory has no index and the whole source tree, including
+ *    `.env`, is published.
+ *  - `web_root` `/public`: the checkout moves down too, so the application's own `public/` lands
+ *    one level too deep.
  */
 beforeEach(function () {
     ServerCapability::query()->delete();
@@ -51,8 +46,7 @@ function gitSite(string $webRoot): Application
 }
 
 it('lands the checkout at public_html whatever the web root says', function () {
-    // The heart of it. Both sites clone to the same place; only what nginx
-    // serves differs.
+    // Both sites clone to the same place; only what nginx serves differs.
     $root = gitSite('/');
     $public = gitSite('/public');
 
@@ -63,8 +57,7 @@ it('lands the checkout at public_html whatever the web root says', function () {
 it('serves inside the checkout, not instead of it', function () {
     $site = gitSite('/public');
 
-    // The Laravel layout, finally expressible: code at public_html, nginx
-    // pointed at the application's own public/ directory inside it.
+    // The Laravel layout: code at public_html, nginx pointed at its own public/ directory.
     expect($site->codePath())->toBe('/home/deployer/'.$site->slug.'/public_html')
         ->and($site->documentRoot())->toBe('/home/deployer/'.$site->slug.'/public_html/public')
         ->and($site->documentRoot())->toStartWith($site->codePath().'/');
@@ -77,13 +70,12 @@ it('puts .env where the application reads it, still out of reach over HTTP', fun
 
     // Laravel loads `.env` from its base directory — the checkout root.
     expect($env)->toBe($site->codePath().'/.env')
-        // And that is above the served directory, so it is not a URL.
+        // And that is above the served directory, so it is not reachable by URL.
         ->and($env)->not->toStartWith($site->documentRoot());
 });
 
 it('deploys into the code root, not the document root', function () {
-    // The bug was one argument at one call site: passing the document root
-    // made the checkout follow the web root down.
+    // Passing the document root to the deployer would make the checkout follow the web root down.
     $site = gitSite('/public');
     $commands = collect();
 
@@ -95,9 +87,8 @@ it('deploys into the code root, not the document root', function () {
             : Process::result(exitCode: 0);
     });
 
-    // The later verify step needs a live site, which a fake cannot give it.
-    // Irrelevant here: `git init` is recorded long before, and it is the whole
-    // question — one argument at one call site.
+    // The later verify step needs a live site, which a fake cannot give; `git init` is recorded
+    // before it, and that is all this test checks.
     try {
         app(GitDeployer::class)->deploy($site, $site->codePath());
     } catch (Throwable) {
@@ -111,18 +102,16 @@ it('deploys into the code root, not the document root', function () {
 });
 
 it('leaves a site with no web root exactly where it was', function () {
-    // The migration argument: `public_html` *is* the document root for these,
-    // so nothing about them moves. Only sites with a non-root web root change,
-    // and those cannot currently work at all.
+    // `public_html` is the document root for these, so nothing moves; only sites with a non-root
+    // web root change.
     $site = gitSite('/');
 
     expect($site->codePath())->toBe($site->documentRoot());
 });
 
 it('still anchors a marketplace application to its served directory', function () {
-    // WordPress unpacks *into* what is served, so its code root and document
-    // root coincide even with a web root set — the git rule must not leak
-    // into types whose installer works differently.
+    // WordPress unpacks into what is served, so its code root and document root coincide even
+    // with a web root set; the git rule must not leak into such types.
     $wp = Application::forceCreate([
         'system_user_id' => $this->owner->id,
         'name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.test',
@@ -135,9 +124,8 @@ it('still anchors a marketplace application to its served directory', function (
 });
 
 it('moves an existing .env beside the code, once', function () {
-    // Sites deployed before this have `.env` at the app root. Without the
-    // move the panel would open a different, empty file and offer to create
-    // one — stranding the real settings a directory up.
+    // Older sites have `.env` at the app root; without the move the panel would open a different,
+    // empty file and strand the real settings.
     $site = gitSite('/public');
     $commands = collect();
 

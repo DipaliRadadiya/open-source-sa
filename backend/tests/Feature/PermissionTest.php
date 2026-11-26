@@ -30,21 +30,17 @@ it('seeds the server and application permission items in order', function () {
 
     $server = Permission::where('level', 'server')->orderBy('order');
     expect($server->pluck('name')->first())->toBe('dashboard');
-    // `registry` is last because it was appended rather than slotted in, so
-    // adding it moved nothing that was already there.
+    // `registry` is appended last rather than slotted in, so nothing already there moved.
     expect($server->pluck('name')->last())->toBe('registry');
 
     $app = Permission::where('level', 'application')->orderBy('order');
     expect($app->pluck('name')->first())->toBe('app_dashboard');
-    // Last because it is not a screen: `app_magic_login` has a null url and is
-    // filtered out of the sidebar, so its order only decides where it sits in
-    // the role editor's list. Appended rather than slotted in beside the other
-    // application features, so adding it moved nothing that was already there.
+    // Last because it is not a screen: `app_magic_login` has a null url and is filtered out of the
+    // sidebar, so its order only decides where it sits in the role editor's list.
     expect($app->pluck('name')->last())->toBe('app_magic_login');
 
-    // Every application permission carries the `app_` prefix. hasAbility()
-    // resolves by name and ignores level, so a collision with a server-level
-    // name would silently grant one through the other.
+    // Every application permission carries the `app_` prefix: hasAbility() resolves by name and
+    // ignores level, so a collision with a server-level name would silently grant one for the other.
     expect(Permission::where('level', 'application')->pluck('name')
         ->every(fn (string $name) => str_starts_with($name, 'app_')))->toBeTrue();
 });
@@ -54,9 +50,8 @@ it('groups the git, storage and registry permissions under the integration sub-l
 
     $integrations = Permission::where('sub_level', 'integration')->orderBy('order')->get();
 
-    // Registry credentials belong here for the reason this group exists: an
-    // externally-held credential the features consume. They were a card at the
-    // bottom of the Docker page, which is what made them undiscoverable.
+    // Registry credentials belong here like git and storage: an externally-held credential the
+    // features consume.
     expect($integrations->pluck('name')->all())->toBe(['git', 'storage', 'registry']);
     expect($integrations->pluck('level')->unique()->all())->toBe(['server']);
     expect($integrations->pluck('url')->all())->toBe([
@@ -105,17 +100,11 @@ it('shows an admin every permission with full view+manage access', function () {
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions');
 
-    // Derived, not written down. A literal here was wrong before anyone noticed
-    // — it said "37 in the catalog, 36 here" while asserting 37, against a
-    // catalog of 38 — and it goes stale the moment a permission is added, which
-    // is a test about admin access failing for a reason that has nothing to do
-    // with admin access.
+    // Derived, not written down: a literal goes stale the moment a permission is added.
     //
-    // Two are withheld: `docker` and `registry` are gated on the server hosting
-    // containers, and a test with no capability row falls back to
-    // `ServerCapabilities::DEFAULT_PROFILES` — php/node/static, no docker. That
-    // is the same answer the Docker endpoints have always given on an unknown
-    // box, so it is consistent rather than a gap.
+    // Two are withheld: `docker` and `registry` are gated on the server hosting containers, and a
+    // test with no capability row falls back to `ServerCapabilities::DEFAULT_PROFILES` —
+    // php/node/static, no docker — the same answer the Docker endpoints give on an unknown box.
     $withheldOffAContainerStack = ['docker', 'registry'];
     $expected = count(app(PermissionCatalog::class)->items()) - count($withheldOffAContainerStack);
 
@@ -180,11 +169,9 @@ it('filters the check endpoint by level', function () {
 
     // level=server spans both sub-levels — the grouping is a display concern.
     //
-    // 18 rather than 19 since `docker` joined `registry` behind the
-    // hosts-containers gate: both are server-level, and a test box has no
-    // capability row so neither is offered. A literal here rather than the
-    // catalog arithmetic above, because deriving the server-level subset would
-    // mean reimplementing the filter inside the test that checks it.
+    // `docker` and `registry` are server-level but gated on hosting containers, and a test box has
+    // no capability row, so neither is offered. A literal rather than catalog arithmetic: deriving
+    // the server-level subset would mean reimplementing the filter inside the test that checks it.
     $response->assertOk()->assertJsonCount(18, 'permissions');
 
     // …and level=application returns the sidebar rendered *inside* an app.
@@ -242,12 +229,8 @@ it('localizes the admin catalog title and falls back to the DB title when no nav
 it('has a nav label for every permission in every locale', function () {
     $this->seed(PermissionSeeder::class);
 
-    // The application sidebar shipped with none of its labels translated: the
-    // 15 `app_*` permissions had no `nav.*` keys at all, so every locale fell
-    // through to the hardcoded English title and eight translated locales
-    // rendered an English sidebar. Falling back is the right behaviour for an
-    // unknown permission and the wrong behaviour to rely on for a shipped one,
-    // and nothing failed when it happened — hence this.
+    // A permission with no `nav.*` key falls back to its hardcoded English title: right for an
+    // unknown permission, wrong to rely on for a shipped one, and nothing else would fail.
     $names = Permission::pluck('name');
     $missing = [];
 
@@ -267,9 +250,8 @@ it('has a nav label for every permission in every locale', function () {
 it('does not label a per-app screen the same as an unrelated server one', function () {
     $this->seed(PermissionSeeder::class);
 
-    // `firewall` opens and closes ports; `app_firewall` is the 8G rule set
-    // inspecting requests to one site. Sharing a label is how someone comes to
-    // believe enabling a WAF closed a port.
+    // `firewall` opens and closes ports; `app_firewall` is the WAF rule set for one site. Sharing a
+    // label would make someone believe enabling a WAF closed a port.
     foreach (config('app.available_locales', ['en']) as $locale) {
         $nav = trans('nav', [], $locale);
 

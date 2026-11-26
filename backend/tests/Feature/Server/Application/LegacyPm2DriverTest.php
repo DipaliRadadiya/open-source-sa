@@ -11,10 +11,8 @@ use Psr\Log\LoggerInterface;
 /**
  * Applications adopted from the old panel, still run by its PM2 daemon.
  *
- * Adoption cannot restart a customer's site, so the panel has to be able to
- * drive a process whose unit it does not own. These cover the rules that
- * distinguish this from the old panel doing the same thing — every one of
- * which is a bug it shipped.
+ * Adoption cannot restart a customer's site, so the panel must drive a process whose unit it
+ * does not own. These cover the rules where this driver differs from the old panel's.
  */
 beforeEach(function () {
     ServerCapability::query()->delete();
@@ -68,9 +66,8 @@ it('runs pm2 as the site user, naming the daemon explicitly', function () {
 
     app(LegacyPm2Driver::class)->restart(adoptedApp());
 
-    // `runuser -u <user> --` with an argv array, never a shell string. The old
-    // panel built `sudo -H -u <user> bash -c "…"`, which root's shell parses
-    // before sudo drops privilege — so a `$(…)` in any value ran as root.
+    // `runuser -u <user> --` with an argv array, never a shell string: a shell string is parsed by
+    // root's shell before privilege is dropped, so a `$(…)` in any value would run as root.
     expect(collect($ran)->contains(fn (string $c) => str_starts_with(
         $c, 'runuser -u appuser -- env PM2_HOME=/home/appuser/.pm2 pm2 restart legacy-api'
     )))->toBeTrue();
@@ -81,9 +78,8 @@ it('saves after every state change, because the dump is the boot mechanism', fun
 
     app(LegacyPm2Driver::class)->{$action}(adoptedApp());
 
-    // There is no unit here. A stop that is not saved comes back at the next
-    // reboot; an environment change that is not saved reverts to the values it
-    // replaced. The old panel saved on start and nowhere else.
+    // There is no unit here: a stop or environment change that is not saved is undone at the next
+    // reboot, so every change must save.
     expect(collect($ran)->contains(fn (string $c) => str_contains($c, 'pm2 save --force')))->toBeTrue();
 })->with(['start', 'stop', 'restart', 'reload']);
 
@@ -110,8 +106,8 @@ it('never clears the dump, which belongs to every app the user owns', function (
 
     expect(collect($ran)->contains(fn (string $c) => str_contains($c, 'delete legacy-api')))->toBeTrue()
         ->and(collect($ran)->contains(fn (string $c) => str_contains($c, 'cleardump')))->toBeFalse();
-    // The old panel ran `cleardump` on a single delete, so removing one site
-    // removed boot persistence for every other site that user owned.
+    // Deleting one site must not run `cleardump`, which removes boot persistence for every other
+    // site of that user.
 });
 
 it('aggregates every instance rather than stopping at the first', function () {
@@ -126,8 +122,7 @@ it('aggregates every instance rather than stopping at the first', function () {
 
     $status = app(LegacyPm2Driver::class)->status(adoptedApp());
 
-    // `jlist` returns one entry per worker. The old panel took the first match
-    // and reported a quarter of a four-worker cluster's memory.
+    // `jlist` returns one entry per worker; taking the first match undercounts a cluster.
     expect($status)->toMatchArray([
         'state' => 'online',
         'instances' => 3,
@@ -156,9 +151,8 @@ it('reports CPU and the pid of a running worker, as v7 did', function () {
 it('tells "not in the daemon" apart from "stopped"', function () {
     Process::fake(fn () => Process::result(output: '[]'));
 
-    // The old panel returned 200 with a null body whether the application was
-    // gone, the daemon was down, or the wrong user had been asked — so the
-    // panel could not distinguish any of them from a healthy lookup.
+    // A gone application, a down daemon and a wrong user must each be distinguishable from a
+    // healthy lookup, not a 200 with a null body.
     $application = adoptedApp();
 
     expect(app(LegacyPm2Driver::class)->status($application))->toBeNull()
@@ -173,9 +167,8 @@ it('reports a partly-down cluster as online, with the counts to prove it', funct
 
     $status = app(LegacyPm2Driver::class)->status(adoptedApp());
 
-    // Degraded is not down: the site still answers. Saying "stopped" would
-    // send someone looking for an outage that is not happening, and saying
-    // nothing about the dead worker would hide one that is.
+    // Degraded is not down: the site still answers. Saying "stopped" would mislead, and hiding the
+    // dead worker would too.
     expect($status['state'])->toBe('online')
         ->and($status['online'])->toBe(1)
         ->and($status['instances'])->toBe(2);
@@ -188,15 +181,8 @@ it('survives a daemon that answers with something other than JSON', function () 
 });
 
 it('runs from a directory the site user can always enter', function () {
-    // `runuser` keeps the caller's working directory. The caller is the panel,
-    // and when the site user cannot enter it PM2 fails to spawn its daemon
-    // with `spawn /usr/local/bin/node EACCES` — a message that names the
-    // binary and says nothing about the directory that caused it.
-    //
-    // Diagnosed on a live v7 box: the same command failed from /home/ubuntu
-    // (0750, another user's home) and worked from /. It only works today
-    // because /var/www/panel happens to be world-traversable, which is a
-    // hardening decision nothing connects to PM2 working.
+    // `runuser` keeps the caller's working directory. If the site user cannot enter it, PM2 fails
+    // with `spawn /usr/local/bin/node EACCES`, which names the binary, not the directory.
     $cwds = new ArrayObject;
 
     Process::fake(function ($p) use ($cwds) {

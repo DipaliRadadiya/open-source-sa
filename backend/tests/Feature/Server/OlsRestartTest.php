@@ -6,21 +6,10 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Sleep;
 
 /*
- * Finding N1 (installer batch 4, 2026-11-03): on a fresh OpenLiteSpeed install
- * Let's Encrypt timed out on every box and the panel got the self-signed
- * fallback.
- *
- * configure_ols restarted with `systemctl restart lshttpd`. The unit's stop is
- * graceful (`lswsctrl delay-stop`, KillMode=none), so the old server was still
- * draining when the start handed its listening sockets, *:7080 included, to
- * the new one. The new config wanted 127.0.0.1:7080 (S5), the new server could
- * not bind it beside the inherited socket, and it exited — over and over, for
- * up to three minutes, while certbot ran. The panel's panel:ols-webadmin did
- * the same handover with `lswsctrl restart`: there the old server simply
- * stayed, the console never moved, and every later graceful restart failed.
- *
- * Both now restart cold: stop, wait until no litespeed process is left (TERM,
- * then KILL, if it lingers), start, and check it stays up.
+ * OpenLiteSpeed restarts cold: stop, wait until no litespeed process is left (TERM, then KILL,
+ * if it lingers), start, and check it stays up. A graceful restart hands the old server's
+ * listening sockets (*:7080) to the new one, which then cannot bind 127.0.0.1:7080 and exits
+ * over and over.
  */
 
 /**
@@ -299,7 +288,7 @@ describe('N1: panel:ols-webadmin restarts OpenLiteSpeed cold', function () {
     });
 
     it('repairs a server whose file is bound but whose server still listens on every address', function () use ($shipped) {
-        // What the graceful version of this command left behind (N1).
+        // What the old graceful restart left behind.
         $path = webAdminConfig(str_replace('*:7080', '127.0.0.1:7080', $shipped));
         $before = (string) file_get_contents($path);
         $server = fakeOlsServer();

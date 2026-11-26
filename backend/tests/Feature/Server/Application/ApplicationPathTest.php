@@ -12,15 +12,11 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 uses(RefreshDatabase::class);
 
 /*
- * The cron form picks a site and fills in the path box. Nothing in the API used
- * to say where a site was on disk — not even its slug — so the only option was
- * guessing from the name, which is wrong for a renamed site and wrong for two
- * sites that once shared a name.
+ * The cron form picks a site and fills in the path box, so the API must say where a site is on
+ * disk; guessing from the name breaks for renamed sites.
  *
- * The reason this is two fields and not one is Craft and Statamic. Everywhere
- * else the served directory and the application's own directory are the same,
- * and a single `path` would look correct right up until somebody made a Craft
- * site and their queue runner silently did nothing.
+ * It is two fields, not one, because of Craft and Statamic: elsewhere the served directory and
+ * the application's own directory coincide, so a single `path` is wrong for them.
  */
 
 beforeEach(function () {
@@ -53,9 +49,8 @@ it('appends the web root inside public_html, never outside the site', function (
 });
 
 /*
- * The path is built from the slug, which is what makes it survivable. A path
- * derived from the name moves when somebody renames the site, orphaning every
- * file already written under the old one — and a cron job still pointing there.
+ * The path is built from the slug: a path derived from the name would move on rename, orphaning
+ * files and any cron job pointing there.
  */
 it('names the directory by slug, so renaming the site does not move it', function () {
     $application = app_at('wordpress', '/');
@@ -69,8 +64,7 @@ it('names the directory by slug, so renaming the site does not move it', functio
 describe('the path a command runs from', function () {
 
     it('is the document root for a type that unpacks into it', function () {
-        // wp-cron.php sits in the served directory, so the two coincide — which
-        // is exactly why one field looks sufficient until it is not.
+        // wp-cron.php sits in the served directory, so the two coincide.
         $application = app_at('wordpress', '/');
 
         expect($application->codePath())
@@ -79,10 +73,9 @@ describe('the path a command runs from', function () {
     });
 
     /*
-     * `php {path}/craft queue/run` — the `craft` binary is one level above the
-     * served directory, which is where CraftCmsInstaller cd's to run it. Handed
-     * the document root, that command points at .../public_html/web/craft,
-     * which does not exist, and cron reports nothing.
+     * `php {path}/craft queue/run`: the `craft` binary is one level above the served directory
+     * (where CraftCmsInstaller cd's to run it). Given the document root, the command would point at
+     * .../public_html/web/craft, which does not exist.
      */
     it('is one level above the document root for Craft', function () {
         $application = app_at('craftcms', '/web');
@@ -98,10 +91,8 @@ describe('the path a command runs from', function () {
     });
 
     /*
-     * A git site is the case that stops `dirname()` being the general rule:
-     * GitDeployer clones *into* the document root, so whatever the checkout
-     * holds is there regardless of what web_root says. Asking the site type
-     * rather than the path shape is what gets both of these right at once.
+     * A git site stops `dirname()` being the general rule: GitDeployer clones *into* the document
+     * root, whatever web_root says. So the site type is asked, not the path shape.
      */
     it('is the document root for a git site, because that is where the repository is cloned', function () {
         $application = app_at('github', 'public');
@@ -113,9 +104,8 @@ describe('the path a command runs from', function () {
 });
 
 it('is exposed on the application API for the cron form to read', function () {
-    // Through the endpoint rather than by resolving the resource directly: the
-    // resource asks systemd about the site, so it wants a real request behind
-    // it, and this is the shape the frontend actually receives.
+    // Through the endpoint, not the resource directly: the resource asks systemd about the site and
+    // this is the shape the frontend receives.
     Process::fake();
 
     $this->seed(PermissionSeeder::class);
@@ -132,9 +122,8 @@ it('is exposed on the application API for the cron form to read', function () {
 });
 
 /*
- * The provisioner owned this arithmetic and every shell command still goes
- * through it. It now delegates, so the two cannot drift — but it keeps the
- * traversal guard, because it is the one handing a directory to a command.
+ * The provisioner delegates the path arithmetic so the two cannot drift, but keeps the traversal
+ * guard because it is what hands a directory to a shell command.
  */
 it('still refuses a traversing path where the directory reaches a shell', function () {
     $application = app_at('php', '../../etc');

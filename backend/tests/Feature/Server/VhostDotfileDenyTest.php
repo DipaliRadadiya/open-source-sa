@@ -10,22 +10,15 @@ use Illuminate\Support\Facades\Process;
 /**
  * No vhost may serve the panel's own bookkeeping directory.
  *
- * `.panel/` holds the Basic-Auth credential file, and it lives *inside* the
- * served directory — so the only thing keeping the password hash off the
- * public internet is the vhost denying dotfile paths. nginx denies every
- * dotfile; OpenLiteSpeed cannot use a lookahead and denies an explicit list,
- * which named `.git`, `.svn`, `.hg`, `.bzr` and `.env` but not `.panel` — so
- * on OLS the file was downloadable.
+ * `.panel/` holds the Basic-Auth credential file inside the served directory, so only the
+ * vhost's dotfile deny keeps the password hash off the internet. nginx denies every dotfile;
+ * OpenLiteSpeed cannot use a lookahead and denies an explicit list, which must include `.panel`.
  *
- * Apache needed two rules and shipped with one. `DirectoryMatch` matches
- * directories, so `.git/` was refused while a `.env` sitting beside it was
- * served as plain text — on every Apache site, for as long as the driver has
- * existed. Which is also why the environment file is kept above the document
- * root wherever the layout allows it: this rule is the last line, not the
- * first.
+ * Apache needs two rules: `DirectoryMatch` only matches directories, so `.git/` is refused while
+ * a `.env` beside it would be served as plain text. This rule is the last line of defence; the
+ * environment file also stays above the document root where the layout allows.
  *
- * Rendered templates rather than a live server, because the question is what
- * the config says, and that is answerable without the daemon.
+ * Rendered templates, not a live server: the question is what the config says.
  */
 beforeEach(function () {
     $systemUser = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
@@ -53,8 +46,7 @@ function vhostTemplates(): array
         ),
         array_filter(
             glob(base_path('resources/views/server/vhosts/*/*.blade.php')) ?: [],
-            // Partials are included by the file that owns them; rendering one
-            // alone proves nothing about the config that ships.
+            // Partials are rendered through the file that owns them.
             fn (string $path): bool => ! str_starts_with(basename($path), '_'),
         ),
     );
@@ -85,10 +77,8 @@ it('denies the panel directory in every OpenLiteSpeed template that filters dotf
 
         $withFilter++;
 
-        // The credential file is at `.panel/.htpasswd`, so the directory
-        // segment is what has to be refused. Asserted on the deny context
-        // itself, not the file, so a stray mention of the word elsewhere
-        // cannot satisfy it.
+        // The credential file is `.panel/.htpasswd`, so the directory segment must be refused;
+        // asserted on the deny context itself so a stray mention elsewhere cannot satisfy it.
         preg_match('/context exp:\/\\\\\.\(([^)]+)\)/', $source, $matches);
 
         expect($matches[1] ?? '')->toContain('panel');
@@ -98,10 +88,8 @@ it('denies the panel directory in every OpenLiteSpeed template that filters dotf
 });
 
 it('denies dotfile files in Apache, not just dotfile directories', function () {
-    // `<DirectoryMatch "/\.">` refuses `.git/` and says nothing at all about
-    // `.env`, which Apache then hands out as a text file. The panel writes an
-    // application's `.env` beside its code whenever the code root is served,
-    // so this is the rule that stops it being one request away.
+    // `<DirectoryMatch "/\.">` refuses `.git/` but says nothing about `.env`, which the panel
+    // writes beside an application's code whenever the code root is served.
     $bodies = array_filter(
         glob(base_path('resources/views/server/vhosts/apache/*.blade.php')) ?: [],
         fn (string $path): bool => str_contains((string) file_get_contents($path), '<DirectoryMatch'),
@@ -114,16 +102,13 @@ it('denies dotfile files in Apache, not just dotfile directories', function () {
 
         expect($source)->toContain('<FilesMatch "^\.">');
 
-        // Filenames only: an ACME challenge token is not a dotfile, so this
-        // must not have grown a lookahead that only appears to be needed.
+        // Filenames only: an ACME challenge token is not a dotfile, so no lookahead is needed.
         expect($source)->not->toContain('<FilesMatch "^\.(?!well-known)">');
     }
 });
 
 it('keeps the ACME challenge path reachable while denying dotfiles', function () {
-    // The deny rule and certificate issuance both live in dotfile territory.
-    // A rule that catches `/.well-known/acme-challenge/` stops every
-    // Let's Encrypt renewal on the server.
+    // A rule that catches `/.well-known/acme-challenge/` stops every Let's Encrypt renewal.
     foreach (vhostTemplates() as $template) {
         $source = file_get_contents(
             base_path('resources/views/'.str_replace('.', '/', $template).'.blade.php')
@@ -136,28 +121,21 @@ it('keeps the ACME challenge path reachable while denying dotfiles', function ()
 });
 
 it('keeps everything the panel writes outside the served directory', function () {
-    // One rule, all of it: the Basic Auth credential, PHP sessions, the PHP
-    // error log, the WAF detect log and the pre-push database dump. Inside
-    // the document root each of these is one vhost deny rule away from being
-    // downloadable, and that rule is per-web-server — OpenLiteSpeed's did not
-    // cover `.panel` at all.
+    // The Basic Auth credential, PHP sessions, PHP error log, WAF detect log and pre-push
+    // database dump: inside the document root each is one per-web-server deny rule from public.
     $documentRoot = app(ApplicationProvisioner::class)->documentRoot($this->application);
 
     expect($this->application->panelPath())->not->toStartWith($documentRoot)
         ->and($this->application->basicAuthPath())->not->toStartWith($documentRoot)
-        // Where v7 keeps it (v7 layout B4): `conf/{web server}/`, a sibling of
-        // the served directory, not inside it.
+        // `conf/{web server}/`, a sibling of the served directory (the v7 layout).
         ->and($this->application->basicAuthPath())->toStartWith($this->application->rootPath().'/conf/')
-        // Still the site's own directory — above the webroot, not outside
-        // the site.
+        // Above the webroot, still inside the site's own directory.
         ->and($this->application->panelPath())->toStartWith($this->application->rootPath());
 });
 
 it('creates the bookkeeping directory before a config that names it goes live', function () {
-    // nginx refuses to start when a log directory is missing, so a vhost
-    // naming the WAF detect log has to be preceded by the mkdir. Nothing
-    // created this at provision time, which made WAF detect mode unturn-on-able
-    // on a site whose web root had never been moved.
+    // nginx refuses to start when a log directory is missing, so a vhost naming the WAF detect
+    // log must be preceded by the mkdir.
     $ran = [];
 
     Process::fake(function ($process) use (&$ran) {
@@ -176,9 +154,8 @@ it('creates the bookkeeping directory before a config that names it goes live', 
 });
 
 it('keeps PHP sessions and the error log outside the served directory', function () {
-    // The other half of the same problem: these must NOT be under the
-    // document root, because no deny rule is what stands between a session
-    // file and anyone who guesses its name.
+    // Must NOT be under the document root: no deny rule should stand between a session file and
+    // anyone who guesses its name.
     $documentRoot = app(ApplicationProvisioner::class)->documentRoot($this->application);
     $pools = app(PoolManager::class);
 

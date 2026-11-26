@@ -16,16 +16,10 @@ use Illuminate\Testing\TestResponse;
 /**
  * A new application appears on its own Domains screen.
  *
- * The domains table is what that screen reads, and nothing wrote to it at
- * create time — only the migration that introduced the table backfilled the
- * sites that existed then. Every application made afterwards came up with an
- * empty Domains section while plainly answering on a domain.
+ * The domains table is what that screen reads, so create must write the primary domain row.
  *
- * The second half is the `is_test` flag, which decides whether a name may go
- * on a certificate. It was fillable, cast, and read in three places, and
- * nothing ever set it — so it was always false, and the guard that exists to
- * stop the panel spending a Let's Encrypt quota shared with the whole internet
- * had never once fired.
+ * The second half is the `is_test` flag, which decides whether a name may go on a certificate;
+ * it guards the shared Let's Encrypt quota and must be set from the hostname.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -42,9 +36,8 @@ beforeEach(function () {
     $this->su = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
 
     Process::fake();
-    // Every site type is created here, n8n included, and its installer
-    // waits for n8n to come up: 60 real two-second sleeps against a fake
-    // server that never answers made this one file take two minutes.
+    // Every site type is created here, n8n included; its installer waits for n8n to come up, so
+    // fake the sleeps or the file takes minutes.
     Sleep::fake();
 });
 
@@ -85,11 +78,9 @@ it('flags a temporary domain as what it is, without disqualifying it', function 
 
     $domain = ApplicationDomain::first();
 
-    // The flag is a fact about the hostname — the panel uses it to know a
-    // wildcard-DNS name resolves by construction and needs no lookup. It is
-    // not a verdict: a name that points here can be certified whatever its
-    // suffix, and refusing on the suffix made a second class of domain the
-    // panel would not protect.
+    // The flag is a fact about the hostname — a wildcard-DNS name resolves by construction and
+    // needs no lookup. It is not a verdict: a name that points here can be certified whatever its
+    // suffix.
     expect($domain->is_test)->toBeTrue()
         ->and($domain->certifiable())->toBe($domain->dns_verified_at !== null);
 });
@@ -159,11 +150,8 @@ it('tells the create form this server address so it can offer a temporary name',
 });
 
 it('recognises every suffix it offers as temporary', function () {
-    // The offered list and the recognised list are the same config key, and
-    // this is what that buys: a hostname the form can build is always a
-    // hostname the backend knows not to put on a certificate. When they were
-    // two keys, a suffix could be offered and not recognised — and the name
-    // would go to Let's Encrypt as though the user owned it.
+    // The offered and recognised lists are the same config key, so a hostname the form can build
+    // is always one the backend knows not to put on a certificate.
     foreach ((array) config('server.temporary_domain_suffixes') as $suffix) {
         expect(ApplicationDomain::looksTemporary("site.203-0-113-9.{$suffix}"))
             ->toBeTrue("{$suffix} is offered but not recognised as temporary");
@@ -178,10 +166,8 @@ it('does not mistake a real domain for a temporary one', function () {
 });
 
 it('records the primary domain for every site type', function () {
-    // Asked rather than assumed. The domain row is written in one place, but
-    // "one place" is what the placeholder and the vhost looked like too, and
-    // each of those turned out to behave differently per site type. A one-type
-    // test would have proved nothing about the other sixteen.
+    // Every site type is checked: the domain row is written in one place, but behaviour has
+    // differed per type before, so a one-type test would prove nothing about the others.
     $types = app(SiteTypeManager::class)->names();
 
     expect($types)->not->toBeEmpty();
@@ -204,10 +190,8 @@ it('records the primary domain for every site type', function () {
 });
 
 it('serves every site type under the domain it was created with', function () {
-    // The vhost renders `server_name` from the domains relation, falling back
-    // to the mirrored column. Now that the rows exist, the relation is what
-    // answers — so this checks the two agree rather than trusting the fallback
-    // to keep hiding a disagreement.
+    // The vhost renders `server_name` from the domains relation, falling back to the mirrored
+    // column; check the two agree so the fallback cannot hide a disagreement.
     foreach (app(SiteTypeManager::class)->names() as $index => $type) {
         $application = app(CreateApplication::class)->execute([
             'system_user_id' => $this->su->id,

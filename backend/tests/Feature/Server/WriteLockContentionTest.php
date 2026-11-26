@@ -18,18 +18,13 @@ use Illuminate\Support\Facades\Process;
 /**
  * No shell command may run inside an open database transaction.
  *
- * SQLite allows exactly one writer. A `ufw` reload takes seconds; a
- * transaction held across it blocks every other write in the panel for that
- * whole time, and the request that loses the race fails with "database is
- * locked" — pointing at itself rather than at the firewall edit that actually
- * caused it.
+ * SQLite allows exactly one writer. A `ufw` reload takes seconds; a transaction held across it
+ * blocks every other write in the panel, and the request that loses the race fails with
+ * "database is locked".
  *
- * The transaction was never buying atomicity to pay for that with. `ufw`
- * changes the running firewall the moment it returns and `tee` has already
- * written the file; rolling back afterwards could only ever undo the row,
- * leaving the two halves disagreeing anyway. So the row is committed quickly
- * and put back by hand if the command refuses — same end state, none of the
- * lock.
+ * The transaction bought no atomicity: `ufw` changes the running firewall the moment it returns,
+ * so a rollback could only undo the row. The row is committed quickly and put back by hand if
+ * the command refuses.
  *
  * These assert the property directly: a command never runs at a deeper
  * transaction level than the one the test harness itself opened.
@@ -48,10 +43,8 @@ function recordTransactionDepth(?string $failOn = null): ArrayObject
 {
     $seen = new ArrayObject;
 
-    // The suite itself runs each test inside a transaction, so the baseline is
-    // 1 rather than 0. What matters is that the action opens no *further* one
-    // around the command — comparing to a hardcoded 0 would assert the test
-    // harness, not the code.
+    // The suite runs each test inside a transaction, so the baseline is 1, not 0: what matters is
+    // that the action opens no *further* one around the command.
     $baseline = DB::transactionLevel();
 
     Process::fake(function ($process) use ($seen, $failOn, $baseline) {
@@ -63,10 +56,8 @@ function recordTransactionDepth(?string $failOn = null): ArrayObject
             'extra' => DB::transactionLevel() - $baseline,
         ]);
 
-        // Only the command that materialises the change is failed. Failing
-        // everything would break the probes these actions run first (checking
-        // the user exists, reading ufw status) and the action would refuse for
-        // the wrong reason.
+        // Only the command that materialises the change is failed: failing everything would break
+        // the probes these actions run first (user exists, ufw status) and refuse for the wrong reason.
         return $failOn !== null && $command === $failOn
             ? Process::result(exitCode: 1, errorOutput: 'refused')
             : Process::result(exitCode: 0);
@@ -97,9 +88,8 @@ function makeCronjob(): Cronjob
 
 function makeRule(): FirewallRule
 {
-    // Re-read, because `create()` does not populate database defaults into the
-    // model — `enabled` would be null in memory. A real request gets the rule
-    // from route-model binding, which reads it back the same way.
+    // Re-read, because `create()` does not populate database defaults into the model (`enabled`
+    // would be null). A real request gets the rule from route-model binding, which reads it back.
     return app(CreateFirewallRule::class)->execute([
         'port_from' => 8080,
         'protocol' => 'tcp',

@@ -46,11 +46,8 @@ function budgetApp(array $overrides = []): Application
 
 describe('job timeouts', function () {
     it('gives every marketplace application more time than its own installer asks for', function () {
-        // The regression this exists for: the job carried a flat 300 while
-        // twelve installers declared 900–1800. With pcntl loaded Laravel
-        // enforces its timeout with SIGALRM, so each of those was killed
-        // mid-download and marked failed at step `worker`. Nextcloud, at
-        // 280 MB, could never install at all.
+        // With pcntl loaded Laravel enforces the job timeout with SIGALRM, so a job shorter than
+        // its installer is killed mid-download and marked failed at step `worker`.
         $installers = (array) config('server.installers');
 
         expect($installers)->not->toBeEmpty();
@@ -67,9 +64,8 @@ describe('job timeouts', function () {
     });
 
     it('leaves a deploy room for the steps after the build', function () {
-        // The old 900 was exactly git_timeout + build_timeout, so a build that
-        // used its full allowance killed the job just as it finished — before
-        // the chown and the restart that make the new code live.
+        // A budget of exactly git_timeout + build_timeout kills a build that uses its full
+        // allowance before the chown and the restart that make the new code live.
         $slow = (int) config('server.git_timeout') + (int) config('server.build_timeout');
 
         expect((new DeployApplication(budgetApp()->id))->timeout)->toBeGreaterThan($slow);
@@ -90,9 +86,8 @@ describe('job timeouts', function () {
 
 describe('docker app first install (RC-20)', function () {
     it('gives every recipe and the Container tab twenty minutes plus the overhead', function () {
-        // Recipes and `docker` have no `installers.<type>.timeout`, so they got
-        // the 300 s default: 420 s for a job that pulls the images. Open WebUI +
-        // Ollama (3.8 GB) died at step `worker` twice that way in RC-16.
+        // Recipes and `docker` have no `installers.<type>.timeout`, so without this they would get
+        // the 300 s default — too short for a job that pulls multi-GB images.
         $budget = app(ProvisioningBudget::class);
         $recipes = array_keys(app(RecipeRegistry::class)->all());
 
@@ -241,10 +236,8 @@ describe('queue reservation window', function () {
 
 describe('live progress', function () {
     it('records steps as they happen, not all at the end', function () {
-        // `steps[]` is documented as the progress indicator while an
-        // application sits at `provisioning`. It was assembled in a local
-        // variable and written once on success, so during the twenty minutes a
-        // Nextcloud install takes it was `[]`.
+        // `steps[]` is the progress indicator while an application sits at `provisioning`, so it
+        // must be written as steps happen, not once on success.
         $app = budgetApp();
         $seen = [];
 
@@ -261,17 +254,15 @@ describe('live progress', function () {
             app(ActivityLogger::class),
         );
 
-        // The row grew while the job was running: by the time the config was
-        // written, the earlier steps were already visible to a poll. Before
-        // this, every one of these reads was 0.
+        // The row grew while the job was running: by the time the config was written, the earlier
+        // steps were already visible to a poll.
         expect($seen)->not->toBeEmpty();
         expect(max($seen))->toBeGreaterThan(0);
         expect($seen[0])->toBe(0);
     });
 
     it('keeps the steps it got through when a step fails', function () {
-        // A failure used to leave `steps` empty, so the user could see which
-        // step broke and nothing about how far it had got.
+        // A failure must leave `steps` showing how far the job got, not empty.
         // The placeholder write — as the site user, after ownership.
         Process::fake(fn ($process) => in_array('tee', $process->command, true)
             && str_ends_with((string) end($process->command), '/index.php')

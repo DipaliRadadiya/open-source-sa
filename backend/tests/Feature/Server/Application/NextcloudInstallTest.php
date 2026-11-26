@@ -88,8 +88,7 @@ it('never puts a password on the command line', function () {
 
     $install = occRun($runs, 'maintenance:install');
 
-    // `ps` is readable by every user on the machine, so an admin password or a
-    // database password passed as an argument is a password handed out.
+    // `ps` is readable by every user, so a password passed as an argument is handed out.
     expect($install['command'])->not->toContain('--admin-pass')
         ->and($install['command'])->not->toContain('--database-pass');
 
@@ -104,9 +103,8 @@ it('answers occ\'s prompts on stdin, database password first', function () {
 
     $install = occRun($runs, 'maintenance:install');
 
-    // Omitting the options makes occ ask, in this order. Getting the order
-    // wrong sets the admin password to the database password and vice versa —
-    // an install that succeeds and locks the user out.
+    // Omitting the options makes occ ask, in this order. A wrong order swaps the admin and
+    // database passwords: the install succeeds and locks the user out.
     $lines = explode("\n", $install['input']);
     expect($lines[1])->toBe('AdminPassw0rd!')
         ->and($lines[0])->not->toBe('')
@@ -116,8 +114,7 @@ it('answers occ\'s prompts on stdin, database password first', function () {
 it('runs occ from Nextcloud\'s own directory', function () {
     $runs = installNextcloud();
 
-    // Upstream is explicit: run maintenance:install from anywhere else and it
-    // dies with a PHP fatal error.
+    // maintenance:install dies with a PHP fatal error unless run from the install directory.
     expect(occRun($runs, 'maintenance:install')['path'])->toBe($this->docRoot);
 });
 
@@ -126,8 +123,7 @@ it('runs occ as the site user, not as the panel', function () {
 
     $install = occRun($runs, 'maintenance:install');
 
-    // occ writes files that the web server then has to own; running it as
-    // anyone else leaves an installation the site cannot use.
+    // occ writes files the web server must own: run as anyone else, the site cannot use them.
     expect(array_slice($install['command'], 0, 4))->toBe(['runuser', '-u', 'ncuser', '--'])
         ->and($install['command'][4])->toBe('/usr/bin/php8.4');
 });
@@ -139,8 +135,7 @@ it('keeps user files out of the web root', function () {
     $dataDir = "{$this->home}/files/nextcloud-data";
     $commands = collect($runs)->pluck('command');
 
-    // The data directory holds every file every user uploads. Under the
-    // document root, each one is a URL.
+    // The data directory holds every uploaded file: under the document root, each is a URL.
     expect(occRun($runs, 'maintenance:install')['command'])->toContain('--data-dir', $dataDir)
         ->and($commands)->toContain(['mkdir', '-p', $dataDir])
         ->and($commands)->toContain(['chmod', '0750', $dataDir]);
@@ -149,22 +144,21 @@ it('keeps user files out of the web root', function () {
 it('trusts the site\'s own domain, or the site refuses every visitor', function () {
     $runs = installNextcloud();
 
-    // Installed from the command line there is no request to learn the
-    // hostname from, so Nextcloud trusts only localhost and answers everyone
-    // else with a refusal page.
+    // Installed from the command line there is no request to learn the hostname from, so
+    // Nextcloud trusts only localhost and refuses everyone else.
     $trust = occRun($runs, 'trusted_domains');
     expect($trust['command'])->toContain('--value=cloud.example.com')
         ->and($trust['path'])->toBe($this->docRoot);
 
     $cliUrl = occRun($runs, 'overwrite.cli.url');
-    // Installation happens before optional certificate issuance. Persist only
-    // what the vhost can serve now; the certificate lifecycle promotes it.
+    // Installation happens before optional certificate issuance: persist only what the vhost
+    // can serve now; the certificate lifecycle promotes it.
     expect($cliUrl['command'])->toContain('--value=http://cloud.example.com');
 });
 
 it('tells Nextcloud to write its config.php private to the site user', function () {
-    // Nextcloud chmods config.php to `configfilemode` on every write, 0640 by
-    // default — readable by the web server account on OpenLiteSpeed.
+    // Nextcloud chmods config.php to `configfilemode` on every write (0640 by default), which
+    // must stay readable by the web server account on OpenLiteSpeed.
     $this->application->forceFill(['isolated_at' => now()])->save();
     $runs = installNextcloud();
 
@@ -182,10 +176,8 @@ it('takes the zip, not the bzip2 tarball', function () {
     $extract = collect($runs)
         ->first(fn ($run) => in_array($run['command'][0] ?? '', ['unzip', 'tar'], true))['command'];
 
-    // Upstream publishes bzip2 and zip only — no gzip. The tarball was the
-    // original choice and it cost a server: Debian's `tar` merely *Suggests*
-    // bzip2, so a lean image extracts nothing and reports a missing `lbzip2`,
-    // a program named nowhere in this codebase. `unzip` is already required.
+    // Upstream publishes bzip2 and zip only. The tarball needs `lbzip2`, which a lean Debian
+    // image lacks (`tar` only *Suggests* bzip2); `unzip` is already required.
     expect($extract[0])->toBe('unzip');
 
     $curl = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'curl')['command'];
@@ -195,15 +187,13 @@ it('takes the zip, not the bzip2 tarball', function () {
 it('copies out of the wrapping directory the zip ships', function () {
     $runs = installNextcloud();
 
-    // Run as the site user (`runuser -u <user> -- cp …`), so the copy's own
-    // arguments start four places in.
+    // Run as the site user (`runuser -u <user> -- cp …`): the copy's own arguments start four
+    // places in.
     $copy = array_slice(collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'runuser'
         && ($run['command'][4] ?? '') === 'cp')['command'], 4);
 
-    // The zip's entries start at `nextcloud/`, unlike Mautic's flat one, and
-    // `unzip` has no `--strip-components` to drop it. Copying from the
-    // extract root instead would put the whole application one directory
-    // below the web root: every URL a 404, and index.php nowhere.
+    // The zip's entries start at `nextcloud/` and `unzip` has no `--strip-components`. Copying
+    // from the extract root would put the application one directory below the web root.
     expect($copy[2])->toEndWith('/src/nextcloud/.');
 });
 
@@ -218,11 +208,8 @@ it('allows longer than the shared default for a 280 MB download', function () {
 });
 
 it('tells occ which database the site was actually given, not a configured constant', function () {
-    // 🔴 `--database` used to come from config alone — harmless while every
-    // Nextcloud got MySQL, and a broken site the moment PostgreSQL is
-    // accepted: occ would be handed `mysql` for a PostgreSQL database and die
-    // inside its own install, past the point where acceptedEngines() could
-    // have refused anything.
+    // `--database` must follow the site's engine, not config alone: occ handed `mysql` for a
+    // PostgreSQL database dies inside its own install, past where acceptedEngines() could refuse.
     $install = occRun(installNextcloud('postgresql'), 'maintenance:install');
 
     // `pgsql` is the value occ's own Install command accepts.
@@ -235,7 +222,7 @@ it('passes a moved MySQL port, which occ does have an option for', function () {
     $at = array_search('--database-port', $command, true);
 
     expect($at)->not->toBeFalse()
-        // Off the engine's connection record, not a literal.
+        // From the engine's connection record, not a literal.
         ->and($command[$at + 1])->toBe('25060');
 });
 
@@ -248,9 +235,8 @@ it('passes a moved PostgreSQL port too', function () {
 });
 
 it('leaves the stock MySQL command line exactly as it was', function () {
-    // The driver still comes from config, and no port option appears where
-    // none appeared before: 3306 is what occ's driver assumes, so naming it
-    // would change the install of every existing Nextcloud to say nothing new.
+    // The driver still comes from config, and no port option appears: 3306 is what occ assumes,
+    // so naming it would change every existing install for nothing.
     $command = occRun(installNextcloud(), 'maintenance:install')['command'];
 
     expect($command)->toContain('mysql')
@@ -266,15 +252,14 @@ it('leaves a stock PostgreSQL command line without a port as well', function () 
 });
 
 it('schedules its background jobs on the site\'s own PHP, and only once', function () {
-    // A fresh install reported "background jobs last ran 56 years ago":
-    // nothing ever added the cron Nextcloud needs.
+    // Without the cron entry, Nextcloud reports "background jobs last ran 56 years ago".
     $runs = installNextcloud();
 
     expect(occRun($runs, 'background:cron'))->not->toBeNull();
 
     $job = Cronjob::query()->sole();
 
-    // The version's binary, not `php` — that is the server default.
+    // The version's binary, not `php` (the server default).
     expect($job->command)->toBe('/usr/bin/php8.4 -f '.$this->application->documentRoot().'/cron.php')
         ->and($job->expression)->toBe('*/5 * * * *')
         ->and($job->application_id)->toBe($this->application->id)

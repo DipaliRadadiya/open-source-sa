@@ -13,17 +13,12 @@ use Illuminate\Support\Sleep;
 /**
  * A container that bounces instead of staying up.
  *
- * `compose ps --status running` was the only check, and a crash-looping container
- * is in the running state for part of every cycle — so one sample can catch it
- * mid-bounce and call the site healthy. Measured on a real box with
- * `curlimages/curl`, which prints its usage and exits: the panel reported the site
- * **active** while the container was on its tenth restart, and the site answered
- * 502.
+ * A crash-looping container is in the running state for part of every cycle, so a single
+ * `compose ps --status running` sample can catch it mid-bounce and call the site healthy.
  *
- * The timing qualifier on the restart count is what keeps this safe, and it was
- * measured rather than reasoned: containers that came back after the host went
- * down read `RestartCount 0`, so a fresh container with restarts on the clock has
- * restarted for its own reasons.
+ * The timing qualifier on the restart count keeps this safe: containers that came back after
+ * the host went down read `RestartCount 0`, so a fresh container with restarts on the clock
+ * has restarted for its own reasons.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -104,13 +99,9 @@ it('refuses to call a restarting container a running site', function () {
 });
 
 it('catches the loop even when the sample lands on a running moment', function () {
-    // The actual failure: `ps --status running` answers, and `ps --format json` says
-    // running too, because the sample happened between two crashes. The restart
-    // count is what gives it away.
-    //
-    // A real loop does not hold still for the confirmation sample: ten seconds
-    // later Docker has restarted it again. The first fake answered the same count
-    // forever, which no looping container does.
+    // `ps --status running` and `ps --format json` both say running because the sample fell
+    // between two crashes; the restart count gives it away. A real loop keeps restarting, so
+    // the confirmation sample must see a higher count.
     Sleep::fake();
     fakeLoopBox(
         json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']),
@@ -126,10 +117,8 @@ it('catches the loop even when the sample lands on a running moment', function (
 });
 
 it('does not punish a long-lived container for restarts in its past', function () {
-    // The false positive this has to avoid. `apply()` also runs on a settings save
-    // for a site that has been up for weeks; a container that crashed once last
-    // month carries that count forever, and failing the save for it would turn a
-    // working site into a reported failure.
+    // False positive to avoid: `apply()` also runs on a settings save for a long-running site,
+    // and a container that crashed once last month carries that count forever.
     fakeLoopBox(
         json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']),
         '3 '.now()->subDays(9)->toIso8601ZuluString(),
@@ -145,8 +134,8 @@ it('lets a healthy container through', function () {
 })->throwsNoExceptions();
 
 it('treats unreadable status output as healthy, not as a failure', function () {
-    // This runs AFTER a successful `up`. Failing a deploy because a status query
-    // did not parse would be the opposite of the mistake it exists to prevent.
+    // This runs AFTER a successful `up`: failing a deploy because a status query did not parse
+    // would be the opposite of what the check is for.
     fakeLoopBox("not json at all\n");
 
     app(ContainerSupervisor::class)->apply($this->application, '/home/loop/loop.test');
@@ -162,27 +151,23 @@ it('has the reason translated in every locale', function () {
 });
 
 it('points at the container log, which is the only place the answer is', function () {
-    // The panel cannot know why somebody's entrypoint exits. What it can do is say
-    // where to look instead of leaving a bare failure.
+    // The panel cannot know why an entrypoint exits; it can say where to look.
     $line = __('application.failure_reason.container_restarting', [], 'en');
 
     expect($line)->toContain('log')->toContain('entrypoint');
 });
 
 describe('one restart is not a loop (F2)', function () {
-    // Found in QA on a real box: PID 1 killed once inside Ghost, Docker brought it
-    // straight back, and for the next two minutes every resume answered 500 and
-    // left the site paused — a restart count of 1 on a container started seconds
-    // ago was read as a loop. A suspicion is now looked at again before it decides
-    // anything.
+    // A restart count of 1 on a container started seconds ago was read as a loop: a suspicion
+    // is looked at again before it decides anything.
 
     it('lets a container through that restarted once and stayed up', function () {
         Sleep::fake();
         $restarted = '1 '.now()->subSeconds(5)->toIso8601ZuluString().' running';
         fakeLoopBox(json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']), [$restarted, $restarted]);
 
-        // Asked directly: through `apply()` an image site goes via the readiness
-        // check, whose grace window would hide a wrong answer here.
+        // Asked directly: through `apply()` the readiness check's grace window would hide a
+        // wrong answer.
         expect(app(ContainerSupervisor::class)->crashLooping($this->application, '/home/loop/loop.test'))->toBeFalse()
             ->and($GLOBALS['loopBoxInspects'])->toBe(2);
         Sleep::assertSleptTimes(1);
@@ -201,8 +186,8 @@ describe('one restart is not a loop (F2)', function () {
     });
 
     it('calls it a loop when the container is no longer running after the wait', function () {
-        // The count can stand still while Docker holds the container in its
-        // backoff delay — the state is what says so.
+        // The count can stand still while Docker holds the container in its backoff delay;
+        // the state says so.
         Sleep::fake();
         fakeLoopBox(json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']), [
             '1 '.now()->subSeconds(5)->toIso8601ZuluString().' running',
@@ -244,8 +229,8 @@ describe('one restart is not a loop (F2)', function () {
     });
 
     it('takes a recreated container as healthy, not as a loop', function () {
-        // `up` can replace the container between the two looks — a new one starts
-        // at RestartCount 0. A count that went DOWN is not a restart.
+        // `up` can replace the container between the two looks (new one: RestartCount 0).
+        // A count that went DOWN is not a restart.
         Sleep::fake();
         fakeLoopBox(json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']), [
             '3 '.now()->subSeconds(5)->toIso8601ZuluString().' running',

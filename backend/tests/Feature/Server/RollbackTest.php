@@ -18,11 +18,8 @@ beforeEach(function () {
     $this->seed(PermissionSeeder::class);
     $this->admin = User::factory()->admin()->create();
 
-    // A real layout on disk, because rollback() is not shelling out for the
-    // checks that matter: it calls is_link(), is_dir() and realpath() against
-    // the actual filesystem. Faking Process leaves those untouched, which is
-    // why every test here failed with "No current release to roll back from"
-    // -- the symlink it asks about was never created.
+    // A real layout on disk: rollback() checks is_link(), is_dir() and realpath() against the
+    // actual filesystem, which faking Process leaves untouched.
     $this->releaseRoot = sys_get_temp_dir().'/rollback-'.Str::random(8);
 
     $this->previousRelease = $this->releaseRoot.'/rollback-site/releases/20260801090000';
@@ -31,8 +28,7 @@ beforeEach(function () {
     mkdir($this->previousRelease.'/public', 0755, true);
     mkdir($this->currentRelease.'/public', 0755, true);
 
-    // `current` points at the newer release, which is the state a rollback
-    // exists to undo.
+    // `current` points at the newer release: the state a rollback exists to undo.
     symlink($this->currentRelease, $this->releaseRoot.'/rollback-site/current');
 
     $this->systemUser = SystemUser::create([
@@ -107,14 +103,8 @@ it('prevents rollback when no previous release path is stored', function () {
 });
 
 it('marks the release it rolled away from, not the one it returned to', function () {
-    // The direction matters and this test had it backwards. `rolled_back` is
-    // the status of the release you LEFT -- the bad deploy -- not of the one
-    // you went back to, which is now live and should read `deployed`.
-    // ReleaseManager::markRolledBack() says so in as many words: "mark the
-    // currently-active release as rolled_back".
-    //
-    // The old expectation could never have passed anyway: markRolledBack() had
-    // no callers at all, so no release was ever marked either way.
+    // The direction matters: `rolled_back` is the status of the release you LEFT (the bad deploy),
+    // not of the one you went back to, which is now live and should read `deployed`.
     fakeSymlinkServerOps();
 
     $previous = Release::create([
@@ -163,21 +153,11 @@ it('records a release in the DB after a successful deploy', function () {
 /*
  * The HTTP half of rollback does not exist.
  *
- * These three tests posted to `POST /applications/{id}/rollback`. There is no
- * such route: `routes/` has no rollback entry, DeploymentController has no
- * rollback method, and the frontend never calls one. `ReleaseManager::rollback()`
- * has no callers anywhere either -- the whole atomic-release rollback feature
- * is a service with nothing wired to it.
+ * These three tests post to `POST /applications/{id}/rollback`, but there is no such route and
+ * `ReleaseManager::rollback()` has no callers: the service has nothing wired to it.
  *
- * So these were not failing because of a bug. They were describing a feature
- * that was never built, and they had been failing on main long enough that the
- * suite's red was background noise -- which is how the third one below, an
- * authorization deny-test, came to have never run once.
- *
- * Skipped rather than deleted. Deleting them would remove the only record that
- * this endpoint was intended, and the deny-test is exactly the assertion you
- * want present on the day somebody does add the route. `pest --filter=rollback`
- * names the gap out loud instead of a red suite everyone learns to ignore.
+ * Skipped rather than deleted: they record that the endpoint was intended, and the deny-test is
+ * the assertion you want in place the day the route is added.
  */
 it('logs application.rolled_back after a rollback', function () {
     Queue::fake();

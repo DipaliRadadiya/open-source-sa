@@ -43,9 +43,8 @@ beforeEach(function () {
         'type' => DomainType::Primary,
     ]);
 
-    // Every shell command this feature runs — tee, nginx -t, systemctl reload —
-    // succeeds. The point of these tests is what gets written and recorded, not
-    // whether the box has nginx on it.
+    // Every shell command (tee, nginx -t, systemctl reload) succeeds: the tests check what is
+    // written and recorded, not whether nginx exists.
     Process::fake(fn () => Process::result(exitCode: 0));
 });
 
@@ -94,8 +93,8 @@ it('gives a redirect its own server block instead of serving the same content', 
 
     $config = renderedVhost($this->application);
 
-    // The redirect name must not join server_name on the content block —
-    // that would serve the site under both names rather than redirect one.
+    // The redirect name must not join server_name on the content block, or the site would be
+    // served under both names.
     expect($config)->toContain('return 301 https://shop.example.com')
         ->and($config)->not->toMatch('/server_name[^;]*old-shop\.example\.com[^;]*;\s*\n\s*root/');
 });
@@ -143,8 +142,7 @@ it('updates the canonical URL and keeps the old primary as an alias', function (
 
     expect($this->application->fresh()->domain)->toBe('newshop.example.com')
         ->and($alias->fresh()->type)->toBe(DomainType::Primary)
-        // The name it replaced stays attached as an alias rather than being
-        // dropped — the site keeps answering on it.
+        // The replaced name stays attached as an alias, so the site keeps answering on it.
         ->and(ApplicationDomain::whereDomain('shop.example.com')->first()->type)->toBe(DomainType::Alias);
 
     $this->assertDatabaseHas('activity_logs', [
@@ -195,9 +193,7 @@ it('marks a test domain as not certifiable', function () {
         'domain' => 'shop.127-0-0-1.nip.io', 'type' => DomainType::Alias, 'is_test' => true,
     ]);
 
-    // nip.io is not on the Public Suffix List, so every certificate issued for
-    // it anywhere on the internet shares one weekly rate limit. Offering the
-    // button would spend somebody else's quota.
+    // nip.io is not on the Public Suffix List: all its certificates share one weekly rate limit.
     expect($domain->certifiable())->toBeFalse();
 });
 
@@ -247,11 +243,8 @@ function renderedVhost(Application $application): string
 }
 
 it('addresses a domain by hostname as well as by id', function () {
-    // The route parameter is called `{domain}` and the model has a `domain`
-    // column, so passing the hostname is the obvious reading. It used to 404
-    // with "No query results for model [App\Models\ApplicationDomain]
-    // alias.example.com" — a message describing the framework's failure to
-    // bind rather than anything the caller could act on.
+    // The route parameter is `{domain}` and the model has a `domain` column, so the hostname
+    // must resolve too (it used to 404 with a model-binding error).
     $domain = $this->application->domains()->create([
         'domain' => 'alias.example.com',
         'type' => DomainType::Alias,
@@ -266,8 +259,7 @@ it('addresses a domain by hostname as well as by id', function () {
 });
 
 it('still refuses a domain belonging to another application', function () {
-    // Resolving a name is not authorising access to it — the ownership check
-    // has to survive the more forgiving lookup.
+    // Resolving a name is not authorising access: the ownership check must still apply.
     $other = Application::forceCreate([
         'system_user_id' => $this->application->system_user_id,
         'name' => 'Other site',
@@ -298,12 +290,8 @@ it('404s an unknown hostname rather than erroring', function () {
 | Editing what a name does
 |--------------------------------------------------------------------------
 |
-| Until this existed, fixing a mistyped redirect target meant deleting the name
-| and adding it back. That is two writes where one was meant, and the gap is
-| not harmless: the vhost is re-rendered without the name in between, so the
-| redirect stops answering — and an add that fails or is forgotten leaves the
-| name off a site whose certificate still covers it, which is the state that
-| silently kills renewal for every other name on that certificate.
+| Detach + re-add would leave a gap where the vhost lacks the name, and a failed re-add
+| leaves the name off a site whose certificate still covers it (renewal then fails).
 | {@see Certificate::staleDomains()}
 */
 
@@ -322,10 +310,10 @@ it('fixes a mistyped redirect target without detaching the name', function () {
         ->assertOk()
         ->assertJsonPath('domain.redirect_to', 'https://example.com');
 
-    // Still attached, and still the same row — the whole point.
+    // Still attached, and still the same row.
     expect($domain->fresh()->id)->toBe($domain->id)
         ->and($this->application->domains()->count())->toBe(2)
-        // And the server block was rewritten, or the old target is still live.
+        // The server block was rewritten, or the old target is still live.
         ->and(renderedVhost($this->application))->toContain('https://example.com')
         ->and(renderedVhost($this->application))->not->toContain('exmaple');
 });
@@ -342,8 +330,7 @@ it('turns a redirect into an alias and drops the target it no longer has', funct
         ->putJson("/api/applications/{$this->application->id}/domains/{$domain->id}", ['type' => 'alias'])
         ->assertOk()
         ->assertJsonPath('domain.type', 'alias')
-        // An alias serves the site itself. A target left behind would be a
-        // value nothing reads and every screen shows.
+        // An alias serves the site itself: a leftover target would be shown but never used.
         ->assertJsonPath('domain.redirect_to', null)
         ->assertJsonPath('domain.redirect_status', null);
 
@@ -364,15 +351,15 @@ it('reports a redirect status only on a redirect', function () {
         ->assertOk()
         ->json('domains'))->keyBy('domain');
 
-    // The column defaults to 301, so every alias and primary used to report one.
+    // The column defaults to 301, so an alias or primary must not report a redirect code.
     expect($domains['old.example.com']['redirect_status'])->toBe(302)
         ->and($domains['www.example.com']['redirect_status'])->toBeNull()
         ->and($domains['shop.example.com']['redirect_status'])->toBeNull();
 });
 
 it('refuses to make a name a redirect with nowhere to redirect to', function () {
-    // `required_if` on the request cannot catch this: the payload names a type
-    // and no target, and the stored row — an alias — has none either.
+    // `required_if` cannot catch this: the payload has a type but no target, and the stored
+    // alias row has none either.
     $domain = $this->application->domains()->create([
         'domain' => 'www.example.com',
         'type' => DomainType::Alias,
@@ -387,8 +374,7 @@ it('refuses to make a name a redirect with nowhere to redirect to', function () 
 });
 
 it('refuses to edit the primary domain', function () {
-    // It names the vhost file and both log files. Changing it is
-    // `makePrimary()`'s job, exactly as removing it is refused.
+    // The primary names the vhost file and both log files: changing it is `makePrimary()`'s job.
     $primary = $this->application->domains()->where('type', DomainType::Primary)->firstOrFail();
 
     $this->actingAs($this->admin)
@@ -400,11 +386,8 @@ it('refuses to edit the primary domain', function () {
 });
 
 it('cannot rename a domain, because the certificate would keep the old name', function () {
-    // 🔴 The guard worth reverting hardest. A rename leaves the old name in the
-    // certificate's lineage, and `certbot renew` re-validates every name in a
-    // lineage and fails the whole renewal when one cannot be validated — so it
-    // would stop the certificate covering the site's *remaining, perfectly
-    // good* names from ever renewing, invisibly, for up to ninety days.
+    // A rename leaves the old name in the certificate's lineage; `certbot renew` re-validates
+    // every name and fails the whole renewal when one cannot be validated.
     $domain = $this->application->domains()->create([
         'domain' => 'www.example.com',
         'type' => DomainType::Alias,
@@ -447,9 +430,7 @@ it('needs manage permission to edit a domain', function () {
 });
 
 it('names the application already holding a domain', function () {
-    // "The domain has already been taken" is true and useless: the rule is
-    // unique across the whole server, and the user's next move — detach it
-    // there, or pick another name — needs to know where "there" is.
+    // The name is unique across the whole server, so the error must say which site holds it.
     $other = Application::forceCreate([
         'system_user_id' => $this->application->system_user_id,
         'name' => 'Company Blog', 'slug' => 'blog', 'domain' => 'blog.example.com',
@@ -466,9 +447,8 @@ it('names the application already holding a domain', function () {
 });
 
 it('refuses a redirect target that would write config into the vhost', function (string $target) {
-    // Every one of these passes Laravel's `url` rule. `;internal;#` is the
-    // reason: `;` ends nginx's `return` and `#` comments out what follows, so
-    // the vhost gained a directive of the user's choosing.
+    // Every one of these passes Laravel's `url` rule, but `;` ends nginx's `return` and `#`
+    // comments out the rest, so the vhost would gain a directive of the user's choosing.
     $this->actingAs($this->admin)
         ->postJson("/api/applications/{$this->application->id}/domains", [
             'domain' => 'old-shop.example.com', 'type' => 'redirect', 'redirect_to' => $target,
@@ -504,9 +484,8 @@ it('still takes an ordinary redirect target with a path', function () {
 });
 
 it('refuses the hostnames the panel itself is served on', function (string $domain) {
-    // install.sh writes these as API_HOST and PANEL_HOST. A site holding one
-    // fights the panel's vhost for the name, and as a primary its certificate
-    // would be issued into — and deleted with — the panel's own lineage.
+    // install.sh writes these as API_HOST and PANEL_HOST. A site holding one fights the panel's
+    // vhost for the name and shares the panel's certificate lineage.
     config(['app.url' => 'https://api.panel.example.org', 'server.storage.panel_url' => 'https://panel.example.org']);
 
     $this->actingAs($this->admin)
@@ -524,8 +503,8 @@ it('refuses the hostnames the panel itself is served on', function (string $doma
 })->with(['panel.example.org', 'API.panel.example.org']);
 
 /*
- * Bug #54: create refused IPs; Add domain did not, and the server's own IP
- * then served this site instead of the default 404.
+ * Create refuses IPs, so Add domain must too: the server's own IP would serve this site
+ * instead of the default 404.
  */
 it('refuses an IP address as a domain', function (string $domain) {
     $this->actingAs($this->admin)
@@ -549,9 +528,8 @@ it('still takes a sibling of the panel host', function () {
 });
 
 /*
-| DOM-01: every template appends the request path to the target, and the path
-| brings its own `/`, so `https://new.example/` sent visitors to
-| `https://new.example//page`.
+| Every template appends the request path to the target, and the path brings its own `/`:
+| `https://new.example/` would redirect to `https://new.example//page`.
 */
 it('saves a redirect target without its trailing slash', function () {
     $this->actingAs($this->admin)
@@ -571,8 +549,7 @@ it('saves a redirect target without its trailing slash', function () {
 });
 
 it('never writes a double slash into the redirect, on any web server', function (string $driver, string $expected) {
-    // Saved before the fix: the row still carries the slash, and the vhost
-    // must not.
+    // A row saved earlier still carries the slash; the vhost must not.
     $this->application->domains()->create([
         'domain' => 'old-shop.example.com', 'type' => DomainType::Redirect,
         'redirect_to' => 'https://new.example.com/', 'redirect_status' => 301,

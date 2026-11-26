@@ -7,30 +7,21 @@ use Illuminate\Support\Facades\Process;
 /**
  * What the setup page is allowed to cost.
  *
- * Every engine answers "which version are you?" by spawning its own client
- * under sudo, and — when it stays silent — "are you installed?" by asking the
- * package manager. Neither is free, and `DatabaseComponent` asked three times:
- * `installed()`, `detail()` and `options()` each took the full capability list.
- * One render of the setup page ran **24 commands** on a four-engine box.
+ * Every engine answers "which version are you?" by spawning its own client under sudo and,
+ * when silent, "are you installed?" via the package manager. Neither is free, so
+ * `DatabaseComponent` must not ask three times (`installed()`, `detail()`, `options()`), and
+ * must not run `dpkg-query` for a page that only shows `running` and `version`.
  *
- * Half of those were `dpkg-query`, which the page never reads: it shows
- * `running` and `version`, and `installed` exists for the engine list in the
- * API. So the page paid for an answer it then discarded, four times over,
- * three times per render.
- *
- * The numbers here are the point. A regression in this area is invisible — the
- * screen stays correct and merely gets slower, so nothing fails and nobody
- * notices. Counting commands is the only thing that notices.
+ * Counting commands is the only way to notice a regression here: the screen stays correct and
+ * merely gets slower.
  */
 
 /**
  * A box where no engine answers.
  *
- * This is the state that costs the most, and the ordinary state of a fresh
- * server: every version probe fails, so nothing short-circuits and every
- * package-manager question gets asked. A fake where the engines all answer
- * hides exactly the work this change removes — it was written that way first,
- * and the sabotage pass caught it.
+ * The costliest state, and the ordinary one on a fresh server: every version probe fails, so
+ * nothing short-circuits and every package-manager question is asked. A fake where the
+ * engines answer would hide the work being counted.
  */
 function fakeSilentBox(array &$seen): void
 {
@@ -50,10 +41,9 @@ function probeCount(array $seen): array
     return [
         'total' => count($seen),
         'package' => collect($seen)->filter(fn ($p) => in_array('dpkg-query', $p->command, true))->count(),
-        // `which <client>`: a PATH lookup, not the package manager. MongoDB
-        // looks for mongosh before running it (bug #48: on a box without it,
-        // sudo refused the missing binary and logged an error), and that one
-        // lookup takes the place of the run, so the total does not grow.
+        // `which <client>`: a PATH lookup, not the package manager. MongoDB looks for mongosh
+        // before running it (sudo logs an error for a missing binary); that lookup replaces
+        // the run, so the total does not grow.
         'lookup' => collect($seen)->filter(fn ($p) => in_array('which', $p->command, true))->count(),
     ];
 }
@@ -67,9 +57,8 @@ it('probes each engine once, and asks the package manager nothing, for a whole s
     $component->detail();
     $component->options();
 
-    // One version probe per engine and nothing else. `package => 0` is the
-    // half of the saving that survives on a box where engines are answering
-    // and `installed()` would short-circuit anyway.
+    // One version probe per engine and nothing else. `package => 0` is the saving that
+    // survives where engines answer and `installed()` would short-circuit anyway.
     expect(probeCount($seen))->toBe([
         'total' => count(app(DatabaseManager::class)->engineNames()),
         'package' => 0,
@@ -86,8 +75,7 @@ it('probes each engine once however many times one manager is asked', function (
     $manager->capabilities();
     $manager->detectedVersions();
 
-    // Three questions, one round of probes: a version probe and a package
-    // question per engine, not three of each.
+    // Three questions, one round of probes: not three of each per engine.
     $engines = count($manager->engineNames());
 
     expect(probeCount($seen))->toBe(['total' => $engines * 2, 'package' => $engines, 'lookup' => 1]);
@@ -96,13 +84,10 @@ it('probes each engine once however many times one manager is asked', function (
 /**
  * The rule that makes the memo safe, pinned so it cannot be undone quietly.
  *
- * The result is remembered for the lifetime of one DatabaseManager, which is
- * only ever short because nothing binds the class as a singleton. Bind it as
- * one — a single `$this->app->singleton(...)` — and the queue worker, which
- * keeps its container between jobs, would hold a version it detected hours ago
- * and report an engine the user has since removed as still installed. That is
- * exactly the failure detect-don't-trust exists to prevent, and it would show
- * up as a wrong screen rather than as an error.
+ * The result is remembered for the lifetime of one DatabaseManager, which is short only
+ * because nothing binds the class as a singleton. As a singleton, the queue worker (which
+ * keeps its container between jobs) would hold a stale version and report a removed engine as
+ * still installed.
  */
 it('resolves a new manager every time, so the memo can never outlive a request', function () {
     expect(app(DatabaseManager::class))->not->toBe(app(DatabaseManager::class));
@@ -123,8 +108,7 @@ it('re-detects for a manager resolved after the engine changed', function () {
 it('reports the same engine state through the cheap probe as through the full list', function () {
     $seen = [];
 
-    // Mixed on purpose: one engine up, the rest silent. Both arms of
-    // `running` have to agree between the two paths, not just the easy one.
+    // Mixed on purpose: one engine up, the rest silent, so both arms of `running` are checked.
     Process::fake(function ($process) use (&$seen) {
         $seen[] = $process;
 
@@ -137,9 +121,8 @@ it('reports the same engine state through the cheap probe as through the full li
             : Process::result(exitCode: 1);
     });
 
-    // The saving must be free. `options()` stopped reading the capability list
-    // and now reads the versions directly, so the two have to agree — engine
-    // for engine, in the same order — or the page has quietly changed.
+    // `options()` reads the versions directly instead of the capability list: the two must
+    // agree, engine for engine and in the same order.
     $capabilities = app(DatabaseManager::class)->capabilities();
     $options = app(DatabaseComponent::class)->options();
 

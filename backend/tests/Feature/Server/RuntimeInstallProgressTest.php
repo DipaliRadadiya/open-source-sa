@@ -26,18 +26,15 @@ use Illuminate\Support\Facades\Queue;
 /**
  * Install progress for PHP and Node.
  *
- * The thing under test is a gap rather than a behaviour: versions are detected
- * from disk, so anything apt has not finished has nowhere to appear. These
- * assert it appears anyway, and — the part that actually bites in production —
- * that it stops appearing as `installing` when the work stops.
+ * Versions are detected from disk, so anything apt has not finished has nowhere to appear.
+ * These assert it appears anyway, and that it stops showing as `installing` when the work stops.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
     $this->admin = User::factory()->admin()->create();
     $this->token = $this->admin->createToken('t')->plainTextToken;
 
-    // A fake /etc/php with one installed version, so nothing depends on what
-    // this machine happens to have.
+    // A fake /etc/php with one installed version, so nothing depends on this machine.
     $this->phpDir = sys_get_temp_dir().'/sv-oss-progress-'.getmypid();
     File::deleteDirectory($this->phpDir);
     File::makeDirectory("{$this->phpDir}/8.4/fpm", 0755, true);
@@ -50,10 +47,9 @@ afterEach(function () {
 });
 
 /**
- * apt and phpenmod as they really behave on the fake /etc/php: the package's
- * ini lands in mods-available, and phpenmod links it into the SAPI's conf.d.
- * Without that the panel reads back an extension that never came on — which
- * since junior re-test #11 it reports, as it should.
+ * apt and phpenmod as they really behave on the fake /etc/php: the package's ini lands in
+ * mods-available, and phpenmod links it into the SAPI's conf.d. Without that the panel reads
+ * back an extension that never came on.
  */
 function fakeRedisPackage(ArrayObject $runs): void
 {
@@ -106,8 +102,7 @@ it('shows a queued version as installing, with no files on disk', function () {
         ->postJson('/api/php/versions', ['version' => '8.3'])
         ->assertStatus(202);
 
-    // The point of the feature: 8.3 has nothing under /etc/php, so before this
-    // it could not appear in the list at all.
+    // 8.3 has nothing under /etc/php, so only the install row can make it appear in the list.
     $row = collect(phpOverview()['versions'])->firstWhere('version', '8.3');
 
     expect($row)->not->toBeNull()
@@ -119,9 +114,8 @@ it('records the install before dispatching, so an immediate poll sees it', funct
     Queue::fake();
     fakePhpPackageIndex();
 
-    // If the row were created inside the job, a client polling between the 202
-    // and the worker picking the job up would see nothing — the exact blind
-    // window this feature exists to close.
+    // Created inside the job, the row would leave a blind window between the 202 and the worker
+    // picking the job up.
     $this->withHeaders(progressHeaders())->postJson('/api/php/versions', ['version' => '8.3']);
 
     Queue::assertPushed(InstallPhpVersion::class);
@@ -189,8 +183,7 @@ it('marks a stranded install failed when the worker dies', function () {
 
     $row = collect(phpOverview()['versions'])->firstWhere('version', '8.3');
 
-    // Without the failed() hook this sits at `installing` forever and the
-    // screen spins on something that stopped running.
+    // Without the failed() hook the row sits at `installing` forever.
     expect($row['status'])->toBe('failed')
         ->and($row['reason'])->toBe('worker');
 });
@@ -328,9 +321,8 @@ describe('extensions', function () {
 
         $rows = collect(app(PhpExtensionManager::class)->catalog('8.4'));
 
-        // `status` is the state of the *operation*. `installed`/`enabled` keep
-        // meaning what they always did, so a never-installed extension is
-        // `ready` — nothing in flight — rather than contradicting them.
+        // `status` is the state of the operation; `installed`/`enabled` keep their meaning, so a
+        // never-installed extension is `ready` (nothing in flight).
         expect($rows->firstWhere('name', 'redis')['status'])->toBe('installing')
             ->and($rows->firstWhere('name', 'gd')['status'])->toBe('ready')
             ->and($rows->firstWhere('name', 'gd')['installed'])->toBeFalse();
@@ -362,17 +354,15 @@ describe('extensions', function () {
 
         app(PhpExtensionManager::class)->install('8.4', 'redis');
 
-        // Debian's postinst normally enables the module, but nothing verified
-        // it while the job went on to log `extension_enabled`. The claim and
-        // the state have to agree.
+        // Debian's postinst normally enables the module, but the claim must be verified: the
+        // logged action and the state have to agree.
         expect(collect($runs))
             ->toContain(aptCommand('install', '-y', '--no-install-recommends', 'php8.4-redis'))
             ->toContain(['/usr/sbin/phpenmod', '-v', '8.4', '-s', 'ALL', 'redis']);
     });
 
     it('logs an extension install as installed, not as enabled', function () {
-        // It logged `extension_enabled` — "Enabled the redis extension" for
-        // something the user had just installed.
+        // "Enabled the redis extension" is wrong for something the user just installed.
         fakeRedisPackage(new ArrayObject);
 
         app()->call([new InstallPhpExtension('8.4', 'redis'), 'handle']);
@@ -395,8 +385,7 @@ describe('extensions', function () {
                 : Process::result(output: '');
         });
 
-        // "The install failed" would be wrong — apt already succeeded, and the
-        // user would retry work that is done.
+        // "The install failed" would be wrong: apt succeeded, and the user would retry done work.
         expect(fn () => app(PhpExtensionManager::class)->install('8.4', 'redis'))
             ->toThrow(RuntimeInstallException::class);
 
@@ -408,8 +397,7 @@ describe('extensions', function () {
     });
 
     it('reports an extension phpenmod left off as not enabled, not as installed and on', function () {
-        // Junior re-test #11: phpenmod exits 0 for a name it has no ini for.
-        // apt "installs" nothing here, so nothing can come on.
+        // phpenmod exits 0 for a name it has no ini for; apt "installs" nothing here.
         Process::fake(fn ($process) => Process::result(output: ($process->command[0] ?? '') === 'apt-cache'
             ? "php8.4-redis - Redis\n"
             : ''));
@@ -444,13 +432,8 @@ function classifiable(string $stderr, bool $denied = false): ServerOpsResult
 }
 
 describe('failure classification', function () {
-    /*
-     * These pass the whole result rather than a string because the classifier
-     * now takes one — deliberately. It used to be handed `$result->output()`,
-     * which is stdout, while installers report failure on stderr; taking the
-     * result makes reading only one stream unexpressible. The cases below feed
-     * stderr for that reason.
-     */
+    // The classifier takes the whole result, not stdout, because installers report failure on
+    // stderr; the cases below feed stderr.
     it('reads a reason out of apt output', function (string $output, string $expected) {
         expect(app(InstallFailureClassifier::class)->classify('php', classifiable($output)))->toBe($expected);
     })->with([
@@ -467,8 +450,7 @@ describe('failure classification', function () {
     });
 
     it('never guesses when it does not recognise the output', function () {
-        // Guessing a cause would be worse than admitting we do not know: the
-        // reference still points at the real stderr.
+        // A guessed cause is worse than "unknown": the reference still points at the real stderr.
         expect(app(InstallFailureClassifier::class)->classify('php', classifiable('weird apt explosion')))
             ->toBe('unknown');
     });

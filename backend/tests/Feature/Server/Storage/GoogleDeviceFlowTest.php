@@ -8,9 +8,9 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
 /*
- * Every fake here is keyed to one endpoint rather than a blanket
- * `Http::fake()`. The device flow talks to two URLs with different shapes, and
- * a catch-all would let a test pass while the code called the wrong one.
+ * Every fake here is keyed to one endpoint rather than a blanket `Http::fake()`: the device flow
+ * talks to two URLs with different shapes, and a catch-all would let a test pass while the code
+ * called the wrong one.
  */
 
 const DEVICE_URL = 'oauth2.googleapis.com/device/code';
@@ -50,9 +50,8 @@ it('requests drive.file and nothing wider', function () {
 });
 
 /*
- * Google renamed this field; the documented name is `verification_url` and
- * newer responses carry `verification_uri`. Reading only one would leave the
- * operator holding a code with nowhere to type it.
+ * The documented field is `verification_url` and newer responses carry `verification_uri`.
+ * Reading only one would leave the operator holding a code with nowhere to type it.
  */
 it('accepts the renamed verification field', function () {
     Http::fake([DEVICE_URL => Http::response([
@@ -72,16 +71,11 @@ it('names a bad client id rather than reporting a generic failure', function () 
 });
 
 /*
- * The exact body Google returned on a real box, captured rather than invented.
+ * The exact body Google returns, captured rather than invented.
  *
- * This is the failure a first-time operator actually hits, because "TVs and
- * Limited Input devices" is an absurd-looking choice for a server control
- * panel and everyone reaches for "Web application" instead. It arrives as
- * `invalid_client` — the same code as an unknown client id — so the previous
- * message sent them to re-check a client id that was perfectly correct.
- *
- * The suite could not catch it: the fake carried the code with no description,
- * which is a response Google never actually sends.
+ * A first-time operator picks "Web application" instead of "TVs and Limited Input devices". That
+ * arrives as `invalid_client` — the same code as an unknown client id — so only the description
+ * tells the two apart; a fake with no description is a response Google never sends.
  */
 it('names a wrong client type instead of blaming the client id', function () {
     Http::fake([DEVICE_URL => Http::response([
@@ -95,8 +89,7 @@ it('names a wrong client type instead of blaming the client id', function () {
         ->reason->toBe('storage.oauth.wrong_client_type');
 });
 
-// An unknown client id still reports as one — the new branch must not swallow
-// the case it was carved out of.
+// An unknown client id still reports as one; the wrong-client-type branch must not swallow it.
 it('still names an unrecognised client id', function () {
     Http::fake([DEVICE_URL => Http::response([
         'error' => 'invalid_client',
@@ -131,10 +124,8 @@ it('distinguishes slow_down from a failure', function () {
 });
 
 /*
- * One outcome per test on purpose: a second `Http::fake()` inside the same
- * test does not replace the first stub, so both halves answered with the first
- * response and the expiry assertion was never really run. It failed loudly
- * here, but the same shape passes silently when the two expectations agree.
+ * One outcome per test on purpose: a second `Http::fake()` inside the same test does not replace
+ * the first stub, so both halves would answer with the first response.
  */
 it('reports a denied approval as its own outcome', function () {
     Http::fake([TOKEN_URL => Http::response(['error' => 'access_denied'], 403)]);
