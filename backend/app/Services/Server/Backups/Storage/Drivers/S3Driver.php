@@ -202,7 +202,8 @@ class S3Driver implements StorageDriver
             || str_contains($message, 'invalid access key')
             || str_contains($message, 'signature')
             || str_contains($message, 'access denied')
-            || str_contains($message, '403')) {
+            // The status line, never a bare `403`: the message holds the probe key's random UUID.
+            || str_contains($message, '403 forbidden')) {
             return 'storage.test.invalid_credentials';
         }
 
