@@ -49,7 +49,7 @@ export function EngineStatusCards({ status, processes = [] }) {
   }
 
   // Running queries for every engine: MongoDB has no thread counter, so it comes from the
-  // live process list instead (7 Oct: Mongo showed one card and an empty row).
+  // live process list instead (Mongo showed one card and an empty row).
   {
     const running = activeQueries(processes);
     const longRunning = running.filter((p) => (p?.time ?? 0) >= STUCK_SECONDS).length;
@@ -91,12 +91,12 @@ export function EngineStatusCards({ status, processes = [] }) {
   }
 
   // No uptime card: the health summary above already says "Up 17 hours" and flags a
-  // recent restart (7 Oct: the tiles repeated it).
+  // recent restart (the tiles repeated it).
 
   if (cards.length === 0) return null;
 
   return (
-    // Compact tiles (7 Oct: tall cards were mostly empty). Three or four per engine; never a
+    // Compact tiles (tall cards were mostly empty). Three or four per engine; never a
     // lone tile on its own row: four go 2×2 until there is room for one row.
     <div className={cn("grid gap-3 sm:grid-cols-2", cards.length === 4 ? "xl:grid-cols-4" : "lg:grid-cols-3")}>
       {cards.map(({ key, icon: Icon, label, value, hint, percent, sub }) => (

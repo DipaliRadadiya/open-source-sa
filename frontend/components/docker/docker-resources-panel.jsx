@@ -50,14 +50,8 @@ import {
 import { HoverHint } from "@/components/ui/hover-hint";
 import { formatDockerSize } from "@/lib/format/bytes";
 
-/**
- * Networks and volumes on this server, as two lists built like every other list in
- * the panel (Krishna, 21 Oct): a card head with its Create button, the shared table,
- * and a ⋯ menu per row whose Remove is red and says why when it cannot run.
- *
- * Every destructive control is either absent or confirmed, and the API refuses the
- * same cases independently.
- */
+// Networks and volumes on this server, as two standard lists. Every destructive action is
+// confirmed or absent, and the API refuses the same cases.
 export function DockerResourcesPanel({
   initialNetworks,
   initialVolumes,

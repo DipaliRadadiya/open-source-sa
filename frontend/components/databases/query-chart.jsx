@@ -186,7 +186,7 @@ export function QueryChart({ metrics = [], timeZone }) {
 
       <CardContent className="space-y-3">
         <p className="text-xs font-medium text-muted-foreground">{t("qps")}</p>
-        {/* Three boxes rather than one strip, each with its own mark, as in the redesign. */}
+        {/* Three boxes rather than one strip, each with its own mark. */}
         <dl className="grid gap-2 sm:grid-cols-3">
           {[
             [t("summary.current"), currentQps, Activity],

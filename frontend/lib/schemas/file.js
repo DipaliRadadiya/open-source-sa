@@ -127,35 +127,3 @@ export const newFileSchema = z.object({
     .regex(SAFE_PATH, "invalidName")
     .refine((v) => !v.includes("/"), "noSlashes"),
 });
-
-// Rename and move are the same endpoint (`target` must not already exist).
-export const renameSchema = z.object({
-  target: z.string().trim().min(1, "required_target").regex(SAFE_PATH, "invalidPath"),
-});
-
-export const copySchema = z.object({
-  target: z.string().trim().min(1, "required_target").regex(SAFE_PATH, "invalidPath"),
-});
-
-export const compressSchema = z.object({
-  target: z
-    .string()
-    .trim()
-    .min(1, "required_target")
-    .regex(SAFE_PATH, "invalidPath")
-    // zip and tar.gz (tar keeps Unix modes); `.tgz` is accepted as an alias.
-    .refine((v) => /\.(zip|tar\.gz|tgz)$/i.test(v), "mustBeArchive"),
-});
-
-export const extractSchema = z.object({
-  target: z.string().trim().min(1, "required_target").regex(SAFE_PATH, "invalidPath"),
-});
-
-export const PERMISSION_PRESETS = ["644", "755", "600"];
-
-export const permissionsSchema = z.object({
-  mode: z
-    .string()
-    .trim()
-    .regex(/^[0-7]?[0-7]{3}$/, "invalidMode"),
-});

@@ -31,14 +31,8 @@ export default async function DockerPage() {
   const { networks, volumes, failed, status, failure, message } =
     await getDockerResources();
 
-  // The container sites, for attaching one from this page. Only sites that are
-  // actually serving: the endpoint applies the change by rewriting the compose
-  // file and bringing the container up, which on a pending site would be
-  // provisioning it as a side effect of a click on a different screen.
-  //
-  // Gated on `application` manage, not `docker` manage: attaching writes the
-  // SITE's configuration and restarts it, so the permission that governs it is
-  // the one that governs the site.
+  // Container sites that are serving, for attaching one here (attaching rewrites the
+  // compose file and restarts the site). Gated on `application` manage, not `docker`.
   const canManageSites = can(permissions, "application", "manage");
   // Names for the "belongs to" badges; anyone who can see applications gets them.
   const allApplications = can(permissions, "application", "view")
@@ -62,16 +56,7 @@ export default async function DockerPage() {
       <PageHeader title={t("title")} />
 
       {failed ? (
-        /*
-         * Not an empty table. "This server has no networks" is a claim about
-         * the machine, and Docker always has at least three — reporting it
-         * without having heard from the machine would be a lie that looks
-         * like data.
-         *
-         * A 409 here is the honest case: the endpoints are gated on the
-         * server hosting containers, so a LEMP box says so rather than
-         * shelling out to a docker binary that is not installed.
-         */
+        /* A failed read is not an empty table. 409: this server doesn't host containers. */
         status === 409 ? (
           <EmptyState
             icon={Container}
@@ -87,11 +72,7 @@ export default async function DockerPage() {
           />
         )
       ) : (
-        /* Networks and volumes only. Registry credentials used to be a third
-           card here and now live under Integrations, beside the git accounts and
-           storage destinations — a credential held somewhere else is not one of
-           Docker's own objects, and burying it under two tables it had nothing to
-           do with is what made it undiscoverable. */
+        /* Networks and volumes only; registry credentials live under Integrations. */
         <DockerResourcesPanel
           initialNetworks={networks}
           initialVolumes={volumes}

@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 // A local-only engine answers 409 `restart_required`; resend with `restart_cluster: true` if confirmed.
 // `retry(error, resend)` returns false for any other error. For this one it asks, and on
 // yes keeps the question open with "Restarting…" until the resend settles: closing it
-// first left the form behind it saying "Adding…" with nothing to explain why (Krishna, 8 Oct).
+// first left the form behind it saying "Adding…" with nothing to explain why.
 export function useRestartConfirm() {
   const t = useTranslations("databases.restartForRemote");
   const [pending, setPending] = useState(null); // { resolve }

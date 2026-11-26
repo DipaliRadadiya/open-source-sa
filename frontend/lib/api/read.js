@@ -5,15 +5,14 @@ import { getApplication } from "@/lib/applications/get-applications";
 // Anything under a site, not the site itself: `/applications/7/domains`.
 const UNDER_APPLICATION = /^\/applications\/(\d+)\/./;
 
-// `http`: non-2xx. `shape`: 200 the schema rejected. `network`: never completed.
-export const READ_FAILURES = ["http", "shape", "network"];
 
 // Server Component reads never appear in the browser's network tab.
 function report(path, failure, detail) {
   console.error(`[read] ${path} failed (${failure})${detail ? `: ${detail}` : ""}`);
 }
 
-// Resolves `{ data, failed, status, failure }`; `status` is always carried.
+// Resolves `{ data, failed, status, failure }`; `status` is always carried. `failure` is
+// `http` (non-2xx), `shape` (200 the schema rejected) or `network` (never completed).
 // A schema mismatch counts as `failed`, never as empty data.
 export async function read(path, schema, options) {
   /* A site with no system user answers 409 on every route under it; the layout shows a notice. */

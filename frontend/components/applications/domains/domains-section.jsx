@@ -92,7 +92,7 @@ function sslRowState(certificate, coverage, domain) {
 // The actions column is fixed, not `auto`: header and rows are separate grids, and `auto`
 // sized each to its own content, so the headings drifted off their columns.
 // Top-aligned, with every column's first line on the 32px icon's centre line: the
-// status cells pad down 8px, the name centres on its icon (Krishna, 14 Oct: the name
+// status cells pad down 8px, the name centres on its icon (the name
 // sat 5px above the statuses and the row read "unaligned and messy").
 const ROW_GRID = "md:grid-cols-[minmax(0,1fr)_10rem_10rem_13rem] md:items-start";
 

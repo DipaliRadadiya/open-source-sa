@@ -128,7 +128,7 @@ export function PermissionMatrix({ groups = [], value, onChange }) {
 
         return (
           // Folded, each with its own count: open, the 38 rows made the page three screens
-          // long (Krishna, 17 Oct). Set all works without opening.
+          // long. Set all works without opening.
           <Collapsible key={sectionKey} className="group/section overflow-hidden rounded-lg border">
             <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/40 px-3 py-2 group-data-[state=open]/section:border-b">
               <CollapsibleTrigger className="flex min-w-0 items-center gap-2 rounded text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">

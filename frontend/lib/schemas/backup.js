@@ -87,7 +87,7 @@ export const backupSchema = z
     application_name: z.string().nullish(),
     application_domain: z.string().nullish(),
     // A backup of a database on its own. After the database (or site) is deleted the
-    // row is `archived`: its id is null and the name and engine are kept (16 Oct).
+    // row is `archived`: its id is null and the name and engine are kept.
     database_id: z.number().nullish(),
     database_name: z.string().nullish(),
     database_engine: z.string().nullish(),
@@ -290,8 +290,6 @@ export const restoreSchema = z
   })
   .passthrough();
 
-export const restoreResponseSchema = z.object({ restore: restoreSchema });
-
 export const restoresResponseSchema = z.object({
   restores: z.array(restoreSchema).default([]),
   meta: metaSchema.default({ current_page: 1, per_page: 20, total: 0, last_page: 1 }),
@@ -335,8 +333,3 @@ export function backupTargetFormSchema(options) {
   });
 }
 
-// `confirm` must equal the domain (backend trims both); checked at the call site.
-export const restoreFormSchema = z.object({
-  type: z.enum(BACKUP_TYPES),
-  confirm: z.string().min(1, "required_confirm"),
-});

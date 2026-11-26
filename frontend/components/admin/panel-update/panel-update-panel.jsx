@@ -57,7 +57,7 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
 
   const activeRunId = isActive(run) ? run.id : null;
   // A failed run from another build (the panel was updated or redeployed since) says
-  // nothing about this one: on 5 Oct a 29 Sep "didn't finish" sat above "Up to date".
+  // nothing about this one.
   const staleRun =
     Boolean(run) &&
     !isActive(run) &&

@@ -17,30 +17,9 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Caution } from "@/components/ui/caution";
 
 /**
- * Edit a container site's compose file.
- *
- * The answer to "how do I change an environment variable", which had none: a
- * container gets no Environment screen — its variables live in this file — and the
- * file was writable exactly once, on the create form.
- *
- * **Why this is not a dialog any more.** It was, modelled on the php.ini editor,
- * and it was the wrong shape for this file. A compose file is sixty lines, so the
- * modal's body pushed the Save button below the fold on a desktop: the control you
- * opened it for was the one you could not reach. A page has no fold to fall off —
- * the editor takes the full width and the save row sits in normal document flow.
- *
- * The file also deserves the room. This is the site: its image, its ports, its
- * volumes and its variables are all in here, which is not a "settings dialog"
- * amount of consequence.
- *
- * **What makes it survivable is stated up front, not left to an error.** The server
- * checks the file with Docker's own parser, refuses one that publishes off loopback
- * or mounts outside the site's own tree, and if the new file will not come up it
- * puts the old one back and starts the site on that.
- *
- * The acknowledgement appears for one case only: a site still running the panel's
- * generated file, where saving is one-way. A confirmation on every save would be
- * friction with nothing behind it, since an ordinary bad save rolls back.
+ * Edit a container site's compose file (its variables live here; there is no Environment
+ * screen). The server validates the file and rolls back if the new one won't start, so the
+ * acknowledgement is asked only when taking over the panel's generated file, which is one-way.
  */
 export function ComposeEditor({
   application,
@@ -99,7 +78,7 @@ export function ComposeEditor({
   const lineCount = contents.split("\n").length;
   const gutter = useRef(null);
 
-  // What the server checks, one short line each instead of a paragraph (Krishna, 20 Oct).
+  // What the server checks, one short line each instead of a paragraph.
   const rules = [
     { key: "parser", icon: ShieldCheck },
     { key: "ports", icon: Network },

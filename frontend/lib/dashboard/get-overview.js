@@ -13,7 +13,7 @@ async function total(path, schema) {
 }
 
 /**
- * The dashboard's "what is on this server" strip (Joe's feedback, 5 Nov): how many of each,
+ * The dashboard's "what is on this server" strip: how many of each,
  * plus whether the firewall is on. Each part only for someone who may open its page.
  */
 export async function getDashboardOverview({ databases, cronjobs, systemUsers, firewall }) {

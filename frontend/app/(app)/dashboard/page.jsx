@@ -51,7 +51,7 @@ export default async function DashboardPage() {
   // MariaDB and miss MongoDB and PostgreSQL.
   const canViewDatabases = can(permissions, "database", "view");
   // The two slow reads (about a second each) start now, beside the others, and stream
-  // into their own Suspense boundaries: nothing else waits for them (18 Nov).
+  // into their own Suspense boundaries: nothing else waits for them.
   const overviewRead = allowed
     ? getDashboardOverview({
         databases: canViewDatabases,
@@ -82,7 +82,7 @@ export default async function DashboardPage() {
   const known = Boolean(appResult && !appResult.failed);
   const applications = known ? appResult.applications : [];
   const firstRun = known && applications.length === 0;
-  // Each finding links only where the role may go (23 Nov: "Set up SSL" opened a refusal).
+  // Each finding links only where the role may go ("Set up SSL" opened a refusal).
   const appCatalog = await getPermissions("application").catch(() => null);
   const attention = attentionFindings(applications, appCatalog);
   const canViewServices = can(permissions, "service", "view");

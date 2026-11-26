@@ -137,7 +137,7 @@ export function AccountRow({
           </div>
         </div>
   
-        {/* Checks on the right, next to the menu (Krishna, 13 Oct); below the account on a phone. */}
+        {/* Checks on the right, next to the menu; below the account on a phone. */}
         <div className="flex flex-wrap items-center gap-2 max-sm:w-full max-sm:ps-11 sm:ms-auto sm:justify-end">
           <Button
             variant="outline"

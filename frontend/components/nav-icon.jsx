@@ -42,7 +42,7 @@ import {
 
 // Every name the menus send today, bundled. DynamicIcon fetches each icon as its own
 // chunk and shows the fallback "?" until it arrives, so on a slow load or a new build
-// the whole sidebar flashed question marks (Krishna, 7 Oct).
+// the whole sidebar flashed question marks.
 const ICONS = {
   "app-window": AppWindow,
   archive: Archive,

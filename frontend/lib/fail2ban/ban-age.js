@@ -9,12 +9,9 @@ function wallClockMs(value) {
 }
 
 /**
- * Seconds since the ban started, or null when it cannot be known.
- *
- * Not `now - banned_at`: banned_at is the SERVER's wall clock with no zone, so reading it
- * in the browser's zone is off by the difference (5½ h in India). The ban's length
- * (expires_at - banned_at, both the same clock) minus the server's own `seconds_left`
- * needs no zone at all. Permanent bans have no expiry, so no age.
+ * Seconds since the ban started, or null when it cannot be known. `banned_at` is the server's
+ * zoneless wall clock, so use the ban's length (`expires_at - banned_at`) minus `seconds_left`.
+ * Permanent bans have no age.
  */
 export function banAgeSeconds({ banned_at: since, expires_at: expires, seconds_left: left }) {
   const start = wallClockMs(since);

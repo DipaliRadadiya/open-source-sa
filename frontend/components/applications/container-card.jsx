@@ -42,35 +42,14 @@ import { Form, FormControl, FormField } from "@/components/ui/form";
  */
 const DEFAULT_NETWORK = "__default__";
 
-/**
- * "No registry — pull anonymously", as a value the form can hold.
- *
- * The same Radix constraint as `DEFAULT_NETWORK`: `""` is reserved for "nothing
- * selected", so the default answer needs a value of its own — and it has to be the
- * same one in the defaults, the item and the submit mapping, which is the bug those
- * three have already had once on this form.
- */
+// "No registry — pull anonymously". Radix reserves `""` for "nothing selected", so the
+// defaults, the item and the submit mapping must all use this value.
 const NO_REGISTRY = "__none__";
 
 /**
- * What a container site runs as — and the only place the panel's own Docker
- * networks become usable.
- *
- * The network is the field that needed a home. `docker network create` takes no
- * container, so joining one is not something the create dialog on the Docker
- * page can do; and Compose cannot discover a network the panel made, so the
- * generated compose file has to name it with `external: true` or the site
- * quietly joins a differently-prefixed network of its own. Before this card
- * existed, the Docker page could create networks that nothing the panel builds
- * was able to use.
- *
- * `image` is deliberately not editable here. Changing it pulls, and a bad
- * reference fails after the old container is already gone — that belongs with
- * the deploy path, not with a form that saves settings. Shown read-only so the
- * card still answers "what is this running".
- *
- * A sentence about downtime, because saving this recreates the container: the
- * site is briefly down, and that is not something to discover from a graph.
+ * What a container site runs as, and where it joins a panel-made Docker network (named
+ * `external: true` in the generated compose file). `image` is read-only: changing it pulls
+ * and belongs to deploy. Saving recreates the container, so the card warns of brief downtime.
  */
 export function ContainerCard({
   application,
@@ -160,7 +139,7 @@ export function ContainerCard({
     );
 
   // Memory and CPU, the same fields and rules for a simple app and a 1-Click Recipe.
-  // Side by side, a pair's inputs share one line however long either hint wraps (18 Nov).
+  // Side by side, a pair's inputs share one line however long either hint wraps.
   const PAIRED = "@3xl/section:row-span-2 @3xl/section:grid-rows-subgrid";
 
   const limitFields = (
@@ -322,7 +301,7 @@ export function ContainerCard({
                     </Button>
                   ) : null}
                 </div>
-                {/* Minutes on a big image: a spinning button with no words read as stuck (users, 3 Nov). */}
+                {/* Minutes on a big image: a spinning button with no words read as stuck. */}
                 {pulling || redeploying ? (
                   <p role="status" className="mt-2 text-xs text-muted-foreground">
                     {tr("runningHint")}
@@ -511,7 +490,7 @@ export function ContainerCard({
                     control={form.control}
                     name="container_port"
                     render={({ field }) => {
-                      // An input like every other field (Krishna, 18 Nov); only a port the image
+                      // An input like every other field; only a port the image
                       // does not declare gets a line under it.
                       const matches = detectedPort && Number(field.value) === detectedPort;
                       return (

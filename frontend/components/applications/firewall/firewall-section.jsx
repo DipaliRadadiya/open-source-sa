@@ -210,7 +210,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   
             <Collapsible open={!enabled}>
               <CollapsibleContent className={COLLAPSIBLE_ANIMATION}>
-                {/* One note, not a page banner plus this one (Krishna, 13 Oct). Only the advice:
+                {/* One note, not a page banner plus this one. Only the advice:
                     the page no longer explains what a firewall is (18 Nov). */}
                 <Note icon={Lightbulb} title={t("whenToUseTitle")}>
                   {t("whenToUseBody")}

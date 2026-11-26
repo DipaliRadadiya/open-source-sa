@@ -28,12 +28,12 @@ const MAIN_RUNTIMES = new Set(["nginx", "apache", "openlitespeed", "php", "node"
 const MAIN_ENGINE_ORDER = ["mariadb", "mysql", "postgresql", "mongodb"];
 // Tiles in one row of the strip at its widest (`lg:grid-cols-5` below).
 const ROW_TILES = 5;
-// Steel UI (Krishna's prototype, 14 Oct): a short mono code in a square instead of the
+// A short mono code in a square instead of the
 // logo on a white tile, which looked odd on the dark theme (and the MariaDB seal is
 // dark blue, so a dark tile would hide it).
 const ENGINE_MARKS = { mariadb: "MDB", mysql: "MYSQL", postgresql: "PG", mongodb: "MGO" };
 
-// Steel UI (Krishna's prototype, 14 Oct): facts are cells in one hairline grid. Each
+// Facts are cells in one hairline grid. Each
 // cell draws its right and bottom edge inside itself; the grid's -1px margins push
 // the outermost ones under the card's clipped edge or the next section's border.
 const CELL = "min-w-0 bg-card shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)]";
@@ -41,8 +41,7 @@ const CELL = "min-w-0 bg-card shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_
 function Fact({ label, value, mono }) {
   return (
     <div className={cn(CELL, "px-4 py-3")}>
-      {/* Normal case (user feedback, 5 Nov): small uppercase mono labels were hard to scan.
-          Mono stays for values like kernels and versions. */}
+      {/* Normal-case labels; mono only for values like kernels and versions. */}
       <dt className="text-[13px] font-medium text-muted-foreground">{label}</dt>
       <dd className="mt-1 flex min-w-0 items-center gap-1">
         {value ? (
@@ -76,7 +75,7 @@ function SoftwareChip({ mark, name, version, title }) {
 }
 
 // One full-width card: the machine's facts, then the software its sites run on.
-// No IP or uptime here: the banner above shows both (Krishna, 6 Oct).
+// No IP or uptime here: the banner above shows both.
 export async function ServerInfoCard({ facts, health, engines = [], enginesFailed = false, canViewServices = false }) {
   const t = await getTranslations("serverDashboard");
 

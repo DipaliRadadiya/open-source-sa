@@ -52,7 +52,7 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
   ) : null;
   const controls = (
     <>
-      {/* Outlined, like every other button: as bare icons they read as decoration (7 Oct). */}
+      {/* Outlined, like every other button: as bare icons they read as decoration. */}
       {/* In the header strip on a touch screen the copy buttons were always shown, a row of
           small icons beside every value (Krishna, 24 Nov); there the value is selectable
           instead. Edit, menu and the password copy stay. */}
@@ -153,8 +153,8 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
   // `strip`: a label over its value, no box, for the facts row in the page header.
   if (strip) {
     return (
-      // Steel UI: one cell of a hairline grid with a mono caps label, like Server
-      // information on the dashboard (Krishna's prototype). Edges are drawn inside the cell.
+      // One cell of a hairline grid with a mono caps label, like Server
+      // information on the dashboard. Edges are drawn inside the cell.
       <div className={`group/fact min-w-0 px-5 py-3 shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)] ${wide ? "col-span-2 xl:col-span-1" : ""}`}>
         <dt className="font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">{label}</dt>
         <dd className="flex min-h-7 min-w-0 items-center gap-2">
@@ -163,7 +163,7 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
           >
             {value}
           </span></HoverHint>
-          {/* Steel UI (Krishna, 14 Oct): with a mouse, the buttons appear when the pointer
+          {/* With a mouse, the buttons appear when the pointer
               is on this fact, for a cleaner header. They stay visible on touch screens (no
               hover there), for keyboard focus, while a menu is open and while busy. Hidden
               by opacity, not removed, so nothing shifts when they appear. */}
@@ -176,7 +176,7 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
     );
   }
 
-  // `plain`: one compact row, label left and value right, as the prototype's Details card.
+  // `plain`: one compact row, label left and value right.
   if (plain) {
     return (
       <div className="min-w-0 py-2.5">
@@ -213,8 +213,7 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
   );
 }
 
-// `strip`: no card, just the facts in a row, for the application header (Krishna, 7 Oct:
-// the details are what people open this page for, so they lead it).
+// `strip`: no card, just the facts in a row, for the application header.
 export function SiteFactsCard({ application, canManage = false, canManageSystemUsers = false, siteTypes = [], nodeVersions = [], nodeVersionsFailed = false, columns = null, list = false, strip = false, className }) {
   const t = useTranslations("applications");
   const format = useFormatter();
@@ -446,7 +445,7 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
       menu: typeMenu,
       menuBusy: probing,
     },
-    // Copyable for SFTP/SSH login, as in the previous panel (user feedback, 5 Nov). The password
+    // Copyable for SFTP/SSH login. The password
     // only for someone who may manage system users; the API withholds it from everyone else.
     {
       icon: User,

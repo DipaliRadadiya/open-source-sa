@@ -1,15 +1,6 @@
 /**
- * Names defined more than once in the same object, with the line each repeat
- * is on.
- *
- * Scanned from the raw text rather than the parsed object because by then the
- * evidence is gone: `JSON.parse` keeps the last of a repeated key and drops
- * the rest silently. A `reviver` does not help either — it is handed the
- * already-parsed value and walks its own keys, so it never sees the loser.
- *
- * Only enough of a scanner to know where it is: strings (so a `"` inside a
- * value cannot be mistaken for structure), and whether the next string is a
- * name or a value. Everything else is skipped as one character.
+ * Names defined more than once in the same object, with their lines. Scans the raw text,
+ * since `JSON.parse` already dropped the repeats; tracks only strings and name/value position.
  */
 export function duplicateKeys(text) {
   const found = [];

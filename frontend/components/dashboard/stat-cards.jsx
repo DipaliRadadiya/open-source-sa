@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatBytes, localizeSizeText } from "@/lib/format/bytes";
 
-// Steel UI (Krishna's prototype, 14 Oct): the level is a square chip and the bar
+// The level is a square chip and the bar
 // takes the level's colour; "off"/"unknown" stay grey.
 const STATUS_VARIANT = {
   normal: "success",
@@ -29,8 +29,7 @@ function UsageTile({ label, value, ringValue, hint, sub, percent, loading, statu
     <div className="min-w-0 bg-card p-4 shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)]">
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
         <p className="text-[13px] font-medium break-words text-muted-foreground">{label}</p>
-        {/* A level word only when it needs a look (user feedback, 5 Nov): five permanent
-            "Normal" chips were noise and hid the one that mattered. The bar keeps its colour. */}
+        {/* A level word only when it needs a look; the bar keeps its colour. */}
         {status && !loading && status.key !== "normal" && status.key !== "unknown" ? (
           <Badge variant={STATUS_VARIANT[status.key] ?? "muted"}>
             <span aria-hidden className="size-1.5 bg-current" />
@@ -43,7 +42,7 @@ function UsageTile({ label, value, ringValue, hint, sub, percent, loading, statu
       ) : (
         <p className="mt-2 text-[22px] leading-none font-semibold tracking-tight tabular-nums"><BigValue text={ringValue ?? value} /></p>
       )}
-      {/* Segmented, as in the prototype: the track and the fill share one mask, so
+      {/* Segmented: the track and the fill share one mask, so
           their segments line up. */}
       <div className={cn("mt-3 h-1 bg-muted", SEGMENTS)} aria-hidden>
         {status && BAR_FILL[status.key] && !loading ? (

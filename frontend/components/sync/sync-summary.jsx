@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 // Preview and apply share this screen; the preview banner states nothing is written yet.
 // `addable`: rows the scan can add. The panel itself is found and skipped on purpose, so
-// counting it said "Found 1 thing" with nothing to add (Krishna, 24 Nov).
+// counting it said "Found 1 thing" with nothing to add.
 export function SyncSummary({ run, loaded, addable = null, running, actions = null }) {
   const t = useTranslations("sync");
   const totals = runTotals(run.totals);

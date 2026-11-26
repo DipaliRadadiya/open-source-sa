@@ -1,5 +1,5 @@
 // A move off the network an application was created on can remove that network (the
-// backend's default) or keep it (`remove_previous_network: false`, Dipali 30 Oct).
+// backend's default) or keep it (`remove_previous_network: false`).
 
 /** The network Compose made for this application. */
 export function ownNetworkName(applicationId) {

@@ -2,19 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 /*
- * Every screen opens with the same heading component.
- *
- * Twenty-eight route files had `PageHeader`'s markup copied out by hand. That
- * is not a tidiness complaint: it is why the firewall page once had a title
- * that disagreed with its own sidebar label, why the settings layout sat on
- * `space-y-0.5` while everything else used `space-y-1`, and why "this page
- * looks different from the others" kept arriving one screenshot at a time.
- * None of those are visible in a diff — only in aggregate, which is what this
- * checks.
- *
- * The exceptions are deliberate and listed by name. A screen that genuinely
- * leads with something else (a site's name and status, an onboarding card, a
- * 404) should say so here rather than quietly drift.
+ * Every screen opens with `PageHeader`, so titles and spacing stay consistent. Deliberate
+ * exceptions are listed by name below.
  */
 
 const ALLOWED = new Map([

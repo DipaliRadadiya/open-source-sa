@@ -13,7 +13,7 @@ import {
 
 /*
  * The phone and tablet layout of the Backups lists, shared by applications and databases
- * (Krishna, 5 Nov: the cards looked "unstructured and messy and uneven"). Every protected
+ * (the cards looked "unstructured and messy and uneven"). Every protected
  * card has the same three bands — who, four facts, one action row — so neighbours in the
  * two-column grid end level; anything not set up is a thin row in one list instead.
  */

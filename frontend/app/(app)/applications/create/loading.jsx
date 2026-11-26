@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SK_CARD, SkHeader, SkInput, SkOptions } from "@/components/ui/skeleton-kit";
 import { cn } from "@/lib/utils";
 
-// Create application (7 Oct): numbered step cards, each a title over a rule, then its body.
+// Create application: numbered step cards, each a title over a rule, then its body.
 function StepCard({ children }) {
   return (
     <div className={cn(SK_CARD, "overflow-hidden")}>

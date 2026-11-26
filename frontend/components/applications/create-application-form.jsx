@@ -147,7 +147,7 @@ function fieldLabel(config) {
 }
 
 // Progress comes from the Create button's checklist, so the two cannot disagree. A
-// numbered step, not an icon (7 Oct): the page is three steps in order, and a finished
+// numbered step, not an icon: the page is three steps in order, and a finished
 // step turns into a tick.
 // The Domain hint sits in a row under both fields, outside its FormItem: add it to what
 // FormControl (via Slot) already describes the input with, the error message included.
@@ -160,7 +160,7 @@ function SectionHeading({ step, title, description, headingId, done = false }) {
     <div className={cn("flex gap-3", description ? "items-start" : "items-center")}>
       <span
         className={cn(
-          // Steel UI: square markers like the rest of the panel.
+          // Square markers like the rest of the panel.
           "flex size-7 shrink-0 items-center justify-center rounded-[2px] border font-mono text-sm font-semibold tabular-nums transition-colors",
           done
             ? "border-success/50 bg-success/15 text-success"
@@ -920,15 +920,8 @@ export function CreateApplicationForm({
     (config) =>
       !COMMON_FIELD_NAMES.has(config.name),
   );
-  /*
-   * `depends_on: "<field>:<value>"` — show this field only while that other field
-   * holds that value. A general extension of the existing named conditions below,
-   * added for the Docker card: an image-and-port site and a pasted compose file are
-   * alternatives, and showing both sets at once with help text saying "leave the
-   * picker above empty" was the whole of the confusion.
-   *
-   * Watched, not read once: the answer has to change as soon as the mode does.
-   */
+  // `depends_on: "<field>:<value>"`: show a field only while that other field holds that
+  // value (e.g. image-and-port vs a pasted compose file). Watched, so it follows the mode.
   const dependencyValues = useWatch({ control: form.control });
   const dependsOnSatisfied = (dependsOn) => {
     if (typeof dependsOn !== "string" || !dependsOn.includes(":")) return true;
@@ -1603,8 +1596,7 @@ export function CreateApplicationForm({
     }
   }
 
-  // Cancel / Create: in a card at the end of the form at every width, not in the review
-  // column (Krishna, 16 Oct).
+  // Cancel / Create: in a card at the end of the form at every width, not in the review column.
   const actionButtons = (
     <>
       {/* Neutral, not the in-card blue tint: Cancel is not an action. */}
@@ -1853,7 +1845,7 @@ export function CreateApplicationForm({
                         </span>
                       ) : (
                         // No SSL control here: the certificate is issued after create, and
-                        // users went looking for the option (3 Nov).
+                        // users went looking for the option.
                         <>
                           {temporary ? t("form.temporaryDomainHint") : t("form.domainHint")}{" "}
                           {t("form.httpsAutomatic")}

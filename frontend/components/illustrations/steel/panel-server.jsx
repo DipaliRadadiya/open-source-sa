@@ -2,14 +2,10 @@ import { cuboid, projector } from "@/lib/geometry/cuboid";
 import { Part } from "@/components/illustrations/steel/part";
 
 /**
- * The dashboard banner's drawing (Krishna, 15 Oct): this panel's own subject — one server and
- * the applications on it — in the machined-steel material of the landing sites, not a copy of
- * their scenes. A slot on the server's top per application (up to six, then "+N"):
- *   green  = running, amber = paused or failing, outlined = no applications yet.
- * The server's own lights turn amber when services are down. Unknown counts (a failed read)
- * light nothing rather than guess. Decorative; the words beside it carry the meaning.
- * On first paint the modules settle into their bays and their lights come on, once (Krishna
- * asked to see it, 15 Oct). Pure CSS, so a live refresh that keeps the nodes does not replay it.
+ * The dashboard banner's drawing: one server with a slot per application (up to six, then
+ * "+N"): green = running, amber = paused or failing, outlined = none yet. Its lights turn
+ * amber when services are down; unknown counts light nothing. Decorative only. The settle-in
+ * animation is pure CSS, so a live refresh does not replay it.
  */
 
 const P = projector(0, 0);

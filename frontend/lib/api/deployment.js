@@ -17,16 +17,6 @@ export function fetchLatestDeployment(id) {
   return api.get(`/applications/${id}/deployments/latest`);
 }
 
-/** The history and the settings, in the one call that returns both. */
-export function fetchDeployments(id) {
-  return api.get(`/applications/${id}/deployments`);
-}
-
-/** Start a deploy. Answers 202 with the queued row. */
-export function startDeployment(id) {
-  return api.post(`/applications/${id}/deployments`);
-}
-
 /** One deployment, with the build output the list deliberately omits. */
 export function fetchDeployment(id, deploymentId) {
   return api.get(`/applications/${id}/deployments/${deploymentId}`);

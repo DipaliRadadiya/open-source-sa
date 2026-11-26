@@ -194,7 +194,7 @@ function Fact({ icon: Icon, label, value, tone }) {
       </span>
       {/* Label and value side by side on a phone row, stacked in a column cell. */}
       <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3 sm:block">
-        {/* Steel UI: mono caps label, as in the dashboard's stat cells. */}
+        {/* Mono caps label, as in the dashboard's stat cells. */}
         <p className="font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">{label}</p>
         <p className="text-sm font-semibold tabular-nums">{value}</p>
       </div>

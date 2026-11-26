@@ -76,7 +76,7 @@ export function DeleteDatabaseDialog({ database, application = null, open, onOpe
             : t("delete.usedByUnknown")}
         </Caution>
       ) : (
-        // Its own backups are archived, not deleted (16 Oct). A site's database is
+        // Its own backups are archived, not deleted. A site's database is
         // backed up with the site, so this is not said there.
         <p className="text-xs leading-5 text-muted-foreground">{t("delete.backupsKept")}</p>
       )}

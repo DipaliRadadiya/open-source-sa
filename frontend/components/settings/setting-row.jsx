@@ -82,7 +82,7 @@ export function Section({
   children,
 }) {
   const destructive = tone === "destructive";
-  // A role that cannot change the card gets no Save band and no "read-only" note (Krishna, 23 Nov).
+  // A role that cannot change the card gets no Save band and no "read-only" note.
   const showActions = Boolean(actions) && !readOnly && !(actions.type === SectionActions && actions.props.canManage === false);
 
   return (

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 const CHIP = "inline-flex h-6 items-center gap-1.5 rounded-[2px] px-2 font-mono text-xs font-medium tracking-[0.08em] uppercase ring-1 ring-[var(--hero-line)]";
 
 // The page's h1, in the server dashboard's banner: one line on whether the panel is
-// fine, and the facts the four tiles used to repeat (version, update, Central).
+// fine, plus version, update and Central.
 export async function AdminHero({ userName = null, doctor = null, update = null, central = null }) {
   const t = await getTranslations("admin.hero");
 
@@ -30,7 +30,7 @@ export async function AdminHero({ userName = null, doctor = null, update = null,
               {t("greeting", { name: userName })}
             </p>
           ) : null}
-          {/* One step below the server banner's title (Krishna, 17 Oct: too big here). */}
+          {/* One step below the server banner's title (too big here). */}
           <h1 className="mt-0.5 flex items-center gap-2 text-lg font-semibold tracking-tight text-balance">
             {failed ? <CircleAlert className="size-[18px] shrink-0" aria-hidden /> : null}
             {title}

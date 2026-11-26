@@ -1,35 +1,11 @@
 /**
- * Fails the build when a translation key is used but missing, or when a locale
- * has drifted from English.
- *
- * Why this exists: a missing next-intl key does not break the build. It renders
- * the key itself — `FIREWALL.ADD.VERBLABEL` — in the running UI. That shipped
- * twice in one day (2026-07-30), both times with a green build, and both times
- * it was caught only because someone happened to run a check by hand. A check
- * that depends on remembering to run it is not a check.
- *
- * Three things are verified:
+ * Fails lint when translations drift. Checks:
  *   1. Every literal `t("…")` resolves in one of the file's own namespaces.
- *   2. Every locale has exactly the same key set as English — no missing keys
- *      falling back silently, no orphans left behind after a rename.
- *   3. No key is defined twice in the same object. `JSON.parse` keeps the last
- *      one and discards the rest without a word, so the edit you just made can
- *      be dead on arrival and every other check still passes: the key set is
- *      identical, it resolves, the build is green. `validation.max500` sat
- *      duplicated in all three locales until a round-trip happened to show it.
- *   4. Every locale's string has the same ICU shape as English — the same
- *      arguments, of the same type, and the same rich-text tags. Key parity
- *      stops at the key; a translation that drops `{count}` renders a sentence
- *      with a hole in it, and one that renames it throws at render. Three
- *      locales could be read by eye. Eight cannot, and this file exists to be
- *      the check that does not depend on anyone remembering.
- *   5. An English string used at more than one key is translated one way. A
- *      locale built in parallel batches comes back saying "Saving…" two
- *      different ways and calling RAM by the same word as disk, and 1–4 all
- *      pass it. See scripts/one-voice.mjs.
- *
- * Dynamic keys (`t(\`add.errors.${x}\`)`) are skipped: they can't be resolved
- * statically, so they stay a human responsibility.
+ *   2. Every locale has exactly English's key set.
+ *   3. No key is defined twice in one object (`JSON.parse` silently keeps the last).
+ *   4. Every locale string has English's ICU shape: same arguments, types and tags.
+ *   5. An English string used at several keys is translated one way (scripts/one-voice.mjs).
+ * Dynamic keys (`t(\`add.errors.${x}\`)`) can't be resolved statically and are skipped.
  */
 import fs from "node:fs";
 import path from "node:path";

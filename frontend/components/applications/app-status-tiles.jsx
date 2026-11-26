@@ -6,7 +6,7 @@ import { ArrowRight, ChevronRight, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SectionJumpLink } from "@/components/ui/section-jump-link";
 
-// Steel UI (Krishna's prototype, 14 Oct): the icon sits in a square edged in its tone.
+// The icon sits in a square edged in its tone.
 const TONE = {
   success: { tile: "border-success/45 bg-success/10 text-success", value: "text-foreground" },
   warning: { tile: "border-warning/45 bg-warning/10 text-warning", value: "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" },
@@ -19,7 +19,7 @@ const LABEL = "font-mono text-xs font-medium tracking-[0.1em] break-words hyphen
 
 // Also drawn on the Services page; `action` sits where a linked tile shows its chevron.
 // `compact` puts label and value beside the icon in one row, for short values that
-// left the stacked tile mostly empty (Krishna, 12 Oct).
+// left the stacked tile mostly empty.
 export function Tile({ icon: Icon, label, value, detail, tone, href, action, compact = false }) {
   const t = TONE[tone] ?? TONE.neutral;
   const end = href ? (
@@ -73,8 +73,7 @@ export function Tile({ icon: Icon, label, value, detail, tone, href, action, com
   );
 }
 
-// What needs attention on an application's overview, one line each with its fix. The
-// status tiles that stood above it are gone (Krishna, 18 Nov): every one repeated a card.
+// What needs attention on an application's overview, one line each with its fix.
 export function AttentionList({ alerts = [] }) {
   const t = useTranslations("applications");
   if (!alerts.length) return null;

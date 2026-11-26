@@ -151,7 +151,6 @@ export default async function DatabasePage({ params, searchParams }) {
 
       {/* As wide as the cards below it. */}
       <div className="space-y-3">
-        {/* Asked for on 1 Oct, alongside the breadcrumb. */}
         <BackLink href="/databases">{t("backToList")}</BackLink>
         <DetailHeader
           icon={<Database aria-hidden />}
@@ -252,7 +251,7 @@ export default async function DatabasePage({ params, searchParams }) {
           }
           exports={
             // Exports first: the everyday, safe action. Import replaces the data, so it
-            // sits below, as Delete does at the foot of Overview (Krishna, 15 Oct).
+            // sits below, as Delete does at the foot of Overview.
             <div className="space-y-4">
               <DatabaseExports
                 database={data}

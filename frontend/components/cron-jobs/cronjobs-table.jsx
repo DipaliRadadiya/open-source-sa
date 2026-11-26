@@ -102,7 +102,7 @@ function Head({ children }) {
 }
 
 // "Runs as" sits under the name, not in a column of its own: with headers on one line the
-// eighth column kept the table past a laptop's width in German and Russian (19 Nov).
+// eighth column kept the table past a laptop's width in German and Russian.
 function NameCell({ row }) {
   const t = useTranslations("cronJobs");
   return (

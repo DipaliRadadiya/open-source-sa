@@ -3,7 +3,7 @@ import { SkCard } from "@/components/ui/skeleton-kit";
 import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 
 // Streamed in after the rest of the dashboard: the Firewall tile reads `/firewall`,
-// which takes about a second (18 Nov). `read` is the page's getDashboardOverview()
+// which takes about a second. `read` is the page's getDashboardOverview()
 // promise, started beside its other reads.
 export async function DashboardOverviewSection({ applications, read, canManageFirewall }) {
   const overview = await read;

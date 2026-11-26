@@ -1,4 +1,4 @@
-// The keep choice (API 2026-10-26): 0 = delete all, N = keep N days, null = each
+// The keep choice: 0 = delete all, N = keep N days, null = each
 // category's old behaviour. Sizes come from the API per choice; nothing is estimated here.
 
 export const DEFAULT_KEEP = { choices: [0, 1, 3, 7, 14, 30], recommended: 7 };

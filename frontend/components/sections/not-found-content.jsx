@@ -15,7 +15,7 @@ export function NotFoundContent({ links = [] }) {
 
   return (
     <div className="grid w-full max-w-5xl gap-12 lg:grid-cols-2 lg:gap-16">
-      {/* Steel UI (Krishna, 14 Oct): framed like the dashboard banner — faint grid, green
+      {/* Framed like the dashboard banner — faint grid, green
           corner brackets — with the number in mono. */}
       <div className="bg-hero relative overflow-hidden rounded-[2px] p-8">
         <div aria-hidden className="bg-hero-grid pointer-events-none absolute inset-0" />

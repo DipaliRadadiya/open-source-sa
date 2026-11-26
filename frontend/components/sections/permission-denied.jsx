@@ -25,7 +25,7 @@ export async function PermissionDenied({ title, description, feature, typeFeatur
   }
   const profiles = feature ? (await getServerCapabilities().catch(() => null))?.servingProfiles : null;
   const unavailable = feature ? unavailableOnServer(feature, profiles) : false;
-  // A Docker server has no database screen on purpose; users asked whether it was (3 Nov).
+  // A Docker server has no database screen on purpose; users asked whether it was.
   const reason =
     feature === "database" && Array.isArray(profiles) && profiles.includes("docker")
       ? t("unavailableDatabaseDocker")

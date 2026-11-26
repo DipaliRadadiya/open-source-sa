@@ -177,7 +177,7 @@ function SystemUsersList({
   // Keyed by id, so a re-read that reorders the list cannot change who is deleted.
   const [selection, setSelection] = useState({});
   const [bulkOpen, setBulkOpen] = useState(false);
-  // Why each kept account was kept, shown next to it (Krishna, 19 Oct).
+  // Why each kept account was kept, shown next to it.
   const [bulkResult, setBulkResult] = useState(null);
 
   // Filtered and paged by the API; filtering here would only search this page.

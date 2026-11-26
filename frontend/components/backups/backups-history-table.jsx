@@ -386,7 +386,7 @@ export function BackupsHistoryTable({
           accessorKey: "application_name",
           header: siteHeader ?? t("columns.site"),
           // A share, not a minimum: `min-w-48` let this column take all the slack and
-          // squeezed Type and Size onto two lines (Krishna, 9 Oct).
+          // squeezed Type and Size onto two lines.
           meta: { className: showDestination ? "w-[24%]" : "w-[30%]" },
           cell: SiteCell,
         }

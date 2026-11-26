@@ -49,7 +49,7 @@ export function sitesMissingDatabase(applications = [], siteTypes = [], counts =
 
 /**
  * The site a listed database is attached to: from the sites this reader can manage,
- * else the name the list now sends (22 Oct), which a view-only reader also gets.
+ * else the name the list now sends, which a view-only reader also gets.
  * Null when not attached; `{ id, name: null }` when attached but unnamed.
  */
 export function attachedApplication(database, applications = []) {

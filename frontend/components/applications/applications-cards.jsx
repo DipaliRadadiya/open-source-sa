@@ -48,7 +48,7 @@ export function ApplicationsCards({
                   <Link
                     href={`/applications/${application.id}`}
                     prefetch={false}
-                    // White like the desktop list: green means "OK" in the steel UI (Krishna, 14 Oct).
+                    // White like the desktop list: green means "OK".
                     className="inline-flex min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
                   >
                     <HoverHint content={application.name}><span className="truncate">{application.name}</span></HoverHint>

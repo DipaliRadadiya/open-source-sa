@@ -23,7 +23,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 
 // What Central's "Connect a panel" asks for next to the key: this panel's API address, the
 // address the panel itself calls (scheme + host, as Central stores it). It was shown nowhere,
-// so it had to be guessed (Central audit, 20 Nov).
+// so it had to be guessed.
 function panelApiAddress() {
   try {
     return new URL(process.env.NEXT_PUBLIC_API_URL).origin;

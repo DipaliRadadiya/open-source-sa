@@ -24,7 +24,7 @@ export function SidebarServerCard() {
         <Server className="size-4" aria-hidden />
       </span>
       <span className="relative min-w-0 flex-1">
-        {/* One line, cut at the end (Krishna, 5 Nov): the breadcrumb carries the whole name, and
+        {/* One line, cut at the end: the breadcrumb carries the whole name, and
             hovering the card shows it. */}
         <span className="block truncate font-mono text-sm font-semibold">{identity.hostname}</span>
         <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
@@ -32,7 +32,7 @@ export function SidebarServerCard() {
           {t("serverOnline")}
         </span>
         {identity.ip ? (
-          // Its own line, no leading dot, with a copy button (Krishna, 5 Nov).
+          // Its own line, no leading dot, with a copy button.
           <span className="mt-0.5 flex items-center gap-1 font-mono text-xs text-muted-foreground">
             <span className="min-w-0 truncate">{identity.ip}</span>
             <CopyButton value={identity.ip} label={td("info.copyIp")} className="relative z-20 size-5 [&_svg]:size-3" />

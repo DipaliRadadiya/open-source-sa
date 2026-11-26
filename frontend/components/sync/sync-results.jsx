@@ -23,7 +23,7 @@ import { ListCard } from "@/components/data-table/list-card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-// A colour per outcome: every status was grey, so "Found" and "Skipped" looked alike (Krishna, 13 Oct).
+// A colour per outcome: every status was grey, so "Found" and "Skipped" looked alike.
 const ACTION_VARIANTS = {
   adopted: "success",
   skipped: "muted",
@@ -144,7 +144,7 @@ export function SyncResults({
     <ListCard
       toolbar={
         // One row: search, type chips, then the count at the far end, so the right
-        // side is not left empty (Krishna, 13 Oct).
+        // side is not left empty.
         <div className="flex flex-wrap items-center gap-3">
           <LocalSearchInput
             value={search}

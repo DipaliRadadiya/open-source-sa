@@ -2,7 +2,7 @@ import { Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // One recipe for every empty state, so 50-odd screens get a picture without 50 drawings.
-// Steel UI (Krishna, 14 Oct): the subject's own icon in thin line work inside a bordered
+// The subject's own icon in thin line work inside a bordered
 // square with the banner's green corner brackets, and a small square badge saying what to
 // do next. Brand colour comes from the theme, so a white-labelled panel recolours it.
 const SIZES = {

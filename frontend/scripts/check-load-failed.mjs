@@ -2,23 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 /*
- * Every error box names the failure.
- *
- * `LoadFailed` takes `status` and `failure` and turns them into a sentence
- * someone can act on: a 403 is a permissions problem, a 500 is the backend's,
- * a shape mismatch is ours. Without them it renders "This part could not be
- * loaded" — a shrug — and no code, which is the one thing anyone reporting the
- * problem would quote.
- *
- * 39 of 65 call sites passed neither. Krishna hit one on the Restores tab and
- * asked why; the honest answer was that the panel knew and had thrown it away,
- * and no amount of reading the screenshot could recover it. Every fetcher has
- * carried both fields since `read()` was consolidated — the gap was always at
- * the call site.
- *
- * This checks the props are present, not that they are the RIGHT ones. A box
- * handed the wrong read's status is still wrong, and only reading the guard
- * beside it can catch that.
+ * Every `LoadFailed` box gets `status` and `failure`, so it can say what failed instead of a
+ * bare "could not be loaded". Checks the props are present, not that they are the right ones.
  */
 
 function walk(dir, out = []) {

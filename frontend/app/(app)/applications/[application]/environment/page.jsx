@@ -63,7 +63,7 @@ export default async function ApplicationEnvironmentPage({ params }) {
 
   return (
     <div className="space-y-6">
-      {/* Only a viewer is told something: that they can look but not change (25 Sep). */}
+      {/* Only a viewer is told something: that they can look but not change. */}
       <PageHeader title={t("pageTitle")} subtitle={canManage ? null : t("pageSubtitleReadOnly")} />
 
       {!settled ? (

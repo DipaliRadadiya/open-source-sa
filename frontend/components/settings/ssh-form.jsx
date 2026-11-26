@@ -112,7 +112,7 @@ export function SshForm({
             title={t("title")}
             // One question per row, answers as cards (three narrow columns wrapped every
             // answer). The port gets its own ruled row: beside the cards it read as a
-            // third sign-in choice (Krishna, 12 Oct).
+            // third sign-in choice.
             readOnly={!canManage}
             changedBy={changedBy}
             actions={

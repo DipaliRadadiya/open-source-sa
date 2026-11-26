@@ -9,7 +9,7 @@ import { reclaimableFor } from "@/lib/disk-cleaner/keep-days";
 import { useKeepChoice } from "@/components/disk-cleaner/keep-context";
 
 // Client-side because the icon component cannot cross the server boundary as a prop.
-// Compact tiles, as on Services: the stacked cards left most of their width empty (Krishna, 13 Oct).
+// Compact tiles, as on Services: the stacked cards left most of their width empty.
 const TONE = { normal: "info", watch: "warning", high: "destructive" };
 
 export function DiskSummary({ disk, categories }) {

@@ -2,18 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 /*
- * Nothing in the panel is smaller than 12px.
- *
- * 47 places used `text-[10px]` or `text-[11px]` — sidebar badges, service
- * cards, worker metadata, upload progress, stack traces, log chrome. Each one
- * looked reasonable on the screen it was written on. Together they made a
- * product that is hard to read at 200% zoom, on a laptop panel, or by anyone
- * who does not have young eyes, and none of it was a decision anyone made:
- * `text-[11px]` is what you reach for when `text-xs` feels one notch too big.
- *
- * 12px is `text-xs`, the scale's own bottom step. The rule is therefore also a
- * rule against arbitrary type sizes: if the answer is a number in brackets, the
- * scale is being stepped around rather than used.
+ * Nothing in the panel is smaller than 12px (`text-xs`); arbitrary sizes like `text-[11px]`
+ * step around the type scale.
  */
 
 const FLOOR = 12;

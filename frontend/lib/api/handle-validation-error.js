@@ -10,8 +10,7 @@ import { genericErrorMessage } from "@/lib/api/generic-error";
 export function handleValidationError(error, form, { formError = false, unrendered = [], fallback } = {}) {
   const errors = error.response?.data?.errors;
 
-  // An empty `errors` object is no field errors at all: it used to return with nothing on
-  // screen, so the 422's message fell through to nowhere.
+  // An empty `errors` object is no field errors: fall through so the 422's message shows.
   if (errors && Object.keys(errors).length > 0 && form) {
     let sent = {};
     try {

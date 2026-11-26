@@ -61,7 +61,7 @@ export function CheckRow({ check, labels }) {
 }
 
 // Passed checks need no reading, only proof they ran: one card, two columns of compact
-// rows, instead of a full card each (15 cards made a 2,000 px page; Krishna, 13 Oct).
+// rows, instead of a full card each (15 cards made a 2,000 px page).
 export function PassedChecks({ checks, title }) {
   return (
     <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">

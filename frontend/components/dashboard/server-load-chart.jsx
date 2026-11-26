@@ -40,7 +40,7 @@ export function ServerLoadChart({ history = [], metrics, timeZone }) {
   ];
 
   const option = timeSeriesOption({
-    // The header chips name each line (Steel UI).
+    // The header chips name each line.
     legend: false,
     data: history,
     series,

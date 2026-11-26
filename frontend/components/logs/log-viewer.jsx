@@ -40,13 +40,13 @@ export function LogViewer({
   // Tells appended lines from a replaced buffer (another filter, another log).
   const previous = useRef({ lines, key: `${group}|${term}|${severity}` });
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual's useVirtualizer is the same known false positive as useReactTable
   // Reversed for rendering only; `lines` stays chronological so append counting works.
   const rows = useMemo(
     () => (newestFirst ? [...lines].reverse() : lines),
     [lines, newestFirst],
   );
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual's useVirtualizer is the same known false positive as useReactTable
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,

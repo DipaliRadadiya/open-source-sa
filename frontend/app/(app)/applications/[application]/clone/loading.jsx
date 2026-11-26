@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SK_CARD, SkHeader, SkInput } from "@/components/ui/skeleton-kit";
 import { cn } from "@/lib/utils";
 
-// Site clone (7 Oct): the form card (two fields side by side, the note, the button),
+// Site clone: the form card (two fields side by side, the note, the button),
 // then the compact "what gets copied" card.
 export default function Loading() {
   return (

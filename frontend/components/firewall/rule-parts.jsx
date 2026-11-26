@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import { protectedReasonFor } from "@/lib/firewall/protected-rule";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -125,31 +124,7 @@ export function SourceText({ rule, labels }) {
   );
 }
 
-/** Delete, with the reason when a system-seeded rule is protected by the lockout guard. */
 export { protectedReasonFor };
-
-export function DeleteRuleButton({ rule, enabled, canManage, pending, onDelete, labels }) {
-  // Deleting a seeded rule sets the same trap as switching it off, so it is refused
-  // whether or not the firewall is enforcing.
-  const reason = protectedReasonFor({ rule, enabled, canManage, labels });
-  const lockedByGuard = Boolean(rule.protected);
-
-  return (
-    <ReasonTooltip reason={reason}>
-      <Button
-        variant="ghost"
-        size="sm"
-        // Red, not grey: grey reads as disabled, and this is the row's destructive action.
-        className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
-        disabled={!canManage || lockedByGuard || pending}
-        onClick={() => onDelete(rule)}
-        aria-label={labels.delete}
-      >
-        <Trash2 className="size-4" />
-      </Button>
-    </ReasonTooltip>
-  );
-}
 
 /**
  * The row's ⋯ menu, as on every other list: Edit, then Delete. Delete stays in the menu on a

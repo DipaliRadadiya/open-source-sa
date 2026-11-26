@@ -16,11 +16,6 @@ export function getSyncRun(runId, { since = 0, signal } = {}) {
   return api.get(`/server/sync/${runId}`, { params: { since }, signal });
 }
 
-/** The most recent run, for a screen reopened after a refresh. No items. */
-export function getLatestSync({ signal } = {}) {
-  return api.get("/server/sync/latest", { signal });
-}
-
 export function getSyncIgnores({ signal } = {}) {
   return api.get("/server/sync/ignores", { signal });
 }

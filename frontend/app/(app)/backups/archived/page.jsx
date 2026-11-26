@@ -10,7 +10,7 @@ import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
-// Backups kept after their application or database was deleted (16 Oct).
+// Backups kept after their application or database was deleted.
 export default async function ArchivedBackupsPage({ searchParams }) {
   const sp = await searchParams;
   const [{ backups, meta, failed, status, failure, message }, permissions, t] = await Promise.all([

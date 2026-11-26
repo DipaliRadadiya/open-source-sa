@@ -1,5 +1,5 @@
 // Docker's memory notation ("1g", "512m") in the words a reader expects ("1 GB", "512 MB").
-// Krishna, 24 Nov: "Needs at least 1g RAM" read as a typo. Anything else comes back as it was.
+// Anything else comes back as it was.
 const UNITS = { k: "KB", m: "MB", g: "GB", t: "TB" };
 
 export function dockerMemoryText(value) {

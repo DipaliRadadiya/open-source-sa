@@ -1,22 +1,7 @@
 /**
- * The registries people actually use, and what each one calls the two values it
- * wants.
- *
- * This exists because the form was three text boxes and a placeholder. The fields
- * are *mechanically* the same for every registry — a host, a username, a token —
- * but the answers are not, and none of them are guessable:
- *
- *  - Docker Hub's host is `docker.io`, which is not the address in your browser.
- *  - GHCR wants a **classic** PAT with `read:packages`; a fine-grained token does
- *    not carry that scope, so it fails with a credential that looks correct.
- *  - GitLab wants a **deploy** token, not a personal one, and its username is the
- *    token's own name rather than your account.
- *
- * So the picker is not a convenience. It is the instructions.
- *
- * Client-side only and never sent: the server stores the address the user ended up
- * with, and `Registry::authKey()` normalises it. A `provider` column would be a
- * second source of truth for a fact the address already carries.
+ * The common registries and what each calls its two values (Docker Hub's host is `docker.io`,
+ * GHCR needs a classic PAT with `read:packages`, GitLab a deploy token). Client-side only: the
+ * server stores the address, which already identifies the registry.
  */
 export const REGISTRY_PROVIDERS = [
   {
@@ -96,15 +81,8 @@ export function providerForAddress(address) {
   return "other";
 }
 
-/**
- * Registries whose tokens are short-lived by design.
- *
- * AWS ECR, Google Artifact Registry and Azure ACR all issue credentials that
- * expire in hours — ECR's in twelve. A token pasted here would authenticate once
- * and then start failing, which is a support ticket disguised as a working
- * feature. The panel does not refresh them, so the honest thing is to say so at
- * the form rather than let somebody discover it on tomorrow's deploy.
- */
+// Registries whose tokens expire within hours (ECR, Artifact Registry, ACR). The panel
+// doesn't refresh them, so the form says so.
 export function issuesTemporaryTokens(address) {
   const host = String(address ?? "").toLowerCase();
 

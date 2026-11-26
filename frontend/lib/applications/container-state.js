@@ -1,11 +1,7 @@
 /**
- * What a container site is doing, in the words the badge uses:
- * `starting` | `running` | `degraded` | `restarting` | `failed`, or null when there is
- * nothing container-specific to say (not a container, one-click apps, sites
- * deployed before the readiness check existed).
- *
- * `status` alone cannot say it: a PUT /container or a Pull that fails leaves
- * the site `active` with `last_failure` set, and that site serves a 502.
+ * What a container site is doing: `starting` | `running` | `degraded` | `restarting` |
+ * `failed`, or null when there is nothing container-specific to say. `status` alone can't
+ * tell: a failed container update leaves the site `active` with `last_failure` set.
  */
 export function containerState(application) {
   if (application?.serving_profile !== "docker") return null;

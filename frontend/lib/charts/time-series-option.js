@@ -9,7 +9,7 @@ function withAlpha(colour, alpha) {
   return m ? `rgba(${m[1]}, ${alpha})` : colour;
 }
 
-// The page's mono face for axis labels (Steel UI). ECharts draws on a canvas, so it
+// The page's mono face for axis labels. ECharts draws on a canvas, so it
 // needs the resolved family name, not the CSS variable.
 function monoFamily() {
   if (typeof document === "undefined") return undefined;
@@ -49,7 +49,7 @@ export function timeSeriesOption({
       data: data.map((point) => [point.t, point[s.key] ?? null]),
     };
 
-    // A fade to nothing, as in the redesign; a flat tint (plus the aria decal
+    // A fade to nothing; a flat tint (plus the aria decal
     // stripes) read as a hatched block.
     if (s.kind === "area") {
       line.areaStyle = {

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 
 // Writes `per_page` and resets to page 1. The choice is also saved, so every list
-// starts at it (Krishna, 5 Nov). `fallback`: the size the list was served with.
+// starts at it. `fallback`: the size the list was served with.
 export function PerPageSelect({ label, value, onValueChange, fallback }) {
   // Links the visible "Per page" label so the combobox has a name.
   const labelId = useId();

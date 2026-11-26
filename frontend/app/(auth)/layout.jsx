@@ -6,7 +6,7 @@ export default function AuthLayout({ children }) {
   return (
     <TooltipProvider delayDuration={300}>
       <ErrorCopy />
-      {/* Steel UI (Krishna, 14 Oct): the dashboard banner's look — flat, a faint grid
+      {/* The dashboard banner's look — flat, a faint grid
           across the page, green corner brackets on the card — instead of a soft glow.
           Half the banner's grid: across a whole empty page it read too strong (17 Oct). */}
       <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-background p-4 [--hero-grid:rgb(15_23_42/0.018)] dark:[--hero-grid:rgb(255_255_255/0.016)]">

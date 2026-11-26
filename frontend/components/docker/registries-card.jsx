@@ -53,15 +53,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/**
- * The registry credentials this server can pull private images with, laid out like
- * Git integrations (Krishna, 21 Oct): a card head with Add, one row per credential
- * with its check and a ⋯ menu, and a two-step dialog — pick where the image is
- * hosted, then the fields that host needs.
- *
- * It never shows a token, and there is no reveal: the API does not serve one. On
- * edit the token box is empty and empty means "keep what is stored".
- */
+// Registry credentials for private images, laid out like Git integrations. A token is never
+// shown; on edit an empty token box keeps the stored one.
 export function RegistriesCard({ initialRegistries, canManage }) {
   const t = useTranslations("docker.registries");
   const { refreshAndWait } = useRefresh();
@@ -375,7 +368,7 @@ function RegistryDialog({ registry, onOpenChange, onTest }) {
         await refreshAndWait();
         toast.success(creating ? t("created", { name }) : t("updated", { name }));
         onOpenChange(false);
-        // A wrong token used to surface only at the first failed pull; test it now, like Storage.
+        // Test the token now, like Storage, instead of at the first failed pull.
         // After the close, so the save never waits on the registry.
         if (saved?.id && credentialChanged) onTest?.(saved);
       }}

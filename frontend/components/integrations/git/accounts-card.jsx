@@ -141,7 +141,7 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
 
         <CardContent className="px-5 py-0">
           {accounts.length === 0 ? (
-            // The same two columns as the Storage empty state (Krishna, 2 Nov): what this is and the
+            // The same two columns as the Storage empty state: what this is and the
             // action on the left, the steps on the right, each provider in step 1 opening its form.
             <div className="grid gap-6 py-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:items-center md:gap-10">
               <div className="flex flex-col items-center gap-4 text-center md:items-start md:text-left">

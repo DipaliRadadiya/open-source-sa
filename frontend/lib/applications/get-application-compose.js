@@ -1,17 +1,8 @@
 import { read } from "@/lib/api/read";
 import { composeFileResponseSchema } from "@/lib/schemas/docker";
 
-/**
- * The compose file this site runs.
- *
- * Read on the server so the page arrives with the file in it. The dialog this
- * replaced fetched on open, which meant a spinner every time somebody wanted to
- * look at their own configuration.
- *
- * Does NOT degrade to an empty string on failure. An empty editor is a claim that
- * the file is empty, and saving that claim back would replace a working site's
- * definition with nothing — so a failed read renders as a failure.
- */
+// The compose file this site runs, read on the server. A failed read stays a failure, never
+// "": an empty editor saved back would wipe the site's definition.
 export async function getApplicationCompose(id) {
   const result = await read(
     `/applications/${id}/container/compose`,

@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { CopyButton } from "@/components/ui/copy-button";
 
-// Add/edit system user: masked, with a copy button and no eye (Krishna, 13 Oct). A
+// Add/edit system user: masked, with a copy button and no eye. A
 // password on screen can be read over someone's shoulder and used to log in to the server.
 export function CopyablePasswordInput({ className, value, copyLabel, ...props }) {
   return (

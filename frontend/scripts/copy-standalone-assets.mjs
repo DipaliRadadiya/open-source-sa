@@ -1,24 +1,7 @@
 /**
- * Put `public/` and `.next/static` where the standalone server can serve them.
- *
- * `output: 'standalone'` traces the server's own dependencies and nothing
- * else: `.next/standalone/` ships without either directory, by design. Next
- * documents the copy as a deployment step, which is fine until the deployment
- * step is a person.
- *
- * It bit on 2026-09-15. The panel had never served a file from `public/` —
- * every icon until then was an inline Lucide glyph — so the omission was
- * invisible for the life of the project. The first commit to add real image
- * files shipped a build where every one of them 404'd, on a server whose
- * `npm ci && npm run build && restart` had always been enough. Ours only
- * worked because the systemd unit happens to copy them in ExecStartPre; a
- * second install with a plainer unit showed blank rows and a green build.
- *
- * Chained onto `build` with `&&` rather than living in `postbuild`, because
- * `npm run build --ignore-scripts` skips lifecycle hooks silently — and the
- * documented restart for this panel is `npm ci --ignore-scripts && npm run
- * build`. A hook would have reproduced the same invisible failure it exists to
- * prevent, on the exact command most likely to be used.
+ * Copy `public/` and `.next/static` into `.next/standalone/`, which ships without them.
+ * Chained onto `build` with `&&`, not `postbuild`: the documented
+ * `npm ci --ignore-scripts && npm run build` would skip a lifecycle hook.
  */
 import fs from "node:fs";
 import path from "node:path";

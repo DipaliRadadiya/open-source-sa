@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 
 /**
  * `readOnly`: the role cannot change it, so the state is shown as an On/Off pill instead of a
- * locked switch (Krishna, 23 Nov: a greyed switch reads as broken). Also on inside a `denied`
+ * locked switch (a greyed switch reads as broken). Also on inside a `denied`
  * area or with a DENIED reason.
  */
 function Switch({

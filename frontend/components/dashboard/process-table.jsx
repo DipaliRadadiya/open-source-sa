@@ -140,7 +140,7 @@ export function ProcessTable({
       enableSorting: false,
       // The command takes the remaining width; max-w-0 lets its child ellipsize. With every
       // column showing, each gets a share instead, or PID, User, CPU and Memory were pushed
-      // together at the right with the middle empty (Krishna, 8 Oct).
+      // together at the right with the middle empty.
       meta: { className: "w-full min-w-36 max-w-0 @xl/procs:min-w-64 @5xl/procs:w-[32%]" },
       cell: CommandCell,
     },

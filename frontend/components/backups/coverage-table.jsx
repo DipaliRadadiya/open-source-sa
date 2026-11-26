@@ -269,13 +269,13 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
       cell: SiteCell,
     },
     // Headers may wrap so long translations don't widen the columns.
-    // Own columns again (Krishna, 8 Oct: the stacked "Backup type / Storage" header read
+    // Own columns again (the stacked "Backup type / Storage" header read
     // as cramped); dropping the Status column made the room.
     // "Type", not "Backup type": on this page it can only mean that, and the long
     // form wrapped to two lines at 1280.
     { id: "type", header: wrapping(t("columns.typeShort")), meta: { className: COVERAGE_WIDTHS.kind }, cell: TypeCell },
     // The time zone is named in the header of the one column with clock times, as Cron Jobs does
-    // ("Next run · UTC"); a footer line under the pager read as detached (Krishna, 19 Nov).
+    // ("Next run · UTC"); a footer line under the pager read as detached.
     { id: "schedule", header: wrapping(scheduleTimezone ? t("columns.scheduleIn", { timezone: wrappableTimezoneLabel(scheduleTimezone) }) : t("columns.schedule")), meta: { className: COVERAGE_WIDTHS.schedule }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
     { id: "storage", header: wrapping(t("columns.storage")), meta: { className: COVERAGE_WIDTHS.storage }, cell: StorageCell },
     { id: "runs", header: wrapping(t("columns.lastRun")), meta: { className: COVERAGE_WIDTHS.runs }, cell: RunsCell },

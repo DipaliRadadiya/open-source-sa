@@ -32,7 +32,7 @@ export function AppBreadcrumb({ items }) {
   const applicationId = params?.application;
   // Set by the application layout (the site name) or by a detail page (a record).
   const { crumb } = usePageCrumb();
-  // The server's own name as the root (Krishna, 5 Nov), so the sidebar card may cut it;
+  // The server's own name as the root, so the sidebar card may cut it;
   // "Server" until the name is known.
   const identity = useServerIdentity();
 
@@ -93,7 +93,7 @@ export function AppBreadcrumb({ items }) {
                   className={cn(
                     "text-muted-foreground/50",
                     // Tied to the crumb BEFORE it, so a folded trail never opens with a dangling
-                    // separator. A slash, as in the redesign.
+                    // separator. A slash.
                     foldedBelowSm(index - 1) && "hidden sm:block",
                   )}
                 >/</BreadcrumbSeparator>

@@ -74,7 +74,7 @@ export function DatabaseDetailsCard({
         </ReasonTooltip>
       ),
       // One line with an ellipsis, the full name in a tooltip: wrapped, it made its box
-      // taller than the other five (Krishna, 8 Oct). On a phone the box is full width.
+      // taller than the other five. On a phone the box is full width.
       value: application ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -105,7 +105,7 @@ export function DatabaseDetailsCard({
           <h2 className="text-[15px] font-semibold tracking-tight">{t("detailsTitle")}</h2>
         </div>
 
-        {/* All four on one row when the card is wide enough (Krishna, 8 Oct), then two, then
+        {/* All four on one row when the card is wide enough, then two, then
             one as it narrows. Size and created live under the name in the header (18 Nov).
             Measured on the card, not the window. */}
         <dl className="grid gap-px bg-border @md/details:grid-cols-2 @3xl/details:grid-cols-4">

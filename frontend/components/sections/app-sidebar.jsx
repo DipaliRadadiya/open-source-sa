@@ -151,8 +151,7 @@ export function AppSidebar({ items, initialGroups = {} }) {
   return (
     <Sidebar collapsible="icon" label={t("serverNavigation")}>
       <SidebarHeader className="h-16 justify-center border-b px-3">
-        {/* Home is the first screen the role can open, not /dashboard for everyone (23 Nov:
-            a role without Dashboard clicked the logo into a refusal). */}
+        {/* Home is the first screen the role can open, not /dashboard for everyone. */}
         <Link
           href={home}
           className="flex items-center"
@@ -195,12 +194,12 @@ export function AppSidebar({ items, initialGroups = {} }) {
               </MobileNavLink>
             </SidebarMenuItem>
             <SidebarMenuItem className="relative">
-              {/* The card is the application switcher (2 Nov): it opens a searched list of the
+              {/* The card is the application switcher: it opens a searched list of the
                   server's applications. The Dashboard is the first link below it. */}
               <SidebarMenuButton
                 asChild
                 tooltip={t("applicationContext.switch")}
-                /* Steel UI (Krishna, 14 Oct): the same green-edged plate as the server card. */
+                /* The same green-edged plate as the server card. */
                 className={cn(NAV_ITEM_CLASS, "relative h-auto min-h-20 items-start overflow-hidden rounded-[2px] border border-primary/70 bg-card p-3 shadow-none transition-colors hover:border-primary hover:bg-card active:bg-card data-[active=true]:bg-card data-[state=open]:border-primary group-data-[collapsible=icon]:min-h-8! group-data-[collapsible=icon]:p-2!")}
               >
                 <ApplicationSwitcher application={application} aria-label={t("applicationContext.switchNamed", { name: application.name })}>
@@ -241,7 +240,7 @@ export function AppSidebar({ items, initialGroups = {} }) {
                 <VisitSiteLink
                   href={application.url}
                   label={t("applicationContext.visit", { domain: application.domain })}
-                  // On the domain row's right end, as in the redesign, not over the name.
+                  // On the domain row's right end, not over the name.
                   className="absolute right-3.5 bottom-3.5 group-data-[collapsible=icon]:hidden"
                 />
               ) : null}
@@ -249,7 +248,7 @@ export function AppSidebar({ items, initialGroups = {} }) {
           </SidebarMenu>
         </SidebarGroup>
       ) : null}
-      {/* pt-4: room between the server/application card above and the first link (Krishna, 14 Oct). */}
+      {/* pt-4: room between the server/application card above and the first link. */}
       <SidebarContent className="gap-0 pt-4 pb-2">
         {/* Keyed on level AND application id: switching sites is also a level change,
             though `currentPanel` stays "application". */}

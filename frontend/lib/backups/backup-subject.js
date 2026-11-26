@@ -1,4 +1,4 @@
-// What a backup is of: a site, a database on its own (16 Oct), or either of them after
+// What a backup is of: a site, a database on its own, or either of them after
 // it was deleted (`archived`: the id is gone, the name is kept).
 export function backupSubject(backup) {
   if (backup.database_id) {

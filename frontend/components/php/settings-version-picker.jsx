@@ -7,7 +7,7 @@ import { useUnsaved } from "@/components/ui/unsaved-guard";
 import { Badge } from "@/components/ui/badge";
 
 // Beside the settings heading, so switching version needs no trip back up the table
-// when many are installed (Krishna, 12 Oct). Keeps the open tab; asks before dropping a php.ini edit.
+// when many are installed. Keeps the open tab; asks before dropping a php.ini edit.
 export function SettingsVersionPicker({ versions, selected }) {
   const t = useTranslations("php");
   const router = useRouter();

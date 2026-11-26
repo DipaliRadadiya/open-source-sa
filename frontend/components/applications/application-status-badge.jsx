@@ -37,7 +37,7 @@ export function isProcessDown(application) {
   );
 }
 
-// The pill's leading dot; it pulses only for a live state, as in the redesign.
+// The pill's leading dot; it pulses only for a live state.
 function PillDot({ tone, live = false }) {
   return (
     <span className="relative flex size-1.5 shrink-0" aria-hidden>
@@ -195,7 +195,7 @@ export function ApplicationStatusNotes({ application, className }) {
           </p>
         ) : application.failed_reason_title ? (
           // The API's cause is a paragraph: two lines here, the whole of it on hover and on
-          // the application's page (Krishna, 23 Nov: the full text made one row huge).
+          // the application's page (the full text made one row huge).
           <HoverHint content={application.failed_reason_title}>
             <p className="line-clamp-2 max-w-52 text-xs text-pretty text-destructive">
               {application.failed_reason_title}

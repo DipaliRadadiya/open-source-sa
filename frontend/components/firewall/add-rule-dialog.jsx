@@ -122,7 +122,7 @@ export function AddRuleDialog({
 
   // A service fills its usual protocol (DNS is UDP) until someone picks a protocol
   // themselves; after that the shortcut keeps theirs, so the HTTPS chip with UDP chosen
-  // means UDP 443, as the Add rule button does (Krishna, 24 Nov).
+  // means UDP 443, as the Add rule button does.
   const protocolChosen = form.getFieldState("protocol", form.formState).isDirty;
   const presetProtocol = (preset) => (protocolChosen ? values.protocol : (preset.protocol ?? "tcp"));
 
@@ -213,7 +213,7 @@ export function AddRuleDialog({
   const blockReason = parsed ? clashReason(clashWith(parsed.from, parsed.to, values.protocol)) : null;
 
   // The refusal is at the top of a dialog scrolled down to its button, so bring it into
-  // view (Krishna, 24 Nov: nothing seemed to happen on Add rule).
+  // view (nothing seemed to happen on Add rule).
   const serverErrorRef = useRef(null);
   useEffect(() => {
     if (serverError) serverErrorRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -394,7 +394,7 @@ export function AddRuleDialog({
               >
                 {services.map((p) => {
                   // Already a rule for this service with the chosen action and source: the
-                  // chip would only lead to "already exists" (Krishna, 24 Nov).
+                  // chip would only lead to "already exists".
                   const taken = clashReason(clashWith(Number(p.port), null, presetProtocol(p)));
                   const item = (
                     <ToggleGroupItem key={p.key} value={p.key} disabled={Boolean(taken)} className="gap-1 px-2.5 text-xs">

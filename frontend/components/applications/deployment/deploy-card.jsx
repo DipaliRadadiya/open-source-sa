@@ -53,7 +53,7 @@ function commitUrl(repositoryUrl, sha) {
   }
 }
 
-// Steel UI (Krishna, 14 Oct): a hairline cell with a mono caps label, like Source and
+// A hairline cell with a mono caps label, like Source and
 // deployment on the application dashboard. Callers still pass an icon; it is not drawn.
 function Fact({ label, children }) {
   return (

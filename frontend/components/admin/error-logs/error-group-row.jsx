@@ -59,7 +59,7 @@ export function ErrorGroupRow({ group, now }) {
     date ? format.dateTime(date, { dateStyle: "medium", timeStyle: "medium" }) : null;
 
   return (
-    // One line per kind of error in a shared list (Krishna, 17 Oct): as separate tall
+    // One line per kind of error in a shared list: as separate tall
     // cards, 19 errors filled three screens. The detail is one click away.
     <Collapsible>
       <CollapsibleTrigger className="group flex w-full items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring">

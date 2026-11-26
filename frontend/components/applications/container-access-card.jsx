@@ -64,13 +64,8 @@ function readAccess(data) {
 const linkClass = "font-medium text-primary underline-offset-4 hover:underline";
 
 /**
- * The app's own system user is the way in: once container login is on, its SSH
- * login opens this app's container, with no sudo. A dashboard card like Backups:
- * off, one row and a Turn on button (the form is a dialog, not a wall on the
- * dashboard); on, the shell line to copy, the rest folded.
- *
- * An extra, not a status: a failed read hides the card (with a console warning)
- * rather than putting an error on the dashboard.
+ * Once container login is on, the app's system user's SSH login opens its container (no
+ * sudo). Off: one row and Turn on; on: the shell line to copy. A failed read hides the card.
  */
 export function ContainerAccessCard({
   application,

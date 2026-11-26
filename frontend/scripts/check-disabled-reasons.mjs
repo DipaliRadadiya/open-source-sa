@@ -1,22 +1,7 @@
 /**
- * Fails the build when a control is disabled for a reason the user is never
- * told.
- *
- * Why this exists: a disabled button explains nothing by itself. Until
- * 2026-08-18 every one of them fell back to "This control is unavailable right
- * now.", which is worse than silence — it trains people to stop reading
- * tooltips. That fallback is gone, so a control with no reason now says
- * nothing at all, and nothing in the build would notice.
- *
- * Only two kinds of `disabled` are exempt:
- *   - mid-action (`isSubmitting`, `pending`, `busy`…). The spinner is the
- *     answer; "why is this disabled" is not the question being asked. EVERY
- *     operand has to be in-flight for this: a mixed `isSubmitting || !isDirty`
- *     is a real precondition wearing a spinner as a disguise.
- *   - literal `disabled` / `disabled || x` pass-through props, where the parent
- *     owns the reason and supplies it through DisabledReasonProvider.
- *
- * Everything else is a precondition or a permission, and has to say so.
+ * Fails lint when a control is disabled without telling the user why. Exempt: mid-action
+ * states (every operand in-flight, e.g. `isSubmitting`, `pending`), and pass-through
+ * `disabled` props whose parent supplies the reason via DisabledReasonProvider.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";

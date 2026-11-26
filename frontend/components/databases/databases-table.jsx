@@ -41,9 +41,9 @@ function NameCell({ row }) {
     <HoverHint content={row.original.name}><Link
       href={`/databases/${row.original.id}`}
       // Primary colour plus chevron, so the link does not rely on colour alone. The chevron
-      // always shows: with no Manage button in the row, the name is the way in (Krishna, 15 Oct).
+      // always shows: with no Manage button in the row, the name is the way in.
       // A usual name shows in full; past 13.5rem it ellipsises, so a long one cannot
-      // widen the column over its neighbours (Krishna, 8 Oct). A max-width, not
+      // widen the column over its neighbours. A max-width, not
       // max-w-0 on the cell: that cut every 27-character staging name too.
       className="group flex min-w-0 items-center gap-1.5 font-mono font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
     >
@@ -105,7 +105,7 @@ function ApplicationCell({ database, applications, canOpenApplications, onAttach
   }
 
   // Grey text, not a yellow badge: three yellow badges a row made every row look
-  // broken (Krishna, 8 Oct). Still the attach control when the reader can act,
+  // broken. Still the attach control when the reader can act,
   // dotted like "Not set up" on Applications; plain text otherwise.
   if (!onAttach) {
     return <span className="text-muted-foreground">{t("columns.notLinked")}</span>;
@@ -170,7 +170,7 @@ function RowActionsCell({ row, table }) {
       adminerSites={table.options.meta.adminerSites}
       showManage={false}
       // The ⋯ menu, as on every list: the client buttons made the row ~1100px, so the
-      // table only fitted from 1440 (Krishna, 19 Nov: tables on a laptop).
+      // table only fitted from 1440 (tables on a laptop).
       menu
       className="flex justify-end"
     />

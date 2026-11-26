@@ -1,7 +1,7 @@
 // What the Adminer button offers for a database. Adminer opens the `sql` and
 // `pgsql` drivers; MongoDB is refused by the API, so no button.
 //
-// Not installed: offered everywhere, beside phpMyAdmin too (Krishna, 16 Oct: hiding it
+// Not installed: offered everywhere, beside phpMyAdmin too (hiding it
 // meant nobody learned Adminer was an option). `installed: null` (failed lookup) never
 // offers installing; on MySQL/MariaDB phpMyAdmin still covers that case.
 export function adminerState({ engine, driver = null, installed = null, users = null } = {}) {

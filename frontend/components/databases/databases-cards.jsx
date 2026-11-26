@@ -58,7 +58,7 @@ export function DatabasesCards({
               {/* The three states, before the numbers. */}
               {users === 0 || (!backupsUnknown && !backup) || (!ownedBy && !orphanUnknown) ? (
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {/* Grey, not yellow (Krishna, 8 Oct); the same fix button as the table. */}
+                  {/* Grey, not yellow; the same fix button as the table. */}
                   {!ownedBy && !orphanUnknown ? (
                     onAttach ? (
                       <button

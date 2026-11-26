@@ -311,7 +311,7 @@ function RunSecurityUpdates({ run, canManage, frame }) {
       : null;
 
   // The main action, filled (it is the one thing to do here), and placed by `frame`
-  // inside the note that says why (Krishna, 12 Oct).
+  // inside the note that says why.
   const action = (
         <ReasonTooltip reason={reason}>
           <Button

@@ -29,7 +29,7 @@ import { apiMessage } from "@/lib/api/error-message";
 const MAX_IGNORE_IPS = 100;
 
 // Each Add and each remove is its own request against the list on disk, so two
-// people editing it no longer overwrite each other (Krishna, 17 Oct). No draft, no Save.
+// people editing it no longer overwrite each other. No draft, no Save.
 export function IgnoreListCard({ settings, canManage }) {
   const yourIp = useBrowserIp();
   const t = useTranslations("fail2ban");
@@ -54,7 +54,7 @@ export function IgnoreListCard({ settings, canManage }) {
       setDraftError(t("settings.invalidIp"));
       return;
     }
-    // Said, not swallowed: a cleared field read as "added" (QA 12 Nov).
+    // Said, not swallowed: a cleared field read as "added".
     if (ips.includes(ip)) {
       setDraftError(t("settings.alreadyListed", { ip }));
       return;

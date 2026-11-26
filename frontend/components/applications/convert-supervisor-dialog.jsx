@@ -8,22 +8,8 @@ import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
- * Moving a site off the old panel's PM2 and onto a systemd unit.
- *
- * Adoption leaves migrated sites exactly where it found them — running under
- * the PM2 daemon that was already running them — because taking a server over
- * must not restart anybody's site. This is the separate, deliberate choice to
- * move one, and the reason it needs a dialog at all is that **it restarts the
- * application**. There is no zero-downtime path: one supervisor has to release
- * the port before the other can bind it.
- *
- * So the dialog leads with the restart rather than burying it, and then says
- * the thing that makes it safe — the API asks the application for a page
- * afterwards and puts it back under PM2 if it does not answer. A failure here
- * means the site is still up, on the supervisor it started on.
- *
- * The gains are listed second, and honestly: they are real but none of them is
- * urgent, which is exactly why nobody should feel pushed into this.
+ * Move a site from the old panel's PM2 to a systemd unit. This restarts the application;
+ * if it doesn't answer afterwards the API puts it back under PM2.
  */
 export function ConvertSupervisorDialog({ application, open, onOpenChange }) {
   const t = useTranslations("applications.process.convert");

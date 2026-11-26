@@ -58,10 +58,6 @@ export const storageTestResponseSchema = z.object({
   }),
 });
 
-export const storageDestinationResponseSchema = z.object({
-  storage_destination: storageDestinationSchema,
-});
-
 // Mirror the backend rules so common mistakes are caught before a round trip.
 const nameField = z.string().trim().min(1, "required_name").max(100, "max100");
 // `.` and `..` segments refused: they escape the bucket or the FTP/SFTP root.

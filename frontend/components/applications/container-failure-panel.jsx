@@ -27,13 +27,8 @@ function validPort(value) {
 }
 
 /**
- * Why a container site is down and the fixes for it, from DS-03's
- * `last_failure`. The reason sentence itself is in the page header.
- *
- * A failed first deploy (`status: failed`) only saves the port — the site has
- * no running container to recreate — so the fix is a save then a Retry, which
- * the provisioning card below follows. A running site's save recreates the
- * container and waits for it to answer, so it answers in the same request.
+ * Why a container site is down and the fixes for it (`last_failure`). After a failed first
+ * deploy a save only stores the port and Retry follows; on a running site a save recreates it.
  */
 export function ContainerFailurePanel({
   application,

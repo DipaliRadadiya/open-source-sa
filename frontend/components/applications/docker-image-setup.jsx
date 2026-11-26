@@ -284,7 +284,7 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
   }
 
   // A search result is a repository; the tag typed with it ("nginx:alpine") was dropped and the
-  // newest stable preselected instead (Krishna, 24 Nov). Kept when the result is that image.
+  // newest stable preselected instead. Kept when the result is that image.
   function chooseOption(option) {
     const { repository: typedRepo, tag: typedTag } = splitImageRef(typed);
     const bare = (ref) => ref.replace(/^(docker\.io\/)?(library\/)?/, "");

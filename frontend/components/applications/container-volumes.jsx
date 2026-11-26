@@ -20,20 +20,8 @@ import {
 } from "@/components/ui/select";
 
 /**
- * The volumes a container site mounts, and where.
- *
- * A list, not a field — which is the whole difference from the network. A site
- * joins one network; it mounts as many volumes as it has data worth keeping, and
- * each one carries a path INSIDE the container. That path is why "attach this
- * volume to a container" cannot be a single dropdown on the Docker page:
- * `shop-db` is only useful at `/var/lib/mysql`, and the same volume at
- * `/app/uploads` is a different thing entirely.
- *
- * Add and remove save immediately, rather than accumulating into a dirty form.
- * Same shape as `components/fail2ban/ignore-list-card.jsx`, and for the same
- * reason: a list of discrete facts has no half-finished state worth holding, and
- * each change here recreates the container — so batching them would hide how
- * many restarts a click is worth.
+ * The volumes a container site mounts, each at a path inside the container. Add and remove
+ * save at once: each change recreates the container, so nothing is batched.
  */
 export function ContainerVolumes({
   application,

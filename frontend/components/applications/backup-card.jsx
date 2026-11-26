@@ -175,7 +175,7 @@ export function BackupCard({
             {target?.next_run_at_human && state === "protected" ? (
               <Row icon={CalendarArrowUp} label={t("nextRun")}>{target.next_run_at_human}</Row>
             ) : null}
-            {/* Five rows whatever the state, beside Security's five (22 Nov: the card stood
+            {/* Five rows whatever the state, beside Security's five (the card stood
                 half empty). Set up: where they go and how many are kept. Not set up: what a
                 backup would hold, so the size of the risk is on the screen. */}
             {target ? (

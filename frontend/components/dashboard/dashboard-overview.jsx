@@ -15,7 +15,7 @@ const FIREWALL = {
   unknown: { icon: ShieldQuestion, tone: "neutral", value: "text-muted-foreground" },
 };
 
-// Steel tiles (Krishna, 5 Nov: the one-line version looked plain): the icon in a square edged
+// Steel tiles (the one-line version looked plain): the icon in a square edged
 // in its tone, the label above the number, an arrow where the tile opens its page. The firewall
 // tile ends in its switch instead, centred on the same line as the icon.
 const TONES = {
@@ -60,8 +60,7 @@ function Tile({ href, icon: Icon, label, value, sub, hint, tone = "info", valueT
 }
 
 /**
- * What is on this server, and whether its firewall is on (user feedback, 5 Nov: the old
- * dashboard's counts were missed, and a server with its firewall off looked "all fine").
+ * What is on this server, and whether its firewall is on.
  * Only parts the user may open; an unread count is "—", never 0.
  */
 export async function DashboardOverview({ applications, overview, canManageFirewall = false }) {
@@ -98,7 +97,7 @@ export async function DashboardOverview({ applications, overview, canManageFirew
       valueTone: look.value,
       label: tf("title"),
       value: t(`firewall.${state}`),
-      // Only the rule count, and only when on (Krishna, 5 Nov: "Off" with a sentence under it looked
+      // Only the rule count, and only when on ("Off" with a sentence under it looked
       // messy). The red Off and its icon say enough; the hint is the tile's tooltip.
       sub: state === "on" && rules !== null ? t("firewallRules", { count: rules }) : null,
       hint: t(`firewall.${state}Hint`),

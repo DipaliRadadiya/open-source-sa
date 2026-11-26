@@ -43,8 +43,7 @@ import { HoverHint } from "@/components/ui/hover-hint";
 import { shownSizeBytes } from "@/lib/applications/size-measurement";
 
 
-/* Cells at module level: flexRender treats an inline cell as a new component type,
- * which remounts on every 4s poll and resets open dialogs. */
+// Cells at module level: an inline cell remounts on every poll and resets open dialogs.
 
 /* `block` before `truncate`: an inline span never shows the ellipsis. The title
  * carries the full value. */
@@ -52,8 +51,8 @@ import { shownSizeBytes } from "@/lib/applications/size-measurement";
  * same as OwnerCell. */
 // PHP or Node.js with its version, a container, or plain files; the logo first so
 // the column scans by shape.
-// One plain line, no logo (Krishna, 7 Oct): the Application column already shows the logo.
-// Under the status badge since 4 Nov (Krishna): its own column left Application 211px at 1280,
+// One plain line, no logo: the Application column already shows the logo.
+// Under the status badge: its own column left Application 211px at 1280,
 // cutting every domain short. Nothing at all where it does not apply.
 function RunsOnCell({ row }) {
   const t = useTranslations("applications");
@@ -69,7 +68,7 @@ function RunsOnCell({ row }) {
   );
 }
 
-// From the backup targets list: one line with an icon, as in the prototype. Red only when
+// From the backup targets list: one line with an icon. Red only when
 // there is something to fix; the detail behind "Failed" / "Manual only" is in the title.
 function LastBackupCell({ row, table }) {
   const t = useTranslations("applications");
@@ -82,7 +81,7 @@ function LastBackupCell({ row, table }) {
         href={`/applications/${row.original.id}/backups`}
         prefetch={false}
         // The title doubles as the description a screen reader adds; a hidden ": Set up
-        // backups" span leaked into the tooltip as ": Set up backups" (users, 3 Nov).
+        // backups" span leaked into the tooltip as ": Set up backups".
         className="flex min-w-0 items-start gap-1.5 text-sm text-destructive"
       >
         <ArchiveRestore className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -229,19 +228,9 @@ function Filters({ statusOptions, typeOptions, t }) {
 }
 
 // `siteTypes` comes from `GET /site-types`, not the visible rows, so every type stays filterable.
-// Percentages plus `fixedLayout` bound the columns so `truncate` works. Each set totals
-// 100 at lg, xl and 2xl. Sized from the widest locale's cell at the NARROWEST table of
-// each breakpoint (704px at 1024, 960px at 1280, 1215px at 1536), measured 7 Oct:
-// Status 162px (de "Fehlgeschlagen", ru "Приостановлено"; since 30 Oct no pill is longer: fr "Redémarre
-// en boucle" (204px) became "Redémarrage", like en "Restarting"; de "fehlgeschlagen" deploy tag 148px),
-// Last backup 132px (pt), Size 93px (es "Tamaño" + sort arrow),
-// System user 131px (de "Systembenutzer", one word that cannot wrap). Runs on is a line under the
-// status badge since 4 Nov, which gave Application its 125px (Krishna: domains were cut short).
-// Every fact column stays on one line (29 Oct: a two-line "41 minutes ago" beside one-line
-// cells read as unaligned); the ⋯ column gave up the room, as it holds a single 32px button.
-// Columns join as the table widens: System user and Size from xl, Created from 2xl (Krishna: System
-// user on 1280 laptops, 29 Oct; Size is important, 30 Oct). Application takes what is left at xl:
-// the others are at their measured floors (Last backup 178px, fr "Manuel uniquement").
+// Percentages plus `fixedLayout` bound the columns so `truncate` works; each set totals 100.
+// Sized from the widest locale's cell at the narrowest table of each breakpoint, so every
+// fact column stays on one line. System user and Size join from xl, Created from 2xl.
 const COLUMN_WIDTHS = {
   withBackups: {
     name: "w-[50%] xl:w-[35%] 2xl:w-[35%]",
@@ -319,7 +308,7 @@ function ApplicationsList({
   const columns = useMemo(
     () => [
       // `col` must be on the API's sort whitelist (else 422). Status sits right after
-      // the name: beside it, PHP's short value read as part of the domain (7 Oct).
+      // the name: beside it, PHP's short value read as part of the domain.
       { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: widths.name, sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} iconDataUri={applicationIconDataUri(row.original, siteTypes)} canOpen={canOpen} /> },
       { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: widths.status, sortKey: "status" }, cell: StatusCell },
       ...(withBackups ? [{ id: "lastBackup", header: t("columns.lastBackup"), meta: { className: `${widths.lastBackup} h-auto min-h-10 whitespace-normal` }, cell: LastBackupCell }] : []),
@@ -340,7 +329,7 @@ function ApplicationsList({
   const toolbar = (
     <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
       {filters}
-      {/* Create sits with Refresh in the table's own toolbar (Krishna, 6 Oct). */}
+      {/* Create sits with Refresh in the table's own toolbar. */}
       <div className="flex flex-wrap items-center gap-2"><RefreshButton /><CreateApplicationButton canManage={canManage} /></div>
     </div>
   );

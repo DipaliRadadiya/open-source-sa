@@ -59,7 +59,7 @@ function duration(seconds, t) {
 
 // Idle connections are counted, not listed, so a stuck query is not buried.
 // `fill`: the card takes its parent's height and the list scrolls inside it, with no
-// "Show all" cap: beside the chart it matches the chart's height (Krishna, 8 Oct).
+// "Show all" cap: beside the chart it matches the chart's height.
 export function ProcessList({ engine, processes: initial = [], canManage, fill = false }) {
   const t = useTranslations("databases.monitor");
   const { refreshAndWait } = useRefresh();
@@ -203,7 +203,7 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
               ) : null}
             </div>
           ) : (
-            // One small card per query, as in the redesign; expanded scrolls inside a
+            // One small card per query; expanded scrolls inside a
             // fixed height so the chart beside it stays put.
             <div
               className={cn(

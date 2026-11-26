@@ -151,7 +151,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
                 variant="neutral"
                 size="sm"
                 // Restart is every running row's button, so it stays plain: ten amber buttons
-                // read as ten warnings (Krishna, 13 Oct). Start on a stopped unit keeps its green.
+                // read as ten warnings. Start on a stopped unit keeps its green.
                 className={cn(primary === "restart" ? null : ACTION_META[primary].tone)}
                 disabled={busy}
                 onClick={() => trigger(primary)}

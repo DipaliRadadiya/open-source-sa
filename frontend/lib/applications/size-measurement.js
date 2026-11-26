@@ -1,7 +1,7 @@
 import { parseApiDate } from "../format/api-date.js";
 
 // A measurement this soon after creation was taken while setup was still writing the files:
-// a new WordPress read "5.0 KB" for six minutes until the next sweep (Krishna, 24 Nov).
+// a new WordPress read "5.0 KB" for six minutes until the next sweep.
 export const SETUP_WINDOW_MS = 90 * 1000;
 // An application this young with no size yet gets its first measurement from the open page.
 export const NEW_APP_MS = 10 * 60 * 1000;

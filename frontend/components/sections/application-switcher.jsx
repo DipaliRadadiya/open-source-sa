@@ -16,7 +16,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// The sidebar's application card opens this (tester request, 2 Nov): another application without
+// The sidebar's application card opens this: another application without
 // going back to the list. The list is one searched page, not the list page's pagination: in a
 // dropdown you type the name you want. Fetched only when opened, so pages do not pay for it.
 export function ApplicationSwitcher({ application, children, ...triggerProps }) {
@@ -90,7 +90,7 @@ export function ApplicationSwitcher({ application, children, ...triggerProps }) 
   const visible = switcherRows(state.applications, application, state.query);
   const shown = visible.length;
   // From the first key until the answer arrives, the pause included: without it the old list just
-  // sat there and nothing said a search was running (Krishna, 3 Nov).
+  // sat there and nothing said a search was running.
   const searching = open && (state.status === "loading" || state.query !== query.trim());
 
   return (

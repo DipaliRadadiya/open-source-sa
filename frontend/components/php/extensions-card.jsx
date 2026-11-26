@@ -172,8 +172,8 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
             <ul aria-label={t("extensions.title")} className="-mr-px -mb-px grid grid-cols-1 @xl/ext:grid-cols-2 @6xl/ext:grid-cols-3">
                 {shown.map((extension) => {
                   const required = panelRequired.includes(extension.name);
-                  // Its own install still running: switching off then was undone a second later
-                  // by the install's last step, while the row already said "Off" (4 Nov, .111).
+                  // Its own install still running: switching off now would be undone by the
+                  // install's last step.
                   const installing = extension.status === "installing";
                   // One at a time: each switch runs apt, and a second run would fail on the lock.
                   const reason = !canManage
@@ -267,7 +267,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                             </span>
                           ) : null}
                           {required ? (
-                            // Said, not hidden behind a hover: a faded switch read as broken (users, 4 Nov).
+                            // Said, not hidden behind a hover: a faded switch read as broken.
                             <HoverHint content={t("extensions.panelNeeds")}><span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Lock className="size-3.5 shrink-0" aria-hidden />
                               {t("extensions.panelNeedsShort")}

@@ -108,7 +108,7 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
       meta: { className: "whitespace-normal", showUser },
     },
     // Last, not before the description: its width is sized for the longest label in any
-    // locale, so in the middle it left an empty band before "What happened" (22 Nov).
+    // locale, so in the middle it left an empty band before "What happened".
     {
       accessorKey: "type",
       header: t("table.type"),

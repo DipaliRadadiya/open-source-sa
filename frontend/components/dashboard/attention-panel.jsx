@@ -19,7 +19,7 @@ const TONE = {
   warning: "bg-warning-soft text-warning ring-warning/25",
 };
 
-// One line per problem (Krishna, 6 Oct: the two-line cards pushed the server's
+// One line per problem (the two-line cards pushed the server's
 // details down the page). The longer explanation is one hover away; the link
 // leads to the page that explains it in full.
 function Row({ icon: Icon, tone, title, detail, names, href, action }) {
@@ -81,11 +81,10 @@ export async function AttentionPanel({ findings = [], health, applicationsKnown 
   if (!count && verdictKnown) return null;
 
   return (
-    // The count heads the rows it counts (it used to be the banner's headline, where it
-    // read as being about the logs button beside it).
+    // The count heads the rows it counts.
     <section aria-labelledby={count ? "attention-heading" : undefined} aria-label={count ? undefined : t("attention.title")} className="space-y-2.5">
       {count ? (
-        // Steel UI: a mono caps section label with an amber square (prototype).
+        // A mono caps section label with an amber square.
         <h2 id="attention-heading" className="flex items-center gap-2 font-mono text-xs font-medium tracking-[0.12em] text-warning uppercase">
           <span aria-hidden className="size-1.5 shrink-0 bg-warning" />
           {t("hero.attention", { count })}

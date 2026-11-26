@@ -151,7 +151,7 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted, subject =
             </div>
           ) : null}
 
-          {/* What the click does, in red, then how it can be undone (testers' wording, 29 Oct). */}
+          {/* What the click does, in red, then how it can be undone. */}
           <Caution tone="destructive" size="md">
             <p>
               {t("overwriteWarning")}

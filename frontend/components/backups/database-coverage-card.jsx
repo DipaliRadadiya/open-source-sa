@@ -32,7 +32,7 @@ const JUST_STARTED_MS = 90_000;
  * Databases that are not part of an application (RC-23), under the applications'
  * coverage: a site's database is backed up with the site, these have schedules of
  * their own, set on the database's Backups tab. Same columns and widths as the
- * applications table above, so the two line up (Krishna, 4 Nov).
+ * applications table above, so the two line up.
  */
 export function DatabaseCoverageCard({ coverage, options, canOpenDatabases = false, canManage = false }) {
   const t = useTranslations("backups.databases");

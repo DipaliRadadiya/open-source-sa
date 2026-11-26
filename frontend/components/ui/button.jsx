@@ -7,19 +7,8 @@ import { Slot } from "radix-ui"
 import { DENIED, ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils"
 
-// Brand tint for labelled outline buttons in a card; dialogs, toolbars and the header
-// stay neutral. Written out per scope: Tailwind needs literal classes.
-// The text colour is repeated for hover and open: NEUTRAL's `hover:text-foreground`
-// otherwise won and turned the label black on hover (Krishna, 7 Oct).
-// A tinted border, not a transparent one: the base clips the fill to the padding box, so
-// a transparent border made it look 2px shorter than a neutral button beside it (8 Oct).
-// Steel UI: secondary buttons stay neutral steel inside cards too; only the main
-// action carries colour. (Was a brand-tinted fill.)
-const TINT_IN_CARDS = "";
-
-// On a coloured note (Caution, notice) a white button with a border, not the blue tint:
-// light blue on amber read as neither (Krishna, 7 Oct). `!` because a note inside a card
-// matches both scopes.
+// On a coloured note (Caution, notice) the button is white with a border.
+// `!` because a note inside a card matches both scopes.
 const ON_NOTE =
   "in-data-[slot=caution]:border-border! in-data-[slot=caution]:bg-card! in-data-[slot=caution]:text-foreground! in-data-[slot=caution]:shadow-xs in-data-[slot=caution]:hover:bg-muted! in-data-[slot=caution]:aria-expanded:bg-muted! in-data-[slot=caution]:dark:border-input! in-data-[slot=caution]:dark:bg-input/40! in-data-[slot=caution]:dark:hover:bg-input/60! in-data-[slot=notice]:border-border! in-data-[slot=notice]:bg-card! in-data-[slot=notice]:text-foreground! in-data-[slot=notice]:shadow-xs in-data-[slot=notice]:hover:bg-muted! in-data-[slot=notice]:aria-expanded:bg-muted! in-data-[slot=notice]:dark:border-input! in-data-[slot=notice]:dark:bg-input/40! in-data-[slot=notice]:dark:hover:bg-input/60!";
 
@@ -75,7 +64,7 @@ const buttonVariants = cva(
       },
     },
     compoundVariants: [
-      { variant: "outline", size: ["default", "xs", "sm", "lg"], className: `${NEUTRAL} ${TINT_IN_CARDS} ${ON_NOTE}` },
+      { variant: "outline", size: ["default", "xs", "sm", "lg"], className: `${NEUTRAL} ${ON_NOTE}` },
       { variant: "outline", size: ["icon", "icon-xs", "icon-sm", "icon-lg"], className: NEUTRAL },
     ],
     defaultVariants: {
@@ -92,7 +81,7 @@ function Button({
   asChild = false,
   disabled = false,
   disabledReason,
-  // The role lacks the permission: the action is hidden, not shown disabled (23 Nov).
+  // The role lacks the permission: the action is hidden, not shown disabled.
   denied = false,
   ...props
 }) {

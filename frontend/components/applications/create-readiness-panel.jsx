@@ -6,11 +6,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 
 // Container query, not a breakpoint: the card is narrow at wide viewports and wide at narrow ones.
 // `className` lets the side column cap its height: then only the list scrolls and the
-// footer buttons stay on screen (on a short laptop they had been below the fold, 7 Oct).
+// footer buttons stay on screen on a short laptop.
 export function CreateReadinessPanel({ items = [], onSelectItem, footer = null, className }) {
   const t = useTranslations("applications");
   const done = items.filter((item) => item.ready).length;
-  // What is still missing comes first: it is what the reader has to act on (7 Oct).
+  // What is still missing comes first: it is what the reader has to act on.
   const ordered = [...items.filter((item) => !item.ready), ...items.filter((item) => item.ready)];
   const complete = items.length > 0 && done === items.length;
 
@@ -62,7 +62,7 @@ export function CreateReadinessPanel({ items = [], onSelectItem, footer = null, 
                 <button
                   type="button"
                   onClick={() => onSelectItem(item.target ?? item.key)}
-                  // Amber, not the link green: green means "done" in the steel UI (Krishna, 14 Oct).
+                  // Amber, not the link green: green means "done".
                   className="rounded-sm text-left font-medium text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] underline decoration-dotted underline-offset-4 hover:decoration-solid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-warning"
                 >
                   {t(item.invalid ? "readiness.fix" : "readiness.complete", { field: item.label })}

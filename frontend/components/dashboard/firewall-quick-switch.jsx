@@ -12,7 +12,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
- * The dashboard's firewall switch (Krishna, 5 Nov: a quick action on the tile). Both directions
+ * The dashboard's firewall switch (a quick action on the tile). Both directions
  * go through the Firewall page's own confirmations: ON blocks anything unlisted (the API adds
  * SSH and the panel's ports first), OFF stops every rule but keeps them.
  */

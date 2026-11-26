@@ -1,23 +1,5 @@
 import { z } from "zod";
 
-// systemctl's three outcomes; anything else renders as unknown.
-export const SERVICE_STATUSES = ["active", "inactive", "failed"];
-
-// What KIND of row this is, separate from how it is doing: installable
-// services stay listed while installing and after a failed install.
-export const SERVICE_STATES = ["installed", "installing", "install_failed"];
-
-// The API decides per service what may be run (protected units omit stop and
-// disable); build buttons from its list, never hardcode them.
-export const SERVICE_ACTIONS = [
-  "start",
-  "stop",
-  "restart",
-  "reload",
-  "enable",
-  "disable",
-];
-
 // Only actions that take a service offline ask for confirmation.
 export const DISRUPTIVE_ACTIONS = ["stop", "disable"];
 
@@ -50,7 +32,7 @@ export const serviceSchema = z.object({
   // Absent means no.
   testable: z.boolean().optional(),
   usage: usageSchema.nullable().optional(),
-  // Installed package version (2026-10-27): `version` beside the name, `package_version` as dpkg
+  // Installed package version: `version` beside the name, `package_version` as dpkg
   // has it. Null when there is nothing to read; absent from an older API.
   version: z.string().nullish(),
   package_version: z.string().nullish(),
@@ -65,6 +47,4 @@ export const configTestResponseSchema = z.object({
 export const servicesResponseSchema = z.object({
   services: z.array(serviceSchema),
 });
-
-export const serviceResponseSchema = z.object({ service: serviceSchema });
 

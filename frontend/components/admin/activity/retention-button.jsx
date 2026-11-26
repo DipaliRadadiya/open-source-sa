@@ -22,7 +22,7 @@ const toValue = (months) => (months == null ? NEVER : String(months));
 
 // How long the activity log is kept, for every user, so admin only (the page is). A header
 // button showing the setting, not a card above the log: it is changed once, read daily
-// (Krishna, 20 Nov).
+//.
 export function RetentionButton({ retention }) {
   const t = useTranslations("activity.retention");
   const tc = useTranslations("common");

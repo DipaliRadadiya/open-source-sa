@@ -1,7 +1,7 @@
 import { ACCESS_MANAGE, ACCESS_NONE, accessFromGrant } from "../schemas/role.js";
 
 // View and manage counted apart: "38 permissions" read the same for a view-only role
-// as for Administrator (Krishna, 17 Oct). Manage implies view, so view counts both.
+// as for Administrator. Manage implies view, so view counts both.
 export function countAccess(levels = []) {
   let view = 0;
   let manage = 0;

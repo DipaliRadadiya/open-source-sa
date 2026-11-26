@@ -1,12 +1,6 @@
 /**
- * Every label in the install-home map resolves, in every locale.
- *
- * The Services page builds these keys with template literals —
- * `t(\`attention.${home.label}\`)` — so they are invisible to grep and to the
- * key-resolution pass in check-i18n. A missing one does not fail the build or
- * the lint; it renders the raw key to a user who is already looking at a failed
- * install. This closes that gap by walking the map itself, so adding a service
- * home without its strings fails here.
+ * Every label in the install-home map resolves in every locale. The Services page builds these
+ * keys with template literals, so check-i18n can't see them.
  */
 import fs from "node:fs";
 import path from "node:path";

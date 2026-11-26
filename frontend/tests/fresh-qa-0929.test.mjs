@@ -623,18 +623,11 @@ test("Caution with an action: text uses the whole row (Krishna, 30 Sep)", () => 
   assert.match(read("components/ui/caution.jsx"), /action \? "min-w-48" : "min-w-0"/);
 });
 
-test("Secondary buttons are tinted only inside cards and notices; elsewhere neutral (Krishna, 30 Sep)", () => {
+test("Secondary buttons are neutral, and white with a border on a coloured note", () => {
   const src = read("components/ui/button.jsx");
-  // A tinted border, not transparent: the fill is clipped to the padding box, so a
-  // transparent border looked 2px shorter than the neutral Refresh beside it (8 Oct).
-  // Steel UI (Krishna, 14 Oct): secondary buttons are brushed steel everywhere (globals.css),
-  // so the in-card brand tint is empty on this branch; the slot stays for the compound variant.
-  assert.match(src, /const TINT_IN_CARDS = "";/);
-  // On a coloured note (Caution, notice): white with a border since 7 Oct; the blue tint
-  // on amber "not looks like button".
   assert.match(src, /in-data-\[slot=caution\]:bg-card!/);
   assert.match(src, /in-data-\[slot=notice\]:bg-card!/);
-  assert.match(src, /\{ variant: "outline", size: \["default", "xs", "sm", "lg"\], className: `\$\{NEUTRAL\} \$\{TINT_IN_CARDS\} \$\{ON_NOTE\}` \}/);
+  assert.match(src, /\{ variant: "outline", size: \["default", "xs", "sm", "lg"\], className: `\$\{NEUTRAL\} \$\{ON_NOTE\}` \}/);
   assert.match(src, /\{ variant: "outline", size: \["icon", "icon-xs", "icon-sm", "icon-lg"\], className: NEUTRAL \}/);
   assert.match(read("components/ui/caution.jsx"), /data-slot="caution"/);
   assert.match(read("components/sections/locale-switcher.jsx"), /<Button\s+variant="neutral"/);

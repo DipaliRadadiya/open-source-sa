@@ -115,7 +115,7 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
                 <p className="py-6 text-center text-sm text-muted-foreground">{ta("noMatch", { query: query.trim() })}</p>
               ) : (
                 // One column, as in the application switcher: two columns cut every domain to
-                // "phpsite.23-172…" and broke a long name into six lines (Krishna, 4 Nov).
+                // "phpsite.23-172…" and broke a long name into six lines.
                 <ul className="divide-y overflow-hidden rounded-lg border">
                   {matches.map((app) => (
                     <li key={app.id}>

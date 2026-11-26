@@ -80,7 +80,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
   // Refresh sits in the Installed services header; when that card is hidden, in the
   // first card that is shown, so the page never loses it.
   const refreshIn = showRunning ? "running" : attention.length > 0 ? "attention" : "installing";
-  // All well: one line in the list's head instead of two big tiles holding a few words (22 Nov).
+  // All well: one line in the list's head instead of two big tiles holding a few words.
   // The tiles come back when something is stopped or failed, so trouble still stands out.
   const healthy = stopped === 0 && attention.length === 0 && showRunning;
   const healthyLine = (
@@ -100,7 +100,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
           too: one per row filled the first screen with four short facts (Krishna, 13 Oct). */}
       {healthy ? null : (
       <div className="@container/tiles">
-      {/* Stopped and Needs attention only when they count something (Krishna, 18 Nov); the
+      {/* Stopped and Needs attention only when they count something; the
           row takes as many columns as it has tiles, and a lone last tile spans a phone row. */}
       <div className={cn("grid grid-cols-2 gap-3 sm:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 @min-[52rem]/tiles:[&>*:last-child:nth-child(odd)]:col-span-1", TILE_COLUMNS[2 + (stopped > 0) + (attention.length > 0)])}>
         <Tile

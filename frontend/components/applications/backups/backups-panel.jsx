@@ -488,7 +488,7 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
 
   return (
     // The state is carried by the icon tile and the button, not a coloured card edge:
-    // the pink outline read as an error banner rather than a card (7 Oct).
+    // the pink outline read as an error banner rather than a card.
     <Card className="gap-0 overflow-hidden py-0">
       <div className={cn("flex flex-col items-start gap-3 px-5 py-4 sm:flex-row sm:items-center", target && "border-b")}>
         <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", tone)}>
@@ -610,7 +610,7 @@ function RecentBackups({
   const t = useSubjectTranslations("backups.application", "backups.database", subject);
   const router = useRouter();
   // Nothing to list and nothing failed: say what this list will hold and offer the next
-  // step, instead of one grey line (Krishna, 7 Oct).
+  // step, instead of one grey line.
   const firstRun = backups.length === 0 && !failed && !forbidden && !queued;
 
   // A failed request is not evidence that the site has no history.
@@ -708,8 +708,7 @@ function RecentBackups({
 }
 
 // The first-run state of the list: what will appear here, in one sentence. No button: the
-// status card above holds Set up / Back up now. (Three fact tiles were tried and read as
-// buttons nobody understood, 7 Oct.)
+// status card above holds Set up / Back up now.
 function FirstBackupEmpty({ hasTarget, subject = "application" }) {
   const t = useSubjectTranslations("backups.application", "backups.database", subject);
   return (

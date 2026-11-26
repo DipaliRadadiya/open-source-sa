@@ -57,6 +57,6 @@ export function ListCard({ toolbar = null, footer = null, from = "always", child
     </div>
   );
   // c900 reads the page's content width (@container/page in the layouts), so every list switches at
-  // the same screen width (Krishna, 19 Nov: tables on a laptop, cards below).
+  // the same screen width (tables on a laptop, cards below).
   return from === "c1000" ? <div className="@container">{card}</div> : card;
 }

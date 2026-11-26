@@ -5,7 +5,7 @@ import { applicationSchema, isValidApplicationDomain } from "./application.js";
 
 // `staging: null` means the site never had one; a 404 means the site type cannot
 // (staging is WordPress-only). Render them differently.
-// A push or update-from-live, which runs on the queue since RC-16 (20 Oct): the POST
+// A push or update-from-live, which runs on the queue since RC-16: the POST
 // answers 202 with this, and GET …/staging carries the latest one so a reload still
 // shows a run in progress and how the last one ended.
 export const stagingRunSchema = z.object({
@@ -16,7 +16,7 @@ export const stagingRunSchema = z.object({
   // False when the user skipped the database copy (57926891); absent from an older API, which always took one.
   safety_copy: z.boolean().nullish(),
   status: z.string(),
-  // What the endpoint used to answer when it failed: message, code/reason, reference.
+  // Set when the run failed: message, code/reason, reference.
   error: z
     .object({
       message: z.string().nullish(),

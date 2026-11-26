@@ -68,11 +68,6 @@ export function clearStuckBackup(backupId) {
   return api.post(`/backups/${backupId}/clear`);
 }
 
-/** The server removes the archive before the record, so nothing is orphaned in the bucket. */
-export function deleteBackup(backupId) {
-  return api.delete(`/backups/${backupId}`);
-}
-
 // Throttled 6/min, max 100 ids. Answers 200 with `{deleted, succeeded, failed}`: a
 // batch can partly fail.
 export function deleteBackups(ids) {

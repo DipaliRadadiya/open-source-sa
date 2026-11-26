@@ -19,11 +19,6 @@ export async function getSystemUserOptions() {
   }
 }
 
-export async function getSystemUsers() {
-  const result = await getSystemUserOptions();
-  return result.users;
-}
-
 /** A picker needs every account; a table needs one page. */
 export async function getSystemUsersPage(query = "") {
   const result = await read("/system-users", systemUsersResponseSchema, {

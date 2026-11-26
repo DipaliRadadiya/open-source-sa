@@ -1,8 +1,7 @@
 import { cn } from "@/lib/utils";
 
-// The icon chip at the start of a card's heading, as on Account and Settings (Krishna,
-// 23 Nov: every card heading gets one, so headings stand apart from content). Colour sits
-// in the chip, never the title.
+// The icon chip at the start of a card's heading, so headings stand apart from content.
+// Colour sits in the chip, never the title.
 export const HEAD_ICON_TONES = {
   default: "border-primary/45 bg-primary/10 text-[var(--primary-700,var(--primary))] dark:text-primary",
   destructive: "border-destructive/45 bg-destructive/10 text-destructive",

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // `replaceState`, not a route change: sections are loaded, and Back should return to the list.
 const VALUES = ["overview", "users", "tables", "exports", "backups"];
 // Old tab values still appear in saved links. `backups` was the exports tab's name
-// until scheduled backups of a database arrived (16 Oct); it now opens those.
+// until scheduled backups of a database arrived; it now opens those.
 const LEGACY = {};
 
 export function DatabaseTabs({ overview, users, tables, exports: exportsNode, backups: backupsNode, counts, initial }) {

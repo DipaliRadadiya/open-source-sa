@@ -21,22 +21,8 @@ export async function generateMetadata({ params }) {
   return { title: `${t("title")} — ${result.application?.name ?? ""}` };
 }
 
-/**
- * A container site's compose file, on its own screen.
- *
- * It was a dialog opened from the Dashboard's Container card, which was wrong
- * twice: this file *is* the site — its image, ports, volumes and environment
- * variables are all in it — and a sixty-line YAML box in a modal put the Save
- * button below the fold on a desktop, so the control you came for was the one you
- * could not see.
- *
- * A page fixes the second problem by not having it: the editor is as wide as the
- * screen and the save control sits in normal document flow, where nothing can push
- * it off.
- *
- * It sits where Environment would for any other site type, and that is the point —
- * a container gets no Environment screen because its variables live here instead.
- */
+// A container site's compose file. A full page, not a dialog, so Save is never below the
+// fold; it takes Environment's place, since a container's variables live in this file.
 export default async function ApplicationComposePage({ params }) {
   const { application: id } = await params;
 

@@ -27,17 +27,7 @@ export async function generateMetadata({ params }) {
   return { title: `${t("title")} — ${result.application?.name ?? ""}` };
 }
 
-/**
- * What a container site runs as.
- *
- * These controls were a full-width card at the bottom of the Dashboard, under the
- * domains and the backups — a long way from where anybody goes looking for "what is
- * this container doing", and sharing a screen with nine cards about other things.
- *
- * Structured settings here; the raw compose file is next door. Two screens because
- * they are two questions — a network chooser and three fields, versus sixty lines
- * of YAML — and because one is the other's escape hatch.
- */
+// What a container site runs as: structured settings here, the raw compose file next door.
 export default async function ApplicationContainerPage({ params }) {
   const { application: id } = await params;
 

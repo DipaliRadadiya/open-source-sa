@@ -22,8 +22,8 @@ import { ConnectDestinationDialog } from "@/components/integrations/storage/conn
 import { EditDestinationDialog } from "@/components/integrations/storage/edit-dialog";
 import { ReplaceCredentialsDialog } from "@/components/integrations/storage/replace-credentials-dialog";
 
-// Every choice the Add destination picker offers, in its order (tester sheet, 2 Nov: only the
-// S3 providers were named). "Other" alone says nothing out of the picker, so it gets its own words.
+// Every choice the Add destination picker offers, in its order. "Other" alone says nothing
+// out of the picker, so it gets its own words.
 const EMPTY_STATE_PROVIDERS = PRESETS.filter((preset) => !preset.legacy).map((preset) => preset.value);
 
 // A plain card of rows rather than a DataTable: the list is always short.
@@ -108,7 +108,7 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
 
       <CardContent className="px-5 py-0">
         {destinations.length === 0 ? (
-          // Two columns from md (Krishna, 2 Nov: the stacked version was too long): what this is and
+          // Two columns from md (the stacked version was too long): what this is and
           // the action on the left, the steps on the right, with the destinations inside step 1
           // rather than a second list above it. One column on a phone.
           <div className="grid gap-6 py-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:items-center md:gap-10">

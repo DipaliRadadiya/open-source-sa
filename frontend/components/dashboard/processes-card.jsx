@@ -27,7 +27,7 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
 
   return (
     // Same chrome as every other card on this page.
-    // Steel UI: title and actions over a hairline, the description opens the body (prototype).
+    // Title and actions over a hairline, the description opens the body.
     <Card className={cn("gap-0 [--card-spacing:--spacing(4)]", PANEL_CARD)}>
       <CardHeader className="flex flex-col gap-3 space-y-0 border-b sm:flex-row sm:items-center sm:justify-between">
         <CardTitle icon={Cpu} as="h2" className="flex items-center gap-2">

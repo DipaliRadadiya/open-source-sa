@@ -85,7 +85,7 @@ export function CloneApplicationPanel({
     mode: "onTouched",
     reValidateMode: "onChange",
     // Prefilled with the suggestion: as a grey placeholder it looked filled in while
-    // Create stayed disabled (Krishna, 13 Oct). It is still an ordinary, editable value.
+    // Create stayed disabled. It is still an ordinary, editable value.
     defaultValues: { name: "", domain: canManage ? suggestion : "" },
   });
 
@@ -355,7 +355,7 @@ export function CloneApplicationPanel({
             </PanelCard>
           </div>
 
-          {/* Its own card again: inside the form card it made one crowded block (7 Oct). */}
+          {/* Its own card again: inside the form card it made one crowded block. */}
           <ImpactCard
             siteType={siteType}
             application={application}

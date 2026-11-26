@@ -2,26 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 /*
- * A card's vertical padding is set once, not twice.
- *
- * `Card` carries `py-(--card-spacing)` itself. `CardContent` sets only `px`.
- * So `py-4` on a CardContent does not REPLACE the card's padding — it is a
- * second element with its own padding, and the two add up. The ionCube card
- * measured 32px top and bottom where every other card has 16.
- *
- * The panel already had a convention for this and fifteen cards follow it:
+ * A card's vertical padding is set once. `Card` has its own `py`; a `CardContent` with `py-*`
+ * adds to it. Exactly one of the pair may set it, as in:
  *
  *     <Card className="gap-0 overflow-hidden py-0 shadow-sm">
  *       <CardContent className="px-5 py-4">
- *
- * The Card hands its vertical padding to the content, so only one of them
- * applies it. Eight cards did not, and those eight were the ones that looked
- * too tall.
- *
- * ⚠️ I first read this backwards and stripped the padding from all 23, which
- * would have left fifteen cards with no vertical padding at all. The question
- * is never "does the content set py" — it is "does exactly one of the pair set
- * it". That is what this checks.
  */
 
 function walk(dir, out = []) {

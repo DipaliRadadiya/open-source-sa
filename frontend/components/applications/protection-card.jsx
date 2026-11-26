@@ -13,7 +13,7 @@ export async function ProtectionCard({ application, items, totals = null }) {
   const onItems = items.filter((item) => item.on);
   const on = onItems.length;
   // Named: two users read "1 of 5 on" against four "Off" rows and missed the last one,
-  // "Application folder: Locked" (3 Nov).
+  // "Application folder: Locked".
   const format = on ? await getFormatter() : null;
 
   return (

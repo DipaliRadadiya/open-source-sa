@@ -21,7 +21,7 @@ function readDismissed() {
   }
 }
 
-// `names`: which ones; a bare "2 recommended components left" left users guessing (3 Nov).
+// `names`: which ones; a bare "2 recommended components left" left users guessing.
 export function SetupBanner({ remaining, names = [] }) {
   const t = useTranslations("setup");
   const format = useFormatter();
@@ -43,7 +43,7 @@ export function SetupBanner({ remaining, names = [] }) {
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-4 py-3">
-      {/* Steel UI: the icon in a bordered square, the card a plain hairline (prototype). */}
+      {/* The icon in a bordered square, the card a plain hairline. */}
       <span className="flex size-8 shrink-0 items-center justify-center rounded-[2px] border">
         <Sparkles className="size-4 text-primary" />
       </span>

@@ -21,22 +21,9 @@ import {
 } from "@/components/ui/select";
 
 /**
- * Attach a site to a network or a volume, from the Docker page.
- *
- * The same write as the Container card on the site's own page — one endpoint, so
- * the two can never disagree about what attaching means. This page is the other
- * door into it, because somebody who has just created a network is already here
- * and should not have to go and find the site.
- *
- * It says the container will be recreated, and then recreates it. The
- * alternative — record it now, apply on the next deploy — leaves the panel
- * showing a network the container is not on, which is the exact trap the card
- * was built to avoid.
- *
- * A volume additionally needs a path inside the container: `shop-db` is only
- * useful at `/var/lib/mysql`. That is why this dialog has a second field for a
- * volume and not for a network, and why the volume CREATE dialog has neither —
- * `docker volume create` takes no container at all.
+ * Attach a site to a network or a volume from the Docker page, through the same endpoint as
+ * the site's Container card. The container is recreated at once. A volume also needs a path
+ * inside the container.
  */
 export function AttachSiteDialog({
   open,

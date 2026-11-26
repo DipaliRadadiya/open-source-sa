@@ -8,16 +8,8 @@ const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
 
 const progress = read("components/applications/clone/clone-progress.jsx");
 const panel = read("components/applications/clone/clone-panel.jsx");
-const schema = read("lib/schemas/clone.js");
 
 const { locales } = await import("../i18n/routing.js");
-
-test("the schema keeps the field the API sends", () => {
-  // Zod strips unknown keys, so a field the schema omits is a field the screen
-  // can never show however correct the backend is.
-  assert.match(schema, /target_webhook: z\s*\n?\s*\.object\(\{/);
-  assert.match(schema, /url: z\.string\(\)/);
-});
 
 test("the result screen is handed the webhook", () => {
   assert.match(panel, /webhook=\{completedClone\.target_webhook\}/);

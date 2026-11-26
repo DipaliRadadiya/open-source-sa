@@ -1,35 +1,7 @@
 /**
- * The machine-readable skeleton of an ICU message: its arguments and its tags.
- *
- * Key parity says a locale has the same key set as English. It says nothing
- * about the INSIDE of a string, and that is where a translation breaks: drop
- * `{count}` and the sentence renders with a hole; rename it and next-intl
- * throws at render; lose the `other` branch of a plural and it throws for the
- * one count nobody tested. Every one of those passes the key check, passes
- * eslint, and passes the build.
- *
- * Three locales were reviewable by eye. Eight are not, so the shape is compared
- * instead of trusted.
- *
- * What is compared, and what deliberately is not:
- *
- *  - **Argument names and their type** must match. `{version}` staying
- *    `{version}`, and `{count, plural, …}` staying a plural, is the contract
- *    between the string and the call site.
- *  - **Tag names** must match. `<strong>` is supplied by `t.rich`, so an
- *    invented `<b>` renders nothing and a missing one loses the emphasis.
- *  - **Plural categories must NOT match.** English needs `one` and `other`;
- *    Russian needs `few` and `many`; Japanese needs only `other`. Requiring the
- *    same set would be requiring every language to have English's grammar. Only
- *    `other` is mandatory — CLDR makes it the fallback for every language, and
- *    ICU refuses a plural without one.
- *
- * This is a real recursive parse, not a scan for `{`. The first attempt walked
- * the string character by character and treated every brace alike, so the `one`
- * branch of `{count, plural, one {No apps} other {…}}` was read as an argument
- * named `No`. It reported 418 problems against two locales that were correct —
- * a check that cries wolf on good input is worse than no check, because the fix
- * is to stop reading it.
+ * The skeleton of an ICU message: its arguments and tags. Argument names and types, and tag
+ * names, must match English. Plural categories may differ per language; only `other` is
+ * required. A real recursive parse, so plural branch text is never read as an argument.
  */
 
 const NAME = /[A-Za-z0-9_]/;

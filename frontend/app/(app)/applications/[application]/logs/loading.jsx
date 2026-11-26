@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SK_CARD, SkHeader, SkTabs, SkTerminal } from "@/components/ui/skeleton-kit";
 import { cn } from "@/lib/utils";
 
-// Logs (7 Oct): one card whose header is the Access / Error switch with Live on the
+// Logs: one card whose header is the Access / Error switch with Live on the
 // right, then the tools row, then the log itself.
 export default function Loading() {
   return (

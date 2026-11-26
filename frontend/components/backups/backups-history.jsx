@@ -348,7 +348,7 @@ export function BackupsHistory({
 // Drawn like the panel's other number tiles: a soft tile carrying the colour, then
 // the number over its label.
 // The same tile as Database health's: an icon that says what is counted, the label
-// above the number (8 Oct: a dot in a circle said nothing). Colour only when the count
+// above the number (a dot in a circle said nothing). Colour only when the count
 // is not zero, so "0 Failed" does not shout in red.
 const TALLY_TONE = {
   primary: "bg-primary/10 text-primary",

@@ -21,7 +21,7 @@ export function useDisabledReason() {
 /** A control's own `disabledReason` takes precedence over this one.
  * `denied`: the role lacks the permission for this area's actions. Buttons that would be
  * disabled are hidden instead, and other controls show their value without a tooltip
- * (Krishna, 23 Nov: hide what the role cannot do; no "no permission" tooltips). */
+ * (hide what the role cannot do; no "no permission" tooltips). */
 export function DisabledReasonProvider({ reason, denied = false, children }) {
   return (
     <DisabledReasonContext.Provider

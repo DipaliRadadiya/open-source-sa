@@ -43,7 +43,7 @@ const CUSTOM_LINES = "custom";
 // The line under the title reports the result only when a filter narrowed it or the file is short.
 export function LogToolbar({
   label,
-  // Replaces the title, e.g. the app page's Access / Error switch (7 Oct: a tab
+  // Replaces the title, e.g. the app page's Access / Error switch (a tab
   // strip above the card and the same name as the card title said it twice).
   heading = null,
   shown,
@@ -94,7 +94,7 @@ export function LogToolbar({
   const [customLines, setCustomLines] = useState(false);
 
   // In the head beside Live, not at the end of the filter row: in the narrower system-logs card it
-  // wrapped onto a row of its own (22 Nov).
+  // wrapped onto a row of its own.
   const clearButton = onClear ? (
     <Button
       type="button"
@@ -114,7 +114,7 @@ export function LogToolbar({
 
   return (
     // Two rows, as the panel's cards: the header (title, Live) over a rule, then the
-    // tools. One grey block holding both read as clutter (7 Oct).
+    // tools. One grey block holding both read as clutter.
     <div className="flex flex-col">
       {/* Wraps the tail pill below rather than squeezing the heading: min-w-48, not
           min-w-0 (ru "Paused while filtering" left one word per line at 390). */}
@@ -202,7 +202,7 @@ export function LogToolbar({
       </div>
 
       {/* Filter anchored left (takes the slack), view actions pushed right. */}
-      {/* White, not tinted: the search and select wells are grey and vanished on a grey band (7 Oct). */}
+      {/* White, not tinted: the search and select wells are grey and vanished on a grey band. */}
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
         <div className="relative w-full min-w-40 flex-1 sm:max-w-sm">
           <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />

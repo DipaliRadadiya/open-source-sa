@@ -15,43 +15,6 @@ export const cloneFormSchema = z.object({
     .refine(isValidApplicationDomain, "cloneDomainInvalid"),
 });
 
-/** One clone job, as `GET /api/clones/{id}` reports it. */
-export const cloneSchema = z
-  .object({
-    id: z.number(),
-    source_application_id: z.number().nullish(),
-    source_application_name: z.string().nullish(),
-    // Null until the job finishes.
-    target_application_id: z.number().nullish(),
-    // The copy's own deploy-on-push endpoint, when the source had one.
-    target_webhook: z
-      .object({
-        url: z.string(),
-        secret: z.string().nullish(),
-        provider: z.string().nullish(),
-      })
-      .nullish(),
-    name: z.string().nullish(),
-    domain: z.string(),
-    status: z.string(),
-    status_title: z.string().nullish(),
-    current_step: z.string().nullish(),
-    current_step_title: z.string().nullish(),
-    // Position in the sequence, so a bar needs no frontend copy of the step list.
-    step_number: z.number().nullish(),
-    total_steps: z.number().nullish(),
-    reason: z.string().nullish(),
-    reason_title: z.string().nullish(),
-    reference: z.string().nullish(),
-    started_at: z.string().nullish(),
-    started_at_human: z.string().nullish(),
-    finished_at: z.string().nullish(),
-    finished_at_human: z.string().nullish(),
-  })
-  .passthrough();
-
-export const cloneResponseSchema = z.object({ clone: cloneSchema });
-
 /** Still working. Polling continues while the status is one of these. */
 export const CLONE_IN_FLIGHT = ["pending", "running"];
 
@@ -71,9 +34,6 @@ export function cloneBlockedReason(application, siteType) {
   }
   return null;
 }
-
-// Read off `CloneManager`'s create array and the per-application tables.
-export const CLONE_CARRIES = ["files", "phpVersion", "webRoot", "buildCommand", "repository"];
 
 export const CLONE_DROPS = ["ssl", "backups", "cronJobs", "workers", "passwordProtection", "deploys"];
 

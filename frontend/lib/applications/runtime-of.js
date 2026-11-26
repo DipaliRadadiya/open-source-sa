@@ -13,7 +13,7 @@ export function runtimeOf(application) {
 }
 
 // The words for a runtime. `t` is the "applications" namespace, `tDocker` "docker".
-// Node shows its major line ("Node.js 24", as in the prototype); `full` gives the
+// Node shows its major line ("Node.js 24"); `full` gives the
 // exact version, for a tooltip.
 export function runtimeLabel(runtime, t, tDocker, { full = false } = {}) {
   if (!runtime) return null;

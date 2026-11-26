@@ -143,7 +143,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
       <WorkerChecksAlert checks={checks} />
 
       {workers.length === 0 ? (
-        // No toolbar while empty: it held only a refresh button over the empty state (Krishna, 14 Oct).
+        // No toolbar while empty: it held only a refresh button over the empty state.
         <ListCard>
           <EmptyState
             icon={Cog}

@@ -8,25 +8,9 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Caution } from "@/components/ui/caution";
 
 /**
- * The credentials the panel generated when it installed a one-click app.
- *
- * **Hidden until asked for, and fetched only then.** The application payload
- * carries the KEY NAMES and nothing else, so the values are not in every page
- * load, every list response or every cache between the server and the browser.
- * Pressing Reveal is a request, and the server records it.
- *
- * Why this exists at all: Ghost's MySQL password and Strapi-style signing keys
- * were generated per site and then existed only inside a compose file and an
- * encrypted column — correct, and useless to the person who needs them to connect
- * a database client or debug a failing app. It also unblocks the apps whose ADMIN
- * account comes from environment variables: generating a password nobody can read
- * is the same as not having an account.
- *
- * Read-only on purpose. Rotating one means rewriting the compose file and the
- * credential inside the running database, and leaving those two disagreeing is how
- * a site comes back up unable to reach its own data — see the reinstall bug this
- * feature's column was added for. Rotation is a deliberate operation, not a button
- * next to the value.
+ * The credentials the panel generated when it installed a one-click app. Values are fetched
+ * only on Reveal (the server records it). Read-only: rotating one means changing the compose
+ * file and the running database together.
  */
 export function ContainerCredentials({ application }) {
   const t = useTranslations("applications.container.credentials");

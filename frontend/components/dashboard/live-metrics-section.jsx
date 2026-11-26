@@ -61,7 +61,7 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
       <span
         className={cn(
-          // A solid soft pill, as in the redesign.
+          // A solid soft pill.
           "inline-flex h-[1.375rem] items-center gap-1.5 rounded-[2px] border px-2 font-mono text-xs font-medium tracking-[0.08em] uppercase",
           failed
             ? "border-destructive/45 bg-destructive/10 text-destructive"
@@ -121,7 +121,7 @@ export function LiveMetricsSection({ timeZone, history = [], between = null }) {
       <ConnectionAnnouncement failed={failed} />
 
       {/* The Live pill is this section's status, so it sits in the heading row. */}
-      {/* Header over a hairline, then the cells flush to the card's edges (prototype). */}
+      {/* Header over a hairline, then the cells flush to the card's edges. */}
       <Card className="gap-0 pb-0 [--card-spacing:--spacing(4)]">
         {/* Stacked on a phone: beside the title the pill squeezed it onto two lines. */}
         <CardHeader className="border-b max-sm:grid-cols-1">

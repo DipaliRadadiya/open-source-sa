@@ -8,27 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const withNextIntl = createNextIntlPlugin('./i18n/request.js');
 
 /**
- * How many workers `next build` may fork for page-data collection and static
- * generation. Next defaults this to the CPU count, which is the right answer
- * on a build server and the wrong one on the 1-2 GB VPS this panel is meant to
- * run on: every worker is a full Node process holding its own copy of the
- * compiled app, so the fan-out is what turns a build that compiled fine into a
- * build the kernel kills with a bare "Killed".
- *
- * Measured on this app (725 files, 58 routes) inside a memory cgroup: a
- * 2 vCPU / 2.5 GB box is OOM-killed during static generation at the default
- * worker count, and finishes in 41s with one worker. Two seconds of wall clock
- * on a big box buys the small box the difference between working and not.
- *
- * Derived from MemAvailable, not MemTotal or the core count: what matters is
- * the memory the kernel believes it can hand out right now, on a box already
- * running the API, the database and every hosted site.
- *
- * The escape hatch is PANEL_BUILD_CPUS, so this can be undone on a server
- * without editing code or shipping a release:
- *   unset -> derived from available memory (the behaviour described above)
- *   0     -> leave Next's own default entirely alone
- *   n     -> use exactly n workers
+ * How many workers `next build` may fork. Next defaults to the CPU count, and each worker is a
+ * full Node process: a 2 vCPU / 2.5 GB box was OOM-killed at the default and built in 41s with
+ * one. So the count is derived from MemAvailable. PANEL_BUILD_CPUS overrides it:
+ *   unset -> derived from available memory
+ *   0     -> Next's own default
+ *   n     -> exactly n workers
  */
 function buildWorkers() {
   const override = process.env.PANEL_BUILD_CPUS;

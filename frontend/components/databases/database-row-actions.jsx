@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // No `flex-wrap`: the table's action column should widen, not stack. Cards pass their own layout.
-// gap-2: at gap-1 Manage, phpMyAdmin and Adminer ran together (Krishna, 15 Oct).
+// gap-2: at gap-1 Manage, phpMyAdmin and Adminer ran together.
 const TABLE_ROW = "flex items-center justify-end gap-2";
 
 export function DatabaseRowActions({
@@ -27,7 +27,7 @@ export function DatabaseRowActions({
   phpmyadminSites = null,
   adminerSites = null,
   // The table drops Manage: its name cell already links to the same page, and with two
-  // database clients the row no longer fitted (Krishna, 15 Oct).
+  // database clients the row no longer fitted.
   showManage = true,
   // Cards have room for Manage and one overflow trigger, not several install buttons.
   menu = false,

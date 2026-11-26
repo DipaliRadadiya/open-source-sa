@@ -32,7 +32,7 @@ function Tile({ href, icon: Icon, tone, label, value, note, noteTone }) {
   );
 }
 
-// Three one-line answers, each opening the page with the detail (Krishna, 20 Nov: the
+// Three one-line answers, each opening the page with the detail (the
 // dashboard shows what matters, not every person and number).
 export async function AdminSummary({ signIns = null, users = null, never = null, impersonation = null }) {
   const [t, tp, ta, format] = await Promise.all([

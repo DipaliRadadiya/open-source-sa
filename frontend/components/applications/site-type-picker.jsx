@@ -274,7 +274,7 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
           value={query}
           onChange={(event) => {
             // Typing searches every category: "glance" found nothing in Popular until
-            // "Search all categories" was clicked (Krishna, 24 Nov). A chip still narrows after.
+            // "Search all categories" was clicked. A chip still narrows after.
             if (!query.trim() && event.target.value.trim() && activeGroup !== "all") setActiveGroup("all");
             setQuery(event.target.value);
           }}

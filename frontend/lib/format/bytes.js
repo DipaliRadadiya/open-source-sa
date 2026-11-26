@@ -51,7 +51,7 @@ export function formatBytes(bytes, format) {
   })} ${units[i]}`;
 }
 
-// "KB" like every other size in the panel (Krishna, 24 Nov: "19.9 kB" beside "5.0 KB" read as two systems).
+// "KB" like every other size in the panel ("19.9 kB" beside "5.0 KB" read as two systems).
 const FILE_UNITS = ["B", "KB", "MB", "GB", "TB"];
 
 /**

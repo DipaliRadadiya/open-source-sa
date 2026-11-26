@@ -80,7 +80,7 @@ export default async function ApplicationDetailPage({ params }) {
 
   const application = result.application;
   // The dashboard is its own grant (`app_dashboard`), as the sidebar already treats it
-  // (23 Nov: a role with only server-level "Applications: view" landed on a half-empty
+  // (a role with only server-level "Applications: view" landed on a half-empty
   // dashboard with an empty menu). Without it, open the first screen the role does allow.
   if (appPermissions && !can(appPermissions, "app_dashboard", "view", "application")) {
     const first = firstAllowedScreen(appPermissions);
@@ -227,7 +227,7 @@ export default async function ApplicationDetailPage({ params }) {
     },
   ].filter(Boolean);
   // Every protection whose state is known, whatever the role may open, so a role that sees
-  // one row does not read "1 of 1 on" when the site has 1 of 5 (23 Nov).
+  // one row does not read "1 of 1 on" when the site has 1 of 5.
   const allProtections = [
     application.basic_auth_enabled,
     application.waf_enabled,
@@ -309,7 +309,7 @@ export default async function ApplicationDetailPage({ params }) {
     .filter((item) => !superseded.has(item.key));
 
   // Said by a card below already: the Backups card's state, the Source card's failed deploy.
-  // The status tiles are gone (Krishna, 18 Nov), so a missing certificate is a line here again.
+  // A missing certificate has no card of its own, so it is a line here.
   const alerts = attentionItems.filter(
     (item) => item.key !== "backups" && !/^issue-deploy_failed-/.test(item.key),
   );
@@ -364,7 +364,7 @@ export default async function ApplicationDetailPage({ params }) {
 
   return (
     <div className="space-y-6">
-      {/* The header card IS the application's details (Krishna, 7 Oct: they are what this
+      {/* The header card IS the application's details (they are what this
           page is for and were far down it). Identity and actions on top, the facts below;
           an 18px name, since the 20px one still read as a banner. */}
       <div className="@container/masthead relative overflow-hidden rounded-2xl border bg-card shadow-e1">
@@ -488,7 +488,7 @@ export default async function ApplicationDetailPage({ params }) {
               have saved them, and these cannot be rotated from the panel. */}
           {showFirstRunCredentials ? <FirstRunCredentials application={application} /> : null}
 
-          {/* What needs attention, one line each. No status tiles (Krishna, 18 Nov): the
+          {/* What needs attention, one line each. No status tiles: the
               header badge and the cards below already say up, secure and restorable. */}
           <AttentionList alerts={alerts} />
 
@@ -516,10 +516,8 @@ export default async function ApplicationDetailPage({ params }) {
               deployInFlight={Boolean(latestDeploy.latest?.in_flight)}
             />
           ) : null}
-          {/* A container app, in rows of cards of about the same height (Krishna, 23 Nov:
-              Command-line access in the right column made it ~185px longer than the left, and
-              on 20 Oct one domain left a half-empty card). Domains (and an attached database)
-              on top, Security beside Backups (291 vs 311px measured), then Command-line access
+          {/* A container app, in rows of cards of about the same height: Domains (and an
+              attached database) on top, Security beside Backups, then Command-line access
               full width, where its commands sit side by side. */}
           {showContainerAccess ? (
             <>

@@ -22,7 +22,7 @@ export function SkCard({ className, head = true, action = false, children, bodyC
   return (
     <div className={cn(CARD, "overflow-hidden", className)} aria-hidden>
       {head ? (
-        // Bottom padding too when the card has no body, or the bars sat on the border (7 Oct).
+        // Bottom padding too when the card has no body, or the bars sat on the border.
         <div className={cn("flex items-start justify-between gap-4 px-5 pt-5", !children && "pb-5")}>
           <div className="space-y-2">
             <Skeleton className="h-4 w-36" />

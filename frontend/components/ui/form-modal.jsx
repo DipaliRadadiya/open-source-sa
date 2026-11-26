@@ -35,7 +35,7 @@ export function FormModal({
   onCloseAutoFocus,
 }) {
   // Every field can be conditional (e.g. nothing left to ask). An empty body band between
-  // header and footer read as something failing to load (Krishna, 23 Nov), so it goes.
+  // header and footer read as something failing to load, so it goes.
   const hasBody = Children.toArray(children).length > 0;
 
   const inner = (

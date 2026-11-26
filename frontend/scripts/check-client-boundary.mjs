@@ -1,21 +1,7 @@
 /**
- * Fails the build when a file declares `"use client"` that it does not need.
- *
- * A file reached only from other client components is already client code —
- * the directive above it changes nothing. 227 files carried one, against 132
- * that were real boundaries, so `grep "use client"` answered a question nobody
- * was asking: it named every file that happens to use a hook, not the line
- * where server rendering stops.
- *
- * The stripped build was byte-for-byte identical to the one before it, which is
- * the point — this check protects a property of the source, not of the output.
- * Keeping it honest matters because the boundary is the thing you have to
- * reason about when a page is slow, and 359 candidates for 132 answers is not a
- * list anyone reads.
- *
- * The directive is REQUIRED, and correct, when a Server Component imports the
- * file. Adding one to a file that is not a boundary is what this rejects, and
- * the fix is always to delete the line.
+ * Fails lint when a file declares `"use client"` it doesn't need: a file reached only from
+ * client components is already client code. The directive is required only where a Server
+ * Component imports the file, so the real boundaries stay easy to find.
  */
 import fs from "node:fs";
 import path from "node:path";

@@ -1,4 +1,4 @@
-// Steel UI (Krishna, 14 Oct): one look for label-over-value facts everywhere, as in the
+// One look for label-over-value facts everywhere, as in the
 // app header and Server information. Labels are mono caps; a summary block is a framed
 // grid of hairline cells (each cell draws its right and bottom edge inside itself, and
 // the grid's -1px margins tuck the outer ones under the frame).

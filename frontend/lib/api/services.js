@@ -7,7 +7,7 @@ export function runServiceAction(key, action) {
   return settleReloadPending(key, action, async () => {
     const response = await api.put(`/services/${encodeURIComponent(key)}`, { action });
     // The panel's own web server or PHP-FPM restarts after answering (202, `scheduled`), so
-    // "done" and the page's re-read wait until the unit is back (backend 34a0e9e19, 24 Nov).
+    // "done" and the page's re-read wait until the unit is back.
     if (response?.status === 202 && response.data?.service?.scheduled) await untilBack(key);
     return response;
   });

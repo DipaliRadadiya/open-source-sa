@@ -1,47 +1,13 @@
 /**
- * One English string, one translation — unless there is a reason for two.
- *
- * Key parity proves a locale is complete. ICU shape proves each string is
- * well-formed. Neither can see the defect that 22 translators working in
- * parallel actually produce: the same English word coming back differently on
- * every screen. "Saving…" was "Speichert…" in seven places and "Wird
- * gespeichert…" in twelve. "Memory" was "Arbeitsspeicher" on the dashboard and
- * "Speicher" in the services table — and "Speicher" is also what a German
- * reader calls disk, which this panel shows on the same page. Every one of
- * those passed the build.
- *
- * So: if English uses one string at more than one key, the locale must use one
- * string too. The check is per locale, because a split that is wrong in German
- * may be required in Russian.
- *
- * The exceptions below are not a snag list to work through. They are English
- * strings that genuinely carry more than one meaning, or that other languages
- * must inflect. Adding to it is allowed; doing so without a reason is not,
- * which is why the reason is a required field rather than a comment.
+ * If English uses one string at several keys, each locale must translate it one way too
+ * (parallel translation produced "Saving…" two ways, and RAM and disk as one word). Checked
+ * per locale. Exceptions below need a reason.
  */
 
 /**
- * English string → why one translation cannot serve every place it is used.
- *
- * Anything not listed here must be rendered identically everywhere.
- *
- * `locales` is the difference between the two reasons a string can be here:
- *
- *   omitted — the ENGLISH carries more than one meaning, so no language can
- *     serve every use with one word. "Right now" is a current value in one
- *     place and the soonest option in another; that is true whoever reads it.
- *
- *   listed — the English is one thing, but these languages must inflect it.
- *     Spanish agrees an adjective with its noun, so a database is "Creada" and
- *     a system user "Creado" — correct, and forcing one would be the bug.
- *     German has no such need for "Created" and must still say it one way, so
- *     the exemption stops at the languages that earn it.
- *
- * A listed exemption still buys a whole string: nothing here checks that
- * "Creada" and "Creado" are the same word inflected rather than two unrelated
- * ones. Narrowing that needs a stemmer per language, which is a lot of
- * machinery to catch a translator who is already ignoring the noun. Keep the
- * lists short and the reasons specific instead.
+ * English string → why one translation can't serve every place it is used.
+ * `locales` omitted: the English itself has several meanings. Listed: only these languages
+ * must inflect it (Spanish "Creada"/"Creado"). Keep the lists short and the reasons specific.
  */
 export const MANY_MEANINGS = {
   "Last run": {

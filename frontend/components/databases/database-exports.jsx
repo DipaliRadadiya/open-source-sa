@@ -42,7 +42,7 @@ const CONFIRM_ABOVE_BYTES = 512 * 1024 * 1024;
 const IN_FLIGHT = ["queued", "running"];
 
 // The newest few stay in view; the rest fold away so a long list cannot push the
-// Import card below it out of reach (Krishna, 15 Oct). Newest first, so a running one shows.
+// Import card below it out of reach. Newest first, so a running one shows.
 const ROWS_SHOWN = 5;
 
 // Past this a dump is flagged as slow; well under the server's abandonment window.

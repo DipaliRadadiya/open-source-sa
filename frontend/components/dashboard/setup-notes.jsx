@@ -1,8 +1,7 @@
 import { SetupBanner } from "@/components/setup/setup-banner";
 import { SystemUpdatesNote } from "@/components/setup/system-updates-note";
 
-// Streamed in after the rest of the dashboard: `/setup` takes about a second, and the
-// page used to wait for it before starting any other read (18 Nov). `read` is the
+// Streamed in after the rest of the dashboard: `/setup` takes about a second. `read` is the
 // page's getSetup() promise, started beside its other reads.
 export async function DashboardSetupNotes({ read }) {
   const { setup } = await read;

@@ -1,9 +1,5 @@
 import { z } from "zod";
 
-// Written against `DeploymentResource`, not the API reference: status `succeeded`,
-// commit `commit_hash`/`commit_short`, and `output` only on the detail view.
-export const DEPLOY_STATUSES = ["queued", "running", "succeeded", "failed"];
-
 export const deploymentSchema = z
   .object({
     id: z.number(),

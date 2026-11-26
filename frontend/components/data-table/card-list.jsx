@@ -39,7 +39,7 @@ export function CardFact({ label, value, children, className }) {
 
 /**
  * Facts as two columns of label-on-top blocks, for cards whose labels run long in some languages:
- * beside its value a long label squeezed the value into ragged right-aligned wraps (Krishna, 28 Oct).
+ * beside its value a long label squeezed the value into ragged right-aligned wraps.
  */
 export function CardFactGrid({ className, children }) {
   return <dl className={cn("grid grid-cols-2 gap-x-4 gap-y-3 border-t pt-3 text-sm", className)}>{children}</dl>;

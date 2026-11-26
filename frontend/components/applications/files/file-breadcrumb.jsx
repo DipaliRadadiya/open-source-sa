@@ -29,7 +29,7 @@ export function FileBreadcrumb({ appId, path }) {
         className="flex min-w-16 items-center gap-1.5 rounded px-1 py-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Folder className="size-3.5 shrink-0" />
-        {/* The real folder on the server (Krishna, 18 Nov); the label only when it is unknown.
+        {/* The real folder on the server; the label only when it is unknown.
             It is the one part that shrinks, so the folder you are in stays readable on a phone. */}
         {root ? <span className="min-w-0 truncate font-mono text-[13px]">{root}</span> : t("root")}
       </Link>

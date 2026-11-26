@@ -16,16 +16,7 @@ export async function generateMetadata() {
   return { title: t("title") };
 }
 
-/**
- * Registry credentials, on their own page under Integrations.
- *
- * It was a card at the bottom of the Docker screen, below networks and volumes,
- * which made the panel's only private-image support something you had to already
- * know about to find. It belongs here for the reason the section exists: this is
- * an externally-held credential the features consume, like a git account or a
- * storage destination. A network is a thing on this box; a registry login is a
- * thing somewhere else.
- */
+// Registry credentials: held elsewhere and used by features, like git accounts and storage.
 export default async function RegistriesPage() {
   const [permissions, t, list] = await Promise.all([
     getPermissions(),

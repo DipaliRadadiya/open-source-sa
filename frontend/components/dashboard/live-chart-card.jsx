@@ -23,7 +23,7 @@ export const SWATCH = {
 export function ChartPill({ dotClassName, label, value, note }) {
   return (
     /* Tighter label–value gap than to the note: "Read 4.5 MB/s" is one reading, "210 IOPS" a second. */
-    // Steel UI: a square mono chip with a square swatch (prototype).
+    // A square mono chip with a square swatch.
     <span className="inline-flex items-center gap-2 rounded-[2px] border bg-muted/40 px-2 py-1 font-mono text-xs tracking-[0.04em]">
       <span className={cn("size-2 shrink-0", dotClassName)} />
       <span className="flex items-center gap-1.5">
@@ -39,7 +39,7 @@ export function LiveChartCard({
   icon = null,
   // h3 inside the "Last 24 hours" section; the live pair stands alone, so h2.
   headingLevel = "h3",
-  // The live pair is shorter than the 24h charts (the redesign); the wait matches it.
+  // The live pair is shorter than the 24h charts; the wait matches it.
   plotHeight = "h-72",
   title,
   badges,
@@ -101,7 +101,7 @@ export function LiveChartCard({
           </div>
         ) : (
           // Same height as the plot so nothing jumps. A faint chart shape rather than a blank
-          // box, which read as broken for the first seconds (Krishna, 13 Oct).
+          // box, which read as broken for the first seconds.
           <div className={cn("relative flex flex-col items-center justify-center gap-2 px-6 text-center", plotHeight)}>
             <svg
               aria-hidden

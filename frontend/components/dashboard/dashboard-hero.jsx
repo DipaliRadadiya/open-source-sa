@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { PanelServer } from "@/components/illustrations/steel/panel-server";
 
-// Square mono chips, as in the prototype.
+// Square mono chips.
 // One height for both chips, the IP one included (its copy button made it taller).
 const CHIP = "inline-flex h-6 items-center rounded-[2px] px-2 font-mono text-xs font-medium tracking-[0.08em] uppercase ring-1 ring-[var(--hero-line)]";
 
@@ -26,9 +26,7 @@ export async function DashboardHero({
   const problems = new Set(findings.map((finding) => finding.kind)).size;
 
   // A failed or forbidden read gives no verdict; "Everything is running" would be a guess.
-  // The banner speaks for the server only. "2 things need your attention" sat here beside
-  // "View logs", and people read it as being about the logs (Krishna's team, 8 Oct); the
-  // count now heads the list it counts, right below.
+  // The banner speaks for the server only; the attention count heads its own list below.
   const title = down
     ? t("hero.down", { count: down })
     : problems
@@ -49,15 +47,14 @@ export async function DashboardHero({
   const ip = facts?.public_ip ?? facts?.ip;
 
   return (
-    // One compact status bar (user feedback, 5 Nov): the drawing and the large headline took
-    // prime space; the counts and checks that matter now sit right below instead.
+    // One compact status bar; the counts and checks sit right below.
     <section className="relative overflow-hidden rounded-2xl bg-hero">
       <div className="bg-hero-grid pointer-events-none absolute inset-0" />
-      {/* Drafting-sheet corner brackets (prototype; Krishna, 5 Nov: keep them). */}
+      {/* Drafting-sheet corner brackets. */}
       <span aria-hidden className="pointer-events-none absolute top-1.5 left-1.5 size-4 border-t-2 border-l-2 border-primary" />
       <span aria-hidden className="pointer-events-none absolute right-1.5 bottom-1.5 size-4 border-r-2 border-b-2 border-primary" />
       <div className="relative flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4 md:px-6">
-        {/* Small, beside the words (Krishna, 5 Nov): the server keeps its picture without taking
+        {/* Small, beside the words: the server keeps its picture without taking
             the row. Decorative; hidden on a phone. */}
         <PanelServer
           total={applications ? applications.length : null}

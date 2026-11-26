@@ -370,7 +370,7 @@ export function ApplicationLogsPanel({
     >
       {/* Target of the tabs' aria-controls; text size and flex reset so the console is unchanged. */}
       <TabsContent value={current ?? ""} className="flex-none text-[length:inherit]">
-      {/* A short log gets a short console instead of a window-tall black box (22 Nov); past
+      {/* A short log gets a short console instead of a window-tall black box; past
           SHORT_LOG lines it takes the window's height and scrolls inside. */}
       <section
         className={cn(
@@ -381,7 +381,7 @@ export function ApplicationLogsPanel({
         <LogToolbar
           label={source?.label ?? t("noSource")}
           // The source switch IS the card's title: a strip above the card and the same
-          // name as its heading said it twice (7 Oct). Scrolls rather than wraps.
+          // name as its heading said it twice. Scrolls rather than wraps.
           heading={
             <ScrollFade className="-my-1 min-w-0 py-1">
               <TabsList className="!h-auto w-fit gap-1 p-1">

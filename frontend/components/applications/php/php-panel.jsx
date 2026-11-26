@@ -978,7 +978,7 @@ function ValueSelect({
   const tCommon = useTranslations("common");
   const value = useWatch({ control: form.control, name });
   // The application's saved value is always a choice of its own: a default of 20 workers
-  // showed as "Custom" with a box, as if someone had typed it (Krishna, 24 Nov).
+  // showed as "Custom" with a box, as if someone had typed it.
   const saved = form.formState.defaultValues?.[name];
   const sizeOf = (option) => (numeric ? Number(option) : phpSizeToBytes(String(option)));
   const choices =
@@ -1144,7 +1144,7 @@ function MemoryBudget({ budget, workers, limit }) {
 
   // Red only when this application alone could outgrow the server. All applications at their
   // limits together is a worst case that rarely happens, and a new app's defaults already met
-  // it, so that is an amber heads-up (Krishna, 24 Nov).
+  // it, so that is an amber heads-up.
   const overSelf = budget.thisSite > budget.total;
   const tone = overSelf ? "destructive" : budget.overCommitted ? "warning" : null;
   const pct = (bytes) => Math.min(100, Math.round((bytes / budget.total) * 100));

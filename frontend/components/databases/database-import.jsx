@@ -362,8 +362,7 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
         tone="destructive"
         confirmVariant="destructive"
         title={t("confirmTitle", { name: database.name })}
-        // Short: one sentence, then the file on its own, then the safety net (Krishna, 15 Oct:
-        // one paragraph with the long file name in it was too much to read).
+        // Short: one sentence, then the file on its own, then the safety net.
         description={t("confirmDescription")}
         cancelLabel={t("cancel")}
         confirmLabel={t("confirmLabel")}

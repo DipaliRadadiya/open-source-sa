@@ -110,7 +110,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
   }
 
   async function onSubmit(values) {
-    // Said before sending: the 422 named a field the person never touched (QA, 24 Nov).
+    // Said before sending: the 422 named a field the person never touched.
     if (unsafe.includes(values.maxmemory_policy)) {
       form.setError("maxmemory_policy", { type: "manual", message: t("redis.unsafePolicy") });
       scrollToFirstError();
