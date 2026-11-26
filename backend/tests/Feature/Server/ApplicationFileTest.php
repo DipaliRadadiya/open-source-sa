@@ -56,12 +56,9 @@ class FixPermissionsFake
 }
 
 /*
- * "My site says permission denied" is the problem this button exists to
- * solve, now that sites run under their own Linux user rather than shared
- * www-data. So the tests that matter are: does it reset ownership across the
- * whole site, does it leave the site readable by the web server it still
- * needs to be readable by, and does it re-tighten the two paths that must
- * stay narrower than the rest of the tree.
+ * The reset fixes "permission denied" on sites running under their own Linux user: it must
+ * reset ownership site-wide, keep the site readable by the web server, and re-tighten the two
+ * paths that stay narrower than the rest of the tree.
  */
 
 beforeEach(function () {
@@ -84,12 +81,8 @@ beforeEach(function () {
         'php_version' => '8.4',
     ]);
 
-    // Every installed panel has this row: install.sh records the stack it
-    // built. Without it these tests fell through to *detection*, which reads
-    // /etc from whatever machine the suite happens to run on — so what the
-    // file browser did before validating a path depended on whether the
-    // developer's laptop had nginx and Apache both installed. Recording it
-    // makes these tests about the file browser again.
+    // Every installed panel has this row (install.sh records the stack). Without it the tests fall
+    // through to detection, which reads /etc of the machine running the suite.
     ServerCapability::query()->delete();
     ServerCapability::query()->create([
         'stack' => 'lemp',
@@ -117,10 +110,8 @@ function fakeFileServer(): void
         }
 
         if ($binary === 'test' && ($args[1] ?? '') === '-f') {
-            // Named, not "yes to everything": the panel asks about more than
-            // one candidate path now — a `.env` beside the code is the file
-            // the framework reads, and answering yes to all of them made this
-            // fake describe a site with two.
+            // Named, not "yes to everything": the panel probes several candidate paths, and a blanket
+            // yes would describe a site with two .env files.
             return Process::result(
                 exitCode: (FixPermissionsFake::$envExists && ($args[2] ?? '') === '/home/siteowner/shop/.env')
                     || in_array($args[2] ?? '', FixPermissionsFake::$files, true) ? 0 : 1,
@@ -235,8 +226,7 @@ it('re-tightens the session directory once the site is isolated', function () {
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    // As the site user: root's `chmod -R` descended into whatever a
-    // `sessions` link pointed at (reproduced live 2026-09-29).
+    // As the site user: root's `chmod -R` descended into whatever a `sessions` link pointed at.
     expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod -R 0700 /home/siteowner/shop/.panel/sessions');
 });
 
@@ -272,11 +262,9 @@ it('reports a server failure and does not log success', function () {
 });
 
 /*
- * FS-C22 #18. The reset is `chown -R` plus every file to 0644 — right for a
- * tree PHP or the web server only reads, and damaging for one a Node process
- * or a container executes from: it stripped the executable bit from
- * `node_modules/.bin` targets and container scripts. Decided by the row's
- * serving profile, so a git site is judged by what it renders as.
+ * The reset is `chown -R` plus every file to 0644: right for a tree PHP or the web server only
+ * reads, wrong for one a Node process or container executes from (it strips the executable bit).
+ * Decided by the row's serving profile, so a git site is judged by what it renders as.
  */
 describe('runtimes the reset is not for', function () {
     it('refuses before running anything', function (string $siteType, string $profile, ?string $rendering) {
@@ -335,8 +323,7 @@ describe('runtimes the reset is not for', function () {
     })->with([
         'php marketplace app' => ['wordpress', 'php', null],
         'git site rendered by php' => ['git', 'php', 'php'],
-        // Unchanged on purpose: the web server only reads a static tree, and
-        // 0644 is what it needs (bug #96 made the reset work here).
+        // Unchanged on purpose: the web server only reads a static tree, and 0644 is what it needs.
         'git site rendered static' => ['git', 'static', 'static'],
     ]);
 
@@ -434,12 +421,9 @@ class FileBrowserFake
 }
 
 /*
- * A file browser is the first feature in this codebase to accept a
- * client-supplied path at all — everything else (logs, .env) uses a fixed or
- * keyed path precisely to avoid this surface. Two things make it safe: the
- * validator refuses anything that isn't a plain relative path, and every
- * command against the result runs as the site's own Linux user rather than
- * the panel's root — so the tests that matter are exactly those two.
+ * The file browser takes a client-supplied path. Two things make it safe, and these tests target
+ * them: the validator refuses anything that is not a plain relative path, and every command runs
+ * as the site's own Linux user rather than the panel's root.
  */
 
 function fakeFileBrowserServer(): void
@@ -481,11 +465,9 @@ function fakeFileBrowserServer(): void
         $inner = ($args[0] ?? null) === 'runuser' ? array_slice($args, 4) : $args;
         $binary = $inner[0] ?? null;
 
-        // Paths under the web root are keyed relative to it; anything above
-        // it — the panel's own `.panel` directory, where file backups now
-        // live — is keyed by its absolute path. Blindly substr()-ing the root
-        // off a path that does not start with it produced mid-string garbage,
-        // which is why a backup written outside the root appeared to vanish.
+        // Paths under the web root are keyed relative to it; anything above it (the panel's
+        // `.panel` directory, where file backups live) is keyed absolute. Stripping the root from
+        // a path that does not start with it produced garbage keys.
         $relative = fn (string $target): string => match (true) {
             $target === $root => '',
             str_starts_with($target, $root.'/') => ltrim(substr($target, strlen($root)), '/'),
@@ -792,9 +774,8 @@ function fakeFileBrowserServer(): void
             foreach (FileBrowserFake::$archives[$archiveRel] ?? [] as $e) {
                 $name = $e['name'];
 
-                // As unzip 6.0 does it (measured, FS-C22 #7): `\` becomes `/`
-                // only in an entry made on FAT whose name has no `/`, and then
-                // the whole run exits 1 with one warning on stderr.
+                // As unzip 6.0 does it: `\` becomes `/` only in an entry made on FAT whose name has no
+                // `/`, and then the whole run exits 1 with one warning on stderr.
                 if (($e['os'] ?? 'unx') === 'fat' && str_contains($name, '\\') && ! str_contains($name, '/')) {
                     $name = str_replace('\\', '/', $name);
                     $converted = true;
@@ -912,12 +893,9 @@ function fakeFileBrowserServer(): void
             return Process::result(exitCode: 0);
         }
 
-        // tar writing an archive, as opposed to the -xzf/-tvzf reads handled
-        // elsewhere. Matched on the create flag rather than on argv position:
-        // compression moved from `-czf` to
-        // `--use-compress-program=<prog> -cf` so the panel can use pigz, and a
-        // fixture that reads `$inner[1]` asserts against an argument order
-        // rather than against a command.
+        // tar writing an archive, as opposed to the -xzf/-tvzf reads handled elsewhere. Matched on the
+        // create flag, not argv position: compression moved from `-czf` to
+        // `--use-compress-program=<prog> -cf` (pigz).
         if ($binary === 'tar' && in_array('-cf', $inner, true)) {
             $target = $inner[array_search('-cf', $inner, true) + 1];
             FileBrowserFake::$fs[$relative($target)] = ['type' => 'f', 'size' => 1, 'content' => 'tarred'];
@@ -1370,23 +1348,19 @@ describe('browsing', function () {
         expect($response->headers->get('Content-Type'))->toStartWith('application/octet-stream')
             ->and($response->headers->get('Content-Disposition'))->toContain('attachment')
             ->and($response->headers->get('Content-Disposition'))->toContain('index.php')
-            // Streamed, so the body is produced by the callback rather than
-            // held on the response — `getContent()` is false here by design.
+            // Streamed, so the body is produced by the callback rather than held on the response —
+            // `getContent()` is false here by design.
             //
-            // Byte-exact, with no trailing newline. This used to expect one,
-            // which came from Laravel's process fake normalising output rather
-            // than from the file: `cat` emits the bytes it is given and adds
-            // nothing. Asserting the fake's habit meant a download could gain
-            // a byte the file never had and the test would agree.
+            // Byte-exact, no trailing newline: `cat` adds nothing, and expecting one asserted the
+            // process fake's normalising habit instead of the file.
             ->and($response->streamedContent())->toBe('<?php echo "hi";');
     });
 
     it('does not cap a download at the size a file has to be to fit in the editor', function () {
         fakeFileBrowserServer();
 
-        // Comfortably past FileBrowser::MAX_BYTES, which bounds `read()`
-        // because an editor has to hold the file, and used to bound this too
-        // — so the panel accepted uploads it would then refuse to return.
+        // Comfortably past FileBrowser::MAX_BYTES, which bounds `read()` (an editor has to hold the
+        // file) but must not bound downloads.
         FileBrowserFake::$fs['huge.zip'] = ['type' => 'f', 'size' => 900 * 1024 * 1024];
 
         $response = $this->actingAs($this->admin)
@@ -1428,9 +1402,8 @@ describe('browsing', function () {
 
     describe('permissions', function () {
         it('lets a viewer browse and search, but not read a file\'s contents', function () {
-            // Operator decision 2026-09-29 (option A). Reading contents let a
-            // view-only role open wp-config.php or .env and read the database
-            // password and APP_KEY every other screen hides from it.
+            // Reading contents would let a view-only role open wp-config.php or .env and read the
+            // database password and APP_KEY every other screen hides from it.
             fakeFileBrowserServer();
             $user = User::factory()->create();
             grantPermission($user, 'app_file', view: true, manage: false);
@@ -1631,13 +1604,9 @@ describe('uploading', function () {
     });
 
     it('refuses to upload onto a file that is already there', function () {
-        // It used to overwrite. An upload that lands on an existing file
-        // destroys it with no undo and no trace — the panel keeps a backup when
-        // *it* replaces a file on an edit, and an upload kept none. It is also
-        // the one operation here a user can do by accident, with a drag onto a
-        // folder they did not check.
-        //
-        // Deleting the file first is the deliberate act that makes a
+        // An upload onto an existing file is refused, not overwritten: it would destroy the file
+        // with no undo (edits keep a backup, uploads do not), and a drag onto an unchecked folder is
+        // easy to do by accident. Deleting the file first is the deliberate act that makes a
         // replacement intentional.
         fakeFileBrowserServer();
         FileBrowserFake::$fs['wp-content/plugins/thing.zip'] = ['type' => 'f', 'content' => 'old'];
@@ -1721,10 +1690,8 @@ describe('extracting', function () {
     });
 
     /*
-     * Bug #57: a zip made on Windows lists `-rw-a--` (MS-DOS attributes), and
-     * one made by Python or Java lists `?rw-------` (no type). The parser took
-     * only Unix's ten-character form, skipped every entry, and said "That
-     * archive has nothing in it".
+     * A zip made on Windows lists `-rw-a--` (MS-DOS attributes), one made by Python or Java lists
+     * `?rw-------` (no type). A parser taking only Unix's ten-character form skips every entry.
      */
     it('extracts a zip made on Windows, or by a tool that records no file type', function (array $entries) {
         fakeFileBrowserServer();
@@ -1744,10 +1711,8 @@ describe('extracting', function () {
     ]);
 
     /*
-     * Bug #7 (FS-C22): a zip made on Windows can name its entries
-     * `folder\file.txt`. Every one was refused as an "unsafe entry". unzip
-     * already treats `\` as a folder there — it then exits 1 with a warning,
-     * which must not fail the job.
+     * A zip made on Windows can name its entries `folder\file.txt`. unzip already treats `\` as a
+     * folder there, then exits 1 with a warning, which must not fail the job.
      */
     it('extracts a Windows zip that uses backslashes as folder separators', function () {
         fakeFileBrowserServer();
@@ -2348,9 +2313,8 @@ describe('compressing', function () {
             ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.tar.gz'])
             ->assertAccepted();
 
-        // The panel could open a .tar.gz and not write one. It also matters
-        // beyond symmetry: ZIP does not carry Unix permissions, so a site
-        // zipped and unzipped loses a 0600 wp-config.php.
+        // ZIP does not carry Unix permissions, so a site zipped and unzipped loses a 0600
+        // wp-config.php.
         expect(FileBrowserFake::$fs)->toHaveKey('wp-content/backup.tar.gz')
             // `--use-compress-program`, not `-z`: `-z` is gzip level 6 on one
             // core, which is what made a large compress impossible.
@@ -2456,8 +2420,7 @@ describe('deleting', function () {
             ->deleteJson(filesUrl(), ['path' => 'old.txt', 'confirm' => true, 'permanent' => true])
             ->assertOk();
 
-        // The escape hatch has to stay real: someone deleting to free disk
-        // space and seeing nothing freed would be right to call that a bug.
+        // The escape hatch has to stay real: deleting to free disk space must actually free it.
         expect(FileBrowserFake::$fs)->not->toHaveKey('old.txt')
             ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- rm')))->toBeTrue();
     });
@@ -2533,7 +2496,7 @@ describe('restoring a backup', function () {
         expect(FileBrowserFake::$fs['index.php']['content'])->toBe("v1\n")
             ->and(ActivityLog::where('action', 'file_restored')->exists())->toBeTrue();
 
-        // APP-5: the restored content comes back, so the editor need not ask.
+        // The restored content comes back, so the editor need not ask.
 
         // Restoring is itself a write, so it backs up what "v2" was before
         // being replaced — restoring the wrong one is itself undoable. The new
@@ -2671,14 +2634,9 @@ describe('setting permissions on one file', function () {
 });
 
 /*
- * Bulk operations.
- *
- * The point is not only the UX. Every action used to take one path, so
- * clearing a cache directory of 200 files meant 200 requests, each spawning
- * its own `runuser` process to stat and another to act — and the delete
- * endpoint is throttled at 10/min, so it could not be done at all. These
- * assert the two things that make a batch trustworthy: it really is one
- * command, and a batch that partly fails says exactly which parts.
+ * Bulk operations: one request instead of one per path (the delete endpoint is throttled at
+ * 10/min). These assert what makes a batch trustworthy: it really is one command, and a batch
+ * that partly fails says exactly which parts.
  */
 describe('bulk operations', function () {
     beforeEach(function () {
@@ -2914,28 +2872,20 @@ describe('bulk operations', function () {
 /*
  * Rate limiting on the resumable-upload endpoints.
  *
- * `bootstrap/app.php` prepends `throttle:api` to every API route, and a
- * per-route throttle does not replace it — it stacks, so the lower of the two
- * wins. These endpoints declare 240/min and 1200/min precisely because one
- * upload is legitimately thousands of requests; with the global 120/min still
- * applied those numbers were decoration, and a large upload competed for that
- * one budget with every other call the UI made.
+ * `bootstrap/app.php` prepends `throttle:api` to every API route and a per-route throttle stacks
+ * with it, so the lower of the two wins. These endpoints declare 240/min and 1200/min because one
+ * upload is thousands of requests; the global limit must not cap them.
  *
- * Asserted by making the requests rather than by reading the route: the
- * declared limit and the effective limit were different things, and only one
- * of them is observable.
+ * Asserted by making the requests: the declared limit and the effective limit differ, and only
+ * the effective one is observable.
  */
 describe('upload throttling', function () {
     it('lets an upload run past the global api limit', function () {
         fakeFileBrowserServer();
 
-        // Pinned rather than read from the environment. This derived its loop
-        // count from the configured global limit but asserts against the
-        // route's own 240/min — so the moment a developer raised
-        // RATE_LIMIT_API above 210 in their .env, the loop overshot 240 and the
-        // test failed on the very limit it exists to prove is working. A test
-        // whose premise depends on an untracked local file is not testing what
-        // it claims.
+        // Pinned rather than read from the environment: the loop count derives from the global
+        // limit but the assertion is against the route's own 240/min, so a RATE_LIMIT_API above 210
+        // in a developer's .env would overshoot it.
         config(['server.rate_limits.api' => 180]);
 
         // Past the global budget entirely: anything beyond it proves the
@@ -2967,9 +2917,8 @@ describe('upload throttling', function () {
 });
 
 it('treats an empty path as the site root, as documented', function () {
-    // `?path=` reaches the request as null (ConvertEmptyStringsToNull), and
-    // was refused with "The path field must be a string" (found live
-    // 2026-09-29).
+    // `?path=` reaches the request as null (ConvertEmptyStringsToNull); it was refused with "The path
+    // field must be a string".
     FileBrowserFake::reset();
     FileBrowserFake::$fs[''] = ['type' => 'd'];
     FileBrowserFake::$fs['index.php'] = ['type' => 'f', 'content' => '<?php'];
@@ -2986,11 +2935,9 @@ describe('trash', function () {
     });
 
     it('lists what was deleted from inside a folder, not the folder, and restores it', function () {
-        // Found live 2026-09-29: deleting `qa/note.txt` made `<batch>/qa/` for
-        // it, the listing read that scaffolding back as a deleted folder `qa`
-        // and hid the file, and "restore all" tried to put back a `qa` that
-        // was never deleted — refused with `exists`. Nothing deleted below the
-        // site root could be restored from the screen.
+        // Deleting `qa/note.txt` makes `<batch>/qa/` as scaffolding; the listing must not read that
+        // back as a deleted folder `qa` (it hid the file, and "restore all" tried to restore a `qa`
+        // that was never deleted).
         fakeFileBrowserServer();
         FileBrowserFake::$fs['qa'] = ['type' => 'd'];
         FileBrowserFake::$fs['qa/note.txt'] = ['type' => 'f', 'size' => 9, 'content' => 'hello v1'];
@@ -3013,9 +2960,8 @@ describe('trash', function () {
     });
 
     it('empties the trash by removing what is in it, never the directory', function () {
-        // `.panel` is root's, so the site user cannot remove `trash` itself:
-        // `rm -rf <trash>` deleted everything, then failed on the directory
-        // and reported the empty as a 500 (found live 2026-09-29).
+        // `.panel` is root's, so the site user cannot remove `trash` itself: `rm -rf <trash>` deletes
+        // everything, then fails on the directory, which must not turn emptying into a 500.
         fakeFileBrowserServer();
 
         $this->actingAs($this->admin)
@@ -3149,11 +3095,8 @@ describe('trash', function () {
 
 describe('trash retention', function () {
     it('is actually scheduled, not merely written', function () {
-        // The reason this test exists: pruneTrash() shipped with zero call
-        // sites. The retention was real code, the config key was real, the API
-        // reference said it happened — and nothing ever ran it. A method
-        // nobody calls is indistinguishable from a method nobody wrote, except
-        // that it reads as done.
+        // Guards against pruneTrash() having no call site: the retention code, config key and API docs
+        // all existed and nothing ever ran it.
         $events = collect(app(Schedule::class)->events())
             ->map(fn ($event): string => (string) $event->command);
 
@@ -3187,12 +3130,9 @@ describe('panel directory ownership', function () {
             ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'new content'])
             ->assertOk();
 
-        // `.panel` belongs to root: the web server driver creates it through
-        // ServerOps, which elevates, and provisioning's chown only descends the
-        // document root. So `runuser -u siteowner -- mkdir` inside it is
-        // permission denied, and file backups failed on every real server while
-        // this suite stayed green — Process is faked, and a fake never returns
-        // EACCES.
+        // `.panel` belongs to root: the web server driver creates it through ServerOps (which elevates)
+        // and provisioning's chown only descends the document root. So `runuser -u siteowner -- mkdir`
+        // inside it is permission denied; a faked Process never returns EACCES.
         expect(collect(FileBrowserFake::$ran)->contains(
             fn (string $c): bool => $c === 'chown -h siteowner:siteowner /home/siteowner/shop/.panel/file-backups'
         ))->toBeTrue();
@@ -3336,7 +3276,7 @@ describe('the user may save a file without a copy (2026-10-29)', function () {
     });
 });
 
-/** `$usable` bytes free above the reserve, on every disk (2026-10-29 space check). */
+/** `$usable` bytes free above the reserve, on every disk. */
 function filesUsableSpace(int $usable): void
 {
     $folder = Mockery::mock(LocalBackupFolder::class, [app(ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();

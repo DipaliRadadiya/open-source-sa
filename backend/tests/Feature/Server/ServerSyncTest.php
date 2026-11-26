@@ -35,10 +35,8 @@ use Illuminate\Support\Facades\Queue;
 /**
  * Reading a migrated server into the panel.
  *
- * The two properties everything else rests on: a preview must change nothing,
- * and an apply must be safe to run twice. Everything below is one of those two
- * or a case where the sync has to say what it could not do rather than quietly
- * leaving it out.
+ * Two properties matter: a preview changes nothing, and an apply is safe to run twice. The
+ * rest are cases where the sync must say what it could not do instead of quietly omitting it.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -47,12 +45,10 @@ beforeEach(function () {
 });
 
 /**
- * A server with two real accounts, a system account, a reserved name, and one
- * account living outside the panel's home base.
+ * A server with two real accounts, a system account, a reserved name, and one account
+ * outside the panel's home base.
  *
- * `$authorizedKeys` is keyed by username, not shared: returning one file for
- * every account made two users legitimately own the same key and hid which
- * user a key had actually been read from.
+ * `$authorizedKeys` is keyed by username: one shared file would make every user own the same key.
  *
  * @param  array<string, string>  $authorizedKeys
  */
@@ -72,8 +68,8 @@ function fakeServer(string $passwd = '', array $authorizedKeys = [], ?string $gr
     Process::fake(function ($process) use ($passwd, $authorizedKeys, $groups) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
-        // `getent group sudo admin` — only when a test models it; the others
-        // get the passwd answer, as before, which names no such group.
+        // `getent group sudo admin`: only when a test models it; otherwise the passwd answer,
+        // which names no such group.
         if ($groups !== null && ($args[0] ?? '') === 'getent' && ($args[1] ?? '') === 'group') {
             return Process::result(output: $groups, exitCode: str_contains($groups, 'admin:') ? 0 : 2);
         }
@@ -125,12 +121,10 @@ describe('discovering system users', function () {
         $found = itemsWith(runSync(), 'system_user', SyncAction::Found);
 
         expect($found)->toContain('siteowner', 'shopuser')
-            // UID below 1000 is a system account on every Debian-derived
-            // distribution; offering to manage root would be absurd.
+            // UID below 1000 is a system account on Debian-derived distributions.
             ->not->toContain('root')
             ->not->toContain('www-data')
-            // Outside the panel's home base — someone's own login, not a site
-            // owner, and claiming it would be presumptuous.
+            // Outside the panel's home base: a personal login, not a site owner.
             ->not->toContain('deploybot')
             // A name the panel refuses to create, so it must refuse to adopt.
             ->not->toContain('mysql');
@@ -148,8 +142,7 @@ describe('discovering system users', function () {
 
 describe('what an imported account may do', function () {
     it('imports an account in the sudo group as having sudo', function () {
-        // It was always recorded as sudo: false, so an account with full sudo
-        // on the server was listed in the panel as having none.
+        // An account with full sudo must not be recorded as sudo: false.
         fakeServer(groups: "sudo:x:27:ubuntu,siteowner\n");
 
         runSync(SyncMode::Apply);
@@ -197,9 +190,8 @@ describe('what an imported account may do', function () {
     });
 
     it('does not strip everyone\'s sudo when the groups cannot be read', function () {
-        // No `sudo` line at all means the command failed — that group exists
-        // on every Debian-derived install. Correcting from an empty answer
-        // would have turned sudo off in the record for every account.
+        // No `sudo` line means the command failed (the group exists on every Debian-derived
+        // install); an empty answer must not turn sudo off for every account.
         $user = SystemUser::create(['username' => 'granted', 'home_path' => '/home/granted', 'sudo' => true]);
         fakeServer(groups: '');
 
@@ -211,8 +203,7 @@ describe('what an imported account may do', function () {
 
 describe('SSH access of system users (SYNC-01)', function () {
     it('adopts an account with the SSH access it really has', function () {
-        // Hard-coded false before: an account that logged in with its key
-        // every day was listed as having no SSH access at all.
+        // An account that logs in with its key must be listed with SSH access.
         fakeServer(groups: "sudo:x:27:\n".SshUsersGroup::NAME.":x:1500:siteowner\n");
 
         runSync(SyncMode::Apply);
@@ -266,12 +257,8 @@ describe('preview', function () {
             Process::assertNotRan(fn ($p) => in_array($binary, (array) $p->command, true));
         }
 
-        // systemctl by verb, not by name. Banning the binary outright was a
-        // proxy for "changes nothing", and it is the wrong proxy: `is-active`
-        // and `show` are reads this codebase already relies on to answer what
-        // is running — including web-server detection, which preview needs in
-        // order to know whose vhosts it is about to read. Asserting on the verb
-        // says what the test means, and still fails on the thing that matters.
+        // systemctl by verb, not by name: `is-active` and `show` are reads the codebase relies on
+        // (including web-server detection, which preview needs).
         foreach (['start', 'stop', 'restart', 'reload', 'enable', 'disable', 'mask', 'daemon-reload'] as $verb) {
             Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'systemctl'
                 && in_array($verb, (array) $p->command, true));
@@ -280,10 +267,8 @@ describe('preview', function () {
 });
 
 /*
- * A preview writes nothing, so everything that belongs to a user it found
- * used to be "skipped until users are synced", though applying the same run
- * adopts the user first and then those. The preview said less than the apply
- * would do (2026-09-24).
+ * A preview must report what an apply would do: everything belonging to a user it found is
+ * adopted after that user, not "skipped until users are synced".
  */
 describe('what a preview promises', function () {
     beforeEach(function () {
@@ -519,10 +504,8 @@ it('records a failure per resource type instead of ending the run', function () 
 /*
  * Sites the web server is already serving.
  *
- * The hard resource: a database is a name, a site is a config file plus a
- * directory plus an owner plus a type read off the disk. Only the first three
- * are facts, and the tests below are mostly about the fourth being treated as
- * the guess it is.
+ * A site is a config file, a directory, an owner and a type read off the disk. The first three
+ * are facts; the tests are mostly about treating the fourth as a guess.
  */
 describe('discovering applications', function () {
     beforeEach(function () {
@@ -600,10 +583,8 @@ describe('discovering applications', function () {
     });
 
     it('never adopts the panel\'s own vhost', function () {
-        // Detected by the directory it serves, not by its name — see the
-        // exclusion group below for why a name is not enough. Recorded with a
-        // reason rather than dropped, so the list accounts for every vhost on
-        // the box.
+        // Detected by the directory it serves, not by its name (see the exclusion group below).
+        // Recorded with a reason rather than dropped, so every vhost is accounted for.
         fakeVhosts([
             'panel' => nginxVhost('panel.example.com', dirname(base_path()).'/backend/public'),
             'shop' => nginxVhost('shop.example.com'),
@@ -790,20 +771,13 @@ describe('adopting a site', function () {
 /*
  * Things on the box that are not customer sites.
  *
- * A server usually runs more than the sites it hosts — the panel itself, and
- * whatever else the operator put there. Offering to adopt the control plane as
- * a site is the failure mode, and matching on names does not prevent it:
- * install.sh writes both `{slug}.conf` and `{slug}-tls.conf`, the slug is
- * overridable, and the panel answers on a domain rather than that slug. On the
- * box this was developed against the panel's own frontend vhost is called
- * `sv-oss-app.conf`, which no amount of matching "panel" would ever catch.
+ * Offering to adopt the control plane as a site is the failure mode, and matching on names does
+ * not prevent it: install.sh writes both `{slug}.conf` and `{slug}-tls.conf`, the slug is
+ * overridable, and the panel answers on a domain rather than that slug.
  */
 /*
- * The slug is the folder the files are in. It used to be made from the
- * domain, so a site in /home/brown/brownsite was recorded as
- * `brown23-172-120-87nipio`, a folder that does not exist, and its file
- * manager, PHP settings, workers and backups all pointed at nothing. Found on
- * a real server, 2026-09-24.
+ * The slug is the folder the files are in, not made from the domain: a site in
+ * /home/brown/brownsite must not become `brown23-172-120-87nipio`, a folder that does not exist.
  */
 describe('where an adopted site lives', function () {
     beforeEach(function () {
@@ -927,8 +901,7 @@ describe('excluding what is not a customer site', function () {
             'shop' => nginxVhost('shop.example.com'),
         ]);
 
-        // Excluded by the operator, so not even worth a line — unlike the
-        // rules above, this is a deliberate "I know, stop showing me".
+        // Ignored by the user: not even worth a line, unlike the rules above.
         expect(runSync()->items()->where('resource_type', 'application')->pluck('resource_key')->all())
             ->toBe(['shop.example.com']);
     });
@@ -958,10 +931,8 @@ describe('excluding what is not a customer site', function () {
 /*
  * The limits a migrated site is actually running under.
  *
- * Without this an adopted site shows the panel's defaults while FPM enforces
- * whatever the old panel wrote — the screen describing a server it is not
- * looking at, and the first save quietly replacing real limits with invented
- * ones.
+ * Without them an adopted site shows the panel's defaults while FPM enforces the old panel's
+ * values, and the first save replaces real limits with invented ones.
  */
 describe('importing php settings from the pool that serves a site', function () {
     beforeEach(function () {
@@ -1012,9 +983,8 @@ describe('importing php settings from the pool that serves a site', function () 
     }
 
     it('finds the pool by the user it runs as, not by the name we would have used', function () {
-        // The bug this exists for: poolPath() builds a name from our own slug,
-        // so on a box migrated from another panel it pointed at nothing and
-        // the import silently did nothing at all.
+        // poolPath() builds a name from our own slug, which points at nothing on a box migrated
+        // from another panel; the pool must be found by its `user =`.
         fakePools([
             '/etc/php/8.4/fpm/pool.d/oldpanel_shop_example_com.conf' => "[oldpanel]\nuser = siteowner\nphp_admin_value[memory_limit] = 1024M\n",
         ]);
@@ -1294,12 +1264,8 @@ describe('discovering workers', function () {
 /*
  * Accounts that can reach an adopted database.
  *
- * Databases were already adoptable and their users were not, so an adopted
- * database showed an empty user list — which reads as "nobody can connect to
- * this" while four applications were connecting to it perfectly well.
- *
- * The password is the part that cannot be recovered, and the tests below are
- * mostly about the panel saying so rather than covering for it.
+ * Without them an adopted database shows an empty user list, which reads as "nobody can
+ * connect". The password cannot be recovered; the tests are mostly about the panel saying so.
  */
 describe('discovering database users', function () {
     beforeEach(function () {
@@ -1416,9 +1382,8 @@ it('never hands out a connection string it knows will not work', function () {
 /*
  * Certificates already issued on the box.
  *
- * Without these an adopted site reads as having no TLS while it is serving
- * HTTPS — and the panel would offer to issue a certificate for a name that
- * already has one, spending a weekly rate limit to replace something working.
+ * Without them an adopted site reads as having no TLS, and the panel would offer to issue a
+ * certificate for a name that already has one, spending a rate limit.
  */
 describe('discovering certificates', function () {
     beforeEach(function () {
@@ -1513,9 +1478,8 @@ describe('discovering certificates', function () {
 });
 
 /*
- * Scheduled jobs. The resource people notice last and miss most: a cron job
- * that stops after a migration is discovered a week later, by whatever did
- * not happen.
+ * Scheduled jobs. A cron job that stops after a migration is only discovered a week later,
+ * by whatever did not happen.
  */
 describe('discovering cronjobs', function () {
     beforeEach(function () {
@@ -1579,7 +1543,7 @@ describe('discovering cronjobs', function () {
         expect($item->evidence['command'])->toBe('/usr/bin/php /home/siteowner/shop/artisan backup:run')
             ->and($job?->command)->toBe('/usr/bin/php /home/siteowner/shop/artisan backup:run')
             ->and($job?->name)->toBe('nightly backup')
-            // The panel's own save rule now accepts it.
+            // The panel's own save rule must accept it.
             ->and(NoShellComment::commentStart($job->command))->toBeNull();
     });
 
@@ -1633,8 +1597,8 @@ describe('discovering cronjobs', function () {
         expect(Cronjob::count())->toBe(1);
     });
 
-    // The panel takes the line out of the crontab on its first edit, so it
-    // needs to know which line. Without it the job ran twice (2026-09-24).
+    // The panel takes the line out of the crontab on its first edit, so it needs to know which
+    // line.
     it('records where a crontab job came from, down to the exact line', function () {
         fakeCron(crontabs: ['siteowner' => "MAILTO=me@example.com\n*/5 * * * * /srv/job.sh\n"]);
 
@@ -1646,8 +1610,7 @@ describe('discovering cronjobs', function () {
             ->and($job->source_line)->toBe('*/5 * * * * /srv/job.sh');
     });
 
-    // Every run offered adopted jobs as new, because the file check only
-    // knew the panel's own file names (2026-09-24).
+    // Jobs already adopted must not be offered as new on every run.
     it('does not offer a job it has already adopted', function () {
         fakeCron(
             cronD: ['/etc/cron.d/legacy' => "0 3 * * * siteowner /usr/bin/php artisan backup:run\n"],
@@ -1678,10 +1641,8 @@ describe('discovering cronjobs', function () {
 /*
  * Things the user has already said no to.
  *
- * Without this every sync re-lists the same items forever. On the box this
- * was developed against that is twenty-one vhosts the panel can never adopt,
- * and a list where the same twenty-one lines appear every time is one nobody
- * reads — which costs the feature the only thing it is for.
+ * Without this every sync re-lists the same items forever, and a list that repeats the same
+ * lines every time is one nobody reads.
  */
 describe('ignoring an item', function () {
     it('stops it appearing in later runs', function () {
@@ -1841,10 +1802,8 @@ describe('discovering firewall rules', function () {
         expect(runSync()->items()->where('resource_type', 'firewall_rule')->count())->toBe(0);
     });
 
-    // `ufw status` prints a rule's comment after the source, on the same
-    // line. It was stored as part of the source (`Anywhere  # note`), a value
-    // ufw rejects, so the adopted rule could never be edited or deleted.
-    // Found on a real server, 2026-09-24.
+    // `ufw status` prints a rule's comment after the source on the same line; it must not be
+    // stored as part of the source (`Anywhere  # note`), a value ufw rejects.
     it('keeps a rule\'s comment out of its source and makes it the description', function () {
         fakeUfwForSync("[ 1] 65000/tcp                  ALLOW IN    Anywhere                   # brownfield test\n"
             ."[ 2] 3306                       ALLOW IN    203.0.113.5                # office db\n");
@@ -2007,13 +1966,10 @@ describe('a run nothing is going to finish', function () {
 /*
  * Discovering sites on OpenLiteSpeed.
  *
- * A separate describe because the layout is genuinely different, and the
- * difference is what broke it: nginx and Apache keep one config file per site
- * in one directory, OpenLiteSpeed keeps a *directory* per site each holding a
- * `vhconf.conf`. The old `find -maxdepth 1 -type f` over its vhost root matched
- * nothing, so a server full of sites synced clean and reported none — the worst
- * possible shape for this feature, because "no sites found" is also what a
- * correct run on an empty box looks like.
+ * The layout differs: nginx and Apache keep one config file per site in one directory,
+ * OpenLiteSpeed a *directory* per site holding a `vhconf.conf`. A `find -maxdepth 1 -type f`
+ * over its vhost root matches nothing, and "no sites found" looks exactly like a correct run on
+ * an empty box.
  */
 describe('discovering sites on OpenLiteSpeed', function () {
     beforeEach(function () {
@@ -2106,9 +2062,8 @@ describe('discovering sites on OpenLiteSpeed', function () {
             ->and($found[0]['key'])->toBe('blog.example.com');
     });
 
-    // The installer's demo vhost was reported as a site whose config could
-    // not be read (2026-09-24). Recognised by its stock document root, so a
-    // customer's own site that happens to be called Example is still found.
+    // The installer's demo vhost is recognised by its stock document root, so a customer's own
+    // site called Example is still found.
     it('passes over OpenLiteSpeed\'s own Example vhost quietly, but not a real site of that name', function () {
         fakeOlsVhosts([
             'Example' => "docRoot \$VH_ROOT/html/\n",
@@ -2126,16 +2081,13 @@ describe('discovering sites on OpenLiteSpeed', function () {
 
     it('finds sites a migrated server keeps under the old panels branded directory', function () {
         /*
-         * The whole point of the layout detection. A v7 server that installs
-         * this panel keeps its vhosts at `/etc/<brand>-ols/<site>/main.conf` —
-         * wrong root *and* wrong filename — so a sync that globbed only
-         * `<configured root>/<site>/vhconf.conf` found nothing and reported a
-         * clean run. "No sites found" is also what a correct run on an empty
-         * box looks like, so nothing about it appeared broken.
+         * A v7 server that installs this panel keeps its vhosts at
+         * `/etc/<brand>-ols/<site>/main.conf` (wrong root and wrong filename), so a sync that
+         * globbed only `<configured root>/<site>/vhconf.conf` found nothing and reported a clean
+         * run.
          *
-         * `sureshcloud` rather than `serveravatar` deliberately: the brand is
-         * the old panel's build-time name, and a real box has already been seen
-         * carrying a reseller's instead of the one in the source.
+         * `sureshcloud` rather than `serveravatar` deliberately: the brand is the old panel's
+         * build-time name and may be a reseller's instead of the one in the source.
          */
         Process::fake(function ($process) {
             $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
@@ -2199,9 +2151,8 @@ describe('vhosts that are not enabled', function () {
             'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
         ]);
 
-        // A fresh box: `default` sits in sites-available unlinked. It was
-        // reported as "being served, but its config is not in a shape the
-        // panel could read" (nginx test server) — nothing serves it.
+        // A fresh box: `default` sits unlinked in sites-available; nothing serves it, so it must
+        // not be reported.
         Process::fake(function ($process) {
             $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
             $binary = $args[0] ?? '';
@@ -2230,15 +2181,12 @@ describe('vhosts that are not enabled', function () {
 /**
  * A Node site's port lives in its vhost and nowhere else.
  *
- * Adopting the site without it leaves `app_port` null, the allocator hands out
- * a fresh port on the first deploy, and nginx goes on proxying to the old
- * number — so a site that was working answers 502 the first time the panel
- * touches it. Found on a real v7 server, where n8n is proxied to 50241.
+ * Adopting the site without it leaves `app_port` null, the allocator hands out a fresh port on the
+ * first deploy, and nginx keeps proxying to the old number, so a working site answers 502.
  */
 describe('a proxied node site', function () {
-    // Copied from a live v7 box (`n8napp.conf`), trimmed to the parts that
-    // matter. The `include` lines and the websocket headers are kept because
-    // they are what a real one looks like.
+    // Trimmed copy of a real v7 vhost (`n8napp.conf`). The `include` lines and the websocket
+    // headers stay because a real one has them.
     $v7NodeVhost = <<<'NGINX'
     server {
         listen 80;
@@ -2354,8 +2302,8 @@ describe('a proxied node site', function () {
         $item = $discoverer->discover($run)[0];
 
         $first = $discoverer->adopt($item);
-        // Its own folder too: adopting the same folder twice is refused
-        // before the port is looked at (a47c8ae2), which is not this test.
+        // Its own folder too: adopting the same folder twice is refused before the port is looked
+        // at.
         $item['attributes']['domains'] = ['second.salite.top'];
         $item['attributes']['slug'] = 'n8napp-second';
         $second = $discoverer->adopt($item);

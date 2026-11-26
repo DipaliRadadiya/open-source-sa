@@ -17,21 +17,15 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /**
- * Fake server state, held statically rather than on the test case.
- *
- * Pest's `test()` returns a proxy, and writes made to it from inside an HTTP
- * request do not reliably reach the test — which silently turns every
- * assertion about what systemd was asked to do into an assertion about an
- * empty array. Statics have no such ambiguity.
+ * Fake server state, held statically rather than on the test case: writes made through Pest's
+ * `test()` proxy from inside an HTTP request do not reliably reach the test.
  */
 class WorkerFake
 {
     /**
      * How many copies of each program supervisord currently has up.
      *
-     * A count rather than a set of unit names, because supervisor's `numprocs`
-     * is the thing that decides it — "three of four running" is the state this
-     * has to be able to represent, and a boolean could not.
+     * A count, not a set of unit names: "three of four running" must be representable.
      *
      * @var array<string, int>
      */
@@ -48,20 +42,15 @@ class WorkerFake
     /**
      * Whether supervisord is on the box.
      *
-     * Default true, because it is on a fresh install. A panel upgraded from
-     * before 2026-09-07 has none — `install.sh` gained the package in the same
-     * commit that started writing supervisor programs, and that reaches new
-     * installs only.
+     * Default true, as on a fresh install; a panel upgraded from an older release may have none.
      */
     public static bool $supervisorInstalled = true;
 
     /**
      * Binaries this server's sudoers grant does not cover.
      *
-     * A separate axis from `$supervisorInstalled` on purpose: the two look
-     * identical through `which` and mean opposite things. One is a package to
-     * install, the other a grant to rewrite, and a panel that confuses them
-     * runs apt against a server that already had supervisord.
+     * Separate from `$supervisorInstalled`: the two look identical through `which`, but one is a
+     * package to install and the other a grant to rewrite.
      *
      * @var array<int, string>
      */
@@ -86,9 +75,7 @@ class WorkerFake
     /**
      * What `supervisorctl status` prints for a program.
      *
-     * Real output, because the panel parses it: one line per process, with the
-     * state in the second column. A test that returned a tidier shape would be
-     * asserting against a format supervisord does not produce.
+     * Real output, because the panel parses it: one line per process, state in the second column.
      */
     public static function statusOutput(string $program): string
     {
@@ -104,10 +91,8 @@ class WorkerFake
 }
 
 /*
- * Workers are systemd template units — one file, N instances — so the tests
- * that matter are about the multiple: that asking for four starts four, that
- * lowering the count actually stops the surplus, and that "three of four" is
- * reported as its own state rather than rounded to a green dot.
+ * The tests that matter are about the multiple (`numprocs`): asking for four starts four,
+ * lowering the count stops the surplus, and "three of four" is its own state, not a green dot.
  */
 
 beforeEach(function () {
@@ -169,19 +154,15 @@ function fakeWorkerSupervisor(): void
                 if (! isset($args[2])) {
                     return Process::result(output: implode("\n", array_map(fn ($name) => WorkerFake::statusOutput($name), array_keys(WorkerFake::$running))));
                 }
-                // Exit 3 is supervisorctl's "some processes are not running",
-                // which is what it really answers for a stopped program — the
-                // panel treats it as an answer rather than a failure, and a
-                // fake returning 0 would never exercise that.
+                // Exit 3 is supervisorctl's "some processes are not running", which is what it
+                // answers for a stopped program; a fake returning 0 would never exercise that.
                 $output = WorkerFake::statusOutput($program);
 
                 return Process::result(output: $output, exitCode: $output === '' ? 3 : 0);
             }
 
-            // Starting brings up as many copies as the row asks for, which is
-            // what `numprocs` means; stopping clears them. Read from the
-            // database rather than assumed, so "lower the count and re-apply"
-            // is a real transition rather than one the fake pretends about.
+            // Starting brings up as many copies as the row asks for (`numprocs`); stopping clears
+            // them. Read from the database so "lower the count and re-apply" is a real transition.
             if (in_array($verb, ['start', 'restart'], true)) {
                 $slug = str_starts_with($program, 'sv-worker-') ? substr($program, strlen('sv-worker-')) : $program;
                 $processes = (int) (Worker::query()->where('program', $program)->orWhere(fn ($query) => $query->whereNull('program')->where('slug', $slug))->value('processes') ?? 0);
@@ -398,10 +379,8 @@ it('stops the surplus when the process count is lowered', function () {
         ->putJson(workerUrl('/'.$worker->id), workerPayload(['processes' => 2]))
         ->assertOk();
 
-    // Two copies must actually stop. supervisor retires them on `update`
-    // rather than the panel sweeping instance numbers, but the requirement is
-    // unchanged: nothing else in the system would notice four processes still
-    // consuming the queue.
+    // Two copies must actually stop; nothing else would notice four processes still consuming
+    // the queue. Supervisor retires them on `update`.
     expect(WorkerFake::$running[$worker->program] ?? 0)->toBe(2);
 
     // And the pair that does it, in that order — `update` alone acts on a
@@ -426,8 +405,8 @@ it('refuses a worker whose unit will not stay up', function () {
         return Process::result(exitCode: 0);
     });
 
-    // A command that will not run is the user's to fix, not a server fault
-    // (APP-1/FS-C44): 422 with a reason and the reference, not a bare 500.
+    // A command that will not run is the user's to fix, not a server fault: 422 with a reason
+    // and the reference, not a bare 500.
     $this->actingAs($this->admin)
         ->postJson(workerUrl(), workerPayload())
         ->assertStatus(422)
@@ -471,11 +450,9 @@ describe('restarting', function () {
     });
 
     it('asks as the account the worker runs as, never the panel\'s', function (string $kind, string $command, string $verb) {
-        // As the panel's own account `queue:restart` could read the site's
-        // code but not write its `storage/`: Laravel could not open its log,
-        // exited 1, and every graceful restart — the button and every
-        // restart-on-deploy — fell back to a hard supervisor restart that
-        // kills the running job (found live 2026-09-29).
+        // As the panel's own account `queue:restart` could read the site's code but not write its
+        // `storage/`, so Laravel could not open its log and exited 1, and every graceful restart
+        // fell back to a hard supervisor restart that kills the running job.
         fakeWorkerSupervisor();
         $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload([
             'name' => 'Q', 'command' => $command, 'kind' => $kind,
@@ -560,10 +537,8 @@ describe('guardrails', function () {
     });
 
     it('warns when queue:restart would silently do nothing', function () {
-        // The find that justifies the check list: `queue:restart` leaves a flag
-        // in the cache for workers to read, and the array driver does not
-        // survive the process that wrote it. The command succeeds, nothing
-        // restarts, and deploys quietly run old code in the queue forever.
+        // `queue:restart` leaves a flag in the cache for workers to read, and the array driver
+        // does not survive the process that wrote it: the command succeeds, nothing restarts.
         WorkerFake::$env = "APP_ENV=production\nCACHE_STORE=array\n";
         fakeWorkerSupervisor();
 
@@ -642,11 +617,9 @@ describe('permissions', function () {
 
 describe('a worker id from another application', function () {
     it('is not editable, deletable or controllable through the wrong application', function () {
-        // Route model binding resolves {worker} from the whole table. Without a
-        // scope check, PUT /applications/1/workers/99 edits site 2's worker and
-        // logs it against site 1 — an audit trail naming the wrong site, which
-        // is worse than none because it is believed. The deployment, domain and
-        // SSH-key routes all check this already; workers were the gap.
+        // Route model binding resolves {worker} from the whole table. Without a scope check,
+        // PUT /applications/1/workers/99 edits site 2's worker and logs it against site 1: an
+        // audit trail naming the wrong site, which is worse than none because it is believed.
         fakeWorkerSupervisor();
 
         $other = Application::forceCreate([
@@ -684,10 +657,9 @@ describe('a worker id from another application', function () {
 });
 
 it('refuses a name or directory that would be two systemd directives', function () {
-    // The name is rendered into `Description=` and the directory into
-    // `WorkingDirectory=`, in a file the panel writes and systemd executes.
-    // A newline there is a directive of the caller's choosing — the same
-    // hazard the cron rule was written for, one file format over.
+    // The name is rendered into `Description=` and the directory into `WorkingDirectory=`, in a
+    // file the panel writes and systemd executes: a newline there is a directive of the caller's
+    // choosing.
     fakeWorkerSupervisor();
 
     $this->actingAs($this->admin)
@@ -762,10 +734,8 @@ describe('the unit name', function () {
 
 describe('a server without supervisord', function () {
     it('installs supervisor itself rather than telling someone to run apt', function () {
-        // The panel has the sudo grant and knows the package name; it installs
-        // PHP versions, database engines and fail2ban exactly this way. Being
-        // handed a shell command by software that could have run it is a poor
-        // answer, even when the command is correct.
+        // The panel has the sudo grant and knows the package name; it installs PHP versions,
+        // database engines and fail2ban this way, so it must not hand the user a shell command.
         Queue::fake();
 
         WorkerFake::$supervisorInstalled = false;
@@ -889,22 +859,14 @@ describe('a server without supervisord', function () {
 
 describe('a server whose sudo grant is out of date', function () {
     /*
-     * Reported 2026-09-08, from a panel upgraded past the release that moved
-     * workers to supervisord: `sudo -n supervisorctl update` answered "a
-     * password is required". supervisord was installed and the program file
-     * was written — the grant in /etc/sudoers.d simply predated the binary.
-     *
-     * `supervisorctl` has been in `server.privilege.binaries` since that
-     * release. The file is rewritten by install.sh and by the update's
-     * `sync_privileges` step, and that step is deliberately never fatal, so a
-     * server can run code whose grant it has not got and say nothing.
+     * `sudo -n supervisorctl update` answers "a password is required" when the grant in
+     * /etc/sudoers.d predates the binary: the file is rewritten only by install.sh and the
+     * update's `sync_privileges` step, which is deliberately never fatal.
      */
 
     beforeEach(function () {
-        // phpunit.xml disables escalation suite-wide. Nothing here exists
-        // without it: with sudo off no command is elevated, so none can be
-        // refused, and every assertion below would pass against a panel that
-        // still reported the old generic failure.
+        // phpunit.xml disables escalation suite-wide. With sudo off no command is elevated, so
+        // none can be refused and every assertion below would pass against the old failure.
         config()->set('server.privilege.sudo', true);
     });
 
@@ -933,11 +895,9 @@ describe('a server whose sudo grant is out of date', function () {
     });
 
     it('does not mistake a refused probe for a missing package', function () {
-        // The expensive version of the same confusion. `which` refused and
-        // `which` finding nothing are the same exit code, so reading only the
-        // status sends a server that already has supervisord to apt — ten
-        // minutes of package install that fixes nothing, and the next create
-        // fails in exactly the same place.
+        // The expensive version of the same confusion: `which` refused and `which` finding
+        // nothing share an exit code, so reading only the status sends a server that already
+        // has supervisord to apt, and the next create fails in exactly the same place.
         Queue::fake();
 
         WorkerFake::$denied = ['which'];
@@ -953,11 +913,9 @@ describe('a server whose sudo grant is out of date', function () {
     });
 
     it('stops at the refusal instead of reporting the next command', function () {
-        // `reload()` is deliberately non-fatal, which is right for supervisord
-        // disagreeing with a config and wrong for a grant that will refuse
-        // every command after it too. Carrying on turned "the panel may not
-        // run supervisorctl" into "the worker would not start" — a true
-        // sentence about a worker whose config had never been applied.
+        // `reload()` is deliberately non-fatal, which is right for supervisord disagreeing with a
+        // config and wrong for a grant that refuses every command after it too: carrying on
+        // reported "the worker would not start" for a config that was never applied.
         WorkerFake::$denied = ['supervisorctl'];
         fakeWorkerSupervisor();
 
@@ -975,14 +933,9 @@ describe('a server whose sudo grant is out of date', function () {
 
 describe('the log source on the Logs screen', function () {
     /*
-     * 🔴 The regression this exists to stop happening twice.
-     *
-     * Under systemd a worker's output went to journald, and `LogManager`
-     * offered it as `kind: journal` read with `journalctl -t sv-worker-{slug}`.
-     * Supervisor writes `stdout_logfile` instead and never touches journald, so
-     * moving the writer without moving the reader left every worker's log
-     * permanently empty — and empty, not failing, which is the version nobody
-     * reports as a bug.
+     * Regression guard: under systemd a worker's log was read with `journalctl -t`; supervisor
+     * writes `stdout_logfile` and never touches journald, so moving the writer without the
+     * reader left every worker's log permanently empty (not failing, so nobody reports it).
      */
     it('points at the file supervisord is actually told to write', function () {
         fakeWorkerSupervisor();
@@ -1035,17 +988,10 @@ describe('the log source on the Logs screen', function () {
 
 describe('a create that fails on the server', function () {
     /*
-     * 🔴 A worker the panel lists and supervisord has never heard of.
-     *
-     * `store()` wrote the row and then applied it. When applying threw — a
-     * unit it could not write, a program that would not start — the row stayed
-     * behind, and the request that made it returned an error, so nobody had
-     * any reason to go looking for it. The panel then showed a worker that
-     * could not be started, stopped or restarted, because there was nothing on
-     * the server to control.
-     *
-     * The method already refused to create a row when supervisord was missing,
-     * for exactly this reason. It just did not cover the apply itself failing.
+     * A worker the panel lists and supervisord has never heard of: `store()` wrote the row and
+     * then applied it, and when applying threw the row stayed behind with nothing on the server
+     * to control. The method already refused to create a row when supervisord was missing; this
+     * covers the apply itself failing.
      */
 
     beforeEach(function () {
@@ -1093,17 +1039,13 @@ describe('a create that fails on the server', function () {
 /*
 | Which PHP a worker actually starts under.
 |
-| This wrote `/usr/bin/`.$binary by hand until 2026-09-18, which is true only
-| on the FPM stacks. An OpenLiteSpeed box has no ondrej PHP at all — install.sh
-| says so, and creates /usr/local/bin/php precisely because nothing else puts a
-| `php` on PATH there. So every PHP worker on an OLS server was written
-| pointing at a file that does not exist, supervisord could not start the
-| program, and the panel offered the Workers screen regardless.
+| The path used to be `/usr/bin/`.$binary, true only on the FPM stacks: an OpenLiteSpeed box has
+| no ondrej PHP, and install.sh creates /usr/local/bin/php because nothing else puts a `php` on
+| PATH there. So every PHP worker on OLS pointed at a file that does not exist.
 |
-| The real LsphpPhpStack is bound rather than a stub: its `detect()` falls back
-| to the first configured candidate when nothing is on disk, so on a box with
-| no lsws tree it returns the documented path deterministically. A stub would
-| only prove the test agrees with itself.
+| The real LsphpPhpStack is bound rather than a stub: its `detect()` falls back to the first
+| configured candidate when nothing is on disk, so on a box with no lsws tree it returns the
+| documented path deterministically. A stub would only prove the test agrees with itself.
 */
 
 function useLsphpStack(): void
@@ -1128,10 +1070,8 @@ it('starts a worker on LSPHP when the server runs OpenLiteSpeed', function () {
 });
 
 it('writes exactly what it wrote before on an nginx or apache server', function () {
-    // The FPM stack is the default binding, so this is the untouched path. It
-    // is asserted rather than assumed: the fix is only safe if boxes that work
-    // today do not move, and "nothing changed" is a claim that needs a test
-    // like any other.
+    // The FPM stack is the default binding, so this is the untouched path. Asserted rather than
+    // assumed: boxes that work today must not move.
     fakeWorkerSupervisor();
 
     $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertCreated();
@@ -1186,16 +1126,12 @@ it('leaves a command that is not php alone', function () {
 });
 
 it('keeps the typed name when the operator has blanked the binary pattern', function () {
-    // A blank SERVER_PHP_BINARY_PATTERN is an operator saying "use whatever is
-    // on PATH", and FpmPhpStack answers the bare `php` for it. Typed `php8.2`
-    // must survive that: collapsing it to `php` would silently move the worker
-    // onto whatever version PATH happens to give, which is the bug this whole
-    // change exists to stop — just with the versions the other way round.
+    // A blank SERVER_PHP_BINARY_PATTERN means "use whatever is on PATH", and FpmPhpStack answers
+    // the bare `php` for it. Typed `php8.2` must survive that: collapsing it to `php` would
+    // silently move the worker onto whatever version PATH gives.
     //
-    // Deliberately a *versioned* name. With a bare `php` the resolved and
-    // unresolved answers are both the string "php", so the test could not tell
-    // the guard from its absence — which is exactly how it first passed with
-    // the fallback sabotaged out.
+    // Deliberately a *versioned* name: with a bare `php` the resolved and unresolved answers are
+    // both "php", so the test could not tell the guard from its absence.
     config(['server.php_binary_pattern' => '']);
     fakeWorkerSupervisor();
 
@@ -1207,11 +1143,9 @@ it('keeps the typed name when the operator has blanked the binary pattern', func
 });
 
 it('never writes an empty command when no candidate path is configured', function () {
-    // `detect()` answers '' when its candidate list is empty. Falling through
-    // with that would write `command= artisan queue:work` — a program block
-    // supervisord cannot start, produced by a config mistake rather than by
-    // anything the user did. Keep the typed name and let PATH decide, which is
-    // the behaviour a worker had before any of this.
+    // `detect()` answers '' when its candidate list is empty. Falling through with that would
+    // write `command= artisan queue:work`, a block supervisord cannot start. Keep the typed
+    // name and let PATH decide.
     useLsphpStack();
     config(['server.php_stacks.lsphp.binary_candidates' => []]);
     fakeWorkerSupervisor();
@@ -1242,9 +1176,9 @@ it('restarts a worker with the resolved php, not a bare versioned name', functio
 });
 
 /*
- * Bug #72: anyone allowed to manage workers could run one as root, point its
- * log at /etc, or override the account in Extra config. The admin keeps v7's
- * freedom; everyone else is held to the site's own account and folders.
+ * Anyone allowed to manage workers could run one as root, point its log at /etc, or override the
+ * account in Extra config. The admin keeps v7's freedom; everyone else is held to the site's own
+ * account and folders.
  */
 describe('who a worker may run as', function () {
     beforeEach(function () {
@@ -1327,10 +1261,8 @@ describe('who a worker may run as', function () {
     });
 
     /*
-     * FS-C22 #2: the checks above matched `key =` only, and supervisord's
-     * parser reads more than that — `user: root` came out as root (checked
-     * with supervisor 4.2.5's own parser). Each form below is one it reads
-     * as the key on the left.
+     * The checks above matched `key =` only, and supervisord's parser reads more than that:
+     * `user: root` came out as root. Each form below is one it reads as the key on the left.
      */
     it('refuses the account in extra config in every form supervisord reads, even for the admin', function (string $extra) {
         fakeWorkerSupervisor();
@@ -1474,7 +1406,7 @@ describe('an edit that will not start (W-edit)', function () {
             ->putJson(workerUrl('/'.$worker->id), workerPayload(['command' => 'no-such-binary --work']))
             ->assertStatus(422)
             ->assertJsonPath('reason', 'worker_did_not_start')
-            // RC-4: an edit is rolled back, never "not added".
+            // An edit is rolled back, never "not added".
             ->assertJsonPath('message', fn (string $message) => str_contains($message, 'the change was not saved and it keeps its previous command')
                 && ! str_contains($message, 'not added'));
 
@@ -1485,9 +1417,8 @@ describe('an edit that will not start (W-edit)', function () {
 });
 
 /*
- * Bug #73: switching a worker off stopped it, but its program still said
- * autostart=true, so supervisord brought it back the next time it started —
- * after every reboot.
+ * Switching a worker off stopped it, but its program still said autostart=true, so supervisord
+ * brought it back the next time it started: after every reboot.
  */
 it('writes autostart=false for a worker that is switched off', function () {
     fakeWorkerSupervisor();
@@ -1647,11 +1578,10 @@ it('does not discard program ownership when deletion fails', function (string $f
 })->with(['stop', 'remove', 'reload']);
 
 /*
- * A program supervisord never loaded (a new worker whose command exits before
- * its first reload) answers `status name:*` with "no such group", exit 4, and
- * `stop name:*` with the same and exit 1 — measured on supervisor 4.2,
- * 2026-10-23. Only "no such process" was accepted: adding such a worker gave a
- * 500 and left its row behind, and deleting that row then failed for good.
+ * A program supervisord never loaded (a new worker whose command exits before its first reload)
+ * answers `status name:*` with "no such group", exit 4, and `stop name:*` with the same and
+ * exit 1. Only "no such process" used to be accepted: adding such a worker gave a 500 and left
+ * its row behind, and deleting that row then failed for good.
  */
 it('refuses a new worker that never loaded with a 422 and keeps no row', function () {
     Process::fake(function ($process) {

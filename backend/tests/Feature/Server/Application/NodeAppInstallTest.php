@@ -18,13 +18,9 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Sleep;
 
 /**
- * The four one-click Node applications.
- *
- * These are the first installers whose result is a *process* rather than a
- * directory, which changes three things that each have their own way of going
- * wrong: the start command has to be written by the panel, the process must
- * not be started before the code exists, and the application must be pointed
- * at the site rather than at the home directory the unit mounts read-only.
+ * The four one-click Node applications. Their result is a process, not a directory: the panel
+ * writes the start command, starts it only after the code exists, and points it at the site
+ * rather than at the read-only home.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -50,9 +46,8 @@ beforeEach(function () {
     Process::fake(function ($process) {
         test()->ran->push($process);
 
-        // Uptime Kuma resolves its version from the repository's tags before
-        // it clones, so a fake that answers nothing turns every provision of
-        // it into a failed lookup. A real remote has tags; this one does too.
+        // Uptime Kuma resolves its version from the repository's tags before cloning; a fake that
+        // answers nothing turns every provision into a failed lookup.
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
         if (($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'ls-remote') {
@@ -107,11 +102,8 @@ function ranCommands(): string
 /**
  * What was piped into the rewrite of `$path`.
  *
- * A separate helper from {@see writtenTo()} because an edit of an existing
- * config is not a write of it: ApplicationConfigMutator tees into
- * `<path>.panel-tmp-<uuid>` and renames, so that the file is never half-written
- * under a process that might be reading it. Matching the exact path finds
- * nothing at all.
+ * Separate from {@see writtenTo()}: ApplicationConfigMutator tees into
+ * `<path>.panel-tmp-<uuid>` and renames, so matching the exact path finds nothing.
  */
 function rewrittenTo(string $path): ?string
 {
@@ -166,9 +158,8 @@ it('never asks for a start command — the installer knows it', function () {
 });
 
 it('allocates a port even though nothing asked for one', function () {
-    // The user never sends a start command for a one-click application — the
-    // installer writes it later — so keying allocation on that left these with
-    // no port, a unit with no PORT, and a proxy pointed at nothing.
+    // A one-click app never sends a start command (the installer writes it later), so keying
+    // port allocation on one left these with no port and a proxy pointed at nothing.
     $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
         ->postJson('/api/applications', [
             'system_user_id' => $this->su->id,
@@ -197,10 +188,8 @@ it('writes the start command itself, and starts only after installing', function
 });
 
 it('does not start a git application that has no code yet', function () {
-    // Its unit is written and enabled, so the port and the boot behaviour are
-    // in place — but `node server.js` in an empty directory exits instantly,
-    // and a provision that failed on that would report a broken site that is
-    // in fact fine, just not deployed.
+    // The unit is written and enabled, but `node server.js` in an empty directory exits at once;
+    // failing the provision on that would report a fine site as broken.
     $app = oneClickApp('git');
     $app->update(['start_command' => 'node server.js']);
 
@@ -242,22 +231,17 @@ it('keeps n8n inside the site, with a key generated before first start', functio
         // TLS is optional and is issued only after installation. The
         // certificate lifecycle promotes this once HTTPS is really servable.
         ->toContain('WEBHOOK_URL="http://n8n.test/"')
-        // Without this n8n refuses to open the editor over the plain-HTTP URL
-        // every site has for its first few minutes — so the very first visit
-        // to a site the panel had just called ready hit a wall telling the
-        // user to go and set an environment variable.
+        // Without this n8n refuses to open the editor over the plain-HTTP URL every site has for
+        // its first few minutes.
         ->toContain('N8N_SECURE_COOKIE="false"')
-        // n8n's own default is the `dev` release channel, and the editor puts
-        // that channel in the browser tab — so a customer's production
-        // automation announced itself as [DEV] on every page. Separate from the
-        // unit's NODE_ENV=production, which does not reach this setting.
+        // n8n defaults to the `dev` release channel and shows [DEV] in the browser tab. Separate
+        // from the unit's NODE_ENV=production, which does not reach this setting.
         ->toContain('N8N_RELEASE_TYPE="stable"');
 });
 
 it('keeps the encryption key n8n already has when the install runs again', function () {
-    // Retry Setup runs install() again. It wrote a fresh key every time, n8n
-    // compared it with the one in its own config and refused to start:
-    // "Mismatching encryption keys" — a retried n8n never came up (measured).
+    // Retry Setup runs install() again; a fresh key each time made n8n refuse to start
+    // ("Mismatching encryption keys").
     $key = str_repeat('ab12', 16);
 
     Process::fake(function ($process) use ($key) {
@@ -284,28 +268,16 @@ it('keeps the encryption key n8n already has when the install runs again', funct
 });
 
 it('installs the release n8n calls current, not a pinned major', function () {
-    /*
-     * Held on `1` until 2026-09-18, by which point that resolved to 1.123.81 —
-     * a version npm had begun tagging `rc` while stable was on 2.x. Nothing
-     * reported it, because a pin that is a year out of date looks exactly like
-     * a pin that is deliberate.
-     */
+    // A major pin goes stale unnoticed (`1` once resolved to a version npm tagged `rc`).
     app(ApplicationProvisioner::class)->provision(oneClickApp('n8n'));
 
     expect(ranCommands())->toContain('npm install --omit=dev --no-audit --no-fund n8n@latest');
 });
 
 it('repairs the release channel on a site that predates it', function () {
-    /*
-     * The half that is easy to miss. Writing the variable in `environment()`
-     * fixes sites created afterwards and leaves every existing site on the dev
-     * channel forever, with nothing to report it — a shipped installer change
-     * reaches fresh installs only.
-     *
-     * `syncUrl()` is the one path that rewrites a live site's environment, and
-     * it appends a key it cannot find, so an existing site repairs itself the
-     * next time a certificate is issued or removed.
-     */
+    // Writing the variable in `environment()` only fixes new sites. `syncUrl()` is the one path
+    // that rewrites a live site's environment (it appends a missing key), so an existing site
+    // repairs itself on the next certificate change.
     $application = oneClickApp('n8n');
     $application->forceFill(['status' => 'active'])->save();
 
@@ -333,19 +305,16 @@ it('secures the n8n cookie once a certificate is really servable', function () {
 
     app(N8nInstaller::class)->syncUrl($application, 'https://n8n.test');
 
-    // The insecure default exists only for the window before TLS. Leaving it
-    // behind on an HTTPS site would put the session cookie in clear on every
-    // request — which is what hardcoding it false would have done.
+    // The insecure default exists only until TLS; leaving it on an HTTPS site would send the
+    // session cookie in clear.
     expect(rewrittenTo('/home/apps/n8n/public_html/.env'))
         ->toContain('N8N_SECURE_COOKIE="true"')
         ->toContain('N8N_PROTOCOL="https"');
 });
 
 it('unsecures it again when the certificate goes away', function () {
-    // The half that is easy to skip, and the one that locks somebody out of
-    // their own editor: n8n answers a secure cookie on an insecure URL by
-    // refusing to load at all, so a removed certificate with no demotion is a
-    // site nobody can open and nothing in the panel to explain it.
+    // n8n refuses to load at all when a secure cookie meets an insecure URL, so a removed
+    // certificate without demotion leaves a site nobody can open.
     $application = oneClickApp('n8n');
     $application->forceFill(['status' => 'active'])->save();
 
@@ -368,9 +337,8 @@ it('gives Node-RED a password, because it ships without one', function () {
         // binding rejects $2y$ outright.
         ->toMatch('/password: "\$2a\$/')
         ->toContain('uiPort: process.env.PORT')
-        // Trusts the panel's own proxy and nothing else (bug #66): otherwise
-        // every visitor is 127.0.0.1, and with `true` a client could choose
-        // its own address by sending X-Forwarded-For.
+        // Trusts the panel's own proxy and nothing else: otherwise every visitor is 127.0.0.1,
+        // and with `true` a client could choose its own address via X-Forwarded-For.
         ->toContain("httpServerOptions: { 'trust proxy': 'loopback' }")
         // The default user directory is under the home, which the unit mounts
         // read-only — so a flow could never be saved.
@@ -380,10 +348,8 @@ it('gives Node-RED a password, because it ships without one', function () {
 });
 
 it('greys NodeBB on a server with neither engine it can use, rather than offering MySQL', function () {
-    // Neither client answers, which is how both engines report themselves
-    // absent. Both are named now that NodeBB accepts PostgreSQL too: faking
-    // only mongosh away would leave psql apparently working, and the card
-    // would be offered for the right reason by accident.
+    // Neither client answers, which is how both engines report themselves absent. Both are
+    // faked: faking only mongosh would leave psql apparently working.
     Process::fake(fn ($process) => in_array($process->command[0] ?? '', ['mongosh', 'psql'], true)
         ? Process::result(exitCode: 1)
         : Process::result(output: ''));
@@ -413,20 +379,16 @@ it('starts NodeBB in the foreground, so systemd keeps hold of it', function () {
     // die and kills the children it left behind in the cgroup.
     expect($installer->startCommand($app, '/home/apps/nodebb/public_html'))
         ->toBe('node /home/apps/nodebb/public_html/loader.js --no-daemon --no-silent')
-        // MongoDB first: the first available engine wins, so a server with
-        // both keeps making Mongo-backed forums and nothing changes for
-        // anyone who already had one.
+        // MongoDB first: the first available engine wins, so a server with both keeps making
+        // Mongo-backed forums.
         ->and($installer->acceptedEngines())->toBe(['mongodb', 'postgresql']);
 });
 
 /**
  * A `Process::fake` that answers `find` from a modelled template directory.
  *
- * The build check probes for named theme templates; an earlier version probed
- * for any `.tpl` at all. Faking the *directory* rather than the *command* is
- * what makes a test able to tell those two apart — a fake keyed on the command
- * string returns nothing for whichever probe it was not written for, so a weak
- * check appears to fail correctly when it would really have passed.
+ * Faking the *directory* rather than the command lets a test tell a named-theme probe from an
+ * any-`.tpl` probe; a command-keyed fake would answer neither correctly.
  *
  * @param  array<int, string>  $files
  */
@@ -444,8 +406,7 @@ function templateDir(array $files): Closure
             return Process::result(output: '');
         }
 
-        // The theme probe names the two files it wants; the old probe asked for
-        // `*.tpl`. Both are answered from the same directory.
+        // The theme probe names the two files it wants; answer it from the modelled directory.
         $matches = str_contains($command, 'header.tpl')
             ? array_filter($files, fn (string $f) => str_ends_with($f, '/header.tpl') || str_ends_with($f, '/footer.tpl'))
             : $files;
@@ -459,9 +420,8 @@ describe('NodeBB asset build', function () {
         $app = oneClickApp('nodebb');
         $root = '/home/apps/nodebb/public_html';
 
-        // `cat config.json` has to answer with what setup wrote, because the
-        // installer now *patches* that file rather than overwriting it — the
-        // whole point being that setup's own keys survive.
+        // `cat config.json` answers with what setup wrote: the installer patches that file
+        // rather than overwriting it, so setup's own keys must survive.
         Process::fake(function ($process) {
             test()->ran->push($process);
             $command = implode(' ', (array) $process->command);
@@ -494,11 +454,8 @@ describe('NodeBB asset build', function () {
 
         $build = $commands->search(fn (string $c) => str_contains($c, './nodebb build'));
 
-        // `setup` builds too, so the temptation is to call this redundant —
-        // and leaving it out is what produced a forum that installed cleanly
-        // and then answered "Failed to lookup view! Did you run `./nodebb
-        // build`?" on every request. setup's build can fail without failing
-        // setup; this one's exit code is checked.
+        // `setup` builds too, but its build can fail without failing setup; this one's exit code
+        // is checked. Without it a forum installs cleanly and answers "Failed to lookup view!".
         expect($build)->not->toBeFalse();
 
         // After the config rewrite, not before: the build has to see the URL
@@ -513,15 +470,9 @@ describe('NodeBB asset build', function () {
     });
 
     it('caps the build heap so the kernel does not kill it', function () {
-        // The third pass at this bug. Adding the build step, then checking the
-        // build produced templates, both assumed the command would *fail* when
-        // it went wrong. On a 2 GB box it does not fail — it is **killed**: V8
-        // sizes its heap from a compiled-in default rather than from the
-        // machine, and the OOM killer takes it. SIGKILL, no stderr, exit 137,
-        // a reference pointing at an empty log.
-        //
-        // Under a cap V8 collects rather than allocates, which is what makes
-        // the build finish on a small server at all.
+        // On a small server the build is not failed but **killed** (V8 sizes its heap from a
+        // compiled-in default; the OOM killer takes it: SIGKILL, exit 137, no stderr). Under a
+        // heap cap V8 collects rather than allocates, so the build finishes.
         $dir = sys_get_temp_dir().'/panel-meminfo-'.bin2hex(random_bytes(6));
         mkdir($dir, 0700, true);
         file_put_contents($dir.'/meminfo', "MemTotal:        2035792 kB\nMemAvailable:    1228800 kB\n");
@@ -567,11 +518,9 @@ describe('NodeBB asset build', function () {
                 return Process::result(output: json_encode([
                     'url' => 'http://old.example',
                     'database' => 'mongo',
-                    // Written by `./nodebb setup`, not by this installer. The
-                    // old code replaced the file with its own six keys and
-                    // discarded anything like this — and `./nodebb build` reads
-                    // this file to reach the database and find the active
-                    // theme, then compiles nothing and still exits 0.
+                    // Written by `./nodebb setup`, not by this installer. `./nodebb build` reads
+                    // it to reach the database and find the active theme; without it the build
+                    // compiles nothing and still exits 0.
                     'setup_only_key' => 'must survive',
                 ]));
             }
@@ -602,11 +551,8 @@ describe('NodeBB asset build', function () {
     it('fails provisioning when the build claims success but compiles nothing', function () {
         $app = oneClickApp('nodebb');
 
-        // The reported failure, exactly: a forum created *after* the build step
-        // was added still answered "Failed to lookup view!" on every request,
-        // with nothing wrong anywhere in provisioning. `./nodebb build` exits 0
-        // having compiled no templates, so the exit code is not the evidence —
-        // the artifact is.
+        // `./nodebb build` can exit 0 having compiled no templates, so the exit code is not the
+        // evidence: the artifact is.
         Process::fake(function ($process) {
             test()->ran->push($process);
             $command = implode(' ', (array) $process->command);
@@ -629,9 +575,8 @@ describe('NodeBB asset build', function () {
     it('fails provisioning when the build fails, rather than serving a broken forum', function () {
         $app = oneClickApp('nodebb');
 
-        // The build dying on a small box is the common case — it runs its
-        // targets in parallel and exhausts the RAM. Silence here is what put
-        // a 500 on every page instead of an error on the install screen.
+        // The build dying on a small box is the common case (parallel targets exhaust RAM);
+        // silence here put a 500 on every page instead of an error on the install screen.
         Process::fake(function ($process) {
             test()->ran->push($process);
 
@@ -648,10 +593,8 @@ describe('NodeBB asset build', function () {
 });
 
 describe('NodeBB setup answers', function () {
-    // The bug that made every forum on the box unusable, and the reason it was
-    // invisible: NodeBB never saw the admin answers, failed its required-values
-    // check, and called a bare `process.exit()` — exit code 0. Provisioning
-    // reported success and moved on.
+    // NodeBB never saw the admin answers, failed its required-values check and called a bare
+    // `process.exit()` (exit 0), so provisioning reported success.
     $healthyBuild = templateDir(['/x/500.tpl', '/x/header.tpl', '/x/footer.tpl']);
 
     it('passes the admin answers under the names NodeBB actually reads', function () use ($healthyBuild) {
@@ -679,8 +622,7 @@ describe('NodeBB setup answers', function () {
             ->and($envFile)->toContain('NODEBB_ADMIN_EMAIL')
             ->and($envFile)->toContain('NODEBB_ADMIN_PASSWORD')
             ->and($envFile)->toContain('forumadmin')
-            // The old names. Nothing upstream reads them, and passing them is
-            // what produced a forum with an empty database.
+            // The old names: nothing upstream reads them, and they produced an empty database.
             ->and($envFile)->not->toContain('admin__username')
             ->and($envFile)->not->toContain('admin__password');
     });
@@ -749,17 +691,13 @@ describe('NodeBB setup answers', function () {
     });
 
     it('rejects a build that compiled core templates but no theme', function () {
-        // The state the old check passed and the forum still 500'd in: the core
-        // `.tpl` files ship with the clone and compile without a database, so
-        // "is there any .tpl?" answered yes while `header.tpl` and `footer.tpl`
-        // — which every page render needs — were absent because setup never
-        // populated the database, so there was no `theme:id`.
+        // The core `.tpl` files ship with the clone and compile without a database, so a generic
+        // "any .tpl?" probe passes while `header.tpl` and `footer.tpl` are absent (setup never
+        // populated the database, so there was no `theme:id`).
         $app = oneClickApp('nodebb');
 
-        // Modelled as a directory, not as a command match: the point is that a
-        // *generic* `.tpl` probe finds plenty here and still describes a broken
-        // forum. Keying the fake off the command instead would let the old
-        // check pass this test for the wrong reason.
+        // Modelled as a directory, not a command match: a generic `.tpl` probe finds plenty here
+        // and would pass this test for the wrong reason.
         Process::fake(templateDir(['/x/500.tpl', '/x/partials/menu.tpl']));
 
         expect(fn () => app(NodeBbInstaller::class)->install($app, '/home/apps/nodebb/public_html', [
@@ -782,11 +720,8 @@ describe('NodeBB setup answers', function () {
 
 describe('unit memory ceiling', function () {
     it('gives an application what it needs rather than one server-wide number', function () {
-        // 512M was applied to every Node app regardless of what it was.
-        // MemoryMax kills rather than throttles, so an app under its own
-        // documented minimum is not slow — it is killed at startup, restarts
-        // to its start limit, stops, and the site answers 502 while the panel
-        // reports it active.
+        // MemoryMax kills rather than throttles: an app under its own documented minimum dies at
+        // startup, hits its start limit and the site answers 502 while the panel says active.
         config(['server.applications.memory_max' => '512M']);
 
         $supervisor = app(ProcessSupervisor::class);
@@ -820,13 +755,8 @@ describe('unit memory ceiling', function () {
 });
 
 describe('the Uptime Kuma version', function () {
-    /*
-     * The config named `2.0.0` outright. Upstream was on 2.5.3 by 2026-09-08,
-     * so every site the panel created was more than a year of releases behind
-     * — a pin in a one-click installer does not stay current, it stops being
-     * noticed. It is now an override, and an empty value means "ask the
-     * repository what the newest release is".
-     */
+    // The config used to name `2.0.0` outright and went stale unnoticed. It is now an override;
+    // an empty value means "ask the repository for the newest release".
 
     /** `git ls-remote --tags --refs` output, in the shape git really prints. */
     function fakeTags(array $tags): void
@@ -848,9 +778,7 @@ describe('the Uptime Kuma version', function () {
 
     beforeEach(function () {
         config(['server.installers.uptimekuma.branch' => '']);
-        // The tag-list source on its own. The API is exercised in its own
-        // block below; leaving it on here would mean these tests never reached
-        // the fallback they are about.
+        // The tag list on its own; the API has its own block below.
         config(['server.installers.uptimekuma.releases_api' => '']);
     });
 
@@ -864,10 +792,8 @@ describe('the Uptime Kuma version', function () {
     });
 
     it('sorts by version rather than by string', function () {
-        // '2.10.0' is lower than '2.9.0' asciibetically and higher by version.
-        // Sorting the list as text is the obvious way to write this and it
-        // would install the wrong release the moment a minor reaches double
-        // digits -- which for this project is a matter of months.
+        // '2.10.0' is lower than '2.9.0' asciibetically and higher by version; a text sort would
+        // install the wrong release once a minor reaches double digits.
         fakeTags(['2.9.0', '2.10.0', '2.5.3']);
 
         app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
@@ -899,8 +825,7 @@ describe('the Uptime Kuma version', function () {
     });
 
     it('refuses rather than installing something stale when it cannot ask', function () {
-        // Falling back to a pinned version here would restore the exact bug
-        // this removes, in the one place nobody would look for it.
+        // Falling back to a pinned version here would restore the stale-pin bug.
         fakeTags([]);
 
         expect(fn () => app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma')))
@@ -946,11 +871,9 @@ describe('the Uptime Kuma releases API', function () {
     });
 
     it('sorts by version, not by the order GitHub returns', function () {
-        // The reason this reads the list rather than `/releases/latest`.
-        // GitHub's "latest" is the newest by *date*, and this project
-        // back-patches its old line -- 1.23.17 shipped in October 2025, long
-        // after 2.x. Listed first, as the most recent release, it would win on
-        // date and lose on version. It must lose.
+        // Why this reads the list rather than `/releases/latest`: GitHub's "latest" is newest by
+        // *date*, and this project back-patches its old line (1.23.17 shipped long after 2.x),
+        // so it would win on date and lose on version. It must lose.
         fakeReleases([release('1.23.17'), release('2.5.3'), release('2.4.0')]);
 
         app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
@@ -971,9 +894,8 @@ describe('the Uptime Kuma releases API', function () {
     });
 
     it('falls back to the tag list when the API refuses', function () {
-        // 403 is what a rate-limited panel gets, and it gets it for an hour.
-        // Refusing every install for that hour, with a second source standing
-        // right there, would be the wrong trade.
+        // 403 is what a rate-limited panel gets, for an hour; refusing every install that long
+        // with a second source available would be the wrong trade.
         Http::fake(['api.github.test/*' => Http::response('rate limited', 403)]);
 
         app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
@@ -1002,22 +924,16 @@ describe('the Uptime Kuma releases API', function () {
 });
 
 /**
- * The config NodeBB actually reads, for a PostgreSQL-backed forum.
+ * The config NodeBB actually reads, for a PostgreSQL-backed forum (NodeBB v4.x source):
  *
- * Every key here was taken from NodeBB v4.x's own source rather than its docs
- * (2026-09-10) — that is the branch the panel clones:
+ *  - `src/database/index.js` loads the driver as `require('./' + database)`, so the value is a
+ *    **filename**: `postgres`, never `postgresql`.
+ *  - `src/database/postgres.js` names `postgres:host|port|username|password|database|ssl`.
+ *  - `src/database/postgres/connection.js` maps `postgres.username` onto node-postgres's `user`
+ *    and reads ssl as `String(ssl) === 'true'`.
  *
- *  - `src/database/index.js` loads the driver as `require('./' + database)`,
- *    so the value is a **filename**: `postgres`, never `postgresql`.
- *  - `src/database/postgres.js`'s `questions` name `postgres:host|port|
- *    username|password|database|ssl`.
- *  - `src/database/postgres/connection.js` maps `postgres.username` onto
- *    node-postgres's `user`, and reads ssl as `String(ssl) === 'true'`.
- *
- * The list of accepted engines is not a label: it decides which database the
- * panel *creates*, while this decides what the forum is *told*. If they
- * disagree the site is created, reported Active, and broken at first load with
- * an error naming the other database.
+ * The accepted-engines list decides which database the panel *creates*; this decides what the
+ * forum is *told*. If they disagree the site is reported Active and breaks at first load.
  */
 it('writes a NodeBB config PostgreSQL can actually be reached with', function () {
     $app = oneClickApp('nodebb');
@@ -1068,9 +984,8 @@ it('still writes a MongoDB config when that is the engine', function () {
 });
 
 /**
- * `config()` is private, and deliberately so — nothing outside the installer
- * should be composing this file. Reached through reflection rather than made
- * public for the test, which would widen the class's surface to suit us.
+ * `config()` is private on purpose; reached through reflection rather than widening the class
+ * for the test.
  *
  * @param  array<string, mixed>  $context
  */
@@ -1087,9 +1002,8 @@ function nodeBbConfigFor(Application $app, array $context): string
 | n8n and Uptime Kuma are claimed by the panel, not by the first visitor
 |--------------------------------------------------------------------------
 |
-| Neither has a setup command: its first administrator is created on a
-| first-run page, by whoever opens the site first. Measured on a real server
-| (n8n 2.40.7, Uptime Kuma 2.5.5): the panel's installs sat there unclaimed.
+| Neither has a setup command: its first administrator is created on a first-run page, by
+| whoever opens the site first.
 */
 
 function claimableApp(string $type, array $settings): Application
@@ -1163,12 +1077,9 @@ it('fails the install when n8n refuses the owner, rather than leaving it open', 
 });
 
 it('never takes n8n\'s starting-up page as an answer', function () {
-    /*
-     * Measured on a real server: while it starts, n8n answers EVERY path, its
-     * API included, with 200 and "n8n is starting up. Please wait". The
-     * readiness check passed on it, the setup request got it too, curl called
-     * both a success — and the site went live with its first-run page open.
-     */
+    // While it starts, n8n answers EVERY path, its API included, with 200 and "n8n is starting
+    // up. Please wait": the readiness check passed on it and the site went live with its
+    // first-run page open.
     $app = claimableApp('n8n', ['admin_email' => 'owner@example.com']);
     $starting = 'n8n is starting up. Please wait';
 
@@ -1205,9 +1116,8 @@ it('waits out n8n\'s start-up before creating the owner', function () {
             return Process::result(output: '{"data":{}}');
         }
 
-        // The real sequence, measured: nothing listening, the starting-up
-        // page with a 200, the API answering 404 while its routes register,
-        // then the settings.
+        // The real sequence: nothing listening, the starting-up page with a 200, the API
+        // answering 404 while its routes register, then the settings.
         return match (++$calls) {
             1 => Process::result(errorOutput: 'curl: (7) Failed to connect', exitCode: 7),
             2 => Process::result(output: 'n8n is starting up. Please wait'),
@@ -1252,9 +1162,8 @@ it('sends the Kuma setup only after Kuma has attached its handlers', function ()
     $script = (string) collect(test()->ran->first(fn ($p) => is_array($p->command)
         && str_contains(implode(' ', $p->command), 'socket.io-client'))->command)->last();
 
-    // Found on a real server: sent on connect, seconds after Kuma's first
-    // start, the event reached Kuma before its handler existed, was dropped,
-    // and the install failed after 30 s. `loginRequired` is emitted last.
+    // An event sent on connect, seconds after Kuma's first start, reached Kuma before its handler
+    // existed and was dropped; `loginRequired` is emitted last.
     expect($script)->toContain('socket.on("loginRequired", send)')
         ->not->toContain('socket.on("connect", () => socket.emit("setup"')
         // Kuma's own needs-setup signal is computed during startup and is
@@ -1294,10 +1203,9 @@ it('runs no after-start step for the Node apps that set up their own admin', fun
 ]);
 
 it('lets npm 12 run the install scripts of the packages the panel installs', function (string $type) {
-    // npm 12 skips every dependency's install scripts unless package.json
-    // allows them, and says so only in a closing warning. n8n installed on
-    // the Apache test box after an npm update from the Node screen, then
-    // crashed at start: sqlite3's native module had never been built.
+    // npm 12 skips every dependency's install scripts unless package.json allows them, and says
+    // so only in a closing warning: n8n then crashed at start because sqlite3's native module
+    // was never built.
     app(ApplicationProvisioner::class)->provision(oneClickApp($type));
 
     $install = test()->ran
@@ -1324,10 +1232,9 @@ it('lets npm 12 run install scripts during NodeBB setup too', function () {
 });
 
 it('copies a cloned app into the site as the site user, from a staging name nobody can guess', function () {
-    // Root's `cp` into a site that already exists — "Retry setup" — wrote
-    // through a link the site user had planted at a destination path (the
-    // `.panel` class of bug, 2026-09-29). And `node-{id}` was a staging path
-    // a site user could create before the installer did.
+    // Root's `cp` into an existing site ("Retry setup") wrote through a link the site user had
+    // planted at a destination path, and `node-{id}` was a staging path a site user could
+    // create first.
     app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
 
     $commands = test()->ran->filter(fn ($p) => is_array($p->command))->map(fn ($p) => $p->command)->values();

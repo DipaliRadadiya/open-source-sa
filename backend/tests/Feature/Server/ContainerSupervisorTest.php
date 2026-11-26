@@ -21,12 +21,10 @@ use Symfony\Component\Yaml\Yaml;
 uses(RefreshDatabase::class);
 
 /*
- * Step one of the Docker stack: run one container from an image, behind the
- * nginx vhost a Node application already gets.
+ * Run one container from an image, behind the nginx vhost a Node application already gets.
  *
- * Two invariants in the generated compose file are not conveniences, and both
- * have tests here because a rule that lives only in a template is a rule the
- * next code path forgets:
+ * Two invariants in the generated compose file have tests here because a rule that lives only
+ * in a template is a rule the next code path forgets:
  *
  *  - **Ports publish to 127.0.0.1 only.** Docker writes its own rules into the
  *    DOCKER chain ahead of the ones ufw manages, so `"8080:80"` — the form
@@ -88,9 +86,8 @@ function containerDeps(array $handlers = [], array &$ran = [], ?string &$written
     );
 
     $files = Mockery::mock(ManagedFile::class);
-    // `$written` means the COMPOSE FILE, not "the last thing written". The panel
-    // also writes `compose.panel.yml` now, and capturing indiscriminately made every
-    // assertion about the compose file silently assert about the override instead.
+    // `$written` means the COMPOSE FILE, not "the last thing written": the panel also writes
+    // `compose.panel.yml`, and capturing both made compose-file assertions hit the override.
     $files->shouldReceive('put')->andReturnUsing(function (string $path, string $contents) use (&$written) {
         if (str_ends_with($path, '/compose.panel.yml')) {
             overrideWritten($contents);
@@ -251,15 +248,10 @@ it('bounds the log read', function () {
 });
 
 it('does not offer clone, which would appear to work — and offers backup, which now does', function () {
-    // Clone arrives in the default feature set and would succeed while doing
-    // the wrong thing, which is worse than its absence: a missing screen
-    // prompts a question, one that succeeds without doing the job does not.
-    // It copies the served files — a container's are in its image and its
-    // state is in its volumes.
-    //
-    // Backup was refused for the same reason until c3913c27 taught the
-    // pipeline to archive a container site's volumes and compose file; this
-    // test still said it was missing (DS-12).
+    // Clone arrives in the default feature set and would succeed while doing the wrong thing, which
+    // is worse than its absence: a missing screen prompts a question, one that succeeds without doing
+    // the job does not. It copies the served files, but a container's are in its image and its state
+    // is in its volumes.
     $docker = collect(app(SiteTypeManager::class)->all())
         ->first(fn ($type) => $type->name() === 'docker');
 
@@ -273,10 +265,8 @@ it('does not offer clone, which would appear to work — and offers backup, whic
 });
 
 it('reuses the node vhost rather than needing one of its own', function () {
-    // The template is selected by serving-profile NAME, so a container aborted
-    // with a bare 500 from `View::exists` until `docker` was aliased to it —
-    // even though the template itself is entirely runtime-agnostic and proxies
-    // to a loopback port without asking what is behind it.
+    // The template is selected by serving-profile NAME: without a `docker` alias a container aborted
+    // with a 500 from `View::exists`, though the template itself is runtime-agnostic.
     expect(view()->exists('server.vhosts.nginx.node'))->toBeTrue()
         ->and(view()->exists('server.vhosts.nginx.docker'))->toBeFalse();
 
@@ -357,15 +347,11 @@ it('writes the user file verbatim when it passes', function () {
 });
 
 it('is actually reached by provisioning, not merely callable', function () {
-    // The gap that produced a 502 on a live server. `ContainerSupervisor`
-    // existed, had seven passing tests, and was never called from
-    // `ApplicationProvisioner` — so a Docker application provisioned to
-    // "active" with no container anywhere and nginx proxying to a port
-    // nothing listened on.
+    // Guards `ContainerSupervisor` never being called from `ApplicationProvisioner`: the app reached
+    // "active" with no container and nginx proxying to a port nothing listened on.
     //
-    // Every other test here drives the supervisor directly, which proves it
-    // works and nothing about whether it is reachable. This one reads the
-    // wiring.
+    // Every other test here drives the supervisor directly, which proves nothing about whether it is
+    // reachable. This one reads the wiring.
     $provisioner = file_get_contents(base_path('app/Services/Server/Applications/ApplicationProvisioner.php'));
 
     expect($provisioner)->toContain('ContainerSupervisor')
@@ -376,15 +362,11 @@ it('is actually reached by provisioning, not merely callable', function () {
 });
 
 it('runs the post-start hook for a container application too', function () {
-    // The same gap, one method along. The docker branch of `startProcess()`
-    // returns early — so the fix for "the supervisor was never called from here"
-    // left `afterStart()` unreachable for every container app, and the hook that
-    // claims Chatwoot's first-run page was dead code for the one case it was
-    // written for. Found on a real box: the site reached Active with
-    // `/installation/onboarding` still answering 200 to anyone.
+    // The same gap, one method along: the docker branch of `startProcess()` returns early, which left
+    // `afterStart()` unreachable for container apps, so the hook that claims Chatwoot's first-run page
+    // never ran and `/installation/onboarding` stayed open to anyone.
     //
-    // Reads the wiring, like the test above, because the alternative is a full
-    // provision and this is the fact that actually broke.
+    // Reads the wiring, like the test above, because the alternative is a full provision.
     $source = file_get_contents(base_path('app/Services/Server/Applications/ApplicationProvisioner.php'));
 
     // From `startProcess()` specifically — `serving_profile === 'docker'` appears
@@ -417,16 +399,12 @@ it('persists the type fields that are columns', function () {
     $docker = collect(app(SiteTypeManager::class)->all())
         ->first(fn ($type) => $type->name() === 'docker');
 
-    // A third category exists now: the create form's "make a new one" fields are
-    // neither columns nor settings ON PURPOSE. `docker_network_new` resolves into
-    // `docker_network`, and `volume_new` + `volume_path` into `volume_mounts`, so
-    // that ONE column answers "what network is this site on" — two columns for
-    // one fact is a compose renderer that has to know about both.
+    // A third category: the create form's "make a new one" fields are neither columns nor settings ON
+    // PURPOSE. `docker_network_new` resolves into `docker_network`, and `volume_new` + `volume_path`
+    // into `volume_mounts`, so that ONE column answers "what network is this site on".
     //
-    // They are allowed here only if `containerWiring()` actually names them. That
-    // keeps the guard's teeth: a new field that is neither a column nor wired
-    // still fails, which is the case that originally dropped a pasted compose
-    // file.
+    // They are allowed only if `containerWiring()` actually names them, so a new field that is
+    // neither a column nor wired still fails.
     $wiring = $create;
     $start = strpos($wiring, 'private function containerWiring');
     expect($start)->not->toBeFalse('containerWiring() is gone; the transient fields have no consumer');
@@ -446,10 +424,8 @@ it('persists the type fields that are columns', function () {
 });
 
 it('strips the escape codes the application itself prints', function () {
-    // `--no-color` controls compose's OWN colouring — the service-name prefix
-    // — and has no say over what the process inside the container prints. It
-    // is easy to assume otherwise, and the panel showed Uptime Kuma's coloured
-    // log lines as literal `[36m` text around every timestamp.
+    // `--no-color` controls compose's OWN colouring (the service-name prefix), not what the process
+    // inside the container prints: Uptime Kuma's colour codes showed as literal `[36m` text.
     $ansi = "uptime-kuma-1  | \e[36m2026-09-24T10:42:27Z\e[0m [\e[32mSERVER\e[0m] \e[36mINFO:\e[0m Env: production\n";
 
     $ran = [];
@@ -521,10 +497,9 @@ it('joins the chosen network, and declares it external', function () {
         // The whole point. An `external: false` — or an absent declaration —
         // is a second, differently-named network that resolves nothing.
         ->and($written)->toContain('external: true')
-        // And the site's own unique name on it. Compose registers the SERVICE
-        // name too, and every generated file calls its service `app` — so two
-        // panel sites on one network both answer to `app` and Docker's DNS
-        // picks one at random. Measured on a real box before this was added.
+        // And the site's own unique name on it. Compose registers the SERVICE name too, and every
+        // generated file calls its service `app`, so two panel sites on one network both answer to
+        // `app` and Docker's DNS picks one at random.
         ->and($written)->toContain('aliases:')
         ->and($written)->toContain('- shop');
 });
@@ -656,9 +631,8 @@ it('declares a volume once even when it is mounted twice', function () {
     (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply($application, '/home/shop/shop/public_html');
 
-    // The DECLARATION once, at the top level. `substr_count('shared:')` also
-    // counts the two mount lines, which is how this assertion first read 3 and
-    // said nothing useful.
+    // The DECLARATION once, at the top level: `substr_count('shared:')` also counts the two
+    // mount lines.
     expect(substr_count($written, "\nvolumes:\n  shared:\n"))->toBe(1)
         ->and(substr_count($written, 'external: true'))->toBe(1)
         ->and($written)->toContain('- shared:/one')
@@ -692,18 +666,14 @@ it('skips a half-written mount rather than rendering a broken line', function ()
 /*
  * The panel's compose override, for a PASTED file.
  *
- * `ComposeValidator` rewrites published ports to loopback and refuses the keys that
- * hand over the host — and adds nothing. Measured: zero references to `mem_limit` or
- * `logging` in that class. So a hand-written compose file was a site with no memory
- * ceiling and unbounded logs, which are the two failures that take a box down.
+ * `ComposeValidator` rewrites published ports to loopback and refuses the keys that hand over the
+ * host, but adds no limits. Without the override a hand-written compose file is a site with no
+ * memory ceiling and unbounded logs, the two failures that take a box down.
  */
 
 it('keeps the limits when the image is pulled, not only when the site is applied', function () {
-    // "Pull and redeploy" on a pasted-compose site used to DELETE the override and
-    // recreate the container with no `mem_limit`, no `cpus` and unbounded logs.
-    // `writeOverride()` reads `$pastedServices`, which only `contents()` fills, and
-    // `pull()` called it without rendering first. `start()` three methods away
-    // carries a comment saying exactly why it re-renders.
+    // "Pull and redeploy" on a pasted-compose site must not DELETE the override: `writeOverride()`
+    // reads `$pastedServices`, which only `contents()` fills, so `pull()` has to render first.
     $pasted = <<<'YAML'
     services:
       web:
@@ -740,11 +710,9 @@ it('keeps the limits when the image is pulled, not only when the site is applied
 });
 
 it('does not carry a pasted file\'s service names into a generated one', function () {
-    // The rollback path. `UpdateContainerCompose` renders the pasted file, fails,
-    // then renders the GENERATED one on the same instance — and `$pastedServices`
-    // was only ever set, never reset, so the second override named services the
-    // generated file does not have. `compose up` is then handed an override
-    // referring to nothing, and the rollback fails with the site already down.
+    // The rollback path. `UpdateContainerCompose` renders the pasted file, fails, then renders the
+    // GENERATED one on the same instance, so `$pastedServices` must be reset: otherwise the override
+    // names services the generated file does not have and the rollback fails with the site down.
     $pasted = <<<'YAML'
     services:
       invented:
@@ -855,9 +823,8 @@ it('passes the override to up, and to nothing else', function () {
     $supervisor->apply($application, '/home/shop/shop/public_html');
     $supervisor->stop($application, '/home/shop/shop/public_html');
 
-    // `contains('compose.panel.yml')` is an EQUALITY check and the command holds a
-    // full path, so it matched nothing — a predicate is required, and without one
-    // this test passed vacuously in both directions.
+    // `contains('compose.panel.yml')` is an EQUALITY check and the command holds a full path, so it
+    // matched nothing: a predicate is required, or the test passes vacuously.
     $overrides = fn (string $op): int => collect($ran)
         ->where('op', $op)
         ->filter(fn (array $row): bool => collect($row['command'])
@@ -913,13 +880,10 @@ it('honours a per-site memory limit in the override', function () {
 /*
  * Per-container CPU quotas.
  *
- * The invariant worth a test is the ABSENCE, not the presence. `cpus` is the one
- * limit with no default: memory falls back to the configured 512m, and CPU falls
- * back to nothing at all, because a default would have capped every container site
- * already on the box the next time it deployed. So a site without the field has to
- * render the file it rendered before the column existed — and the failure mode of
- * getting that wrong is not an error, it is a diff on every site's compose file
- * that nobody can tell from a real change.
+ * The invariant worth a test is the ABSENCE, not the presence. `cpus` is the one limit with no
+ * default (memory falls back to the configured 512m): a default would cap every existing container
+ * site on its next deploy. A site without the field must render the file it rendered before the
+ * column existed, or every site's compose file shows a diff nobody can tell from a real change.
  *
  * The other half is the empty key. Compose reads `cpus: ` as `0`, and `0` means no
  * limit, so a key rendered with a null value is the one spelling that silently
@@ -1049,19 +1013,16 @@ it('writes no cpus line into the override for a pasted site with no quota', func
 });
 
 it('writes no override for a file the panel rendered itself', function () {
-    // 🔴 The bug this guard exists for, found on a real box. `contents()` takes the
-    // pasted-file branch whenever `compose` is non-empty — and a ONE-CLICK app's
-    // compose column holds a file the panel rendered from that app's own template,
-    // which already carries per-service limits. So the override applied the app's
-    // ceiling to every service in it, and a Ghost installed at 640m gave its MySQL
-    // 640m while the file on disk plainly said 512m. `docker inspect` was the only
-    // place the two disagreed.
+    // `contents()` takes the pasted-file branch whenever `compose` is non-empty, and a ONE-CLICK app's
+    // compose column holds a file the panel rendered from the app's own template, which already carries
+    // per-service limits. The override then applied the app's ceiling to every service (Ghost at 640m
+    // gave its MySQL 640m while the file said 512m).
     //
-    // The override is for a HAND-WRITTEN file, which has no limits of its own.
-    // A generated one needs nothing added and must not have its numbers replaced.
+    // The override is for a HAND-WRITTEN file, which has no limits of its own. A generated one needs
+    // nothing added and must not have its numbers replaced.
     //
-    // Keyed on the recipe registry — the same source the installer renders
-    // from — so a new one-click cannot be added without being covered.
+    // Keyed on the recipe registry, the same source the installer renders from, so a new one-click
+    // cannot be added without being covered.
     $pasted = <<<'YAML'
     services:
       ghost:
@@ -1152,7 +1113,7 @@ it('still writes an override for a genuinely hand-written file', function () {
 });
 
 /*
- * A pasted file that sets its OWN resource limits (RC-42).
+ * A pasted file that sets its OWN resource limits.
  *
  * Compose refuses two spellings of one limit with different values — "can't set
  * distinct values on 'mem_limit' and 'deploy.resources.limits.memory'" — so an
@@ -1199,8 +1160,7 @@ function pastedWeb(array $extra = []): array
 }
 
 it('writes the memory ceiling under deploy when the pasted service sets it there', function () {
-    // The live repro: `deploy.resources.limits.memory: 128m`, which
-    // `docker compose config` resolves to bytes.
+    // `deploy.resources.limits.memory: 128m`, which `docker compose config` resolves to bytes.
     $override = pastedOverride([
         'web' => pastedWeb(['deploy' => ['resources' => ['limits' => ['memory' => '134217728']]]]),
     ]);
@@ -1298,10 +1258,9 @@ it('gives each pasted service the limit form it uses itself', function () {
 });
 
 it('quotes the deploy memory limit, which Compose only accepts as a string', function (string $own, ?string $siteLimit, string $expected) {
-    // RC-42-FIX, found live: `deploy.resources.limits.memory: 134217728` fails
-    // `docker compose config` with "must be a string", so the site never starts.
-    // `mem_limit` takes a number; this key does not. Both the service's own
-    // value and the ceiling must reach Compose as a string.
+    // `deploy.resources.limits.memory: 134217728` fails `docker compose config` with "must be a
+    // string", so the site never starts. `mem_limit` takes a number; this key does not. Both the
+    // service's own value and the ceiling must reach Compose as a string.
     $override = pastedOverride(
         ['web' => pastedWeb(['deploy' => ['resources' => ['limits' => ['memory' => $own]]]])],
         $siteLimit === null ? [] : ['memory_limit' => $siteLimit],
@@ -1315,17 +1274,14 @@ it('quotes the deploy memory limit, which Compose only accepts as a string', fun
 ]);
 
 /*
- * Where the site's own directory is mounted (DS-01).
+ * Where the site's own directory is mounted.
  *
- * Every simple-mode container used to get `public_html` bound over `/app`, which
- * is where changedetection.io, Gotify, Actual, Umami and every linuxserver.io
- * image keep their program. The empty directory hid it, the container
- * crash-looped, and the site showed "Setup failed".
+ * Binding `public_html` over `/app` hides the program of images that keep it there
+ * (changedetection.io, Gotify, Actual, Umami, every linuxserver.io image): the container
+ * crash-loops and the site shows "Setup failed".
  *
- * The goldens under tests/Fixtures/docker were rendered by the code BEFORE this
- * change. A site created before it has no `site_mount_path`, and its file must
- * stay byte-for-byte what it was — a "changed" compose file on the next deploy
- * is a diff nobody can tell from a real one.
+ * The goldens under tests/Fixtures/docker were rendered before `site_mount_path` existed. A site
+ * created before it has none, and its file must stay byte-for-byte what it was.
  */
 
 it('renders an existing site byte-for-byte as before the fix', function () {
@@ -1357,7 +1313,7 @@ it('never mounts a new site over /app', function () {
     $application = containerApp();
     $application->forceFill([
         'site_mount_path' => ContainerMountPath::SITE_MOUNT,
-        // Gotify keeps its data here. Refused before the fix; a volume now.
+        // Gotify keeps its data here: a volume under `/app` is allowed.
         'volume_mounts' => [['volume' => 'gotify-data', 'path' => '/app/data']],
     ])->save();
 
@@ -1421,10 +1377,9 @@ it('refuses to render a compose file from a value with a line break in it (DS-08
 ]);
 
 describe('a one-click app\'s limits changed after install (F1)', function () {
-    // Found in Docker QA on a real box: NocoDB saved at 768m kept running at 1 GiB.
-    // The recipe's file carries the limit of install day, and the broad override
-    // is switched off for one-click apps (it capped their database at the app's
-    // number). So a narrow one names the app service alone.
+    // The recipe's file carries the limit of install day, and the broad override is switched off for
+    // one-click apps (it capped their database at the app's number). So a narrow one names the app
+    // service alone: a NocoDB saved at 768m must not keep running at 1 GiB.
 
     /**
      * Apply a Ghost one-click whose installed file says ghost 640m / 0.5 CPU and
@@ -1502,8 +1457,7 @@ describe('a one-click app\'s limits changed after install (F1)', function () {
     });
 
     it('writes both spellings, one value, when the app service uses both', function () {
-        // Compose refuses two different values for the pair (RC-42); one value in
-        // both places is accepted.
+        // Compose refuses two different values for the pair; one value in both places is accepted.
         [$override] = f1Apply('1g', null, ['mem_limit' => '671088640', 'deploy' => ['resources' => ['limits' => ['memory' => '671088640']]]]);
 
         expect($override)->toContain("    mem_limit: 1g\n")->toContain("          memory: \"1g\"\n");
@@ -1554,11 +1508,10 @@ it('ships every recipe with exactly one app service, which a limit change target
 });
 
 describe('a container left on no network after a failed start', function () {
-    // Found in Docker QA on a real box: a port clash made `compose up` fail while
-    // Docker wired the container's network, and Docker left Ghost attached to
-    // nothing. Every later `up` just started that same container — no port, no
-    // route to its database — while MySQL kept running, so a resume said 200 and
-    // the site was 502. Pull and redeploy refuses a stopped container.
+    // A port clash makes `compose up` fail while Docker wires the container's network, leaving the
+    // container attached to nothing. Every later `up` just starts that same container (no port, no
+    // route to its database), so a resume said 200 and the site was 502. Pull and redeploy refuses a
+    // stopped container.
 
     /**
      * @param  string  $networks  `docker inspect` lines: "<service> <network count>".

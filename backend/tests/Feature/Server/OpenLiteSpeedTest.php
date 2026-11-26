@@ -28,11 +28,9 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 /**
  * OpenLiteSpeed support.
  *
- * Everything here is verified against the *shape* of OLS's configuration, not
- * against a running OLS server — there was none available. So these prove the
- * dangerous logic (rebuilding a file every site depends on, and the order in
- * which files and shared entries change) and deliberately do not claim the
- * paths are right. See the class docblocks.
+ * Verified against the *shape* of OLS's configuration, not a running OLS server: these prove the
+ * dangerous logic (rebuilding the shared config, and the order in which files and shared entries
+ * change), not that the paths are right.
  */
 beforeEach(function () {
     ServerCapability::query()->delete();
@@ -87,9 +85,8 @@ function olsConfig(string $managed = ''): string
 /**
  * A fake filesystem keyed by path.
  *
- * Keyed deliberately: `apply()` writes the vhost file *and* the shared config,
- * and a fake that returned "the last thing written" for any `cat` would hand
- * the driver its own vhost back when it went to read httpd_config.conf.
+ * Keyed because `apply()` writes the vhost file *and* the shared config; a "last thing written"
+ * fake would hand the driver its own vhost back when it reads httpd_config.conf.
  */
 function fakeOls(string $config, bool $testPasses = true, bool $tlsFallbackPresent = true): ArrayObject
 {
@@ -101,9 +98,8 @@ function fakeOls(string $config, bool $testPasses = true, bool $tlsFallbackPrese
         $command = $process->command;
         $path = (string) ($command[1] ?? '');
 
-        // `test -s <cert> -a -s <key>` — whether the shared TLS-reject pair is
-        // on disk. Answered explicitly rather than by the catch-all success at
-        // the bottom, because a secure listener is only written when it is.
+        // `test -s <cert> -a -s <key>`: whether the shared TLS-reject pair is on disk. Answered
+        // explicitly because a secure listener is only written when it is.
         if (($command[0] ?? '') === 'test') {
             return Process::result(exitCode: $tlsFallbackPresent ? 0 : 1);
         }
@@ -124,17 +120,11 @@ function fakeOls(string $config, bool $testPasses = true, bool $tlsFallbackPrese
             return Process::result(output: '');
         }
 
-        // Matches the config test (`openlitespeed -t`) and the restart
-        // (`lswsctrl restart`) alike — both live under lsws/bin, and the fake
-        // has to follow the real command names or a passing test only proves
-        // that nothing ran.
+        // Matches the config test (`openlitespeed -t`) and the restart (`lswsctrl restart`): the
+        // fake must follow the real command names or a passing test proves nothing ran.
         if (str_contains((string) ($command[0] ?? ''), '/lsws/bin/')) {
-            // Exit 2 and the reason on *stdout*, which is what a real failing
-            // `openlitespeed -t` does: it prints the contents of its error log
-            // and exits 2 when they contain `[ERROR]`. This said exit 1 with
-            // the reason on stderr, and exit 1 is OLS's code for "warnings,
-            // nothing wrong" — so the one test asserting a refused config was
-            // asserting it against a code that does not mean refusal.
+            // Exit 2 with the reason on *stdout*, like a real failing `openlitespeed -t` (exit 1
+            // means "warnings, nothing wrong", not refusal).
             return $testPasses
                 ? Process::result(output: 'ok')
                 : Process::result(output: "[ERROR] [config:vhost:shop] invalid directive\n", exitCode: 2);
@@ -170,11 +160,9 @@ describe('the shared httpd_config.conf', function () {
     });
 
     /*
-     * A map inside the panel's markers with no virtualHost block says nothing
-     * about where the site lives, and the rebuild rendered its block with an
-     * empty root: `vhRoot /`. OpenLiteSpeed accepts that until the site's own
-     * config names a log under $VH_ROOT, so it survived the config test and
-     * broke the next change instead (seen on a real server, 2026-09-24).
+     * A map inside the panel's markers with no virtualHost block says nothing about where the
+     * site lives; rendering it with an empty root (`vhRoot /`) passes the config test but breaks
+     * the next change once the site's config names a log under $VH_ROOT.
      */
     it('refuses to rebuild when a site in its maps has no known directory, and changes nothing', function () {
         $orphan = "  ### BEGIN panel-managed maps — do not edit between these markers\n"
@@ -192,12 +180,8 @@ describe('the shared httpd_config.conf', function () {
     });
 
     it('creates a secure listener when the server has none', function () {
-        // OpenLiteSpeed binds certificates to a listener, not to a vhost. A
-        // fresh install ships one plain listener and no secure one, and
-        // install.sh only creates `Defaultssl` when the panel itself gets TLS
-        // — so on an HTTP panel this used to be skipped silently. Issuing a
-        // certificate then succeeded, `vhssl` was written, and nothing on the
-        // box was listening on 443.
+        // OLS binds certificates to a listener, not a vhost. A fresh install has no secure
+        // listener, so issuing a certificate on an HTTP panel wrote `vhssl` with nothing on 443.
         fakeOls(olsConfig());
 
         app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
@@ -242,19 +226,17 @@ describe('the shared httpd_config.conf', function () {
     });
 
     it('does not create a listener naming a key pair that is not on disk', function () {
-        // A secure listener pointing at files that are not there does not
-        // break one site — OpenLiteSpeed will not start at all, taking every
-        // site with it. And `openlitespeed -t` has been seen passing a config
-        // it should have rejected, so this cannot be left to the config test.
+        // A secure listener pointing at missing files stops OpenLiteSpeed from starting at all,
+        // taking every site with it; `openlitespeed -t` can pass such a config, so this cannot
+        // be left to the config test.
         fakeOls(olsConfig(), tlsFallbackPresent: false);
 
         app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
 
         expect(sharedConfig())
             ->not->toContain('listener Defaultssl {')
-            // …and the site is still registered on plain HTTP. Refusing to add
-            // a site because the server has no TLS material would be worse
-            // than the problem.
+            // …and the site is still registered on plain HTTP: refusing it for lack of TLS
+            // material would be worse.
             ->toContain('virtualHost shop.test {');
     });
 
@@ -310,15 +292,10 @@ describe('the shared httpd_config.conf', function () {
 
     it('takes over an entry the old panel left outside the markers', function () {
         /*
-         * The migration case, and the one that would have damaged a real
-         * server. A box that ran the old panel already has `virtualHost <site>`
-         * and `map <site>` in httpd_config.conf, written before these markers
-         * existed. `sites()` reads the managed regions only — correct for a
-         * file this panel wrote, wrong for one it inherited — so registering
-         * the site would add a second definition beside the first.
-         *
-         * Two `virtualHost` blocks for one name, in the file whose mistakes are
-         * not one broken site but every site on the box.
+         * Migration: a box that ran the old panel already has `virtualHost <site>` and `map <site>`
+         * in httpd_config.conf, written before these markers existed. `sites()` reads only the
+         * managed regions, so registering the site would add a second definition beside the first
+         * — two `virtualHost` blocks for one name in the file every site depends on.
          */
         $migrated = <<<'CONF'
         serverName                SomeServer
@@ -358,13 +335,10 @@ describe('the shared httpd_config.conf', function () {
 
     it('refuses to take over a vhost that is not a site', function (string $name, string $root) {
         /*
-         * The other side of the takeover above, and the one that happened on a
-         * live box (2026-09-29): a site created as `panel` absorbed the
-         * panel's own `virtualHost panel` and both of its maps, and the UI
-         * answered 404. A name is not enough to tell a site from the server's
-         * own vhosts; where it is rooted is — a site's vhRoot is its folder,
-         * install.sh roots the panel in the config directory, and
-         * OpenLiteSpeed's sample uses a relative path.
+         * The other side of the takeover: a site created as `panel` absorbed the panel's own
+         * `virtualHost panel` and both its maps. A name cannot tell a site from the server's own
+         * vhosts; where it is rooted can — a site's vhRoot is its folder, install.sh roots the
+         * panel in the config directory, and OpenLiteSpeed's sample uses a relative path.
          */
         $original = <<<CONF
         serverName                SomeServer
@@ -413,10 +387,8 @@ describe('the shared httpd_config.conf', function () {
 
         app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
 
-        // With `restrained 1` the vhost may only reach files under vhRoot. Set
-        // to the config directory — as it was — the document root sits outside
-        // the only tree the site is allowed to read, and every request is
-        // refused. The site would never have served a single page.
+        // With `restrained 1` the vhost may only reach files under vhRoot. Rooted at the config
+        // directory, the document root sits outside that tree and every request is refused.
         expect(sharedConfig())
             ->toContain('vhRoot                  /home/shopuser/shop.test/')
             ->toContain('configFile              /usr/local/lsws/conf/vhosts/shop.test/vhconf.conf');
@@ -504,9 +476,8 @@ describe('the shared httpd_config.conf', function () {
     });
 
     it('keeps regex metacharacters in paths intact', function () {
-        // `$1` and `\1` are backreferences in a replacement string. vhost_root
-        // is operator-set config, so it can contain them, and the old
-        // preg_replace ate them silently — in the file every site depends on.
+        // `$1` and `\1` are backreferences in a replacement string. vhost_root is operator-set
+        // config, so it can contain them; preg_replace would eat them silently.
         config(['server.web_server_drivers.openlitespeed.vhost_root' => '/srv/$1/vhosts']);
         fakeOls(olsConfig());
 
@@ -577,10 +548,8 @@ describe('the driver', function () {
     });
 
     it('writes Basic Auth in the syntax OpenLiteSpeed accepts', function (string $profile) {
-        // Verified on OpenLiteSpeed 1.9.2 (2026-09-23). The earlier block had a
-        // `userNameSeparator` line OLS rejects ("Not support
-        // [usernameseparator :]"), so every attempt to switch protection on
-        // failed its config test and was rolled back — on all three profiles.
+        // OLS rejects a `userNameSeparator` line ("Not support [usernameseparator :]"), which
+        // failed the config test and rolled back every attempt to switch protection on.
         $this->app_->forceFill([
             'serving_profile' => $profile,
             'site_type' => $profile === 'node' ? 'n8n' : 'wordpress',
@@ -605,11 +574,9 @@ describe('the driver', function () {
     })->with(['php', 'static', 'node']);
 
     /*
-     * OLS rotates a site's access and error logs itself, and the panel's
-     * logrotate policy leaves them alone, so the vhost is the only place that
-     * says how long rotated copies stay. Without keepDays OLS keeps every
-     * rotated error log; v7 kept 30 days of both and compressed old access
-     * logs (2026-11-22).
+     * OLS rotates a site's access and error logs itself and the panel's logrotate policy leaves
+     * them alone, so the vhost is the only place that says how long rotated copies stay. Without
+     * keepDays OLS keeps every rotated error log; v7 kept 30 days of both.
      */
     it('keeps rotated logs for 30 days and compresses old access logs', function (string $profile, bool $waf) {
         $this->app_->forceFill([
@@ -638,10 +605,8 @@ describe('the driver', function () {
     })->with(['php', 'static', 'node'])->with(['waf off' => false, 'waf on' => true]);
 
     it('writes nothing for a site whose name is one of the server\'s own vhosts', function () {
-        // The shared config refuses on its own, but by then the site's
-        // `vhconf.conf` has been written — into the panel's own vhost folder,
-        // which is what took the UI down on 2026-09-29. So the driver asks
-        // first.
+        // The shared config refuses on its own, but by then the site's `vhconf.conf` has been
+        // written into the panel's own vhost folder. So the driver asks first.
         $this->app_->forceFill(['slug' => 'panel'])->save();
 
         $runs = fakeOls(<<<'CONF'
@@ -673,12 +638,8 @@ describe('the driver', function () {
 
         app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop.test');
 
-        // Found by the path each step touches, not by the binary it runs.
-        // `apply()` issues several `mkdir`s, several `tee`s and more than one
-        // `cat`, so "the first tee" named the PHP ini file and "the first cat"
-        // named whichever read happened to come first — neither of which is
-        // the step this test is about. Identify the file, and the assertion
-        // keeps meaning what its name says however many reads get added.
+        // Found by the path each step touches, not by the binary it runs: `apply()` issues several
+        // `mkdir`s, `tee`s and `cat`s, so "the first tee" would name the wrong step.
         $commands = collect($runs)->pluck('command')->map(fn ($c) => implode(' ', $c))->values();
 
         $siteDir = $commands->search(fn (string $c) => str_starts_with($c, 'mkdir') && str_contains($c, '/vhosts/shop'));
@@ -697,9 +658,8 @@ describe('the driver', function () {
     });
 
     it("writes the site's PHP settings as an ini file of its own", function () {
-        // There is no pool on this stack, so nothing else carries these. Until
-        // this existed the PHP screen saved memory_limit and friends with a
-        // 200 and applied none of them.
+        // There is no pool on this stack, so nothing else carries these; without it the PHP screen
+        // saved memory_limit and friends with a 200 and applied none of them.
         ApplicationPhpSettings::create([
             'application_id' => $this->app_->id,
             'memory_limit' => '512M',
@@ -734,11 +694,9 @@ describe('the driver', function () {
     });
 
     it('creates the session directory the ini points at', function () {
-        // The ini named session.save_path and nothing created it. FPM refuses
-        // to start a pool whose session path is missing, so on that stack the
-        // mistake is loud; LSPHP starts happily and every site dies later at
-        // session_start() with "No such file or directory". Seen in the wild
-        // on phpMyAdmin, which cannot show a login page without a session.
+        // The ini named session.save_path and nothing created it. FPM refuses to start a pool
+        // whose session path is missing; LSPHP starts happily and every site dies later at
+        // session_start() with "No such file or directory".
         $runs = fakeOls(olsConfig());
 
         app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop/public_html');
@@ -748,19 +706,17 @@ describe('the driver', function () {
         );
 
         expect($commands)->toContain('mkdir -p /home/shopuser/shop/.panel/sessions')
-            // -h and the mode by its owner: neither may follow a `sessions`
-            // that was replaced by a link (the `.panel` bug, 2026-09-29).
+            // -h and the mode by its owner: neither may follow a `sessions` that was replaced by
+            // a link.
             ->toContain('chown -h shopuser:shopuser /home/shopuser/shop/.panel/sessions')
             // As sensitive as the cookies that name the files in it.
             ->toContain('runuser -u shopuser -- chmod 0700 /home/shopuser/shop/.panel/sessions');
     });
 
     it('hands the site its sessions without handing it its own limits', function () {
-        // The pool builder chowns -R from .panel down, which is safe on FPM
-        // because the limits live in a pool file under /etc. Here they live in
-        // .panel/php/zz-panel.ini. A recursive chown would let a site rewrite
-        // its own disable_functions and open_basedir -- lifting every
-        // restriction placed on it by editing a file it owns.
+        // Unlike FPM (limits in a pool file under /etc), the limits here live in
+        // .panel/php/zz-panel.ini, so a recursive chown would let a site rewrite its own
+        // disable_functions and open_basedir.
         $runs = fakeOls(olsConfig());
 
         app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop/public_html');
@@ -778,13 +734,9 @@ describe('the driver', function () {
     });
 
     it('creates the PHP error log it names, owned by the site', function () {
-        // logs/ is root-owned 0750 with the site as group -- read and traverse
-        // for the site, write for nobody but root. That works everywhere else
-        // because a root master opens the file first: nginx and Apache in
-        // their masters, php-fpm before it drops to the pool user. lshttpd
-        // spawns LSPHP *as* extUser and hands it nothing, so PHP opened the
-        // path itself, was refused, and fell back to stderr -- the panel's PHP
-        // error log viewer was empty on every OLS site.
+        // logs/ is root-owned 0750 with the site as group. On other stacks a root master opens
+        // the file first; lshttpd spawns LSPHP *as* extUser and hands it nothing, so PHP opened
+        // the path itself, was refused, and fell back to stderr: an empty PHP error log viewer.
         $runs = fakeOls(olsConfig());
 
         app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop/public_html');
@@ -798,11 +750,9 @@ describe('the driver', function () {
     });
 
     it('creates the file without making the log directory writable', function () {
-        // THE POINT OF DOING IT THIS WAY. Write permission on a directory is
-        // permission to unlink what is inside it, so a site that owned logs/
-        // could replace access.log with a symlink to /etc/cron.d and have a
-        // root process append attacker-chosen text into it. Owning one file
-        // it already writes gives it nothing it did not have.
+        // Write permission on a directory is permission to unlink its contents: a site owning
+        // logs/ could swap access.log for a symlink to /etc/cron.d and have root append
+        // attacker-chosen text into it. Owning the one file it already writes gives it nothing.
         $runs = fakeOls(olsConfig());
 
         app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop/public_html');
@@ -841,9 +791,8 @@ describe('the driver', function () {
     });
 
     it('accepts PHP settings instead of demanding a pool that cannot exist', function () {
-        // The guard asked "does this stack have pools", which is false here —
-        // so it never fired on the one stack where nothing else applied these
-        // values either. Saving returned 200 and the server did not move.
+        // The guard asked "does this stack have pools", which is false here, so saving returned
+        // 200 and the server did not move.
         $this->seed(PermissionSeeder::class);
         $admin = User::factory()->admin()->create();
 
@@ -858,11 +807,8 @@ describe('the driver', function () {
     });
 
     it('names the account the site actually runs as', function () {
-        // `runs_as` was inferred from `isolated_at`, a column only the pool
-        // feature sets — so every OpenLiteSpeed site was reported as running
-        // under www-data. The vhost names the site's own user as `extUser`, so
-        // it has never run as www-data, and this is the screen someone opens
-        // to find out which account it is.
+        // `runs_as` was inferred from `isolated_at`, which only the pool feature sets, so every
+        // OpenLiteSpeed site showed as www-data. The vhost names the site's user as `extUser`.
         $this->seed(PermissionSeeder::class);
         $admin = User::factory()->admin()->create();
 
@@ -879,11 +825,9 @@ describe('the driver', function () {
     });
 
     it('creates the directory the config test writes its verdict into', function () {
-        // `openlitespeed -t` decides its own exit code by reading
-        // {tmp}/testconf back, and test mode is the one mode that does not
-        // create that directory — so with /tmp/lshttpd missing, which is the
-        // normal state of a rebooted box and the permanent state of one where
-        // lshttpd has never started, the test exits 0 on any config at all.
+        // `openlitespeed -t` reads {tmp}/testconf back to pick its exit code, and test mode does
+        // not create that directory. With /tmp/lshttpd missing (a rebooted box, or lshttpd never
+        // started) the test exits 0 on any config at all.
         $runs = fakeOls(olsConfig());
 
         app(OlsDriver::class)->test();
@@ -898,10 +842,9 @@ describe('the driver', function () {
     });
 
     it('prepares the config test for the shared file too, not only for a vhost', function () {
-        // The rollback in OlsSharedConfig is the panel's last defence for the
-        // file every site on the box shares, and it used to run the raw
-        // command — so the guard could not fail for the same reason. Both
-        // callers go through OlsConfigCheck now.
+        // The rollback in OlsSharedConfig is the last defence for the shared config and used to
+        // run the raw command, so the guard could not fail there either. Both callers go
+        // through OlsConfigCheck now.
         $runs = fakeOls(olsConfig());
 
         app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
@@ -910,8 +853,8 @@ describe('the driver', function () {
     });
 
     it('asks again when the config test is killed by a restart, not by the config', function () {
-        // About six seconds after a graceful restart OpenLiteSpeed kills every
-        // `openlitespeed` process, a running `-t` included (measured on 1.9.4).
+        // About six seconds after a graceful restart OpenLiteSpeed kills every `openlitespeed`
+        // process, a running `-t` included.
         $tests = 0;
         Process::fake(function ($process) use (&$tests) {
             if (in_array('/usr/local/lsws/bin/openlitespeed', $process->command, true)) {
@@ -951,11 +894,9 @@ describe('the driver', function () {
     it('passes the config test on a warning, rather than refusing the site', function () {
         Process::fake(fn () => Process::result(output: "[WARN] [config] deprecated directive\n", exitCode: 1));
 
-        // Exit 1 means the log had content and none of it was an error. Until
-        // the directory above was created the test exited 0 regardless, so
-        // exit 1 has never been reachable on a real server — treating it as
-        // failure now would be a brand-new refusal shipped as a fix, and it
-        // would refuse to create a site over a deprecation notice.
+        // Exit 1 means the log had content and none of it was an error. It was unreachable before
+        // the directory above was created; treating it as failure now would be a brand-new refusal
+        // (a deprecation notice would block site creation).
         $result = app(OlsDriver::class)->test();
 
         expect($result->failed())->toBeFalse()
@@ -986,17 +927,14 @@ describe('the driver', function () {
     });
 
     it('does not delete the vhost files when the shared entry did not go', function () {
-        // The markers are comments, and the OLS WebAdmin console strips
-        // comments when it rewrites the file. The entries then survive outside
-        // the region, `unregister()` changes nothing and reports success, and
-        // deleting the file it still points at breaks config_test for every
-        // site on the box.
+        // The markers are comments, and the OLS WebAdmin console strips comments when it rewrites
+        // the file. The entries then survive outside the region, `unregister()` changes nothing,
+        // and deleting the file it still points at breaks config_test for every site.
         fakeOls("listener Default {\n  address *:80\n  map shop shop.test\n}\n\nvirtualHost shop {\n  vhRoot /x/\n}\n");
 
         app(OlsDriver::class)->remove($this->app_);
 
-        // Nothing but the panel's own copy of the shared config, discarded
-        // once it is no longer needed (2026-10-29).
+        // Only the panel's own copy of the shared config, discarded once no longer needed.
         Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'rm' && ! str_ends_with((string) last((array) $p->command), '.panel-bak'));
     });
 
@@ -1012,8 +950,7 @@ describe('the driver', function () {
         expect(fn () => app(OlsDriver::class)->remove($this->app_))
             ->toThrow(HttpException::class);
 
-        // Nothing but the panel's own copy of the shared config, discarded
-        // once it is no longer needed (2026-10-29).
+        // Only the panel's own copy of the shared config, discarded once no longer needed.
         Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'rm' && ! str_ends_with((string) last((array) $p->command), '.panel-bak'));
     });
 
@@ -1037,11 +974,9 @@ describe('the driver', function () {
     });
 
     /*
-     * Every vhost used to name its processor `lsphp84`. OpenLiteSpeed keeps one
-     * external app per name, so the first vhost loaded supplied the extUser and
-     * socket for all of them. On a real server (2026-09-24) three sites' PHP ran
-     * as a fourth site's user, which could read their files, and the sites whose
-     * wp-config.php it could not read answered 500.
+     * Every vhost used to name its processor `lsphp84`. OpenLiteSpeed keeps one external app per
+     * name, so the first vhost loaded supplied the extUser and socket for all of them: sites' PHP
+     * ran as another site's user, which could read their files.
      */
     it('gives each site a processor of its own, and routes its PHP to that one', function () {
         fakeOls(olsConfig());
@@ -1077,15 +1012,10 @@ describe('the driver', function () {
 
         $config = app(OlsDriver::class)->renderConfig($this->app_, '/home/shopuser/shop.test');
 
-        // `context ~ /re/` is nginx. OLS spells it `exp:`, and the wrong one
-        // fails the config test — which would have stopped every OLS site from
-        // provisioning, not just broken this rule.
-        // `panel` is in the list because the Basic-Auth credential file lives
-        // at `{documentRoot}/.panel/.htpasswd` — inside the served directory,
-        // so the deny rule is the only thing keeping the password hash off
-        // the public internet. nginx and Apache get that from a lookahead;
-        // OLS has to name it.
-        // Unanchored: `^/` refused /.env and served /sub/.env (measured).
+        // `context ~ /re/` is nginx; OLS spells it `exp:` and the wrong one fails the config test.
+        // `panel` is listed because the Basic-Auth hash lives in `.panel/.htpasswd` inside the
+        // served directory; nginx/Apache cover it with a lookahead, OLS has to name it.
+        // Unanchored: `^/` refused /.env and served /sub/.env.
         expect($config)->toContain('context exp:/\.(git|svn|hg|bzr|env|panel) {')
             ->and($config)->not->toContain('context exp:^/\.(git')
             ->and($config)->not->toContain('context ~')
@@ -1103,16 +1033,14 @@ describe('the driver', function () {
 
         app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop/public_html');
 
-        // OLS does not create it, and silently falls back to the server-wide
-        // log — so a site's errors land where nobody thinks to look.
+        // OLS does not create it and silently falls back to the server-wide log, so a site's
+        // errors land where nobody looks.
         //
-        // Under the site's own root (slug), not its domain: the vhost root is
-        // also what `restrained 1` confines the vhost to, so a domain-named
-        // one put the document root outside the restraint — and moved a live
-        // site's logs every time someone changed its domain.
-        // Every mkdir, not just the first: apply() also guarantees the
-        // `.panel/` directory, so picking one command and hoping it is the
-        // right one makes this assertion depend on call order.
+        // Under the site's own root (slug), not its domain: the vhost root is also what
+        // `restrained 1` confines the vhost to, and a domain-named one put the document root
+        // outside it.
+        // Every mkdir, not just the first: apply() also guarantees `.panel/`, so picking one
+        // command makes this assertion depend on call order.
         expect(collect($runs)->pluck('command')
             ->filter(fn ($c) => ($c[0] ?? '') === 'mkdir')
             ->flatten()
@@ -1188,17 +1116,10 @@ describe('the lsphp stack', function () {
     });
 
     /*
-     * Reported from a real server: "when I change the default PHP I get an
-     * error on the OLS stack."
-     *
-     *   sudo -n update-alternatives --set php /usr/local/lsws/lsphp85/bin/php
-     *   update-alternatives: error: no alternatives for php
-     *
-     * `--set` selects a choice inside an existing link group. ondrej's
-     * php8.x-cli registers that group; LiteSpeed's packages install an
-     * interpreter and never call update-alternatives at all. So on a box with
-     * no ondrej PHP there was nothing to set, and the panel had no way to
-     * change the CLI default on its own stack.
+     * `sudo -n update-alternatives --set php /usr/local/lsws/lsphp85/bin/php` fails with "no
+     * alternatives for php": `--set` selects a choice inside an existing link group, ondrej's
+     * php8.x-cli registers that group, and LiteSpeed's packages never call update-alternatives.
+     * So without ondrej PHP there was nothing to set.
      */
     it('creates the alternatives group before selecting it', function () {
         $runs = new ArrayObject;
@@ -1221,14 +1142,9 @@ describe('the lsphp stack', function () {
     });
 
     /*
-     * Measured on a real OLS server, and the reason the first fix was not
-     * enough: the alternative was set, `/usr/bin/php -v` reported the new
-     * version, and `php -v` reported the old one.
-     *
-     * install.sh creates /usr/local/bin/php on this stack so the PHARs whose
-     * shebang is `#!/usr/bin/env php` have a php on PATH -- and /usr/local/bin
-     * precedes /usr/bin there. That symlink, not the alternative, is what `php`
-     * resolves through.
+     * The alternative alone is not enough: install.sh creates /usr/local/bin/php on this stack
+     * (for PHARs with an `#!/usr/bin/env php` shebang) and /usr/local/bin precedes /usr/bin, so
+     * that symlink, not the alternative, is what `php` resolves through.
      */
     it('moves the symlink that actually wins on PATH', function () {
         $runs = new ArrayObject;
@@ -1256,9 +1172,7 @@ describe('the lsphp stack', function () {
 
         app(PhpRuntime::class)->setDefault('8.4');
 
-        // `<tree>/bin/phar8.4` is there on every lsphp tree. An earlier version
-        // of this claimed LSPHP had no phar, copied from the v7 handler's
-        // omission rather than checked.
+        // `<tree>/bin/phar8.4` is there on every lsphp tree.
         $phar = $this->lsws.'/lsphp84/bin/phar8.4';
 
         expect(collect($runs))
@@ -1289,12 +1203,9 @@ describe('the lsphp stack', function () {
     });
 
     it('reads back the default it just set', function () {
-        // The second half of the same bug. The version used to be pattern-matched
-        // out of the path with `php(\d+\.\d+)`, which is true of
-        // /usr/bin/php8.4 and false of every lsphp path — LiteSpeed names the
-        // tree `lsphp84` with no dot and ends the path in a bare `php`. So even
-        // once --set worked, an OLS box would report "no default" for ever and
-        // no row would be marked.
+        // The version used to be pattern-matched out of the path with `php(\d+\.\d+)`, true of
+        // /usr/bin/php8.4 and false of every lsphp path: LiteSpeed names the tree `lsphp84` with
+        // no dot and ends the path in a bare `php`. Without the fix no row would be marked default.
         $binary = $this->lsws.'/lsphp84/bin/php';
 
         Process::fake(fn ($process) => ($process->command[0] ?? '') === 'update-alternatives'
@@ -1316,9 +1227,8 @@ describe('the lsphp stack', function () {
     });
 
     /*
-     * install.sh links /usr/local/bin/php to the panel's lsphp and registers no
-     * alternative at all, so reading only update-alternatives left every fresh
-     * OLS server with no default on the PHP screen (seen live, 2026-09-23).
+     * install.sh links /usr/local/bin/php to the panel's lsphp and registers no alternative, so
+     * reading only update-alternatives left fresh OLS servers with no default on the PHP screen.
      */
     it('reads the default from the php link on PATH when no alternative is registered', function () {
         $link = $this->lsws.'/usr-local-bin-php';
@@ -1349,8 +1259,8 @@ describe('the lsphp stack', function () {
     });
 
     it('fails the lsphp config test when php could not parse its ini', function () {
-        // `lsphp -c php.ini -v` exits 0 over a syntax error and runs with
-        // every directive after it ignored (measured on OLS, 2026-09-23).
+        // `lsphp -c php.ini -v` exits 0 over a syntax error and runs with every directive after it
+        // ignored.
         Process::fake(fn () => Process::result(
             output: "PHP 8.4.25 (cli) (built: Sep 12 2026)\n",
             errorOutput: "PHP:  syntax error, unexpected end of file, expecting TC_DOLLAR_CURLY or TC_QUOTED_STRING or '\"' in {$this->lsws}/lsphp84/etc/php/8.4/litespeed/php.ini on line 4\n",
@@ -1364,14 +1274,10 @@ describe('the lsphp stack', function () {
     });
 
     it('does not report a version whose directory has no interpreter in it', function () {
-        // Reported from a real server: the dashboard offered PHP 8.3 on a box
-        // that only had 8.4. A `lsphp83/` tree is left behind by a removed
-        // version, and LiteSpeed's packaging creates the tree before the
-        // interpreter lands in it — so the directory is not the evidence.
-        //
-        // It is not only cosmetic: an offered version can be assigned to a
-        // site, and the vhost then points OpenLiteSpeed at a binary that is
-        // not there.
+        // The dashboard offered PHP 8.3 on a box that only had 8.4: a `lsphp83/` tree is left
+        // behind by a removed version, and LiteSpeed's packaging creates the tree before the
+        // interpreter lands in it, so the directory is not the evidence. An offered version can
+        // be assigned to a site, and the vhost then points at a binary that is not there.
         File::makeDirectory($this->lsws.'/lsphp83/bin', 0755, true);
 
         expect(app(LsphpPhpStack::class)->versions())->toBe(['8.4'])
@@ -1443,17 +1349,10 @@ describe('the lsphp stack', function () {
     });
 
     it('restarts the web server so the new extension is actually loaded', function () {
-        // The install put the package on disk, logged `extension_enabled` and
-        // showed it enabled in the UI -- while every running LSPHP worker went
-        // on without it until 5000 requests recycled them. A setting that
-        // reports success and changes nothing is the bug this stack's PHP work
-        // keeps being about.
-        //
-        // The cause was a guard testing `serviceName()`, which is null here
-        // because LSPHP has no per-version unit. It does not need one: it
-        // reloads by restarting the web server that spawns it. The test above
-        // asserts what must NOT run; without this one, nothing asserted that
-        // anything must.
+        // The install put the package on disk and showed it enabled in the UI, while every
+        // running LSPHP worker went on without it until recycled. The guard tested `serviceName()`,
+        // which is null here (no per-version unit); LSPHP reloads by restarting the web server
+        // that spawns it. The test above asserts what must NOT run; this one asserts what must.
         Process::fake(fn ($process) => Process::result(output: ''));
 
         app(PhpExtensionManager::class)->install('8.4', 'redis');
@@ -1480,10 +1379,9 @@ describe('the lsphp stack', function () {
     });
 
     it('falls through to the other places LSPHP gets installed', function () {
-        // Some builds put it outside the lsws tree — and note the dot, where
-        // the lsws tree uses `lsphp84`. Taken from the Go agent that ran on
-        // production servers; a single hardcoded pattern is right on the
-        // common install and quietly wrong on the rest.
+        // Some builds put it outside the lsws tree, and note the dot where the lsws tree uses
+        // `lsphp84`. A single hardcoded pattern is right on the common install and quietly wrong
+        // on the rest.
         File::delete($this->lsws.'/lsphp84/bin/php');
 
         $elsewhere = $this->lsws.'/usr-bin';
@@ -1551,16 +1449,13 @@ describe('the site type catalog', function () {
     it('offers every site type, because nothing in them depends on the web server', function () {
         $catalog = collect(app(SiteTypeManager::class)->catalog());
 
-        // An audit found no installer or site type that mentions .htaccess,
-        // mod_rewrite or Apache, none declaring extension requirements, and no
-        // web-server concept in the SiteType contract. A shorter list here
-        // would be a guess about risk dressed as a capability limit.
-        // NodeBB is the one exception, and not because of the web server: it
-        // takes MongoDB alone, and this fixture answers only for SQL.
+        // No installer or site type mentions .htaccess, mod_rewrite or Apache, declares extension
+        // requirements, or relies on a web-server concept in the SiteType contract, so a shorter
+        // list here would be a guess about risk dressed as a capability limit.
+        // NodeBB is the exception: it takes MongoDB alone, and this fixture answers only for SQL.
         expect($catalog->where('available', false)->pluck('name')->all())->toBe(['nodebb'])
             ->and($catalog->firstWhere('name', 'nodebb')['unavailable_reason'])
             ->toBe('This application needs MongoDB / PostgreSQL, which this server does not have.')
-            // 18 since Adminer joined phpMyAdmin (2026-10-14).
             ->and($catalog)->toHaveCount(18);
     });
 
@@ -1628,13 +1523,10 @@ it('still resolves FPM on an nginx server', function () {
 /*
  * The isolation boundary on this stack.
  *
- * On nginx and Apache a site is confined by its own php-fpm pool: `user =` is
- * mandatory and a pool without one is refused by the master at startup. On
- * OpenLiteSpeed the equivalent is `extUser` in the vhost's own extprocessor,
- * and nothing refuses a vhost that omits it — OLS quietly runs the process as
- * the server's default user, `nobody`, which every other site also falls back
- * to. One identity for the whole box: each site can read every other site's
- * `.env`, and nothing about the server looks wrong.
+ * On nginx and Apache a site is confined by its own php-fpm pool: `user =` is mandatory. On
+ * OpenLiteSpeed the equivalent is `extUser` in the vhost's own extprocessor, and nothing refuses
+ * a vhost that omits it: OLS runs the process as the default user `nobody`, shared by every
+ * other site, so each site can read every other site's `.env`.
  *
  * These are the assertions that stop that shipping.
  */
@@ -1667,11 +1559,9 @@ describe('site isolation', function () {
     });
 
     it('names the socket by slug, never by domain', function () {
-        // `domain` is nullable and NOT unique -- the applications migration
-        // says so in the same comment that explains why the vhost file is not
-        // named after it. Two sites on one domain shared the socket their
-        // isolation depends on, and a site with no domain bound
-        // `lsphp84-.sock`, which every other domainless site would also want.
+        // `domain` is nullable and NOT unique, so two sites on one domain shared the socket their
+        // isolation depends on, and a site with no domain bound `lsphp84-.sock`, which every
+        // other domainless site would also want.
         $config = app(OlsDriver::class)
             ->renderConfig($this->app_, '/home/shopuser/shop/public_html');
 
@@ -1680,13 +1570,10 @@ describe('site isolation', function () {
     });
 
     it('keeps the socket bindable when the slug is long', function () {
-        // sun_path caps a unix socket at 108 bytes including the terminator.
-        // Measured on a real server: 99 characters bound, 109 failed with
-        // "AF_UNIX path too long". A site name may be 255, so an unbounded
-        // slug produces a vhost OpenLiteSpeed cannot start -- the same silent
-        // 503 as the panel's own socket bug, one layer down.
-        // forceFill, not update: `slug` is not fillable, so update() is a
-        // silent no-op here and this test passed against the short slug.
+        // sun_path caps a unix socket at 108 bytes including the terminator (99 characters bound,
+        // 109 failed with "AF_UNIX path too long"). A site name may be 255, so an unbounded slug
+        // produces a vhost OpenLiteSpeed cannot start.
+        // forceFill, not update: `slug` is not fillable, so update() is a silent no-op here.
         $this->app_->forceFill(['slug' => str_repeat('a', 120)])->save();
 
         $config = app(OlsDriver::class)
@@ -1734,10 +1621,8 @@ describe('site isolation', function () {
 /*
  * LSAPI pool sizing.
  *
- * `maxConns` is how many connections OpenLiteSpeed will open to the pool;
- * PHP_LSAPI_CHILDREN is how many workers LSPHP forks to answer them. They
- * describe one pool and must agree — this template set the first and never
- * told PHP about it.
+ * `maxConns` is how many connections OpenLiteSpeed will open to the pool; PHP_LSAPI_CHILDREN is
+ * how many workers LSPHP forks to answer them. They describe one pool and must agree.
  */
 describe('LSAPI pool', function () {
     beforeEach(function () {
