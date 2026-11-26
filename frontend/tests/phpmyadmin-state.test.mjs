@@ -256,7 +256,8 @@ test("remote access is offered from the capability, never from the engine name",
   const dialog = fs.readFileSync("components/databases/create-database-dialog.jsx", "utf8");
 
   assert.match(dialog, /engine\?\.supports_remote_users !== false/);
-  assert.match(dialog, /\.\.\.\(remoteUsers/, "the two options are spread in, not rendered disabled");
+  assert.match(dialog, /<UserFields form=\{form\} access=\{values\.connection_preference\} remoteUsers=\{remoteUsers\} \/>/);
+  assert.match(fs.readFileSync("components/databases/user-fields.jsx", "utf8"), /\.\.\.\(remoteUsers/, "the two options are spread in, not rendered disabled");
   assert.doesNotMatch(dialog, /=== "postgresql"/, "the engine name must not appear in this decision");
 
   // Switching engine has to clear a preference the new one cannot honour, or
