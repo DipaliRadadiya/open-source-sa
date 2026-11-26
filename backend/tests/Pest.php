@@ -400,3 +400,42 @@ function fakeRunningWorker(?string $commandLine, string $pid = '4242'): void
         return Process::result(exitCode: 0);
     });
 }
+
+/**
+ * A local `php -S` that the installer's curl reports reach, listening before this returns.
+ *
+ * The port comes from the kernel (port 0), not a random guess: a guess can collide with another
+ * test's server, and the reports then land in someone else's file. Retried when the port is
+ * taken in between.
+ *
+ * @return array{port: int, process: resource}
+ */
+function startReportServer(string $router): array
+{
+    for ($attempt = 0; $attempt < 5; $attempt++) {
+        $probe = stream_socket_server('tcp://127.0.0.1:0');
+        $port = (int) substr(strrchr((string) stream_socket_get_name($probe, false), ':'), 1);
+        fclose($probe);
+
+        $process = proc_open([PHP_BINARY, '-S', "127.0.0.1:{$port}", $router], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
+
+        for ($i = 0; $i < 100; $i++) {
+            if (! proc_get_status($process)['running']) {
+                break; // could not bind: try another port
+            }
+
+            $socket = @fsockopen('127.0.0.1', $port, $errno, $errstr, 0.1);
+            if ($socket !== false) {
+                fclose($socket);
+
+                return ['port' => $port, 'process' => $process];
+            }
+
+            usleep(50_000);
+        }
+
+        proc_terminate($process);
+    }
+
+    throw new RuntimeException('Could not start the local report server.');
+}

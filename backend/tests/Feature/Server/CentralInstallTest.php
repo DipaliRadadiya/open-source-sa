@@ -187,9 +187,7 @@ it('reports each step to Central as JSON, signed, with the escaping a title need
     $dir = sys_get_temp_dir().'/central-progress-'.bin2hex(random_bytes(4));
     mkdir($dir);
     file_put_contents($dir.'/router.php', '<?php file_put_contents(__DIR__."/got.jsonl", json_encode(["auth" => $_SERVER["HTTP_AUTHORIZATION"] ?? null, "body" => json_decode(file_get_contents("php://input"), true)])."\n", FILE_APPEND); http_response_code(204);');
-    $port = random_int(20000, 40000);
-    $server = proc_open([PHP_BINARY, '-S', "127.0.0.1:{$port}", $dir.'/router.php'], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
-    usleep(400_000);
+    ['port' => $port, 'process' => $server] = startReportServer($dir.'/router.php');
 
     $script = installerFunctions('json_str', 'one_line', 'send_progress').'
         PROGRESS_READY=1; DRY_RUN=0; CENTRAL_TOKEN="tok-xyz"; PROGRESS_URL="http://127.0.0.1:'.$port.'/p"
@@ -228,9 +226,7 @@ function failedProgressReport(?string $log): array
     if ($log !== null) {
         file_put_contents($dir.'/install.log', $log);
     }
-    $port = random_int(20000, 40000);
-    $server = proc_open([PHP_BINARY, '-S', "127.0.0.1:{$port}", $dir.'/router.php'], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
-    usleep(400_000);
+    ['port' => $port, 'process' => $server] = startReportServer($dir.'/router.php');
 
     $script = installerFunctions('json_str', 'json_text', 'one_line', 'redact_log', 'report_log_tail', 'send_progress').'
         PROGRESS_READY=1; DRY_RUN=0; PROGRESS_URL="http://127.0.0.1:'.$port.'/p"; LOG_FILE='.escapeshellarg($dir.'/install.log').'

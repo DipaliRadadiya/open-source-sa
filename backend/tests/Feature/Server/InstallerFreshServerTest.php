@@ -184,12 +184,7 @@ function freshPreflight(array $box, array $vars = [], string $after = ''): array
 {
     $r = $box['root'];
     file_put_contents($box['dir'].'/router.php', '<?php file_put_contents(__DIR__."/got.jsonl", file_get_contents("php://input"), FILE_APPEND); http_response_code(204);');
-    $port = random_int(20000, 40000);
-    $server = proc_open([PHP_BINARY, '-S', "127.0.0.1:{$port}", $box['dir'].'/router.php'], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
-    // Listening before the first report, or curl's refused connection loses it.
-    for ($i = 0; $i < 50 && ! @fsockopen('127.0.0.1', $port, $errno, $errstr, 0.1); $i++) {
-        usleep(100_000);
-    }
+    ['port' => $port, 'process' => $server] = startReportServer($box['dir'].'/router.php');
 
     // As root on this release: the two lines preflight cannot be pointed elsewhere.
     $preflight = str_replace(
