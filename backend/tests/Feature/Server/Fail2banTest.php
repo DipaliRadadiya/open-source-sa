@@ -60,10 +60,8 @@ function fakeFail2ban(bool $installed = true, array $bans = ['sshd' => []], bool
             return Process::result(exitCode: 0);
         }
 
-        // The panel now asks whose file jail.local is before replacing it, so
-        // the fake has to answer from the same disk `tee` above writes to —
-        // otherwise every save looks like it is about to clobber a stranger's
-        // configuration.
+        // The panel asks whose file jail.local is before replacing it, so the fake must answer from
+        // the same disk `tee` writes to, or every save looks like it clobbers a stranger's file.
         if ($command[0] === 'test' && ($command[1] ?? '') === '-f') {
             return Process::result(exitCode: File::exists($command[2] ?? '') ? 0 : 1);
         }
@@ -141,9 +139,8 @@ it('queues the install and refuses to install twice', function () {
 });
 
 /*
- * Bug #3: the install wrote every jail off, so Setup said "You're all set"
- * over a fail2ban protecting nothing. Debian's own default and v7 both turn
- * the SSH jail on; the rest stay off until asked for.
+ * The install wrote every jail off, so Setup said "You're all set" over a fail2ban protecting
+ * nothing. Debian's own default turns the SSH jail on; the rest stay off until asked for.
  */
 it('protects SSH as soon as fail2ban is installed, and nothing else', function () {
     fakeFail2ban();
@@ -215,10 +212,8 @@ it('owns jail.local, and says so in the file', function () {
 
     f2b('PUT', '/api/fail2ban', ['bantime' => 7200, 'findtime' => 900, 'maxretry' => 3])->assertOk();
 
-    // Server-level settings live in jail.local (operator decision, 2026-08-30:
-    // existing installations already have one there). The header is not a
-    // courtesy — it is how the panel recognises its own file before replacing
-    // it, so it is asserted rather than assumed.
+    // Server-level settings live in jail.local, where existing installations already have one.
+    // The header is how the panel recognises its own file before replacing it, so it is asserted.
     expect(dropIn())->toStartWith(Fail2banManager::MANAGED_HEADER)
         ->and(dropIn())->toContain('bantime = 7200');
 });
@@ -230,19 +225,12 @@ it('owns jail.local, and says so in the file', function () {
 |
 | `backend` decides where a jail looks: `systemd` reads the journal, anything
 | else reads the file named by `logpath`. Set in `[DEFAULT]` it applies to
-| EVERY jail — and this file used to assert exactly that, with
-| `toContain('backend = systemd')` on the test above. That assertion was
-| pinning the bug.
-|
-| With a systemd default, fail2ban ignores `logpath` entirely. `recidive`
-| names /var/log/fail2ban.log and every per-site application jail names the
-| site's access log, and none of them were ever opened: the jails matched
-| nothing and banned nobody while the panel reported them enabled. Measured on
-| a live server — `recidive` showed `Journal matches: _SYSTEMD_UNIT=fail2ban`
-| and `Total failed: 0` on a box that had banned nine addresses that day.
+| EVERY jail, and a systemd default makes fail2ban ignore `logpath` entirely:
+| `recidive` and the per-site jails would match nothing and ban nobody while
+| the panel reported them enabled.
 |
 | SSH is the one jail that genuinely wants the journal, so the setting belongs
-| on it. This is what v7 has always done.
+| on it.
 */
 
 it('keeps the backend off [DEFAULT], where it would apply to every jail', function () {
@@ -256,11 +244,9 @@ it('keeps the backend off [DEFAULT], where it would apply to every jail', functi
 });
 
 it('gives the SSH jail the journal, since that is where sshd logs', function () {
-    // The negative control, and the half that matters most: SSH is the jail
-    // that actually protects the box. `%(sshd_backend)s` rather than a literal
-    // `systemd` because it is fail2ban's own variable and resolves to whatever
-    // the distribution uses — hardcoding would be right on Ubuntu and wrong
-    // elsewhere.
+    // The negative control, and the half that matters most: SSH is the jail that protects the box.
+    // `%(sshd_backend)s` rather than a literal `systemd`: it is fail2ban's own variable and
+    // resolves to whatever the distribution uses.
     fakeFail2ban(bans: []);
 
     f2b('PUT', '/api/fail2ban', ['bantime' => 7200, 'findtime' => 900, 'maxretry' => 3])->assertOk();
@@ -285,10 +271,9 @@ it('leaves recidive reading its log file, not the journal', function () {
 });
 
 it('refuses to overwrite a jail.local it did not write', function () {
-    // A server migrated from another panel, or an administrator who set
-    // fail2ban up by hand, owns this file — and this feature replaces it
-    // wholesale. Losing someone's brute-force configuration silently is worse
-    // than declining to save a setting.
+    // A server migrated from another panel, or set up by hand, owns this file, and this feature
+    // replaces it wholesale. Silently losing someone's brute-force configuration is worse than
+    // declining to save a setting.
     fakeFail2ban(bans: []);
 
     $theirs = "[DEFAULT]\nbantime = 99999\nignoreip = 198.51.100.7\n";
@@ -302,9 +287,8 @@ it('refuses to overwrite a jail.local it did not write', function () {
 });
 
 it('refuses rather than guessing when it cannot read jail.local', function () {
-    // Unreadable is not "there was nothing here". Read as absent, the write
-    // goes ahead and the file is gone; the rollback path had the same bug in
-    // reverse and would `rm -f` the file it was restoring.
+    // Unreadable is not "there was nothing here": read as absent, the write goes ahead and the
+    // file is gone (and rollback would `rm -f` the file it was restoring).
     fakeFail2ban(bans: []);
     File::put("{$this->jailD}/jail.local", "[DEFAULT]\n");
 
@@ -405,26 +389,19 @@ it('refuses to ban an address that is on the ignore list', function () {
         Fail2banManager::MANAGED_HEADER."\n[DEFAULT]\nignoreip = 127.0.0.1/8 ::1 203.0.113.5\n",
     );
 
-    // Refused because the user listed it as trusted — not because it would
-    // fail. This comment used to say fail2ban drops such a ban at the next
-    // reload; measured on a live box, it does not: an address in `ignoreip`
-    // was banned by hand, survived `fail2ban-client reload`, and stayed in the
-    // nftables set. `ignoreip` governs detection, not manual bans.
+    // Refused because the user listed it as trusted, not because it would fail: `ignoreip`
+    // governs detection, not manual bans, so such a ban survives a reload.
     f2b('POST', '/api/fail2ban/bans', ['ip' => '203.0.113.5', 'jail' => 'sshd'])->assertUnprocessable();
 });
 
 /*
  * The server's own address is never bannable.
  *
- * `POST /fail2ban/bans {"ip":"127.0.0.1"}` returned 200 and fail2ban carried
- * it out — verified on a live box. The guard consulted `ignoreIps()`, which
- * subtracts ALWAYS_IGNORED on purpose (it is the user's own entries, for a UI
- * that must not offer to delete something it will re-add), so loopback was
- * never covered by it.
+ * The guard used `ignoreIps()`, which leaves out ALWAYS_IGNORED on purpose (it lists only the
+ * user's own entries), so loopback was never covered.
  *
- * Worst on `recidive`, whose rule is `meta l4proto tcp ... reject` — every
- * port, not just 22. The server would reject its own traffic to MariaDB and
- * Redis, and unbanning runs through the API that had just become unreachable.
+ * Worst on `recidive`, whose rule rejects every port, not just 22: the server would reject its
+ * own traffic to MariaDB and Redis, and unbanning goes through the API that became unreachable.
  */
 it('refuses to ban the loopback address, whatever the jail', function (string $ip, string $jail) {
     fakeFail2ban(bans: ['sshd' => [], 'recidive' => []]);
@@ -442,11 +419,9 @@ it('refuses to ban the loopback address, whatever the jail', function (string $i
 ]);
 
 it('refuses any address inside the loopback range, not just the literal one', function () {
-    // ALWAYS_IGNORED holds `127.0.0.1/8` while the address banned in the wild
-    // was `127.0.0.1` — an exact string compare can never match those two, so
-    // the CIDR handling is the fix rather than a refinement of it. A fix that
-    // only special-cased the literal address passes the test above and fails
-    // this one.
+    // ALWAYS_IGNORED holds `127.0.0.1/8` while the address banned was `127.0.0.1`: an exact string
+    // compare never matches, so CIDR handling is required. Special-casing the literal address
+    // passes the test above and fails this one.
     fakeFail2ban(bans: ['sshd' => []]);
 
     f2b('POST', '/api/fail2ban/bans', ['ip' => '127.0.0.5', 'jail' => 'sshd'])
@@ -730,9 +705,8 @@ it('shows an install in flight, and why it failed, instead of a boolean that nev
         ->assertJsonPath('fail2ban.installed', false)
         ->assertJsonPath('fail2ban.install.status', 'installing');
 
-    // Failed, with a classified reason rendered in the viewer's locale. This
-    // is the state that used to exist only as an activity-log line: the job
-    // logged and returned, and the screen went on saying false forever.
+    // Failed, with a classified reason rendered in the viewer's locale; the screen must not keep
+    // saying false forever after the job logged and returned.
     app(InstallTracker::class)->fail(
         InstallFail2ban::RUNTIME,
         InstallFail2ban::VERSION,
@@ -764,9 +738,8 @@ it('shows an install in flight, and why it failed, instead of a boolean that nev
 |--------------------------------------------------------------------------
 |
 | jail.local is written at install and when the settings screen is saved, and
-| nowhere else. So the backend fix above repairs new installs and leaves every
-| existing server with the file it was given. This command is the difference
-| between a fix that shipped and a fix that arrived.
+| nowhere else, so a template fix repairs new installs and leaves every
+| existing server with the file it was given. This command carries it over.
 */
 
 it('rewrites jail.local through the current template, keeping the settings', function () {
@@ -798,37 +771,26 @@ it('rewrites jail.local through the current template, keeping the settings', fun
 
     // The bug is gone…
     expect($default)->not->toContain('backend')
-        // …and nothing the operator chose went with it. A resync that reset
-        // someone's ban time, or dropped an address off their ignore list,
-        // would be a worse bug than the one it fixes.
+        // …and nothing the operator chose went with it. A resync that reset someone's ban time or
+        // ignore list would be a worse bug than the one it fixes.
         ->and($default)->toContain('bantime = 7200')
         ->and($default)->toContain('findtime = 900')
         ->and($default)->toContain('maxretry = 4')
         ->and($default)->toContain('203.0.113.7')
-        // Including which jails were on. SSH especially: this command runs
-        // unattended from a deploy, and silently disabling the jail that
-        // protects the box would be the worst possible outcome.
+        // Including which jails were on: this runs unattended from a deploy, and disabling the SSH
+        // jail would be the worst outcome.
         ->and($after)->toContain("[sshd]\nenabled = true")
         ->and($after)->toContain("[recidive]\nenabled = false");
 });
 
 it('reads the enabled jails from the file, not from a daemon that disagrees', function () {
-    // 🔴 The guard that stops this command doing harm. `activeJails()` asks
-    // fail2ban-client, which reports what is *running* — and that is not what
-    // the file says whenever the daemon is down, mid-restart, or simply out of
-    // step. Sourcing the rewrite from it would persist the daemon's view, and
-    // in the worst case ("nothing is running") switch off the jail protecting
-    // the operator's SSH.
+    // 🔴 The guard that stops this command doing harm. `activeJails()` asks fail2ban-client, which
+    // reports what is *running*, not what the file says (daemon down, mid-restart, out of step).
+    // Sourcing the rewrite from it would persist the daemon's view and could switch off SSH.
     //
-    // The two are made to disagree deliberately: the file has sshd on and
-    // recidive off, the daemon reports the exact opposite. Reading the daemon
-    // flips both.
-    //
-    // ⚠️ This test's first version used `running: false` and asserted sshd
-    // survived. It passed under the sabotage — with no active jails the
-    // command returns early and never writes, so the fixture's own text was
-    // what the assertion read back. A guard whose test cannot fail is not a
-    // guard; the disagreement below is what makes it measurable.
+    // The two disagree deliberately: the file has sshd on and recidive off, the daemon reports the
+    // opposite. With no active jails the command returns early without writing, so a test that
+    // read back its own fixture could not fail.
     fakeFail2ban(bans: ['recidive' => []]);
 
     File::put("{$this->jailD}/jail.local", implode("\n", [
@@ -854,9 +816,8 @@ it('reads the enabled jails from the file, not from a daemon that disagrees', fu
 });
 
 it('leaves a jail.local it does not own completely alone', function () {
-    // An administrator's own file, or one from another panel. There is no
-    // panel configuration to preserve, so there is nothing to resync — and
-    // writing one would mean a deploy deciding which jails this server runs.
+    // An administrator's own file, or one from another panel: there is no panel configuration to
+    // preserve, and a deploy must not decide which jails this server runs.
     fakeFail2ban(bans: []);
 
     $theirs = "[DEFAULT]\nbantime = 99999\n\n[sshd]\nenabled = true\n";
@@ -880,16 +841,15 @@ it('restarts only the jails that watch the SSH port, so their rule moves with it
 
     app(Fail2banManager::class)->restartSshJails();
 
-    // A reload kept the running rule on the old port (measured); a restart
-    // of that jail rebuilds it. recidive bans every port and is left alone.
+    // A reload kept the running rule on the old port; a restart of that jail rebuilds it.
+    // recidive bans every port and is left alone.
     Process::assertRan(fn ($p) => array_slice($p->command, -3) === ['reload', '--restart', 'sshd']);
     Process::assertNotRan(fn ($p) => in_array('--restart', $p->command, true) && in_array('recidive', $p->command, true));
 });
 
 /*
-| F2B-01 (old QA list): `::ffff:<ip>` is the same host to fail2ban, which
-| converts it and bans the IPv4 address, and a different string to every
-| guard. Banning `::ffff:<own IP>` on sshd locked the caller out of SSH.
+| `::ffff:<ip>` is the same host to fail2ban, which converts it and bans the IPv4 address, but a
+| different string to every guard. Banning `::ffff:<own IP>` on sshd locked the caller out of SSH.
 */
 
 it('sees through the IPv4-mapped form of the loopback address', function (string $ip) {
@@ -935,9 +895,8 @@ it('bans the address in the form fail2ban uses', function () {
 });
 
 it('keeps the per-site jails\' bans out of recidive (FB-K)', function () {
-    // recidive bans on every port for a week after three bans in a day from
-    // any jail. A site jail bans for one site; counted, three of them took
-    // the whole server — panel and SSH — away from that address (seen live).
+    // recidive bans on every port for a week after three bans in a day from any jail. A site jail
+    // bans for one site, so counting it would let three of them take the whole server away.
     fakeFail2ban(bans: []);
 
     f2b('PUT', '/api/fail2ban', ['bantime' => 7200, 'findtime' => 900, 'maxretry' => 3])->assertOk();
@@ -947,8 +906,8 @@ it('keeps the per-site jails\' bans out of recidive (FB-K)', function () {
 
     expect($recidive)->toContain('filter = panel-recidive')
         ->and($filter)->toContain('before = recidive.conf')
-        // [DEFAULT], where fail2ban's own recidive.conf sets it — a
-        // [Definition] override was measured to change nothing.
+        // [DEFAULT], where fail2ban's own recidive.conf sets it; a [Definition] override
+        // changes nothing.
         ->and($filter)->toContain("[DEFAULT]\n_jailname = (?:recidive|panel\\-site\\-[^\\]]+)");
 
     // The exclusion really is a regex that leaves out site jails and keeps

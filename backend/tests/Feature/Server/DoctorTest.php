@@ -22,17 +22,14 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 
 /*
- * The doctor exists because a green suite cannot tell you the panel works: the
- * suite fakes every process, so it passes identically on a server where the
- * panel is not permitted to do anything. These tests cover the reporting; the
- * value of the checks themselves is that they run unfaked on a real box.
+ * A green suite cannot tell you the panel works: it fakes every process, so it passes identically
+ * on a server where the panel may not do anything. These tests cover the reporting; the checks
+ * themselves only mean something when run unfaked on a real box.
  */
 
 beforeEach(function () {
-    // phpunit.xml disables sudo so feature tests can assert bare commands.
-    // The doctor's whole job is to check escalation, so it needs it on —
-    // otherwise every privilege result is "escalation is switched off",
-    // which is a correct finding but not the one under test here.
+    // phpunit.xml disables sudo; the doctor checks escalation, so turn it on or every privilege
+    // result is "escalation is switched off".
     config()->set('server.privilege.sudo', true);
 
     $this->admin = User::factory()->admin()->create();
@@ -42,10 +39,8 @@ beforeEach(function () {
 /**
  * What `sudo -n -l` prints on a server whose grant is up to date.
  *
- * Built from the allowlist rather than hardcoded, because the point of the
- * check is that the two agree — a fixture listing its own idea of the grant
- * would pass while the real server's diverged, which is the failure being
- * tested for.
+ * Built from the allowlist, not hardcoded: the check is that the two agree, and a fixture with
+ * its own idea of the grant would pass while the real server diverged.
  */
 function sudoListing(?array $only = null): string
 {
@@ -85,12 +80,9 @@ it('reports healthy only when nothing failed', function () {
 });
 
 it('catches a sudo grant that predates the panel it is running', function () {
-    // sudo works — the representative commands are all permitted — but the
-    // rule on disk is an older install.sh's. This is the state every server
-    // reaches the moment the panel is updated and install.sh is not re-run,
-    // and it is how certbot, openssl, touch, stat and crontab were denied for
-    // months while this check reported healthy: it sampled five binaries that
-    // were granted on day one and never changed.
+    // sudo works and every representative command is permitted, but the rule on disk is from an
+    // older install.sh: the state of every server right after a panel update. The check must
+    // compare the full allowlist, not sample a few binaries granted on day one.
     $stale = array_values(array_diff(
         (array) config('server.privilege.binaries', []),
         ['certbot', 'openssl', 'touch'],
@@ -120,9 +112,8 @@ it('catches a sudo grant that predates the panel it is running', function () {
 })->skip(fn () => posix_geteuid() === 0, 'runs as root — nothing needs sudo');
 
 it('accepts php-fpm granted as a wildcard', function () {
-    // One binary per installed PHP version, granted as /usr/sbin/php-fpm* for
-    // the same reason elevate() matches it by prefix — an exact list would
-    // need editing every time a version is added through the panel.
+    // One binary per installed PHP version, granted as /usr/sbin/php-fpm* (matched by prefix like
+    // elevate()), so the list need not change when a version is added.
     fakeHealthySudo();
 
     config()->set('server.doctor.checks', [PrivilegeCheck::class]);
@@ -131,8 +122,7 @@ it('accepts php-fpm granted as a wildcard', function () {
 })->skip(fn () => posix_geteuid() === 0, 'runs as root — nothing needs sudo');
 
 it('is unhealthy when a privileged command is denied', function () {
-    // sudo -n -l <binary> exits non-zero when there is no grant. This is the
-    // exact condition that made the whole server panel inert.
+    // sudo -n -l <binary> exits non-zero when there is no grant.
     Process::fake(['*' => Process::result(errorOutput: 'sorry, user may not run', exitCode: 1)]);
 
     config()->set('server.doctor.checks', [PrivilegeCheck::class]);
@@ -243,11 +233,8 @@ it('exits non-zero so the installer can act on it', function () {
 
 describe('the checks added for "routes error after setup"', function () {
     it('resolves binaries through sudo\'s secure_path, not the panel user\'s PATH', function () {
-        // The first run of this check reported useradd/userdel/usermod/chpasswd
-        // missing on a box where they were present and working: they live in
-        // /usr/sbin, which is not on an unprivileged PATH, but sudo finds them
-        // via secure_path. A false failure here trains people to ignore the
-        // report, which is worse than not checking.
+        // useradd/userdel/usermod/chpasswd live in /usr/sbin, which is not on an unprivileged PATH,
+        // but sudo finds them via secure_path. Reporting them missing would be a false failure.
         $captured = [];
 
         Process::fake(function ($process) use (&$captured) {
@@ -264,9 +251,7 @@ describe('the checks added for "routes error after setup"', function () {
     });
 
     it('treats a missing optional tool as a warning naming the feature it costs', function () {
-        // A panel without ufw cannot do firewall rules but works otherwise.
-        // Calling that "broken" would be inaccurate and would bury the real
-        // failures underneath it.
+        // A panel without ufw cannot do firewall rules but works otherwise: not "broken".
         Process::fake(function ($process) {
             return str_contains(implode(' ', $process->command), 'ufw')
                 ? Process::result(exitCode: 1)
@@ -283,11 +268,8 @@ describe('the checks added for "routes error after setup"', function () {
     });
 
     it('warns about a missing psql, naming PostgreSQL', function () {
-        // Absent from the optional list until 2026-09-14, which left the one
-        // check whose job is catching an absent-or-ungranted binary blind to
-        // the engine with an installer, a driver and a remote-access feature.
-        // The 2026-09-07 sudoers gap in miniature: allowlisted in config, and
-        // nothing verifying the grant reached the server.
+        // psql is on the optional list: a binary that is allowlisted in config but absent or
+        // ungranted on the server must still be caught.
         Process::fake(function ($process) {
             return str_contains(implode(' ', $process->command), 'psql')
                 ? Process::result(exitCode: 1)
@@ -318,9 +300,8 @@ describe('the checks added for "routes error after setup"', function () {
     });
 
     it('fails the queue check when jobs sit unclaimed', function () {
-        // The services check proves the worker is *running*; this proves it is
-        // *working*. A worker holding a stale config looks active while every
-        // queued deploy and install silently never happens.
+        // The services check proves the worker is *running*; this proves it is *working*. A worker
+        // with a stale config looks active while queued jobs never run.
         DB::table('jobs')->insert([
             'queue' => 'default',
             'payload' => '{}',
@@ -365,19 +346,16 @@ describe('the checks added for "routes error after setup"', function () {
     });
 
     it('tests the OpenLiteSpeed configuration rather than asking whether it is running', function () {
-        // This asked `lswsctrl status` — whether the service is up, which is
-        // not what the check reports. A box with a healthy process and a
-        // broken vhost was told "config valid", on the one stack whose config
-        // test needs the panel's help to work at all.
+        // The check must run the config test, not ask `lswsctrl status` whether the service is up:
+        // a healthy process with a broken vhost was reported as "config valid".
         $commands = [];
 
         Process::fake(function ($process) use (&$commands) {
             $commands[] = $process->command;
             $command = implode(' ', (array) $process->command);
 
-            // The grant probe has to answer separately, or the check reports
-            // "not permitted" — which is the right answer to a different
-            // question, and would have hidden whether the config test ran.
+            // The grant probe has to answer separately, or the check reports "not permitted"
+            // and hides whether the config test ran.
             if (str_contains($command, '-n -l')) {
                 return Process::result(output: 'may run');
             }
@@ -403,12 +381,8 @@ describe('the checks added for "routes error after setup"', function () {
     });
 
     it('warns rather than blaming the config when it is not allowed to test it', function () {
-        // The state of a panel deployed without install.sh: sudo refuses, so
-        // `nginx -t` never runs and exits non-zero anyway. This used to report
-        // "the web server configuration is invalid" on a box where `nginx -t`
-        // passed and all 18 vhosts were fine — doctor is what you read when
-        // something is already broken, and it was inventing a second, false
-        // problem out of the first real one.
+        // A panel deployed without install.sh: sudo refuses, so `nginx -t` never runs and exits
+        // non-zero anyway. That must not be reported as an invalid web server configuration.
         Process::fake(fn () => Process::result(
             errorOutput: 'sudo: a password is required',
             exitCode: 1,
@@ -447,8 +421,7 @@ describe('the checks added for "routes error after setup"', function () {
 
         $report = app(Doctor::class)->run();
 
-        // The evidence travels with the verdict — the check used to assert the
-        // config was invalid and show nothing to back it up.
+        // The failure detail must come with the verdict, not just "invalid".
         expect($report['checks'][0]['status'])->toBe('fail')
             ->and($report['checks'][0]['detail'])->toContain('sites-enabled/demo:4');
     });
@@ -483,10 +456,8 @@ describe('the stale account-lock check', function () {
 
 describe('the interface build check', function () {
     it('warns when the build is older than the source', function () {
-        // The services check proves the Next server is *running*; it runs
-        // perfectly happily on last week's build. This is the only check that
-        // notices a build failed — which is exactly how a diagnostic file with
-        // a Node import in an Edge hook reached users.
+        // The services check proves the Next server is *running*, even on last week's build; only
+        // this check notices a failed build.
         config()->set('server.doctor.checks', [FrontendBuildCheck::class]);
 
         $report = app(Doctor::class)->run();
@@ -514,11 +485,8 @@ describe('the interface build check', function () {
 });
 
 it('checks the panel account rather than the operator running it as root', function () {
-    // An operator reads this from a root shell, and root needs no sudo — so
-    // the check answered "sudo not required" and skipped everything, while
-    // php-fpm and the queue worker went on failing as the unprivileged panel
-    // account. That is how a server whose sudoers predated the `touch` grant
-    // reported healthy while git provisioning could not create a `.env`.
+    // Run from a root shell, root needs no sudo: the check must not answer "sudo not required"
+    // and skip everything while php-fpm and the queue worker fail as the panel account.
     if (! function_exists('posix_geteuid') || posix_geteuid() !== 0) {
         expect(true)->toBeTrue();
 
@@ -544,13 +512,9 @@ it('checks the panel account rather than the operator running it as root', funct
 
 describe('the PHP isolation check', function () {
     it('warns rather than announcing every pool file missing when it cannot look', function () {
-        // A missing pool file means a site is silently being served by the
-        // shared account with none of its own settings — serious, and worth a
-        // fail. But `test -f` is refused for EVERY site at once on a server
-        // whose sudo grant predates the build, so reading that as "gone"
-        // announced it for all of them: the loudest possible false alarm, in
-        // the tool someone opens when something is already wrong.
-        // php-fpm, or there are no pools to have an opinion about.
+        // A missing pool file means a site is silently served by the shared account: worth a fail.
+        // But `test -f` is refused for EVERY site at once on a server whose sudo grant predates
+        // the build, so reading that as "gone" would be a false alarm for all of them.
         ServerCapability::query()->delete();
         ServerCapability::query()->create([
             'stack' => 'lemp', 'web_server' => 'nginx', 'capabilities' => [],
@@ -591,10 +555,8 @@ describe('the PHP isolation check', function () {
 });
 
 it('fails when the panel is configured for a different web server than the box runs', function () {
-    // The check used to detect independently and never look at the value the
-    // panel actually writes vhosts with — so on the real server that hit this,
-    // doctor reported a clean bill of health while every site creation failed
-    // with `tee: /etc/apache2/sites-available/x.conf: No such file or directory`.
+    // The check must look at the value the panel actually writes vhosts with, not detect on its
+    // own; otherwise doctor reports healthy while every site creation fails.
     ServerCapability::query()->delete();
     ServerCapability::query()->create([
         'stack' => 'lamp',
@@ -621,21 +583,9 @@ it('fails when the panel is configured for a different web server than the box r
 });
 
 it('does not report a stack mismatch on a healthy OpenLiteSpeed box', function () {
-    // Reported from a real OLS server, and it fires on every one of them:
-    //
-    //   ✗ Web server  the panel is configured for openlitespeed but this
-    //     server runs apache — every site the panel writes goes to
-    //     openlitespeed's directories
-    //
-    // The box was fine. `/etc/apache2` is shipped by php-fpm, which every
-    // stack installs, and this check had its own private copy of detection —
-    // a plain directory walk in config order, apache before openlitespeed,
-    // with none of the systemd tiebreak `ServerCapabilities` was fixed to use.
-    //
-    // Worse than a wrong verdict: the fix it offered was `server:record-stack
-    // ols`, which re-records the value that was already correct. Running it
-    // produced the identical failure, so there was no way out of the message
-    // at all.
+    // `/etc/apache2` is shipped by php-fpm on every stack, so a plain directory walk (apache before
+    // openlitespeed) reported a false mismatch on OpenLiteSpeed servers. The check must use the
+    // same detection as ServerCapabilities.
     ServerCapability::query()->delete();
     ServerCapability::query()->create([
         'stack' => 'ols',
@@ -647,10 +597,9 @@ it('does not report a stack mismatch on a healthy OpenLiteSpeed box', function (
 
     Process::fake(fn () => Process::result(output: ''));
 
-    // A fixture tree rooted in a temp directory, with the real config's paths
-    // rebased onto it — so this asks the shipped values, not a copy of them.
-    // Revert `web_servers` to `/etc/apache2` and the phantom below satisfies
-    // it, detection answers apache, and this test fails. That is the point.
+    // A fixture tree in a temp directory with the real config's paths rebased onto it, so this
+    // asks the shipped values. Reverting `web_servers` to `/etc/apache2` lets the phantom below
+    // satisfy it and this test fail.
     $root = sys_get_temp_dir().'/ols-phantom-'.Str::random(8);
 
     // What php-fpm ships, and all it ships. No sites-available: Apache is not
@@ -673,13 +622,9 @@ it('does not report a stack mismatch on a healthy OpenLiteSpeed box', function (
 });
 
 it('asks systemd which web server is running rather than trusting config order', function () {
-    // The other half of the same fix, and the one the phantom directory alone
-    // does not prove: a box with two web servers genuinely installed. This
-    // check kept its own directory walk long after `ServerCapabilities` was
-    // fixed to prefer the running unit, so a server running OpenLiteSpeed
-    // alongside a leftover nginx was reported as a stack mismatch.
-    //
-    // One detector, or the check disagrees with the code it is checking.
+    // A box with two web servers genuinely installed, which the phantom directory alone does not
+    // prove. One detector, or the check disagrees with the code it is checking: OpenLiteSpeed
+    // running beside a leftover nginx must not be reported as a stack mismatch.
     ServerCapability::query()->delete();
     ServerCapability::query()->create([
         'stack' => 'ols',
@@ -724,12 +669,9 @@ it('asks systemd which web server is running rather than trusting config order',
 /*
  * The OpenLiteSpeed isolation boundary, checked on disk.
  *
- * OlsDriver refuses to write a vhost with no `extUser`. This is the other
- * half: the ones already on the server — written before that guard, adopted
- * from a brownfield box, or hand-edited. Without extUser a site's PHP runs as
- * the server's own user, and so does every other site's, so any one of them
- * can read the others' `.env`, database credentials and uploads. Nothing about
- * such a server looks wrong.
+ * OlsDriver refuses to write a vhost with no `extUser`; this covers the ones already on the
+ * server (written before that guard, adopted, or hand-edited). Without extUser every site's PHP
+ * runs as the server's own user and can read the others' `.env`, credentials and uploads.
  */
 it('fails when an OpenLiteSpeed site has no extUser', function () {
     $root = sys_get_temp_dir().'/ols-vhosts-'.Str::random(8);
@@ -775,10 +717,9 @@ it('fails when an OpenLiteSpeed site has no extUser', function () {
 });
 
 /*
- * Every vhost can name its own user and still not run as it. The panel wrote
- * `extprocessor lsphp84` into every vhost, and OpenLiteSpeed keeps one external
- * app per name, so the first vhost loaded supplied the user for all of them. On
- * a real server (2026-09-24) three sites' PHP ran as a fourth site's user.
+ * Every vhost can name its own user and still not run as it: the panel wrote `extprocessor
+ * lsphp84` into every vhost, and OpenLiteSpeed keeps one external app per name, so the first
+ * vhost loaded supplied the user for all of them.
  */
 function olsVhostsWithProcessors(array $vhosts): array
 {

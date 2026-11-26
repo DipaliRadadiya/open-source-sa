@@ -17,20 +17,17 @@ use Symfony\Component\Yaml\Yaml;
 /**
  * Databases running as containers, for the container sites to connect to.
  *
- * A Docker box manages no engine — that is the stack's own decision, and it is why
- * an application that wants a database brings one. Which is fine until two sites
- * want the same database, or an app needs Redis as well, at which point "bring
- * your own" means pasting the same service into every compose file and having no
- * idea which volume belongs to whom.
+ * A Docker box manages no engine, so an app that wants a database brings one. That breaks down
+ * when two sites want the same database or an app needs Redis too: the same service pasted into
+ * every compose file, with no idea which volume belongs to whom.
  *
- * These are NOT applications. Every site here has a required `domain`, a vhost and
- * `proxy_pass http://127.0.0.1:<port>`; a database speaks its own wire protocol, so
- * as a site it would hold a domain, be issued a certificate no browser can use, and
- * answer 502 for ever.
+ * These are NOT applications. Every site has a required `domain`, a vhost and
+ * `proxy_pass http://127.0.0.1:<port>`; a database speaks its own wire protocol, so as a site
+ * it would hold a domain, be issued a certificate no browser can use, and answer 502 for ever.
  *
- * What the tests are mostly about is the compose file, and three properties of it
- * that "the container came up" cannot show: the publish is loopback-only, the
- * password is generated per database, and the volume is the panel's.
+ * Mostly about the compose file, and three properties "the container came up" cannot show: the
+ * publish is loopback-only, the password is generated per database, and the volume is the
+ * panel's.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -43,9 +40,8 @@ beforeEach(function () {
         'source' => 'installer', 'verified_at' => now(),
     ]);
 
-    // Faked per command. `compose ps --status running` decides the `running` flag
-    // on every response, so a blanket empty answer would make every database read
-    // as stopped and the tests would assert against a box the fake broke.
+    // Faked per command. `compose ps --status running` decides the `running` flag on every
+    // response, so a blanket empty answer would make every database read as stopped.
     Process::fake(function ($process) {
         $args = $process->command;
 
@@ -57,10 +53,8 @@ beforeEach(function () {
             return Process::result(output: "abc123\n");
         }
 
-        // The readiness wait asks Docker for the engine's health. Answered
-        // explicitly rather than left to the blanket exit-0 above, because a blank
-        // answer is what the wait treats as "nothing to wait for" — so a test
-        // relying on that would pass for the wrong reason.
+        // The readiness wait asks Docker for the engine's health. Answered explicitly: a blank answer
+        // means "nothing to wait for", so a test relying on it would pass for the wrong reason.
         if (($args[0] ?? '') === 'docker' && ($args[1] ?? '') === 'inspect') {
             return Process::result(output: "healthy\n");
         }
@@ -100,19 +94,17 @@ it('offers every engine the panel can actually render', function () {
         ->and($engines['redis']['port'])->toBe(6379)
         ->and($engines['mongodb']['port'])->toBe(27017);
 
-    // Every version is a STRING. PHP keys `'18'` as an int and `'8.4'` as a
-    // string, so without a cast the same field is a number for one engine and a
-    // string for another — and a client echoing the number back fails a `string`
-    // rule with a message about a type it never picked.
+    // Every version is a STRING. PHP keys `'18'` as an int and `'8.4'` as a string, so without a
+    // cast the same field is a number for one engine and a string for another, and a client
+    // echoing the number back fails a `string` rule.
     foreach ($engines as $engine) {
         foreach ($engine['versions'] as $version) {
             expect($version)->toBeString();
         }
     }
 
-    // Every advertised version resolves to an image, or the form offers a choice
-    // that fails minutes later at `docker pull` — which is exactly how a bad
-    // BookStack tag reached a real box.
+    // Every advertised version resolves to an image, or the form offers a choice that fails
+    // minutes later at `docker pull`.
     foreach ($engines as $engine) {
         // Read out of the ARRAY, not through a dotted config path: a version like
         // `8.4` contains a dot, which `config()` would read as two more segments
@@ -190,10 +182,9 @@ it('declares the volume external, so the panel owns the data', function () {
 });
 
 it('escapes every dollar sign, because Compose interpolates its own file', function (string $engine, string $version) {
-    // The WordPress lesson, applied where it would bite next: MySQL's healthcheck
-    // reads `$MYSQL_ROOT_PASSWORD`, and written plainly Compose would substitute it
-    // away — leaving a healthcheck that authenticates with an empty password and a
-    // database that never reports healthy.
+    // MySQL's healthcheck reads `$MYSQL_ROOT_PASSWORD`; written plainly Compose would substitute
+    // it away, leaving a healthcheck that authenticates with an empty password and a database that
+    // never reports healthy.
     [, $id] = createDb(['name' => 'esc'.$engine, 'engine' => $engine, 'version' => $version]);
     $compose = app(DatabaseContainerManager::class)->contents(DockerDatabase::find($id));
 
@@ -307,10 +298,8 @@ it('does not hand a site a port a database already holds', function () {
  */
 
 it('answers both the internal and the loopback address', function () {
-    // From another container it is the name on a shared network; from the server
-    // itself it is 127.0.0.1 and the allocated port. The two being different is the
-    // single most confusing thing about a containerised database, so the API says
-    // both rather than leaving the UI to explain it.
+    // From another container it is the name on a shared network; from the server itself it is
+    // 127.0.0.1 and the allocated port. The API says both rather than leaving the UI to explain.
     [, $id] = createDb(['name' => 'shared', 'engine' => 'postgres', 'version' => '17']);
 
     $this->withHeaders(dbHeaders())
@@ -378,9 +367,8 @@ it('removes the data when the delete opted in', function () {
 });
 
 /*
- * A delete that did not happen on the server is not reported as one
- * (live-reproduced 2026-11-06: `down` failed, the container kept running, and
- * the row and the compose file were deleted anyway).
+ * A delete that did not happen on the server is not reported as one (`down` failed, the
+ * container kept running, and the row and compose file were deleted anyway).
  */
 
 /**
@@ -547,10 +535,9 @@ it('records the engine and the port, never a credential', function () {
  */
 
 it('waits for the engine to answer before reporting success', function () {
-    // `up -d` returns as soon as the container is created, which for a database is
-    // well before it accepts connections. Measured on a real box: the endpoint
-    // replied 201, and a connection made immediately with the credentials it had
-    // just handed over was refused — Postgres was still initialising.
+    // `up -d` returns as soon as the container is created, which for a database is well before it
+    // accepts connections: a connection made right after the 201 with the credentials just handed
+    // over was refused while Postgres was still initialising.
     $asked = [];
 
     Process::fake(function ($process) use (&$asked) {
@@ -579,10 +566,9 @@ it('waits for the engine to answer before reporting success', function () {
 });
 
 it('rolls back a database that never becomes ready', function () {
-    // Two minutes of `starting` is not slow, it is broken — a bad volume
-    // permission, an OOM, an image that cannot initialise. Leaving the row would
-    // leave connection details that connect to nothing, and a port the allocator
-    // keeps reserving.
+    // Two minutes of `starting` is broken, not slow (bad volume permission, OOM, an image that
+    // cannot initialise). Leaving the row would keep connection details that connect to nothing
+    // and a port the allocator keeps reserving.
     config(['server.docker_databases.ready_timeout' => 0]);
 
     Process::fake(function ($process) {
@@ -604,23 +590,18 @@ it('rolls back a database that never becomes ready', function () {
 
     expect(DockerDatabase::count())->toBe(0);
 
-    // 🔴 **And the volume goes too.** Two failed creates on the test box left
-    // `sv-db-8_data` and `sv-db-10_data` behind with nothing pointing at them,
-    // while the API answered "Nothing was left behind — no row, no container and no
-    // port held". A true list, and the wrong one.
+    // The volume goes too: a failed create used to leave `sv-db-8_data` behind with nothing
+    // pointing at it, while the API said nothing was left behind.
     //
-    // Safe to remove unconditionally on THIS path, unlike on delete where it is an
-    // opt-in: the volume was made seconds earlier by this same call, for a database
-    // that never started, so nothing in it can be wanted.
+    // Safe to remove unconditionally on THIS path (on delete it is opt-in): the volume was made
+    // seconds earlier by this same call, for a database that never started.
     Process::assertRan(fn ($process): bool => in_array('volume', $process->command, true)
         && in_array('rm', $process->command, true));
 });
 
 it('does not hang when the health status cannot be read', function () {
-    // The rule is "only `starting` and `unhealthy` mean wait". Written the other
-    // way round — wait unless healthy — an unanswered inspect is
-    // indistinguishable from starting and the whole timeout elapses on every
-    // call. That is exactly what happened, which is why this asserts the
+    // Only `starting` and `unhealthy` mean wait. Written as "wait unless healthy", an unanswered
+    // inspect looks like starting and the whole timeout elapses on every call; this asserts the
     // permissive direction.
     Process::fake(function ($process) {
         $args = $process->command;
@@ -641,11 +622,9 @@ it('does not hang when the health status cannot be read', function () {
 /*
  * Per-instance sizes.
  *
- * Before these columns a database read one server-wide value, so a Redis cache
- * used as a session store and the primary Postgres behind everything were sized
- * identically at 512m. The size is the product for anyone selling compute, and an
- * engine's own buffers are sized from what it can see — so this is the field that
- * decides how a database performs, and it has to be per row.
+ * A database used to read one server-wide value, so a Redis session store and the primary
+ * Postgres were sized identically. The size is the product for anyone selling compute and
+ * decides how a database performs, so it has to be per row.
  */
 
 it('sizes each database from its own row, not one server-wide number', function () {
@@ -663,10 +642,9 @@ it('sizes each database from its own row, not one server-wide number', function 
 });
 
 it('falls back to the configured default for memory and to no quota for cpu', function () {
-    // The asymmetry is the design. A database with no memory ceiling can take the
-    // box down, so that one has a default; a database with no CPU quota is merely
-    // unthrottled, and defaulting it would have capped every engine already
-    // running here the next time it was recreated.
+    // The asymmetry is the design: a database with no memory ceiling can take the box down, so it
+    // has a default; one with no CPU quota is merely unthrottled, and defaulting it would have
+    // capped every running engine the next time it was recreated.
     [, $id] = createDb(['name' => 'plain']);
     $service = Yaml::parse(app(DatabaseContainerManager::class)->contents(DockerDatabase::find($id)))['services']['db'];
 
@@ -675,11 +653,9 @@ it('falls back to the configured default for memory and to no quota for cpu', fu
 });
 
 it('refuses a cpu quota larger than the machine, at the form', function () {
-    // Docker refuses it too — `compose up` answers "range of CPUs is from 0.01 to
-    // 4.00, as there are only 4 CPUs available" — but it refuses at deploy time,
-    // which for a database means the row is created, the container never starts,
-    // and `CreateDockerDatabase` rolls the whole thing back. A field error is the
-    // same refusal where somebody can act on it.
+    // Docker refuses it too ("range of CPUs is from 0.01 to 4.00") but at deploy time: the row is
+    // created, the container never starts and `CreateDockerDatabase` rolls everything back. A
+    // field error is the same refusal where somebody can act on it.
     app()->instance(HostCpus::class, new class extends HostCpus
     {
         public function count(): int
@@ -696,17 +672,14 @@ it('refuses a cpu quota larger than the machine, at the form', function () {
 });
 
 it('refuses a memory ceiling Docker would not start', function () {
-    // Docker's own floor is 6MB: "Minimum memory limit allowed is 6MB", measured.
-    // Accepted here it would be a database that saves and never runs.
+    // Docker's own floor is 6MB ("Minimum memory limit allowed is 6MB"). Accepted here it would be
+    // a database that saves and never runs.
     [$tooSmall] = createDb(['name' => 'tiny', 'memory_limit' => '2m']);
     $tooSmall->assertStatus(422)->assertJsonValidationErrors('memory_limit');
 
-    // And a bare number is BYTES to Docker, not megabytes — the mistake the
-    // message exists to name, and it has to be the message that actually fires.
-    // 512 bytes is also below the 6m floor, so the size check would answer first
-    // and describe the consequence while hiding the cause. Measured on the box
-    // before this was split: `512` got "less than 6m of memory", to somebody who
-    // plainly meant 512 megabytes.
+    // A bare number is BYTES to Docker, not megabytes: the mistake the message exists to name, and
+    // it must be the message that fires. 512 bytes is also below the 6m floor, so the size check
+    // would answer first and hide the cause from someone who meant 512 megabytes.
     [$noUnit] = createDb(['name' => 'nounit', 'memory_limit' => '512']);
     $noUnit->assertStatus(422)->assertJsonValidationErrors('memory_limit');
 
@@ -738,22 +711,12 @@ it('answers the size it was given, and what an empty field would have meant', fu
 /*
  * Where an image keeps its data, which is not always the engine's default.
  *
- * 🔴 Found on the box by using the new one-click control: Postgres **18** is the
- * newest version the catalog offers, so it is what that control starts by default —
- * and it was the one version that could not start at all. The container says why
- * itself:
- *
- *   The suggested container configuration for 18+ is to place a single mount at
- *   /var/lib/postgresql which will then place PostgreSQL data in a subdirectory,
- *   allowing usage of "pg_upgrade --link" without mount point boundary issues.
- *
- * Verified with `docker inspect` on all three images: 16 and 17 have
- * `PGDATA=/var/lib/postgresql/data` and declare their volume there; 18 has
+ * Postgres 18 (the newest catalog version, so the one-click default) could not start: the
+ * image wants a single mount at /var/lib/postgresql, with the data in a subdirectory. 16 and 17
+ * have `PGDATA=/var/lib/postgresql/data` and declare their volume there; 18 has
  * `PGDATA=/var/lib/postgresql/18/docker` and declares `/var/lib/postgresql`.
  *
- * The panel handled the failure correctly — `CreateDockerDatabase` rolled the row,
- * the container and the port back — so the only symptom was a create that failed,
- * with nothing left to inspect. Which is why this is a test and not a comment.
+ * The failed create is rolled back with nothing left to inspect, which is why this is a test.
  */
 
 it('mounts Postgres 18 where Postgres 18 keeps its data', function () {
@@ -780,9 +743,8 @@ it('leaves the older Postgres versions where they were', function () {
 });
 
 it('matches a data path override by version string, not by PHP array key', function () {
-    // `'18' => …` keys as the INT 18 in PHP, so a lookup with the string '18'
-    // misses unless both sides are cast. The engine catalog hit exactly this and
-    // returned 18 as a number while '8.4' stayed a string.
+    // `'18' => …` keys as the INT 18 in PHP, so a lookup with the string '18' misses unless both
+    // sides are cast.
     $database = DockerDatabase::find(createDb(['name' => 'pgcast', 'engine' => 'postgres', 'version' => '18'])[1]);
 
     expect($database->dataPath())->toBe('/var/lib/postgresql')
@@ -796,15 +758,12 @@ it('falls back to the engine default for an engine with no overrides', function 
 });
 
 it('pings MariaDB with the tool MariaDB 12 actually ships', function () {
-    // 🔴 MariaDB 12 REMOVED `mysqladmin`. It was renamed `mariadb-admin` in 11 with
-    // the old name kept as a symlink, and 12.3 dropped the symlink — verified on the
-    // box: only `/usr/bin/mariadb-admin` exists. So the healthcheck could never
-    // pass, the readiness wait ran its full course, and the create rolled back with
-    // `not_ready`. 12.3 is the newest MariaDB in the catalog and therefore what the
-    // one-click tile offers.
+    // MariaDB 12.3 dropped the `mysqladmin` symlink (renamed `mariadb-admin` in 11); only
+    // `/usr/bin/mariadb-admin` exists. The healthcheck could never pass and the create rolled
+    // back with `not_ready`. 12.3 is the newest MariaDB, so it is what the one-click tile offers.
     //
-    // One line serves both engines because of the `||`: MySQL has no
-    // `mariadb-admin`, so the shell answers 127 and falls through.
+    // One line serves both engines because of the `||`: MySQL has no `mariadb-admin`, so the
+    // shell answers 127 and falls through.
     foreach ([['mariadb', '12.3'], ['mysql', '8.4']] as [$engine, $version]) {
         [, $id] = createDb(['name' => 'ping'.$engine, 'engine' => $engine, 'version' => $version]);
 

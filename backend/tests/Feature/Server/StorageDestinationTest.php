@@ -37,28 +37,20 @@ beforeEach(function () {
     $this->admin = User::factory()->admin()->create();
     $this->token = $this->admin->createToken('t')->plainTextToken;
 
-    // Tests should never reach a real endpoint. The probe takes a disk-builder
-    // closure; we bind a Container-level override here so any
-    // ServiceProvider-level singleton resolves to the same fake too.
+    // Tests must never reach a real endpoint: the container resolves the prober to the fake disk.
     $this->fakeDisk = Storage::fake();
 
     $this->app->bind(StorageConnectionProber::class, fn () => makeProber(
-        // Return type is deliberately untyped. A typed `: Filesystem` here
-        // would force the resolved `$this->fakeDisk` (a LocalFilesystemAdapter
-        // returned by Storage::fake()) through PHP's covariant return-type
-        // check, which turns the test into a test of PHP's type system rather
-        // than the prober.
+        // Untyped on purpose: a `: Filesystem` return type would make this test exercise PHP's
+        // covariance check instead of the prober.
         fn (array $config) => test()->fakeDisk,
     ));
 });
 
 /**
- * A prober wired with the real driver factory and a host-key reader that never
- * opens a socket.
+ * A prober wired with the real driver factory and a host-key reader that never opens a socket.
  *
- * The factory is real on purpose: classification is now the driver's job, so a
- * test that faked the factory would be asserting against its own stub instead
- * of against the code that runs in production.
+ * The factory is real on purpose: a faked one would assert against its own stub.
  */
 function makeProber(?callable $diskBuilder = null, ?string $fingerprint = null): StorageConnectionProber
 {
@@ -264,10 +256,8 @@ it('updates a destination and keeps the credentials when not sent', function () 
 it('keeps the other config keys when only one is patched', function () {
     $dest = makeDestination();
 
-    // The merge, not the replace. Sending one key must not clear the rest —
-    // a destination that loses its secret key on a bucket change keeps
-    // working until the next backup runs, which is the worst moment to find
-    // out.
+    // A merge, not a replace: sending one key must not clear the others (a destination that
+    // loses its secret key on a bucket change fails at the next backup).
     $this->withHeaders(storageAdminAuthHeader())
         ->patchJson("/api/integrations/storage/destinations/{$dest->id}", [
             'config' => ['bucket' => 'a-different-bucket'],
@@ -296,10 +286,8 @@ it('rotates the credentials when new values are sent', function () {
 it('refuses to change the provider of an existing destination', function () {
     $dest = makeDestination();
 
-    // The config blob's shape is defined by the provider, so switching it
-    // would reinterpret a bucket and a secret key as a hostname and a
-    // password. Refused outright rather than ignored: a request that asked
-    // and got a 200 would reasonably believe it had worked.
+    // The config shape belongs to the provider: switching would reinterpret a bucket and secret
+    // key as a hostname and password. Refused rather than silently ignored.
     $this->withHeaders(storageAdminAuthHeader())
         ->patchJson("/api/integrations/storage/destinations/{$dest->id}", ['provider' => 'ftp'])
         ->assertUnprocessable()->assertJsonValidationErrors('provider');
@@ -375,10 +363,7 @@ describe('FTP destinations', function () {
             'config' => ['host' => 'old.example.com', 'username' => 'u', 'password' => 'p', 'ssl' => false],
         ]);
 
-        // The default is on; a deliberate false must survive. `?? true` would
-        // be wrong here and `?: true` catastrophically so — it would coerce
-        // the user's explicit "no" back to "yes" and tell them they were
-        // encrypted when they were not.
+        // The default is on; a deliberate false must survive (`?: true` would coerce it to true).
         expect(app(DestinationDisk::class)->config($dest)['ssl'])->toBeFalse();
     });
 
@@ -401,9 +386,8 @@ describe('FTP destinations', function () {
             },
         ));
 
-        // The old shared classifier fingerprinted AWS SDK exception names, so
-        // this exact failure was reported as "unreachable" — sending the user
-        // to check DNS when their password was wrong.
+        // The old shared classifier matched AWS SDK exception names, so this failure read as
+        // "unreachable" instead of a wrong password.
         $this->withHeaders(storageAdminAuthHeader())
             ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")
             ->assertOk()
@@ -443,9 +427,8 @@ describe('an FTP server without encryption (bug #39)', function () {
     });
 
     it('says the server has no TLS instead of blaming the password', function () {
-        // vsftpd without TLS refuses `AUTH TLS` with 530, the same code as a
-        // wrong password (measured 2026-10-03), so the encrypted login was
-        // reported as "rejected the credentials" with the password right.
+        // vsftpd without TLS refuses `AUTH TLS` with 530, the same code as a wrong password; the
+        // encrypted login must not be reported as "rejected the credentials".
         $dest = StorageDestination::create([
             'name' => 'NAS', 'provider' => StorageProvider::Ftp, 'prefix' => null,
             'config' => ['host' => 'backup.example.com', 'username' => 'u', 'password' => 'p'],
@@ -503,7 +486,7 @@ describe('SFTP destinations', function () {
             'config' => [
                 'host' => 'backup.example.com',
                 'username' => 'backups',
-                // A real key: an invented one is refused at save now.
+                // A real key: an invented one is refused at save.
                 'private_key' => $key = EC::createKey('Ed25519')->toString('OpenSSH'),
             ],
         ])->assertCreated()
@@ -549,8 +532,8 @@ describe('SFTP destinations', function () {
         $recorded = $dest->refresh()->configValue('host_fingerprint');
         expect($recorded)->toStartWith('sha256:');
 
-        // And it is now handed to the adapter, so a host that starts
-        // answering with a different key is refused rather than trusted.
+        // It is handed to the adapter, so a host that starts answering with a different key is
+        // refused, not trusted.
         expect(app(DestinationDisk::class)->config($dest)['hostFingerprint'])->toBe($recorded);
     });
 
@@ -585,8 +568,8 @@ describe('SFTP destinations', function () {
         $this->app->bind(StorageConnectionProber::class, fn () => makeProber(
             fn (array $config) => new class
             {
-                // The probe's first network call now: it makes the folder
-                // before writing, and a changed key refuses it just the same.
+                // The probe's first network call: it makes the folder before writing, and a changed key
+                // refuses it just the same.
                 public function makeDirectory(string $path): bool
                 {
                     throw UnableToEstablishAuthenticityOfHost::becauseTheAuthenticityCantBeEstablished('h');
@@ -599,9 +582,8 @@ describe('SFTP destinations', function () {
             },
         ));
 
-        // The host IS reachable — that is the problem. "Could not connect"
-        // would send the operator to check the firewall while a possible
-        // interception went unmentioned.
+        // The host IS reachable: "could not connect" would send the operator to the firewall while
+        // a possible interception went unmentioned.
         $this->withHeaders(storageAdminAuthHeader())
             ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")
             ->assertOk()
@@ -610,16 +592,9 @@ describe('SFTP destinations', function () {
 
     it('still sees a changed host key when the adapter wraps it, which is the only way it ever arrives', function () {
         /*
-         * The test above throws the host-key exception bare. **The real adapter
-         * never does.** Measured against a live SFTP server on 2026-09-14:
-         * Flysystem returns `UnableToWriteFile` with the
-         * `UnableToEstablishAuthenticityOfHost` one level down in
-         * `getPrevious()`, so the driver's `instanceof` checks were reading the
-         * wrapper and matching nothing — a rejected host key was reported as
-         * `unreachable`, sending an operator to check their firewall while a
-         * possible interception went unmentioned.
-         *
-         * The bare-throw test passed throughout. It was a test about the fake.
+         * The test above throws the host-key exception bare; the real adapter never does. Flysystem
+         * returns `UnableToWriteFile` with `UnableToEstablishAuthenticityOfHost` in `getPrevious()`,
+         * so a driver checking only the outer exception reported a rejected key as `unreachable`.
          */
         $dest = StorageDestination::create([
             'name' => 'Box', 'provider' => StorageProvider::Sftp, 'prefix' => null,
@@ -711,16 +686,9 @@ it('composes the remote root from the connection root and the prefix', function 
 
 it('keeps an absolute remote root absolute, instead of resolving it against the login directory', function () {
     /*
-     * `/backups` is the form every FTP and SFTP client accepts, so it is the
-     * form users type. Trimming the leading slash turned it into the relative
-     * `backups`, resolved against wherever the login lands.
-     *
-     * Verified against live servers on 2026-09-14, and the two protocols hid
-     * it in opposite directions: SFTP creates missing directories, so a
-     * destination set to `/backups` probed **green** while writing into
-     * `~/backups` — every archive in a directory the operator never chose.
-     * FTP refuses to resolve a root that does not exist, so the same
-     * destination failed and blamed the network. The silent success is the
+     * `/backups` is the form every FTP and SFTP client accepts, so users type it. Stripping the
+     * slash makes it relative to wherever the login lands: SFTP creates the missing directory and
+     * probes green into `~/backups`, FTP refuses and blames the network. The silent success is the
      * dangerous one.
      */
     $absolute = StorageDestination::create([
@@ -751,9 +719,7 @@ it('keeps an absolute remote root absolute, instead of resolving it against the 
 
 it('says the folder is missing rather than blaming the network', function () {
     /*
-     * The host answered and the login succeeded; only the directory is absent
-     * — the single most likely mistake when creating a destination, since the
-     * folder usually does not exist until someone makes it. Reported as
+     * The host answered and the login worked; only the directory is missing. Reported as
      * `unreachable` it sends the operator to check DNS and firewalls.
      */
     $dest = StorageDestination::create([
@@ -789,11 +755,8 @@ it('keeps an absolute remote root absolute', function () {
         'config' => ['host' => 'h', 'username' => 'u', 'password' => 'p', 'root' => '/backups'],
     ]);
 
-    // `/backups` is the form every FTP and SFTP client accepts. Stripping the
-    // leading slash makes it relative to wherever the login lands, and the two
-    // protocols hide that differently: SFTP creates the missing directory and
-    // silently succeeds into `~/backups`, FTP refuses and reports an
-    // unreachable host. The green probe against the wrong directory is worse.
+    // `/backups` keeps its leading slash (see above): stripped, SFTP silently writes into
+    // `~/backups` and FTP blames the network.
     expect(app(DestinationDisk::class)->config($dest)['root'])->toBe('/backups/shop.example.com');
 
     $bare = StorageDestination::create([
@@ -900,9 +863,8 @@ describe('the in-use guard', function () {
     });
 
     /*
-     * The target can be repointed while its old backups stay where they were
-     * written. The database refused this (restrictOnDelete on
-     * backups.storage_destination_id), but as a 500 naming nothing.
+     * The target can be repointed while its old backups stay where they were written. The
+     * database would refuse this too (restrictOnDelete), but as a 500 naming nothing.
      */
     it('refuses to delete a destination that still holds backups, even with no target pointing at it', function () {
         $old = makeDestination();
@@ -1052,10 +1014,8 @@ describe('the persisted test result', function () {
         $this->withHeaders(storageAdminAuthHeader())
             ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")->assertOk();
 
-        // The old invalidation list was five hardcoded S3 column names, which
-        // could only ever be right for one provider. A host change slipping
-        // past it leaves a green badge describing a destination that is no
-        // longer the one being talked to.
+        // The old invalidation list was five hardcoded S3 column names, right for one provider only.
+        // A host change slipping past it leaves a green badge for a destination no longer in use.
         $this->withHeaders(storageAdminAuthHeader())
             ->patchJson("/api/integrations/storage/destinations/{$dest->id}", [
                 'config' => ['host' => 'new.example.com'],
@@ -1128,11 +1088,9 @@ it('probes a destination and reports success when write/read/delete all match', 
 it('classifies a credentials failure as invalid_credentials without echoing the raw exception', function () {
     $dest = makeDestination();
 
-    // Replace the faked disk with one whose get() throws as if the S3 SDK
-    // rejected the access key. The closure's return type is left untyped on
-    // purpose — declaring `: Filesystem` here forces PHP to type-check the
-    // anonymous class against the contract, which fails and turns our test of
-    // the classifier into a test of PHP.
+    // Replace the faked disk with one whose get() throws as if the S3 SDK rejected the access
+    // key. The closure is left untyped on purpose: a `: Filesystem` return type would test PHP's
+    // type checks instead of the classifier.
     $this->app->bind(StorageConnectionProber::class, fn () => makeProber(
         fn (array $config) => new class
         {
@@ -1295,10 +1253,9 @@ it('returns a 404 for an unknown destination id', function () {
 });
 
 /*
- * The tests above all replace the prober's disk builder, so none of them ever
- * execute the driver's config() — which is how `throw => false` shipped and
- * silently turned every real failure into a "bytes did not match" message.
- * These assert the config itself.
+ * The tests above replace the prober's disk builder, so none executes the driver's config().
+ * These assert the config itself (`throw => false` once turned every real failure into a
+ * "bytes did not match" message).
  */
 it('builds an S3 driver config that surfaces adapter errors instead of swallowing them', function () {
     $dest = makeDestination();
@@ -1342,12 +1299,9 @@ it('uses path-style addressing only when a custom endpoint is configured', funct
 });
 
 /*
- * Unlike the two above, this one drives the *real* adapter rather than a
- * captured config array. Asserting `stream_reads` is present would pass while
- * proving nothing: what matters is that the key survives Laravel's `?? false`
- * read (FilesystemManager::createS3Driver) and reaches the wire as
- * @http.stream. An injected http_handler is the only place that's observable
- * without a bucket.
+ * Unlike the two above, this drives the real adapter. What matters is that the key survives
+ * Laravel's `?? false` read (FilesystemManager::createS3Driver) and reaches the wire as
+ * @http.stream; an injected http_handler is the only place that is observable without a bucket.
  */
 it('sends GetObject as a streamed request so a large artefact never lands in memory', function () {
     $destination = new StorageDestination([
@@ -1376,32 +1330,23 @@ it('sends GetObject as a streamed request so a large artefact never lands in mem
 
     Storage::build($config)->readStream('app1/restore.tar.gz');
 
-    // False here means Guzzle buffers the whole GetObject body into memory
-    // before readStream() returns — DownloadArtifact's stream_copy_to_stream
-    // then copies an already-loaded 5+ GB string and OOMs the worker.
+    // False here means Guzzle buffers the whole GetObject body in memory before readStream()
+    // returns, so DownloadArtifact would copy an already-loaded 5+ GB string and OOM the worker.
     expect($requestOptions[0]['stream'] ?? false)->toBeTrue();
 });
 
 /*
- * Every S3 failure used to read "The destination rejected the credentials":
- * the classifier matched the class name `Aws\S3\Exception`, and the SDK
- * throws that one class for everything. A wrong bucket, a wrong region and a
- * server with broken TLS all sent the user to replace keys that worked.
- *
- * These drive the *real* adapter and SDK through an injected http_handler,
- * answering with what the provider really sends: an S3 error XML body, or the
- * cURL errno Guzzle reports. The older tests above threw a RuntimeException
- * with "InvalidAccessKeyId" in its text, a shape the SDK never produces, which
- * is how the bug stayed invisible. Shapes measured against real AWS, a host
- * with broken TLS and a self-signed certificate on 2026-09-24.
+ * Every S3 failure used to read "The destination rejected the credentials": the classifier
+ * matched the class name `Aws\S3\Exception`, which the SDK throws for everything. These drive
+ * the real adapter and SDK through an injected http_handler and answer with what a provider
+ * really sends: an S3 error XML body, or the cURL errno Guzzle reports.
  */
 describe('S3 failure classification', function () {
     /**
      * Probe a destination whose requests are answered by $answer.
      *
-     * Through the SDK's real Guzzle handler, not a bare http_handler: turning
-     * a 4xx into an exception is Guzzle's `http_errors` middleware's job, and
-     * a bare handler skips it, so a 404 would read as a successful upload.
+     * Goes through the SDK's real Guzzle handler: a bare http_handler skips the `http_errors`
+     * middleware, so a 404 would read as a successful upload.
      */
     function probeS3With(Response|Closure $answer): array
     {
@@ -1469,8 +1414,8 @@ describe('S3 failure classification', function () {
 });
 
 /*
- * Destinations hold backup credentials, and creating, changing and deleting
- * them left no trace in the activity log.
+ * Destinations hold backup credentials: creating, changing and deleting them must leave a
+ * trace in the activity log.
  */
 it('records creating, updating and deleting a destination, without its credentials', function () {
     $id = $this->withHeaders(storageAdminAuthHeader())
@@ -1515,9 +1460,8 @@ it('still accepts a folder with dots in its names', function () {
 });
 
 /*
-| FTP-01 (old QA list): FTPS destinations never checked the server's
-| certificate, so an impostor in between received the password and every
-| backup. Now pinned on first use, like an SFTP host key.
+| FTPS destinations pin the server certificate on first use, like an SFTP host key; without
+| the pin an impostor in between would receive the password and every backup.
 */
 
 /** The FTPS server presents this certificate fingerprint (null = unreadable). */

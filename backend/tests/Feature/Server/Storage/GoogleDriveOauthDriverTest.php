@@ -23,10 +23,8 @@ function oauthDriver(): GoogleDriveOauthDriver
 }
 
 /*
- * Built in memory rather than persisted: every assertion here is about how the
- * driver reads a destination, and none of it needs a row. `StorageDestination`
- * has no factory, and adding one to test a pure reader would be inventing
- * fixtures for their own sake.
+ * Built in memory rather than persisted: the assertions are about how the driver reads a
+ * destination, and none of it needs a row.
  */
 function oauthDestination(array $config = []): StorageDestination
 {
@@ -37,8 +35,7 @@ function oauthDestination(array $config = []): StorageDestination
         'client_id' => '123-abc.apps.googleusercontent.com',
         'client_secret' => 'secret',
         'refresh_token' => 'rt',
-        // A connected destination always has one; preflight now asks whether
-        // it is still there.
+        // A connected destination always has one; preflight checks it still exists.
         'folder_id' => 'FOLDER-1',
     ], $config);
 
@@ -79,11 +76,8 @@ it('is resolvable through the factory like every other provider', function () {
 // ---------------------------------------------------------------------------
 
 /*
- * A stored refresh token is a string that was valid once, not evidence that it
- * still is. The likeliest production failure is an OAuth app left in "Testing",
- * where Google expires refresh tokens after about a week: the destination works
- * all week, then every backup fails and nothing in the panel changed. Only
- * asking Google can tell the difference.
+ * A stored refresh token was valid once, not proof it still is: an OAuth app left in "Testing"
+ * gets its refresh tokens expired by Google after about a week. Only asking Google can tell.
  */
 it('refuses a destination whose grant has been revoked', function () {
     Http::fake([OAUTH_TOKEN_URL => Http::response(['error' => 'invalid_grant'], 400)]);
@@ -99,11 +93,8 @@ it('passes a destination whose grant still works', function () {
 });
 
 /*
- * The folder is in somebody's *personal* Drive and they may delete it without
- * telling the panel. The token still refreshes perfectly afterwards, so a
- * token-only preflight put a green tick on exactly the destination whose next
- * run fails — and the first thing to notice would have been a scheduled backup
- * at 3am.
+ * The folder lives in someone's personal Drive and may be deleted without telling the panel.
+ * The token still refreshes, so a token-only preflight would pass a destination that fails.
  */
 it('refuses a destination whose folder was deleted from the Drive', function () {
     Http::fake([OAUTH_TOKEN_URL => Http::response(['access_token' => 'fresh'])]);
@@ -113,11 +104,8 @@ it('refuses a destination whose folder was deleted from the Drive', function () 
 });
 
 /*
- * Trashed is the case worth paying an API call for. Drive still resolves a
- * trashed folder by id, so uploads would keep succeeding into the Trash and be
- * purged about thirty days later — a destination reporting success while its
- * archives quietly expire, which nobody discovers until the day they are
- * needed.
+ * Trashed is worth an API call: Drive still resolves a trashed folder by id, so uploads would
+ * succeed into the Trash and be purged about thirty days later.
  */
 it('treats a trashed folder as gone', function () {
     Http::fake([OAUTH_TOKEN_URL => Http::response(['access_token' => 'fresh'])]);
@@ -126,8 +114,7 @@ it('treats a trashed folder as gone', function () {
     expect(oauthDriver()->preflight(oauthDestination()))->not->toBeNull();
 });
 
-// Connected, but the folder was never recorded — a connect that half-finished.
-// Its own answer, not a Drive failure.
+// Connected, but the folder was never recorded: a half-finished connect, not a Drive failure.
 it('says "not connected" when no folder was ever stored', function () {
     Http::fake([OAUTH_TOKEN_URL => Http::response(['access_token' => 'fresh'])]);
 
@@ -135,8 +122,7 @@ it('says "not connected" when no folder was ever stored', function () {
         ->toBe('storage.oauth.not_connected');
 });
 
-// Not connected is its own answer. Reporting Google's failure for a request we
-// never made would send the operator to debug a grant that does not exist yet.
+// Not connected is its own answer, not a Google failure for a request we never made.
 it('says "not connected" rather than blaming Google before anyone has approved', function () {
     Http::fake([OAUTH_TOKEN_URL => Http::response(['access_token' => 'x'])]);
 
@@ -151,9 +137,8 @@ it('says "not connected" rather than blaming Google before anyone has approved',
 // ---------------------------------------------------------------------------
 
 /*
- * The refresh token mints access tokens on demand for as long as the grant
- * lives. Leaving it out of `secretKeys()` would encrypt the client secret and
- * store the more powerful credential beside it in clear.
+ * The refresh token mints access tokens for as long as the grant lives; leaving it out of
+ * `secretKeys()` would store it in clear beside the encrypted client secret.
  */
 it('treats the refresh token as a secret, not as configuration', function () {
     expect(oauthDriver()->secretKeys())
@@ -166,8 +151,7 @@ it('never exposes the refresh token through public config', function () {
 
     expect($public)->not->toHaveKey('refresh_token')
         ->and($public)->not->toHaveKey('client_secret')
-        // Connected-ness still has to be answerable, or the form cannot choose
-        // between a Connect button and a connected account.
+        // The form still needs "connected" to choose between Connect and the account.
         ->and($public['connected'])->toBeTrue()
         ->and($public['account_email'])->toBe('me@gmail.com');
 });
@@ -182,8 +166,7 @@ it('reports not-connected through public config without a token', function () {
 // ---------------------------------------------------------------------------
 
 /*
- * A pasted project id or a truncated copy fails at the form rather than at
- * approval time, when the operator has already walked to their phone.
+ * A pasted project id or a truncated copy should fail at the form, not at approval time.
  */
 it('rejects a client id that is not a Google client id', function () {
     $rule = oauthDriver()->rules()['config.client_id'];
@@ -197,10 +180,8 @@ it('rejects a client id that is not a Google client id', function () {
 });
 
 /*
- * The destination is created before anyone has approved anything — the connect
- * flow writes the token afterwards. Requiring it here would make connecting
- * impossible, which is the kind of rule that looks careful and blocks the
- * feature.
+ * The destination is created before approval and the connect flow writes the token afterwards,
+ * so requiring it here would make connecting impossible.
  */
 it('does not require a refresh token at creation time', function () {
     $rules = oauthDriver()->rules();
@@ -217,19 +198,15 @@ it('builds a google_oauth disk that throws on failed writes', function () {
     $config = oauthDriver()->config(oauthDestination());
 
     expect($config['driver'])->toBe('google_oauth')
-        // Without this a failed upload returns false and a backup that never
-        // happened is indistinguishable from one that did.
+        // Without this a failed upload returns false and looks like a successful backup.
         ->and($config['throw'])->toBeTrue()
         ->and($config['root'])->toBe('backups')
         ->and($config['refresh_token'])->toBe('rt');
 });
 
 /*
- * The existing provider/status/category guard in StorageDestinationTest does
- * not reach these keys, so they would ship as raw `storage.oauth.*` strings in
- * seven languages and nothing would fail. Every one of them is shown at the
- * moment something has already gone wrong, which is the worst moment to hand
- * someone a translation key.
+ * The provider/status/category guard in StorageDestinationTest does not reach these keys, so they
+ * would ship as raw `storage.oauth.*` strings in every locale and nothing would fail.
  */
 it('has copy for every OAuth outcome in every locale', function () {
     $keys = [
@@ -249,15 +226,9 @@ it('has copy for every OAuth outcome in every locale', function () {
 });
 
 /*
- * The first real user of this feature hit `folder_failed` and was told to check
- * their Drive had space. It had plenty. The cause was the Drive API not being
- * enabled in the Cloud project — invisible until this exact moment, because
- * OAuth is a different service: consent succeeds, a refresh token is issued,
- * and then the first Drive call 403s.
- *
- * Each case asserts the *advice*, not the code: "free up space" and "enable an
- * API" send someone to completely different places, and the old catch-all sent
- * everyone to the wrong one.
+ * Each case asserts the *advice*, not the code: "free up space" and "enable an API" send someone
+ * to different places. OAuth consent succeeds without the Drive API enabled; the first Drive
+ * call is what 403s.
  */
 dataset('drive_failures', [
     'api not enabled' => [
@@ -283,8 +254,7 @@ dataset('drive_failures', [
 ]);
 
 it('names the cause Google actually gave', function (string $googleSays, string $expected) {
-    // A factory that succeeds and a create that fails — the factory throwing
-    // would be read as a dead grant and never reach the classifier.
+    // The factory succeeds and create fails; a throwing factory would read as a dead grant.
     $workspace = new GoogleDriveWorkspace(
         fn () => new class($googleSays) extends Drive
         {
@@ -306,8 +276,7 @@ it('names the cause Google actually gave', function (string $googleSays, string 
     expect($workspace->prepare('c', 's', 'rt', 'Panel backups')['reason'])->toBe($expected);
 })->with('drive_failures');
 
-// The classifier can only name causes somebody thought of. Losing Google's own
-// words is what made the first real failure of this feature a guess.
+// The classifier only names causes somebody thought of; the log must keep Google's own words.
 it('logs what Google said, not only what the panel decided', function () {
     Log::spy();
 
@@ -337,16 +306,11 @@ it('logs what Google said, not only what the panel decided', function () {
 /*
  * A folder id is not a folder name.
  *
- * With `useDisplayPaths` on, the adapter treats its root argument as a display
- * name and creates a directory with that literal text when it cannot find one.
- * Passing `folder_id` there therefore made a folder actually called
- * `1f5v8y369-o8pIvZse_VXpIbgbdY3POXu` in a personal Drive, next to the properly
- * named one the panel had already created — reported, reasonably, as a
- * suspected compromise.
+ * With `useDisplayPaths` on, the adapter treats its root argument as a display name and creates a
+ * directory with that literal text when it finds none. Passing `folder_id` there made a folder
+ * named after the id in the user's Drive.
  *
- * Asserted on the adapter's resolved root rather than on a mock's arguments,
- * because the thing that matters is where writes land, not which parameter we
- * happened to pass.
+ * Asserted on the adapter's resolved root: what matters is where writes land.
  */
 it('roots the disk at the folder id without inventing a folder named after it', function () {
     $adapter = new GoogleDriveAdapter(
@@ -365,9 +329,8 @@ it('roots the disk at the folder id without inventing a folder named after it', 
 });
 
 /*
- * The shape that caused it, pinned so it cannot come back: an id in the
- * positional root makes the adapter go looking for a folder *named* that, which
- * is the lookup that creates one.
+ * Pinned regression: an id in the positional root makes the adapter look for a folder *named*
+ * that, which is the lookup that creates one.
  */
 it('never passes the folder id as the adapter root', function () {
     $provider = file_get_contents(app_path('Providers/AppServiceProvider.php'));
@@ -380,8 +343,8 @@ it('never passes the folder id as the adapter root', function () {
 });
 
 /*
- * `folderExists` itself, against a fake Drive — the tests above stub it, so
- * without these the trashed case would be asserted only against my own stub.
+ * `folderExists` against a fake Drive; the tests above stub it, so the trashed case would
+ * otherwise be asserted only against a stub.
  */
 function driveReturning(?bool $trashed, ?string $throws = null): GoogleDriveWorkspace
 {
@@ -419,8 +382,7 @@ it('accepts a folder that is present and not in the trash', function () {
         ->ok->toBeTrue();
 });
 
-// Drive resolves a trashed folder by id perfectly well. Without this the panel
-// would upload into the Trash and lose it on Google's thirty-day purge.
+// Drive resolves a trashed folder by id; without this uploads would go into the Trash and be purged.
 it('calls a trashed folder missing', function () {
     expect(driveReturning(true)->folderExists('c', 's', 'rt', 'FOLDER-1'))
         ->ok->toBeFalse()
@@ -433,8 +395,7 @@ it('calls a deleted folder missing', function () {
         ->reason->toBe('storage.oauth.folder_missing');
 });
 
-// No folder recorded is a half-finished connect, not a Drive failure — and it
-// must not cost a request to say so.
+// No folder recorded is a half-finished connect, and answering it must not cost a request.
 it('answers an empty folder id without asking Drive', function () {
     expect(driveReturning(false)->folderExists('c', 's', 'rt', ''))
         ->ok->toBeFalse()
@@ -491,9 +452,8 @@ function persistedOauthDestination(array $config = []): StorageDestination
 }
 
 /*
- * The panel created that folder and still holds a working refresh token, so it
- * can create another. Requiring a browser round trip to replace it left the
- * destination stuck — and a backup at 3am cannot complete a consent screen.
+ * The panel created that folder and still holds a working refresh token, so it can create
+ * another; an unattended backup cannot complete a consent screen.
  */
 it('makes a new folder when the old one is gone', function () {
     $seen = new \stdClass;
@@ -522,8 +482,7 @@ it('clears the failure that was about the folder it just replaced', function () 
     expect($destination->fresh()->last_test_error)->toBeNull();
 });
 
-// Nothing to heal with. Creating a folder needs a grant, and inventing one is
-// not on the table — "not connected" stays the honest answer.
+// Nothing to heal with: creating a folder needs a grant, so "not connected" stays the answer.
 it('does not try to heal a destination nobody has connected', function () {
     $seen = new \stdClass;
     app()->bind(GoogleDriveWorkspace::class, fn () => healingWorkspace($seen));
@@ -534,9 +493,8 @@ it('does not try to heal a destination nobody has connected', function () {
 });
 
 /*
- * A full Drive, a revoked grant, the API switched off. The destination is left
- * exactly as it was so the operation that triggered this reports the real
- * failure — a half-healed row would claim a folder that was never made.
+ * Full Drive, revoked grant, API off: the destination is left as it was so the triggering
+ * operation reports the real failure; a half-healed row would claim a folder never made.
  */
 it('leaves the destination alone when it cannot make a folder either', function () {
     $seen = new \stdClass;
@@ -578,12 +536,8 @@ it('does not create anything when the folder is still there', function () {
 });
 
 /*
- * The wiring, not just the method.
- *
- * `heal()` is only useful if something calls it, and the whole point is that it
- * runs on an unattended 3am backup — not merely when somebody presses Test.
- * `DestinationDisk::for()` is the seam every path goes through, so that single
- * line is the feature. Deleting it broke no test until this one existed.
+ * The wiring, not just the method: `DestinationDisk::for()` is the seam every path goes through,
+ * so `heal()` also runs on unattended backups, not only when someone presses Test.
  */
 it('repairs the folder when a disk is built for the destination', function () {
     $seen = new \stdClass;
@@ -604,8 +558,8 @@ it('repairs the folder when a disk is built for the destination', function () {
 });
 
 /*
- * And it must be repaired *before* the config is read, or the very operation
- * that triggered the repair would still be handed the dead folder id.
+ * The repair must happen *before* the config is read, or the triggering operation would still
+ * get the dead folder id.
  */
 it('builds the disk on the new folder, not the one that was gone', function () {
     $seen = new \stdClass;
@@ -629,14 +583,9 @@ it('builds the disk on the new folder, not the one that was gone', function () {
 });
 
 /*
- * Test connection must leave nothing behind.
- *
- * The sentinel key used to be `.probe/<uuid>.bin`. A key with a directory in it
- * makes the provider create that directory, and deleting the object does not
- * remove it — so every test left a `.probe` folder for good. On S3 a prefix is
- * not a real object and nobody noticed; on Drive it is a real folder, in
- * somebody's personal account, where a leading dot does not even make it
- * hidden.
+ * Test connection must leave nothing behind. A key containing a directory (`.probe/<uuid>.bin`)
+ * makes the provider create that directory, and deleting the object does not remove it; on
+ * Drive that is a real folder in the user's account.
  */
 it('probes with a flat key so no folder is created', function () {
     $source = file_get_contents(

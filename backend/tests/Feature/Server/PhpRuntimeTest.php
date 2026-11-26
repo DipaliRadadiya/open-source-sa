@@ -48,8 +48,7 @@ function fakePhp(string $default = '8.4', bool $ok = true, array $absent = [], b
         $runs[] = ['command' => $process->command, 'env' => $process->environment ?? []];
         $command = $process->command;
 
-        // `$ok: false` fails the mutating commands only — the reads still have
-        // to answer, or a test cannot get as far as the operation it is about.
+        // `$ok: false` fails the mutating commands only; the reads must still answer.
         if (! $ok && ($command[0] ?? '') === 'apt-get') {
             return Process::result(exitCode: 1, errorOutput: 'E: Could not get lock');
         }
@@ -58,15 +57,10 @@ function fakePhp(string $default = '8.4', bool $ok = true, array $absent = [], b
             ($command[0] ?? '') === 'update-alternatives' && in_array('--query', $command, true) => Process::result(
                 output: "Name: php\nLink: /usr/bin/php\nStatus: auto\nBest: /usr/bin/php{$default}\nValue: /usr/bin/php{$default}\n"
             ),
-            // `apt-cache policy <pkg>` — the availability check install()
-            // makes before handing a name to apt. Answered per package from
-            // $absent, so a test can model a name the index does not have.
-            //
-            // The shape matters: an unknown package prints NOTHING and still
-            // exits 0, and a known-but-uninstallable one prints
-            // `Candidate: (none)`. A fake that answered with an exit code
-            // would prove the opposite of what happens on a server.
-            // Several packages in one call print one block each, as apt does.
+            // `apt-cache policy <pkg>`: the availability check install() makes before calling apt.
+            // An unknown package prints NOTHING and still exits 0; a known-but-uninstallable one
+            // prints `Candidate: (none)`. One block per package, as apt does. `$absent` models
+            // names the index does not have.
             ($command[0] ?? '') === 'apt-cache' && ($command[1] ?? '') === 'policy' => Process::result(
                 output: collect(array_slice($command, 2))
                     ->reject(fn (string $package) => in_array($package, $absent, true))
@@ -74,15 +68,9 @@ function fakePhp(string $default = '8.4', bool $ok = true, array $absent = [], b
                     ->implode('')
             ),
             ($command[0] ?? '') === 'apt-cache' => Process::result(output: $search),
-            // `dpkg-query -W` — which of the base packages are actually on the
-            // box. A version the panel installed has all of them, which is the
-            // default here; `$bare` models the case that prompted this, a
-            // version that arrived as somebody else's apt dependency with only
-            // the interpreter.
-            //
-            // dpkg-query exits non-zero when a name is unknown, and that is
-            // the ordinary answer rather than a failure — modelled, because a
-            // fake that always exits 0 would hide the expected-exit handling.
+            // `dpkg-query -W`: which base packages are on the box. The default has all of them;
+            // `$bare` models a version that arrived as another package's dependency with only the
+            // interpreter. An unknown name exits non-zero, which is an ordinary answer, not a failure.
             ($command[0] ?? '') === 'dpkg-query' && ($command[1] ?? '') === '-W' => Process::result(
                 output: $bare
                     ? ''
@@ -112,8 +100,7 @@ function phpCall(string $method, string $uri, array $body = []): TestResponse
 it('reads the default from update-alternatives, which is what owns /usr/bin/php', function () {
     fakePhp(default: '8.3');
 
-    // Managing that symlink by hand would fight the package manager on its
-    // own ground; update-alternatives is the supported mechanism.
+    // Managing that symlink by hand would fight the package manager.
     expect(phpSettings()['default'])->toBe('8.3');
 });
 
@@ -166,8 +153,7 @@ it('offers only versions that are not installed yet', function () {
 });
 
 it('does not offer a PHP whose candidate is a pre-release', function () {
-    // Measured on a real server: `php8.6-fpm` sat at the top of the list,
-    // looking like any release, while apt's candidate was a beta.
+    // A `php8.6-fpm` whose apt candidate is a beta must not look like any other release.
     fakePhp(
         search: "php8.2-fpm - x\nphp8.3-fpm - x\nphp8.4-fpm - x\nphp8.5-fpm - x\nphp8.6-fpm - x\n",
         candidates: [
@@ -193,23 +179,19 @@ it('offers a pre-release when told to', function () {
 });
 
 it('offers nothing older than the configured floor for a new install', function () {
-    // Operator decision 2026-09-28: 5.6 to 7.3, long past end of life, are
-    // not offered any more — they came up in the repository and sat in the
-    // list like any other release.
+    // 5.6 to 7.3 are long past end of life and are not offered, though the repository lists them.
     fakePhp(search: "php5.6-fpm - x\nphp7.0-fpm - x\nphp7.3-fpm - x\nphp7.4-fpm - x\nphp8.2-fpm - x\n");
 
     expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.2', '7.4']);
 
-    // Said as what it is — 7.3 is in the repository, it is just not offered.
+    // Refused as "below the minimum", not as unknown: 7.3 is in the repository.
     phpCall('POST', '/api/php/versions', ['version' => '7.3'])
         ->assertStatus(422)
         ->assertJsonPath('errors.version.0', __('php.below_minimum', ['version' => '7.3', 'minimum' => '7.4']));
 });
 
 it('still lists and keeps an old version that is already installed', function () {
-    // "If the user has it installed, show it": a server that already runs
-    // 7.2 must not lose it from the screen because the panel stopped
-    // offering it.
+    // A server already running 7.2 must not lose it from the screen when the panel stops offering it.
     File::makeDirectory("{$this->phpDir}/7.2/fpm", 0755, true);
     fakePhp(search: "php7.2-fpm - x\nphp8.2-fpm - x\n");
 
@@ -249,8 +231,7 @@ it('refuses to remove the version the panel is running on', function () {
     fakePhp(default: '8.3');
     $panel = PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;
 
-    // This is the one that would take the panel offline from inside the
-    // panel, with no way back in to undo it.
+    // Removing it would take the panel offline from inside the panel, with no way back.
     phpCall('DELETE', "/api/php/versions/{$panel}")
         ->assertUnprocessable()
         ->assertJsonFragment(['message' => "Removing PHP {$panel} would take the panel offline — it is the version the panel itself runs on."]);
@@ -276,10 +257,7 @@ it('queues the removal instead of purging inside the request', function () {
     Queue::fake();
     fakePhp(default: '8.4');
 
-    // 202, not 204. apt takes minutes and nginx ends a request at
-    // fastcgi_read_timeout, so purging here handed the browser a timeout
-    // while the work carried on — the screen never refreshed, the version
-    // disappeared on its own, and pressing Remove again answered 404.
+    // 202, not 204: apt takes minutes and nginx ends a request at fastcgi_read_timeout.
     phpCall('DELETE', '/api/php/versions/8.3')->assertStatus(202);
 
     Queue::assertPushed(RemovePhpVersion::class, fn ($job) => $job->version === '8.3');
@@ -291,18 +269,14 @@ it('marks the version as removing before the worker picks it up', function () {
 
     phpCall('DELETE', '/api/php/versions/8.3')->assertStatus(202);
 
-    // Recorded before dispatch: a client reloading straight after the 202
-    // must see the version marked rather than watch it sit there looking
-    // untouched.
+    // Recorded before dispatch: a client reloading right after the 202 must see it marked.
     expect(RuntimeInstall::where('version', '8.3')->first()?->status)
         ->toBe(InstallStatus::Removing);
 });
 
 it('purges and then clears what the purge cannot', function () {
-    // The panel writes a pool file per site into <version>/fpm/pool.d. dpkg
-    // does not own those, so a directory still holding them survives the
-    // purge — and detection reads exactly these directories, which is why a
-    // removed version stayed on the screen through a reload.
+    // The per-site pool files in <version>/fpm/pool.d are not dpkg's, so the directory survives
+    // the purge, and detection reads exactly these directories.
     $runs = fakePhp(default: '8.4');
 
     app(PhpRuntime::class)->uninstall('8.3');
@@ -313,9 +287,8 @@ it('purges and then clears what the purge cannot', function () {
 });
 
 /*
- * The panel's ionCube ini and loader are not dpkg's, so they outlived the
- * purge. On OpenLiteSpeed the ini sits in the version's scan dir, and
- * reinstalling that version loaded ionCube again with nothing saying so.
+ * The panel's ionCube ini and loader are not dpkg's, so the purge leaves them; a reinstall of
+ * that version would load ionCube again unannounced.
  */
 it('deletes the panel\'s ionCube files once the purge has succeeded', function () {
     $ionCube = Mockery::mock(IonCubeLoader::class);
@@ -348,16 +321,10 @@ it('leaves ionCube alone when the purge failed', function () {
 });
 
 it('does not clear the directory when the purge failed', function () {
-    // Stripping a version's configuration after apt refused to remove the
-    // version would leave a working PHP with no config at all — worse than
-    // the leftovers this exists to sweep up.
-    // The failure this fake injects is "E: Could not get lock", which is one of
-    // `server.transient.patterns` — so `ServerOps::apt()` retried it on the
-    // real budget, 40 attempts 15 seconds apart. That is a genuine `usleep` of
-    // **600 seconds** inside one test, and the whole suite runs in 764: four
-    // fifths of every run was this line waiting. The retry budget itself is
-    // covered by ServerOpsRetryTest, which sets its own; here it is incidental
-    // to a test about not deleting a directory.
+    // Stripping the configuration after apt refused to remove the version would leave a working
+    // PHP with no config at all.
+    // "E: Could not get lock" is a transient failure that ServerOps::apt() retries on the real
+    // budget (40 x 15 s), so the retry config is shrunk; ServerOpsRetryTest covers the budget.
     config(['server.apt.lock_attempts' => 2, 'server.apt.lock_delay_ms' => 0]);
 
     $runs = fakePhp(default: '8.4', ok: false);
@@ -370,15 +337,9 @@ it('does not clear the directory when the purge failed', function () {
 });
 
 it('installs a usable PHP, not a bare interpreter', function () {
-    // A bare php8.2-fpm has no mysql, no curl, no mbstring — every
-    // application in the marketplace would fail on it.
-    //
-    // Through fakePhp(), which answers `apt-cache policy`. An earlier version
-    // re-faked Process with a stub that returned nothing for every command,
-    // and once install() started checking availability that stub meant "the
-    // index has none of these" — so the assertion failed for a reason that
-    // had nothing to do with the base set. A fake that answers less than the
-    // real thing tests the fake.
+    // A bare php8.2-fpm has no mysql, no curl, no mbstring: marketplace applications would fail.
+    // Uses fakePhp() because it answers `apt-cache policy`; a stub answering nothing reads as
+    // "the index has none of these".
     $runs = fakePhp();
 
     app(PhpRuntime::class)->install('8.2');
@@ -388,10 +349,8 @@ it('installs a usable PHP, not a bare interpreter', function () {
 });
 
 it('drops a package this server cannot install, and keeps the rest', function () {
-    // The reported failure: `E: Unable to locate package lsphp85-opcache`.
-    // apt fails the WHOLE transaction on one unknown name, so a single gap in
-    // LiteSpeed's per-version package set meant "install PHP 8.5" installed
-    // nothing at all — mysql and curl went down with the missing one.
+    // apt fails the WHOLE transaction on one unknown name (`E: Unable to locate package ...`),
+    // so a single gap in a version's package set would install nothing at all.
     $runs = fakePhp(absent: ['php8.2-mbstring']);
 
     app(PhpRuntime::class)->install('8.2');
@@ -399,34 +358,27 @@ it('drops a package this server cannot install, and keeps the rest', function ()
     $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get' && ($c[1] ?? '') === 'install');
 
     expect($install)->not->toContain('php8.2-mbstring')
-        // ...and the ones that DO exist still get installed, which is the
-        // whole point: one absent name must not cost the others.
+        // ...and the ones that DO exist still get installed.
         ->and($install)->toContain('php8.2-fpm', 'php8.2-mysql', 'php8.2-curl');
 });
 
 it('never drops the interpreter itself', function () {
-    // Filtering the thing being installed would turn "this version is not
-    // available on this server" into a successful install of nothing.
-    // Extensions are degradable; the interpreter is not.
+    // Filtering the interpreter would turn "this version is not available" into a successful
+    // install of nothing. Extensions are degradable; the interpreter is not.
     $runs = fakePhp(absent: ['php8.2-fpm', 'php8.2-cli', 'php8.2-common', 'php8.2-mysql']);
 
     app(PhpRuntime::class)->install('8.2');
 
     $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get' && ($c[1] ?? '') === 'install');
 
-    // Still handed to apt, so apt refuses out loud rather than the panel
-    // quietly installing an empty set and calling it done.
+    // Still handed to apt, so apt refuses out loud instead of the panel installing an empty set.
     expect($install)->toContain('php8.2-fpm');
 });
 
 it('installs the full set when the availability check itself fails', function () {
-    // A filter that cannot see must not filter. If apt-cache cannot run --
-    // lock held, index broken, binary missing -- reading "cannot confirm" as
-    // "not there" would strip every extension and report success, which is
-    // the same silent half-install this filtering exists to prevent.
-    //
-    // Degrading to the previous behaviour puts apt back in charge: if a
-    // package really is missing it says so, loudly, as it always did.
+    // A filter that cannot see must not filter: reading "cannot confirm" (lock held, index
+    // broken) as "not there" would strip every extension and report success. Installing the
+    // full set puts apt back in charge, and it fails loudly if a package is really missing.
     $runs = new ArrayObject;
     Process::fake(function ($process) use ($runs) {
         $runs[] = ['command' => $process->command];
@@ -457,8 +409,7 @@ it('queues the install, once per version', function () {
 
     phpCall('POST', '/api/php/versions', ['version' => '8.2'])->assertStatus(202);
 
-    // apt takes a lock; a second run for the same version would sit waiting
-    // for the first and then repeat its work.
+    // apt takes a lock; a second run for the same version would wait, then repeat the work.
     Queue::assertPushed(InstallPhpVersion::class, 1);
     expect((new InstallPhpVersion('8.2'))->uniqueId())->toBe('php-install-8.2');
 });
@@ -491,9 +442,8 @@ it('changes the default through update-alternatives', function () {
 });
 
 it('moves phar with php, so the two cannot disagree', function () {
-    // `php8.x-cli` registers three groups and the panel moved one of them, so
-    // `php -v` and `phar -v` could report different versions — the kind of
-    // thing a build script finds weeks later.
+    // `php8.x-cli` registers three alternative groups; moving only one makes `php -v` and
+    // `phar -v` report different versions.
     $runs = fakePhp(default: '8.4');
 
     phpCall('PUT', '/api/php/default', ['default' => '8.3'])->assertOk();
@@ -504,9 +454,8 @@ it('moves phar with php, so the two cannot disagree', function () {
 });
 
 it('still changes the default when the box has no phar alternative', function () {
-    // A box assembled some other way can have the interpreter without the phar
-    // links. Refusing the whole change over that would report a change that
-    // did happen as one that did not.
+    // A box can have the interpreter without the phar links; refusing the change over that
+    // would report a change that did happen as one that did not.
     $runs = new ArrayObject;
 
     Process::fake(function ($process) use ($runs) {
@@ -556,19 +505,10 @@ it('denies every mutation to a view-only user', function () {
 });
 
 it('refreshes the package index before asking what exists', function () {
-    // 🔴 Reported from a real OpenLiteSpeed server: PHP 8.3 installed cleanly,
-    // then Nextcloud refused to install because curl was missing — a package
-    // that exists upstream, is named correctly by the panel, and was never
-    // asked for.
-    //
-    // `installablePackages()` asks `apt-cache policy` whether each extension
-    // exists, and that reads the LOCAL index. On a box whose index predates
-    // the repository, every extension answers "no", every one is skipped by
-    // the degrade-gracefully filter, and a bare interpreter installs while
-    // reporting success.
-    //
-    // Ordering is the assertion, not presence: a refresh after the checks
-    // answers a question that has already been asked wrongly.
+    // `installablePackages()` asks `apt-cache policy`, which reads the LOCAL index. If that
+    // predates the repository, every extension answers "no", every one is skipped, and a bare
+    // interpreter installs while reporting success.
+    // Ordering is the assertion: a refresh after the checks comes too late.
     $runs = fakePhp();
 
     app(PhpRuntime::class)->install('8.2');
@@ -583,10 +523,8 @@ it('refreshes the package index before asking what exists', function () {
 });
 
 it('installs anyway when the index refresh fails', function () {
-    // `apt-get update` exits non-zero when ANY configured source fails,
-    // including one with nothing to do with PHP. Refusing to install over an
-    // unrelated 404 would turn a working server into one that cannot add a PHP
-    // version — a worse failure than the stale index this guards against.
+    // `apt-get update` exits non-zero when ANY source fails, even one unrelated to PHP; refusing
+    // to install over that is worse than the stale index the refresh guards against.
     config(['server.apt.lock_attempts' => 2, 'server.apt.lock_delay_ms' => 0]);
 
     $runs = new ArrayObject;
@@ -615,21 +553,11 @@ it('installs anyway when the index refresh fails', function () {
 /*
 | The FPM package list, against install.sh's.
 |
-| 🔴 These two drifted, and the gap reached a real server: the panel's list
-| omitted `sqlite3`, so PHP 8.5 added from the PHP screen had no pdo_sqlite.
-| Made the system default, it left bare `php` — which the deploy runbook uses —
-| unable to open the panel's own SQLite database:
+| The two lists must not drift: without `sqlite3` a PHP added from the PHP screen has no
+| pdo_sqlite, and as the system default it breaks `artisan` on the panel's own SQLite database.
+| `OlsInstallerTest` asserts the same parity for OpenLiteSpeed.
 |
-|   In Connector.php line 67:  could not find driver
-|
-| OpenLiteSpeed never had this bug, and the reason is instructive: the same
-| drift happened there first, caused an "install PHP 8.3" that installed
-| nothing, and `OlsInstallerTest` has asserted parity ever since. The FPM stack
-| had no such guard. This is it.
-|
-| install.sh is the source of truth in both, for the reason the OLS test gives:
-| it is the set proven on hardware. Whichever list a future edit changes, the
-| other has to move with it.
+| install.sh is the source of truth (the set proven on hardware); change both lists together.
 */
 
 it('installs from the panel exactly what install.sh installs', function () {
@@ -639,9 +567,7 @@ it('installs from the panel exactly what install.sh installs', function () {
         test()->markTestSkipped('install.sh is not in this checkout');
     }
 
-    // The FPM branch only. `install_ols_packages` builds `${lsphp}-` names and
-    // is covered by OlsInstallerTest; matching both here would compare two
-    // stacks' lists to one config key.
+    // The FPM branch only: `install_ols_packages` builds `${lsphp}-` names (OlsInstallerTest).
     preg_match_all('/php\$\{PHP_VERSION\}-([a-z0-9]+)/', (string) file_get_contents($path), $matches);
 
     $fromInstaller = array_values(array_unique($matches[1]));
@@ -656,33 +582,18 @@ it('installs from the panel exactly what install.sh installs', function () {
 });
 
 it('always installs the driver for the panel\'s own database', function () {
-    // Named on its own rather than left to the parity check. Losing sqlite3 is
-    // not one missing extension among sixteen: the panel stores itself in
-    // SQLite, so a version without it breaks `artisan` — migrations, the
-    // scheduler, the queue — the moment it becomes the default. A parity test
-    // says "the lists match"; this says which package must never leave.
+    // Named on its own: the panel stores itself in SQLite, so a version without sqlite3 breaks
+    // `artisan` (migrations, scheduler, queue) once it becomes the default.
     expect((array) config('server.runtimes.php.base_packages'))->toContain('sqlite3');
 });
 
 /*
 | A version the panel did not install.
 |
-| 🔴 Found on a real OpenLiteSpeed server, 2026-09-21. The `openlitespeed`
-| package pulls in `lsphp83` as its OWN dependency, so the panel listed a
-| version nobody asked for — and it was a bare interpreter:
-|
-|   PHP 8.3 (apt dependency)   curl ✗  sqlite3 ✗  redis ✗  intl ✗  pgsql ✗
-|   PHP 8.4 (panel installed)  curl ✓  sqlite3 ✓  redis ✓  intl ✓  pgsql ✓
-|
-| In the version picker the two look identical. A site put on 8.3 then fails
-| with "curl is not installed" — the report this whole sequence began from,
-| reproduced on a brand-new server with every earlier fix in place.
-|
-| And the one control that could have repaired it refused to act: `store()`
-| asked `installed()`, which only means the interpreter exists.
-|
-| The same shape exists on FPM — a hand-installed php8.1-fpm has an
-| interpreter and none of the set — so none of this is OpenLiteSpeed-specific.
+| The `openlitespeed` package pulls in `lsphp83` as its own dependency: a bare interpreter that
+| the version picker shows like any other, and a site put on it fails with "curl is not
+| installed". `store()` must not read "interpreter exists" as "installed". FPM has the same shape
+| with a hand-installed php8.1-fpm.
 */
 
 it('reports the base packages a half-installed version is missing', function () {
@@ -693,8 +604,7 @@ it('reports the base packages a half-installed version is missing', function () 
     expect($missing)->not->toBeEmpty()
         ->and($missing)->toContain('php8.3-curl')
         ->and($missing)->toContain('php8.3-sqlite3')
-        // Never the interpreter: its presence is what "installed" means, and
-        // its absence would be a different state entirely.
+        // Never the interpreter: its presence is what "installed" means.
         ->and($missing)->not->toContain('php8.3-fpm')
         ->and(collect($runs)->pluck('command')->contains(fn ($c) => ($c[0] ?? '') === 'dpkg-query'))->toBeTrue();
 });
@@ -706,9 +616,8 @@ it('reports nothing missing for a version the panel installed', function () {
 });
 
 it('never reports a package the index does not have', function () {
-    // LiteSpeed compiles mbstring, xml, zip, gd, bcmath and soap into the
-    // interpreter, so those names exist nowhere. Calling them "missing" would
-    // be alarming and false — the version has the capability.
+    // LiteSpeed compiles mbstring, xml, zip, gd, bcmath and soap in, so those package names
+    // exist nowhere; calling them "missing" would be false.
     fakePhp(bare: true, absent: ['php8.3-mbstring', 'php8.3-soap']);
 
     $missing = app(PhpRuntime::class)->missingBasePackages('8.3');
@@ -719,9 +628,8 @@ it('never reports a package the index does not have', function () {
 });
 
 it('completes a half-installed version instead of calling it done', function () {
-    // The bug: "Install PHP 8.3" answered "already installed" and did nothing,
-    // on a version the panel was still offering for new sites. apt is
-    // idempotent, so falling through to the install is the existing path.
+    // "Install PHP 8.3" must not answer "already installed" for a bare interpreter; apt is
+    // idempotent, so falling through to the install is safe.
     $this->seed(PermissionSeeder::class);
     $admin = User::factory()->admin()->create();
 
@@ -733,8 +641,7 @@ it('completes a half-installed version instead of calling it done', function () 
 });
 
 it('still treats a complete version as done', function () {
-    // The pre-existing behaviour, which must not regress: a healthy version
-    // is a no-op, not an apt run on every press.
+    // A healthy version is a no-op, not an apt run on every press.
     $this->seed(PermissionSeeder::class);
     $admin = User::factory()->admin()->create();
 
@@ -746,9 +653,8 @@ it('still treats a complete version as done', function () {
 });
 
 it('does not go on calling a version failed once it is installed and complete', function () {
-    // The nginx test server showed PHP 8.3 as "install failed" all day while
-    // it served WordPress: apt's start of php-fpm had failed mid-install, and
-    // the version was completed right after.
+    // A failure recorded mid-install (apt's php-fpm start) must not stick once the version is
+    // complete.
     fakePhp();
     $tracker = app(InstallTracker::class);
     $tracker->start('php', '8.3');
@@ -771,9 +677,8 @@ it('still reports the failure while the version is incomplete', function () {
 });
 
 it('keeps the server default when installing a newer PHP', function () {
-    // Debian's `php` group is in auto mode and the newest version has the
-    // highest priority, so apt moved the default to 8.5 on install (nginx
-    // test server) — cron, shells and every new site with it.
+    // Debian's `php` group is in auto mode and the newest version has the highest priority, so
+    // apt moves the default to it on install, taking cron, shells and new sites along.
     $runs = new ArrayObject;
     $state = new ArrayObject(['default' => '8.4']);
     $phpDir = $this->phpDir;
@@ -835,10 +740,9 @@ it('still answers 404 for a version that is neither installed nor failed', funct
 });
 
 /*
-| OpenLiteSpeed: dpkg skipped the folders the panel's ionCube files were in,
-| and deleting those files afterwards left `lsphpNN/` as a skeleton of empty
-| folders (found on the OLS test server, 2026-10-13). Only empty folders are
-| swept, only on that stack, only when the panel's ionCube was there.
+| OpenLiteSpeed: dpkg skips the folders holding the panel's ionCube files, so deleting those
+| leaves `lsphpNN/` as a skeleton of empty folders. Only empty folders are swept, only on that
+| stack, only when the panel's ionCube was there.
 */
 it('sweeps the empty folders of an OpenLiteSpeed version once its ionCube files are gone', function () {
     config(['server.php_stacks.lsphp.dir' => '/usr/local/lsws']);

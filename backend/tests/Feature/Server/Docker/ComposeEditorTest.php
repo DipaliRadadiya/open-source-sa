@@ -14,19 +14,14 @@ use Illuminate\Support\Facades\Process;
 /**
  * Editing a container site's compose file after it exists.
  *
- * Before this the file was writable exactly once, on the create form. A site that
- * needed a new environment variable had no way to get one: the Environment screen
- * is not offered on a container, and the compose text no endpoint accepted.
+ * What these tests are mostly about:
  *
- * Two things here are not decoration and are what these tests are mostly about:
- *
- *  - **Rollback.** Every other apply path changes one field; this one hands over
- *    the whole file, so a save can stop the site in ways no validator predicts. A
- *    save that leaves a site down and the panel holding the text that broke it is
- *    worse than a save that refuses.
- *  - **The vhost.** With a pasted compose the FILE chooses the published port, not
- *    the panel. Change it and forget to re-render the vhost and nginx proxies to a
- *    port nothing listens on — a 502 caused by a save that reported success.
+ *  - **Rollback.** This path hands over the whole file, so a save can stop the site in ways no
+ *    validator predicts; leaving the site down with the panel holding the text that broke it is
+ *    worse than refusing the save.
+ *  - **The vhost.** With a pasted compose the FILE chooses the published port. Change it
+ *    without re-rendering the vhost and nginx proxies to a port nothing listens on (a 502
+ *    after a save that reported success).
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -99,10 +94,9 @@ function validCompose(int $hostPort = 20001, int $containerPort = 80): string
 }
 
 /**
- * Faked per command. `compose config` is how the validator reads the file, so it
- * has to answer with the resolved document — a blanket fake makes the validator
- * report every file unparsable and the test then asserts against a box the fake
- * broke.
+ * Faked per command. `compose config` is how the validator reads the file, so it has to
+ * answer with the resolved document: a blanket fake makes the validator report every file
+ * unparsable.
  *
  * @param  callable|null  $onUp  return a failure to make `compose up` fail.
  */
@@ -134,9 +128,8 @@ function fakeComposeBox(string $resolved, ?callable $onUp = null): void
 /**
  * What `docker compose config` prints for {@see validCompose()}.
  *
- * **JSON, not YAML.** The validator asks for `--format json` and `json_decode`s the
- * answer, so a YAML fixture reads back as null and every file is reported
- * unparsable — which is what the first version of these tests asserted against.
+ * **JSON, not YAML.** The validator asks for `--format json` and `json_decode`s the answer, so a
+ * YAML fixture reads back as null and every file is reported unparsable.
  */
 function resolvedCompose(int $hostPort = 20001, int $containerPort = 80): string
 {
@@ -183,16 +176,14 @@ function publicResolvedCompose(): string
  */
 
 it('hands back the generated file for a site that has no stored one', function () {
-    // Simple mode: the panel renders the file from the fields on every deploy, so
-    // there is nothing stored. Showing an empty editor would invite somebody to
-    // write one from scratch when they wanted to change one line of the real one.
+    // Simple mode: the panel renders the file from the fields on every deploy, so nothing is
+    // stored. An empty editor would invite writing one from scratch instead of changing one line.
     $response = $this->withHeaders(composeHeaders())->getJson(composeUrl())->assertOk();
 
     expect($response->json('generated'))->toBeTrue()
         ->and($response->json('compose'))->toContain('nginx:1.27-alpine')
-        // The panel's own guarantees are in the rendered file, and seeing them is
-        // the point: somebody about to take the file over should know what they
-        // are taking responsibility for.
+        // The panel's own guarantees are in the rendered file; somebody taking the file over
+        // should see what they are taking responsibility for.
         ->and($response->json('compose'))->toContain('127.0.0.1:20001:80')
         ->and($response->json('compose'))->toContain('mem_limit');
 });
@@ -208,9 +199,8 @@ it('hands back the stored file once there is one', function () {
 });
 
 it('does not touch the server when the file is only read', function () {
-    // The pasted-file path records the published port as a side effect. A GET that
-    // reached it would be a read that rewrites a row and restarts nothing — the
-    // worst kind of surprise.
+    // The pasted-file path records the published port as a side effect; a GET that reached it
+    // would rewrite a row on a read.
     $this->application->forceFill(['compose' => validCompose(30500)])->save();
     $ran = [];
     Process::fake(function ($process) use (&$ran) {
@@ -240,12 +230,9 @@ it('writes the file and recreates the container', function () {
 });
 
 it('refuses a file that publishes to every address', function () {
-    // The single most important rule in this validator, and the reason the editor
-    // cannot be a plain file write: a container published on 0.0.0.0 is reachable
-    // past the firewall.
-    // Answered the same way whatever is sent, so the loopback rewrite's re-parse
-    // also comes back public — which is the case the validator refuses outright
-    // rather than silently accepting.
+    // The reason the editor cannot be a plain file write: a container published on 0.0.0.0 is
+    // reachable past the firewall. Answered the same whatever is sent, so the loopback rewrite's
+    // re-parse also comes back public, which is refused outright.
     fakeComposeBox(publicResolvedCompose());
 
     $this->withHeaders(composeHeaders())
@@ -258,9 +245,8 @@ it('refuses a file that publishes to every address', function () {
 });
 
 it('refuses an empty file rather than treating it as "generate one"', function () {
-    // Empty means "render from the fields" on the create form. Here it would mean
-    // silently reverting a site to a file the user cannot see, so it is refused —
-    // and stopping a site is what the disable control is for.
+    // Empty means "render from the fields" on the create form. Here it would silently revert a
+    // site to a file the user cannot see, so it is refused; stopping a site is what disable is for.
     $this->withHeaders(composeHeaders())
         ->putJson(composeUrl(), ['compose' => ''])
         ->assertStatus(422)
@@ -268,9 +254,8 @@ it('refuses an empty file rather than treating it as "generate one"', function (
 });
 
 it('tells the user what Docker could not read, not where a log is (RC-29)', function () {
-    // The refusal used to end "the error from Docker itself is in the server
-    // operations log" — a log nobody using the editor can open. The 422 now
-    // carries Docker's own line, so the person who typed the mistake can see it.
+    // The 422 carries Docker's own error line: the server operations log it used to point at is
+    // not something the person who typed the mistake can open.
     Process::fake(function ($process) {
         $args = $process->command;
 
@@ -375,9 +360,8 @@ it('re-renders the vhost when the published port moved', function () {
 });
 
 it('rolls the file and the vhost back when the new vhost fails its test (DS-09)', function () {
-    // Written and reloaded with neither result read, a vhost that failed
-    // `nginx -t` left the old one proxying to the old port behind a save that
-    // said OK — the 502 the reconcile above exists to prevent.
+    // Written and reloaded with neither result read, a vhost that failed `nginx -t` would leave
+    // the old one proxying to the old port behind a save that said OK.
     $working = validCompose();
     $this->application->forceFill(['compose' => $working])->save();
 
@@ -516,12 +500,9 @@ it('records that the file changed without recording what it said', function () {
 });
 
 /*
- * The screen's placement, which is a permission question.
- *
- * It was a dialog on the Dashboard's Container card. It is now its own item in the
- * application sidebar, which means its own `app_compose` permission — the sidebar
- * row IS the permission row — and that permission must be offered for containers
- * and for nothing else.
+ * The screen's placement, which is a permission question: it is its own item in the application
+ * sidebar, so it has its own `app_compose` permission (the sidebar row IS the permission row),
+ * offered for containers and nothing else.
  */
 
 it('offers a Compose File item in a container site\'s sidebar', function () {
@@ -556,12 +537,9 @@ it('offers it for no other site type', function () {
 
     expect($items)->not->toContain('app_compose');
 
-    // Deliberately NOT asserting that Environment appears instead. A hand-rolled
-    // PHP site gets neither, on purpose — `AbstractSiteType` adds Environment only
-    // for git-deployed and Node sites, because a site with no framework reading a
-    // `.env` would be offered a convention the panel invented for it. The pairing
-    // holds for a container, not universally, and the first version of this test
-    // asserted otherwise and failed.
+    // Deliberately NOT asserting that Environment appears instead: `AbstractSiteType` adds it only
+    // for git-deployed and Node sites, so a hand-rolled PHP site gets neither. The pairing holds
+    // for a container, not universally.
 });
 
 it('does not offer Environment on a container, since the file replaced it', function () {
@@ -599,9 +577,8 @@ it('offers a Container item in a container site\'s sidebar', function () {
 });
 
 it('gates the container endpoints on their own permission', function () {
-    // They were on `application,manage`, which is the grant for renaming a site and
-    // enabling it. Recreating a container on a new network is a different act, and
-    // the sidebar row needs a permission of its own anyway.
+    // They were on `application,manage`, the grant for renaming and enabling a site. Recreating a
+    // container on a new network is a different act and the sidebar row needs its own permission.
     dockerStack();
 
     $role = Role::create(['name' => 'Sitewrangler', 'slug' => 'sitewrangler']);
@@ -638,13 +615,10 @@ it('has the Container label translated in every locale', function () {
 });
 
 /*
- * The one-click apps, which is where this went wrong.
- *
- * `app_container` and `app_compose` were added by `DockerSiteType` alone, so all
- * fifteen one-click app types went without them — and since the credentials
- * endpoint moved onto `app_container`, it answered 404 for exactly the sites that
- * HAVE generated credentials. Found by installing Ghost on a real box; every test
- * that touched the endpoint had used the BYO-image type.
+ * The one-click apps. `app_container` and `app_compose` were added by `DockerSiteType` alone, so
+ * the fifteen one-click app types went without them, and the credentials endpoint (on
+ * `app_container`) answered 404 for exactly the sites that HAVE generated credentials.
+ * Every earlier test of that endpoint had used the BYO-image type.
  */
 
 it('offers both container screens to every container-served type', function (string $type) {
@@ -676,14 +650,9 @@ it('keeps the credentials endpoint reachable on a one-click app', function () {
 /*
  * Deleting a site whose compose file declared its own volumes.
  *
- * The panel records the volumes IT creates on `volume_mounts` and removes those
- * itself, after checking no other site mounts them. A volume declared inside a
- * pasted compose file was nobody's job: Compose created it, the panel never knew
- * about it, and it outlived the site as an orphan named after a project that no
- * longer existed.
- *
- * Measured on a real box before this was fixed — `sv-app-7_mfdata` survived a
- * delete that explicitly asked for the site's Docker objects to go.
+ * The panel removes the volumes IT records on `volume_mounts`, after checking no other site
+ * mounts them. A volume declared inside a pasted compose file was nobody's job: it outlived the
+ * site as an orphan even when the delete asked for the site's Docker objects to go.
  */
 
 it('passes --volumes to compose down when the delete opted in', function () {
@@ -779,10 +748,8 @@ it('removes no network on a plain delete, even one the site has moved off (BUG-5
 });
 
 /*
- * A port another application holds (RC-43).
- *
- * The create form now refuses it; the editor has to as well, and has to leave the
- * site being edited out — its own port is not a clash with itself.
+ * A port another application holds: the create form refuses it, so the editor has to as well,
+ * leaving the site being edited out (its own port is not a clash with itself).
  */
 
 it('accepts the file again with the site\'s own port', function () {

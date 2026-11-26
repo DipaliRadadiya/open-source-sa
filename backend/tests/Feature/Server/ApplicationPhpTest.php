@@ -186,10 +186,8 @@ it('treats a missing pool as an expected negative probe', function () {
 });
 
 it('pools that do not exist never attempt a cat', function () {
-    // A pool file that does not exist must never shell out `cat` — that would
-    // be a genuine error logged against every staging site that was never
-    // isolated. `PoolManager::read()` now probes first and only cats a
-    // confirmed-present path.
+    // A pool file that does not exist must never shell out `cat`: that would log a genuine error
+    // against every staging site that was never isolated. `PoolManager::read()` probes first.
     $catCalls = [];
     Process::fake(function ($process) use (&$catCalls) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
@@ -264,12 +262,9 @@ it('hands the site its sessions directory and never the .panel above it', functi
 
     $ran = collect(PoolFake::$ran);
 
-    // `.panel` is root's: everything else root writes for this site lives
-    // there. This was `chown -R` on the parent of `sessions`, which handed
-    // `.panel` to the site user on every PHP site, and a link the user
-    // planted in it then redirected root's writes (reproduced live
-    // 2026-09-29: enabling Basic Auth wrote and chowned a file outside the
-    // site).
+    // `.panel` is root's: everything else root writes for this site lives there. It must not be
+    // `chown -R`'d via the parent of `sessions`: a link the site user planted in it would
+    // redirect root's writes outside the site.
     expect($ran->contains(fn (string $c) => str_contains($c, 'chown -R') && str_contains($c, '/home/siteowner/shop/.panel')))->toBeFalse()
         ->and($ran)->toContain('chown -h siteowner:siteowner /home/siteowner/shop/.panel/sessions')
         // And the mode by its owner, so a `sessions` that is a link is not
@@ -500,7 +495,7 @@ describe('settings', function () {
             ->toContain('php_admin_flag[display_errors] = Off')
             ->toContain('php_value[max_input_nesting_level] = 128')
             // A pool setting that could move the site off its socket is
-            // refused by name and never written, in either form (2026-10-13).
+            // refused by name and never written, in either form.
             ->not->toContain('listen')
             ->not->toContain('; a comment');
     });
@@ -691,10 +686,8 @@ describe('a version change that fails', function () {
             ->putJson(phpUrl(), ['php_version' => '8.3'])
             ->assertStatus(422);
 
-        // The version used to be written to the database *before* the pool
-        // was applied, so a rejected pool left the panel showing 8.3 on a
-        // site still running 8.4 — and, because the old pool had already been
-        // deleted, running nothing at all.
+        // The version must be written only after the pool is applied: a rejected pool would
+        // otherwise leave the panel showing 8.3 on a site still running 8.4.
         expect($this->application->fresh()->php_version)->toBe('8.4');
     });
 
@@ -725,12 +718,9 @@ describe('a version change that fails', function () {
 
 describe('a version the application itself cannot run on', function () {
     /*
-     * The range was enforced when a site was *created* and never again:
-     * `SupportedPhpVersion` was used by `StoreApplicationRequest` alone, and
-     * this screen only ever asked whether the version was installed. So a
-     * PrestaShop site correctly created on 8.1 could be moved to 8.4 here and
-     * simply break — one field, two paths, one of them validated, which is the
-     * same shape as the 2026-09-03 bug in the opposite direction.
+     * The range must be enforced on update too: `SupportedPhpVersion` was used by
+     * `StoreApplicationRequest` alone, and this screen only asked whether the version was
+     * installed. So a PrestaShop site created on 8.1 could be moved to 8.4 here and break.
      */
     beforeEach(function () {
         // The fixture's `php` type declares no range, so it cannot exercise
@@ -942,10 +932,8 @@ it('says so when the pool has been edited by hand', function () {
 });
 
 /*
- * Both "could not check" cases used to become a confident answer: a refused
- * probe read as "managed" (no warning before a save that overwrites hand
- * edits), and a failed `cat` read as "hand-edited" (a warning about edits
- * nobody made).
+ * A "could not check" answer must not become a confident one: a refused probe is not "managed"
+ * (no warning before a save that overwrites hand edits), and a failed `cat` is not "hand-edited".
  */
 it('says it could not check the pool, rather than guessing', function (string $failure) {
     fakePhpServer();
@@ -998,10 +986,9 @@ describe('permissions', function () {
 });
 
 it('writes the vhost at the site\'s real document root when the version changes', function () {
-    // The PHP screen republishes the vhost whenever the version moves. It
-    // built the root itself instead of asking the provisioner, and built it
-    // wrong: domain instead of slug, and no public_html — so the site would
-    // be pointed at a directory that does not exist.
+    // The PHP screen republishes the vhost whenever the version moves. The root must come from
+    // the provisioner (slug, with public_html), not be built from the domain, or the site is
+    // pointed at a directory that does not exist.
     fakePhpServer();
 
     $captured = [];
@@ -1235,8 +1222,8 @@ describe('open_basedir, as reported', function () {
             ->putJson(phpUrl(), ['open_basedir_enabled' => true])
             ->assertOk();
 
-        // Below ours, as an additional directive saved before 2026-10-01
-        // lands: FPM ignores it, so the screen must too.
+        // Below ours, as an earlier-saved additional directive lands: FPM ignores it, so the
+        // screen must too.
         editPools(fn (string $pool): string => $pool."\nphp_admin_value[open_basedir] = /srv/somewhere-else\n");
 
         $php = $this->actingAs($this->admin)->getJson(phpUrl())->json('php');
@@ -1459,7 +1446,7 @@ describe('values that are the right shape but wrong (bug #61)', function () {
     });
 
     it('refuses unlimited memory', function () {
-        // Operator's call: -1 lets one site take the whole server's memory.
+        // -1 would let one site take the whole server's memory.
         $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '-1'])
             ->assertUnprocessable()
             ->assertJsonPath('errors.memory_limit.0', __('php_settings.errors.memory_unlimited'));
@@ -1571,10 +1558,9 @@ it('does not call disable_functions changed when it is the list the site was pro
 });
 
 /*
- * RC-3, second half. The check above compares with the strict list of *this*
- * release, so a site provisioned by a release whose list differed (the cleaned
- * list, the Nextcloud exceptions) read "changed" without anyone touching it.
- * A site now keeps the list it was provisioned with and is compared with that.
+ * A site keeps the list it was provisioned with and is compared with that, not with this
+ * release's strict list: otherwise a site provisioned by a release whose list differed (the
+ * cleaned list, the Nextcloud exceptions) reads "changed" without anyone touching it.
  */
 /** A site as provisioning leaves it: the list in force, and the list it was given. */
 function provisionedWith(string $list): ApplicationPhpSettings
@@ -1630,7 +1616,6 @@ it('cannot be told what the provisioned list was through the settings endpoint',
     $this->actingAs($this->admin)->getJson(phpUrl())->assertJsonPath('php.overridden.disable_functions', true);
 });
 
-// Folded into create_application_php_settings by the 2026-11-25 squash.
 it('creates the provisioned list column with its table', function () {
     expect(Schema::hasColumn('application_php_settings', 'provisioned_disable_functions'))->toBeTrue();
 });
@@ -1653,10 +1638,9 @@ it('does not call a value changed when it is the default (PHP-ob)', function () 
 });
 
 /*
- * v7 parity (Dipali, 2026-10-13). v7's "extra pool lines" were pasted into the
- * pool as typed, with no checks. v8 takes the pool settings that only change
- * how this site's own workers run, refuses the rest by name with a reason, and
- * keeps v7's own PHP-FPM numbers in fields of their own.
+ * v7 parity: v7's "extra pool lines" were pasted into the pool as typed, with no checks. v8
+ * takes the pool settings that only change how this site's own workers run, refuses the rest by
+ * name with a reason, and keeps v7's own PHP-FPM numbers in fields of their own.
  */
 describe('v7 extra pool lines', function () {
     it('writes the allowed pool settings into the pool as typed', function () {

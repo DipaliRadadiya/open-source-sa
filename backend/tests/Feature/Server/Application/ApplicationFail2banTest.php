@@ -14,14 +14,10 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Per-application fail2ban: the commercial-style raw-INI variant.
- *
- * Three endpoints (GET / POST / DELETE /api/applications/{id}/fail2ban),
- * one auto-migrate from the previous structured schema, one rendered
- * jail + filter file written to /etc/fail2ban/{jail,filter}.d/. What
- * matters here: the test before apply catches a bad config, the
- * auto-migrate rebuilds INI from old structured columns on first GET,
- * and disable() leaves no trace on disk.
+ * Per-application fail2ban, raw-INI variant: GET / POST / DELETE /api/applications/{id}/fail2ban,
+ * the auto-migrate from the old structured schema, and the jail + filter written to
+ * /etc/fail2ban/{jail,filter}.d/. The config test runs before apply, the auto-migrate rebuilds
+ * INI on first GET, and disable() leaves no trace on disk.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -37,10 +33,8 @@ beforeEach(function () {
 
     $this->systemUser = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
 
-    // Stage fail2ban directories in temp so the manager writes files we can
-    // inspect without touching the real /etc/fail2ban. The config matches
-    // the production layout — same paths the install script would use — so
-    // the tests exercise the same code paths the live server does.
+    // Stage fail2ban directories in temp so the manager writes files we can inspect without
+    // touching the real /etc/fail2ban. Same layout as the install script.
     $this->jailD = sys_get_temp_dir().'/sv-oss-f2b-jail-'.getmypid();
     $this->filterD = sys_get_temp_dir().'/sv-oss-f2b-filter-'.getmypid();
     @mkdir($this->jailD, 0755, true);
@@ -72,25 +66,16 @@ function appFail2banHeaders(): array
 }
 
 /**
- * Fake the fail2ban-client invocations. `$testOk=false` makes the `-t`
- * validation step fail (the controller then refuses to write the file).
- *
- * `$writes` is passed by reference and is populated with any `tee` writes
- * the fake observes, indexed by absolute path. The caller reads it after
- * the request to assert that the on-disk files match what was submitted.
+ * Fake the fail2ban-client calls; `$testOk=false` makes the `-t` validation fail.
  *
  * @param  array<string, string>  $writes  jail/filter path => written content
  */
 /**
  * fail2ban as the panel meets it on a real server.
  *
- * `-t` with no `-c` tests the LIVE tree, which is valid — so it passes
- * whatever was submitted. That is exactly what the old testConfigs() ran, and
- * why `[broken` reached /etc/fail2ban on a real server (2026-09-23): the fake
- * here answered `-t` without asking which config it was pointed at, so the
- * suite passed the broken code too. Now `-c <stage>` is judged by what was
- * written into that stage, and anything containing `[broken` fails as the
- * real client does (exit 255).
+ * `-t` with no `-c` tests the LIVE tree, which is valid, so it passes whatever was submitted.
+ * The fake therefore judges `-c <stage>` by what was written into that stage, and anything
+ * containing `[broken` fails as the real client does (exit 255).
  *
  * @param  array<string, string>  $writes  path => content, every `tee`
  */
@@ -152,9 +137,8 @@ function fakeAppFail2ban(
             return Process::result(exitCode: $existing ? 0 : 1);
         }
 
-        // `rm -f <path>` is what disableForApp() runs. Process::fake does
-        // not actually delete the file, so the disable test would never see
-        // the file leave disk without us mirroring the call here.
+        // `rm -f <path>` is what disableForApp() runs; Process::fake does not delete the file,
+        // so mirror the call here.
         if (($args[0] ?? '') === 'rm' && in_array(($args[1] ?? ''), ['-f', '--force'], true)) {
             foreach (array_slice($args, 2) as $target) {
                 if (file_exists($target)) {
@@ -165,10 +149,8 @@ function fakeAppFail2ban(
             return Process::result(exitCode: 0);
         }
 
-        // `dpkg-query -S <path>`, answered the way the real one does: 0 when
-        // the package owns the file, otherwise exit 1 *and* a line on stderr.
-        // An earlier fake answered "not owned" silently, and passed code that
-        // read every real "not owned" as "could not find out".
+        // `dpkg-query -S <path>`: 0 when the package owns the file, otherwise exit 1 *and* a line
+        // on stderr (a silent "not owned" once let code read it as "could not find out").
         if (($args[0] ?? '') === 'dpkg-query') {
             if ($packageUnavailable) {
                 return Process::result(exitCode: 1, errorOutput: 'sudo: a password is required');
@@ -214,17 +196,12 @@ function appFail2banUrl(): string
 }
 
 /**
- * Create an application the same way the production CreateApplication action
- * does — most importantly, sets `slug` from the name via uniqueSlug(). Without
- * a slug the fail2ban jail name falls back to the domain (`shop.test`)
- * and the test assertions miss the cleaner `shop` form.
+ * Create an application like CreateApplication does, including `slug` via uniqueSlug(), so the
+ * jail name is `shop` and not the domain fallback `shop.test`.
  */
 function createFail2banApp(string $name, string $domain, string $siteType = 'php', array $extra = []): Application
 {
-    // forceCreate: `slug` is not in $fillable (it is server-derived) but the
-    // test wants the resolved slug on the row so the jail name is shop,
-    // not shop.test. CreateApplication uses forceCreate too for the same
-    // reason — we mirror that here.
+    // forceCreate: `slug` is not in $fillable (server-derived); CreateApplication does the same.
     return Application::forceCreate(array_merge([
         'system_user_id' => test()->systemUser->id,
         'name' => $name,
@@ -267,14 +244,8 @@ it('has nothing to warn about on WordPress', function () {
 });
 
 it('hands the form a filled-in template, not one full of placeholders', function () {
-    // This endpoint returned `defaultJailContent()` raw, so the form was
-    // pre-filled with `[{name}]`, `filter = {filter}` and `logpath =
-    // {logpath}` — and invited the user to save that. The write path
-    // substitutes them, so the file on disk was right while the screen was
-    // wrong: nothing the user read matched what the server had.
-    //
-    // The structure assertion above passed throughout, because a template
-    // made entirely of placeholders is still a string under the right key.
+    // The default must be rendered, not returned raw: the form was pre-filled with literal
+    // `{name}`/`{filter}`/`{logpath}` while the file on disk had them substituted.
     $this->application = createFail2banApp('Shop', 'shop.test');
 
     $response = $this->withHeaders(appFail2banHeaders())
@@ -290,27 +261,15 @@ it('hands the form a filled-in template, not one full of placeholders', function
         // The real values, so the user can see what will be written.
         ->and($jail)->toContain('[panel-site-shop]')
         ->and($jail)->toContain('filter   = panel-site-shop')
-        // The site's own log directory — fail2ban follows `logPaths()`, so
-        // moving the logs moved the jail with them for free.
-        // Both access logs, HTTP and HTTPS (v7's `-ssl` file), as v7's jail
-        // reads them: with HTTPS forced the logins are all in the second.
+        // The site's own log directory (fail2ban follows `logPaths()`), both access logs, HTTP and
+        // HTTPS (v7's `-ssl` file): with HTTPS forced the logins are all in the second.
         ->and($jail)->toContain('logpath  = /home/siteowner/shop/logs/access*log')
         ->and($filter)->not->toContain('{name}');
 });
 
 it('states the backend, so the jail reads its log file whatever [DEFAULT] says', function () {
-    // A jail that names a `logpath` and inherits its backend is one edit away
-    // from reading the journal instead — and that is not hypothetical: this
-    // panel shipped `backend = systemd` in `[DEFAULT]` of jail.local, which
-    // applies to every jail, so every jail generated here watched a file
-    // fail2ban never opened. It matched nothing and banned nobody while the
-    // panel reported it enabled — the same symptom as the `[Definition]` bug
-    // below, from a completely different cause.
-    //
-    // Proven on a live server both ways: as shipped the jail reported
-    // `Total failed: 0` against a log full of matching requests; with the
-    // backend stated it reported `File list: …/access.log`, four failures and
-    // a ban.
+    // A jail with a `logpath` must state its `backend`: inheriting `backend = systemd` from
+    // [DEFAULT] makes fail2ban read the journal, so the jail matches nothing and bans nobody.
     $this->application = createFail2banApp('Shop', 'shop.test');
 
     $jail = $this->withHeaders(appFail2banHeaders())
@@ -322,13 +281,8 @@ it('states the backend, so the jail reads its log file whatever [DEFAULT] says',
 });
 
 it('generates a filter fail2ban can actually read', function () {
-    // A fail2ban *filter* names its section `Definition`; only a *jail* is
-    // named after itself. This emitted `[{name}]`, so the file had no
-    // Definition section, fail2ban found no failregex, and the jail banned
-    // nobody — while the panel reported it enabled.
-    //
-    // The two filters this repository already ships get it right; only the
-    // generated default did not.
+    // A filter names its section `Definition` (only a jail is named after itself); without it
+    // fail2ban finds no failregex and the jail bans nobody.
     $this->application = createFail2banApp('Shop', 'shop.test');
 
     $filter = $this->withHeaders(appFail2banHeaders())
@@ -346,9 +300,8 @@ it('saves INI, tests it, and applies the configuration on success', function () 
 
     $writes = [];
     fakeAppFail2ban(writes: $writes);
-    // Make the closure-side write array visible to the test scope: PHP
-    // closures capture by value, so the outer $writes is still empty until
-    // we look at the same in-memory array through this alias.
+    // PHP closures capture by value, so the outer $writes stays empty until the same in-memory
+    // array is read through this alias.
 
     // The site's own name, spelled out rather than as `{name}`, is accepted.
     $jail = "[panel-site-shop]\nenabled  = true\nfilter   = panel-site-shop\nlogpath  = /tmp/log\nmaxretry = 5\n";
@@ -374,18 +327,15 @@ it('saves INI, tests it, and applies the configuration on success', function () 
     expect($writes)->toHaveKey($this->jailD.'/panel-site-shop.conf')
         ->and($writes)->toHaveKey($this->filterD.'/panel-site-shop.conf');
 
-    // The manager replaces {name}/{filter}/{logpath}/{slug} placeholders, so
-    // the on-disk file must reference the resolved logpath, not the literal
-    // placeholder string.
+    // The manager replaces {name}/{filter}/{logpath}/{slug}: the file must hold the resolved
+    // logpath, not the literal placeholder.
     expect($writes[$this->jailD.'/panel-site-shop.conf'])->toContain('logpath  = ')
         ->not->toContain('{logpath}');
 });
 
 /*
- * The incident itself (2026-09-23, real server): `[broken` passed the test,
- * was written over the live jail and filter, and only the reload failed.
- * No `testOk: false` here — the fake judges what was staged, as the real
- * client does, so this fails if the test ever stops pointing at the stage.
+ * `[broken` must fail the config test: the fake judges what was staged, as the real client does,
+ * so this fails if the test ever stops pointing at the stage (no `testOk: false` here).
  */
 it('refuses a broken config because it tests the config it was given', function () {
     $this->application = createFail2banApp('Shop', 'shop.test');
@@ -406,9 +356,8 @@ it('refuses a broken config because it tests the config it was given', function 
     expect($commands)->toContain(['cp', '-a', dirname($this->jailD).'/.', $stage.'/'])
         ->toContain(['rm', '-rf', $stage]);
 
-    // Nothing reached the live files, nothing was reloaded, nothing saved.
-    // (The shared ban action and its script are the server's, not the
-    // site's, and are written before the test that needs them.)
+    // Nothing reached the live files, nothing was reloaded, nothing saved. (The shared ban action
+    // and its script are the server's, written before the test that needs them.)
     expect(collect(array_keys($writes))->filter(fn (string $p) => ! str_starts_with($p, $stage.'/') && ! banTool($p)))->toBeEmpty()
         ->and($commands->contains(fn (array $c) => ($c[1] ?? '') === 'reload'))->toBeFalse()
         ->and($this->application->fresh()->fail2ban_jail_content)->toBeNull();
@@ -438,7 +387,7 @@ it('puts the previous jail back and reloads again when the reload fails', functi
 it('gives fail2ban\'s own reason when it refuses the jail on reload (bug #95)', function () {
     $this->application = createFail2banApp('Shop', 'shop.test');
     $runs = new ArrayObject;
-    // Measured on a real server: `-t` passed this filter, the reload refused it.
+    // `-t` passes this filter, but the reload refuses it.
     fakeAppFail2ban(reloadOk: false, existing: true, runs: $runs, reloadError: "2026-10-03 13:02:42,878 fail2ban                [281466]: ERROR   NOK: (\"No failure-id group in '^foo bar'\",)\n");
 
     $jail = "[{name}]\nenabled = true\nfilter = {filter}\nlogpath = {logpath}\n";
@@ -525,8 +474,7 @@ it('disables fail2ban and clears the stored content', function () {
         ->and($application->fail2ban_filter_content)->toBeNull();
 
     expect(file_exists($jailFile))->toBeFalse('jail file removed from disk')
-        // #20: the filter is the site's own too, and a left-behind one is what
-        // made a name collision permanent.
+        // The filter is the site's own too; a left-behind one made a name collision permanent.
         ->and(file_exists($filterFile))->toBeFalse('filter file removed from disk');
 
     $this->assertDatabaseHas('activity_logs', ['type' => 'application', 'action' => 'fail2ban_disabled', 'subject_id' => $this->application->id]);
@@ -577,16 +525,12 @@ it('auto-migrates structured columns to raw INI on first GET', function () {
         ->and($fresh->fail2ban_jail_content)->toContain('bantime  = 7200')
         ->and($fresh->fail2ban_jail_content)->toContain('findtime = 900')
         ->and($fresh->fail2ban_filter_content)->toContain('failregex')
-        // The current default: a `[{slug}]` header gave fail2ban no
-        // failregex at all, and the copy kept the wp-admin rule (bug #93).
+        // The current default: a `[{slug}]` header gave fail2ban no failregex, and the copy
+        // kept the wp-admin rule.
         ->and($fresh->fail2ban_filter_content)->toBe(app(ApplicationFail2banManager::class)->defaultFilterContent());
 
-    // The log path is left as the placeholder rather than resolved here, so
-    // the write path substitutes whatever the active web-server driver says.
-    // It used to be baked in as `/var/log/nginx/{slug}.access.log`: on an
-    // OpenLiteSpeed server — which logs inside the site's own directory — the
-    // migrated jail watched a file that does not exist, and banned nobody
-    // while reporting itself enabled.
+    // The log path stays a placeholder so the write path substitutes the active web-server
+    // driver's value; a baked-in nginx path watched a file that does not exist on OpenLiteSpeed.
     expect($fresh->fail2ban_jail_content)
         ->toContain('logpath  = {logpath}')
         ->not->toContain('/var/log/nginx/');
@@ -615,17 +559,10 @@ it('refuses POST without manage permission', function () {
 });
 
 /*
- * The dashboard card and this screen disagreed for as long as both existed.
- *
- * The card reads `fail2ban_enabled` off the application resource; this screen
- * reads the jail columns. The column had exactly one writer — an action nothing
- * called, which itself called a manager method that does not exist — so it was
- * `false` on every application ever created, and the card said "Off" for sites
- * with a jail running. Two representations of one fact, and the orphaned one
- * won wherever it was consulted.
- *
- * These assert the two answers together, in one test, because that is the only
- * shape that fails when they drift apart again.
+ * The dashboard card reads `fail2ban_enabled` off the application resource; this screen reads
+ * the jail columns. That column had no working writer and stayed `false`, so the card said
+ * "Off" for sites with a jail running. Both answers are asserted together in one test, the only
+ * shape that fails if they drift apart again.
  */
 it('agrees with the application resource about whether fail2ban is on', function () {
     $this->application = createFail2banApp('Nextcloud', 'cloud.test');
@@ -645,8 +582,7 @@ it('agrees with the application resource about whether fail2ban is on', function
             'filter_config_content' => "[Definition]\nfailregex = ^<HOST> .*\nignoreregex =\n",
         ])->assertOk();
 
-    // After: the jail exists, so the card must say on. This is the assertion
-    // that was missing — the screen below was already right.
+    // After: the jail exists, so the card must say on.
     $after = $this->withHeaders(appFail2banHeaders())
         ->getJson('/api/applications/'.$this->application->id)->assertOk();
 
@@ -676,10 +612,8 @@ it('goes back to off for both screens when the jail is removed', function () {
 });
 
 /*
- * The stored boolean is deliberately not consulted any more. Pinned because the
- * column still exists — dropping it needs a schema change, and pre-1.0 that
- * means migrate:fresh, which must never touch the shared dev database — so the
- * temptation to "use the field that is right there" outlives this fix.
+ * The stored boolean is deliberately not consulted any more. Pinned because the column still
+ * exists, so the temptation to "use the field that is right there" outlives the fix.
  */
 it('ignores the orphaned fail2ban_enabled column entirely', function () {
     $this->application = createFail2banApp('Docs', 'docs.test');
@@ -698,10 +632,7 @@ it('ignores the orphaned fail2ban_enabled column entirely', function () {
 | A site's jail can never be one of fail2ban's own
 |--------------------------------------------------------------------------
 |
-| Names were the bare site slug, so a site called `sshd` overwrote
-| /etc/fail2ban/filter.d/sshd.conf with a WordPress regex and replaced the
-| server's [sshd] jail — reproduced on a real server, SSH protection gone
-| while the panel said "configured successfully".
+| A site called `sshd` once overwrote filter.d/sshd.conf and replaced the server's [sshd] jail.
 */
 
 it('writes a site called sshd under its own prefixed name, never over fail2ban\'s', function () {
@@ -833,9 +764,8 @@ it('treats a filter as package-owned when dpkg cannot be asked', function () {
 });
 
 it('does not ban a logged-in WordPress administrator by default', function () {
-    // The default filter matched every POST under /wp-admin/, and the
-    // dashboard is nothing but: the Heartbeat API alone calls admin-ajax.php
-    // every 15-60 seconds. Three in ten minutes banned the site's owner.
+    // The default filter matched every POST under /wp-admin/; the Heartbeat API alone calls
+    // admin-ajax.php every 15-60 seconds, so three in ten minutes banned the site's owner.
     $this->application = createFail2banApp('Shop', 'shop.test', 'wordpress');
 
     $filter = $this->withHeaders(appFail2banHeaders())
@@ -977,11 +907,8 @@ describe('the settings a site jail may use', function () {
 });
 
 /*
- * Bug #93: every login POST counted, a successful one too, so an admin who
- * signed in three times in ten minutes was banned for an hour. WordPress
- * answers a wrong password with 200 and a right one with a 302 (measured on
- * the nginx test server); only 200 counts, as in v7. Lines as nginx wrote
- * them on that server.
+ * Only a failed login counts, as in v7: WordPress answers a wrong password with 200 and a right
+ * one with 302, and counting both banned an admin who signed in three times in ten minutes.
  */
 it('counts a failed WordPress login and not a successful one', function () {
     $this->application = createFail2banApp('Shop', 'shop.test', 'wordpress');
@@ -1017,7 +944,7 @@ it('moves a site still on the previous default to the failed-login rule on fail2
     expect($this->application->fresh()->fail2ban_filter_content)->toBe(app(ApplicationFail2banManager::class)->defaultFilterContent());
 });
 
-/** The shared ban action and the script it runs (FB-K). */
+/** The shared ban action and the script it runs. */
 function banTool(string $path): bool
 {
     return $path === config('server.fail2ban_apps.ban_script')
@@ -1213,8 +1140,8 @@ describe('the user may change a jail without a copy (2026-10-29)', function () {
 });
 
 /*
- * QA, 2026-11-17: with fail2ban not installed, saving a site's jail was a
- * 500 — the config test stages a copy of /etc/fail2ban, which is not there.
+ * With fail2ban not installed, saving a site's jail was a 500: the config test stages a copy of
+ * /etc/fail2ban, which is not there.
  */
 function fakeNoFail2ban(array &$ran): void
 {

@@ -57,14 +57,10 @@ function userPayload(array $overrides = []): array
 /**
  * A database client's answer to a query a fake would otherwise leave silent.
  *
- * `null` for anything that is not a database client, so a fake falls through
- * to its own handling and this only ever adds an answer where there was none.
- *
- * Provisioning asks the engine whether a generated name is free before using
- * it. A bare `Process::result(exitCode: 0)` answers that probe with an empty
- * string — which reads as "taken", so the allocator walks twenty candidates
- * and fails the install. No real client answers a SELECT with nothing, so the
- * fake, not the code, is what was wrong.
+ * `null` for anything that is not a database client, so a fake falls through to its own
+ * handling. A bare `Process::result(exitCode: 0)` answers the "is this generated name free"
+ * probe with an empty string, which reads as "taken": the allocator walks twenty candidates
+ * and fails the install.
  */
 function fakeDatabaseAnswer(mixed $process): ?FakeProcessResult
 {
@@ -76,15 +72,10 @@ function fakeDatabaseAnswer(mixed $process): ?FakeProcessResult
 }
 
 /**
- * A version query's answer, for the fakes that otherwise reply `1` to
- * everything.
+ * A version query's answer, for the fakes that otherwise reply `1` to everything.
  *
- * 🔴 `1` is not a version. Applications that declare a minimum engine version
- * compare what the engine reports, so a fake answering `1` describes a server
- * running PostgreSQL 1 — and every type with a minimum reads as unusable, in
- * tests that are about something else entirely. SQL reaches these clients on
- * **stdin**, not argv, which is why this reads `input` rather than the
- * command.
+ * 🔴 `1` is not a version: applications with a minimum engine version would read as unusable.
+ * SQL reaches these clients on **stdin**, not argv, so this reads `input` rather than the command.
  */
 function fakeEngineVersionAnswer(mixed $process): ?FakeProcessResult
 {
@@ -100,19 +91,17 @@ function fakeEngineVersionAnswer(mixed $process): ?FakeProcessResult
         return null;
     }
 
-    // Per client, because the two number their releases apart: answering
-    // `8.0.36` from MariaDB describes a MariaDB 8, below every MariaDB floor.
-    // MySQL answers 8.4 — what Ubuntu 26.04 ships — because Moodle 5.0 and
-    // Mautic need it; a test about 24.04's 8.0 says so explicitly.
+    // Per client, because the two number their releases apart: `8.0.36` from MariaDB would be a
+    // MariaDB 8, below every MariaDB floor. MySQL answers 8.4 (Ubuntu 26.04's) because Moodle 5.0
+    // and Mautic need it; a test about 24.04's 8.0 says so explicitly.
     return Process::result(output: ($process->command[0] ?? '') === 'mariadb'
         ? '10.11.14-MariaDB-0ubuntu0.24.04.1'
         : '8.4.6-0ubuntu0.26.04.1');
 }
 
 /**
- * An apt-get command as ServerOps::apt() runs it: with apt's own lock wait
- * switched off, so a held lock fails and is retried on the panel's budget
- * rather than hanging until the process timeout (S-09).
+ * An apt-get command as ServerOps::apt() runs it: with apt's own lock wait switched off, so a
+ * held lock fails and is retried on the panel's budget instead of hanging until the timeout.
  *
  * @return list<string>
  */
@@ -122,14 +111,10 @@ function aptCommand(string ...$args): array
 }
 
 /**
- * Move the panel's connection for an engine onto a port the application does
- * not assume — what `PUT /databases/connections/{engine}` does when someone
- * points the panel at a managed database.
+ * Move the panel's connection for an engine onto a port the application does not assume, as
+ * `PUT /databases/connections/{engine}` does when someone points the panel at a managed database.
  *
- * This is the whole reason the installers have to write a port at all: the
- * connection is editable, so "the database is on 3306" is an assumption, not
- * a fact. Tests that do not call this describe a stock local server, and
- * their assertions pin the config every existing site was installed with.
+ * Tests that do not call this describe a stock local server on the default port.
  */
 function moveDatabasePort(string $engine, int $port): void
 {
@@ -142,19 +127,11 @@ function moveDatabasePort(string $engine, int $port): void
 /**
  * A database client's answer on a server whose only SQL engine is PostgreSQL.
  *
- * MySQL and MariaDB are made to *fail* rather than left to fall through, and
- * that is the point of the helper. With MySQL still answering, an installer
- * that ignored the chosen engine would be handed a MySQL database and write a
- * MySQL-shaped config — which an assertion looking for PostgreSQL's shape
- * would catch, but one checking "did it write a driver at all" would not. On a
- * server with nothing else, the only database the site can have been given is
- * the one under test.
+ * MySQL and MariaDB are made to *fail* rather than fall through, so an installer that ignored
+ * the chosen engine cannot be handed a MySQL database unnoticed.
  *
- * `psql` answers `1` because two different callers read that value: the
- * engine's `available()` wants a successful query, and `identifierAvailable()`
- * reads the output and treats anything but `1` as "name taken" — twenty times,
- * and then the install fails on identifier allocation rather than on anything
- * to do with the test.
+ * `psql` answers `1` because `available()` wants a successful query and `identifierAvailable()`
+ * treats any output but `1` as "name taken" (twenty times, then the install fails).
  */
 function fakePostgresOnlyAnswer(mixed $process): ?FakeProcessResult
 {
@@ -172,17 +149,13 @@ function fakePostgresOnlyAnswer(mixed $process): ?FakeProcessResult
 /**
  * Answer as a server whose SQL engine is reachable.
  *
- * The catalog asks `available()` — a live query — before offering any type
- * that needs a database, and the create endpoint refuses one that is blocked.
- * A fixture that fakes nothing is therefore a claim about a server with no
- * database engine at all, on which creating WordPress is correctly refused.
- * Most tests do not mean to make that claim; they mean "an ordinary server".
+ * The catalog asks `available()` (a live query) before offering any type that needs a database,
+ * so a fixture that fakes nothing describes a server with no engine, where creating WordPress
+ * is correctly refused.
  *
- * Everything else *fails*, which is the important half. Falling through to an
- * empty success turns "this command could not be run" into "it ran and printed
- * nothing" — two different servers, and the second is one that cannot exist. A
- * config reader then sees a file that is present and empty rather than absent,
- * and fails somewhere far away from the fake that caused it.
+ * Everything else *fails*: falling through to an empty success turns "this command could not be
+ * run" into "it ran and printed nothing", and a config reader then sees an empty file instead of
+ * an absent one, far from the fake that caused it.
  */
 function fakeUsableSqlEngine(): void
 {
@@ -190,13 +163,11 @@ function fakeUsableSqlEngine(): void
 }
 
 /**
- * Answer `git ls-remote --heads <url> refs/heads/<branch>` as a reachable
- * repository that has the branch.
+ * Answer `git ls-remote --heads <url> refs/heads/<branch>` as a reachable repository that has
+ * the branch.
  *
- * Creating a git site and changing its branch now ask the repository first
- * (bugs #71, #101). An empty success is a repository WITHOUT the branch, so a
- * fake that answers every command with nothing describes a broken setup —
- * which these tests do not mean.
+ * Creating a git site and changing its branch ask the repository first; an empty success means
+ * a repository WITHOUT the branch.
  */
 function fakeGitRemoteAnswer(mixed $process): ?FakeProcessResult
 {
@@ -212,10 +183,8 @@ function fakeGitRemoteAnswer(mixed $process): ?FakeProcessResult
 /**
  * Answer the PHP package index as a server offering 8.2 – 8.4.
  *
- * `POST /php/versions` refuses a version the index does not have, so a test
- * that installs one must say what the index holds — otherwise it passes or
- * fails on whatever repository the machine running the suite has configured.
- * Everything else fails, as {@see fakeUsableSqlEngine()} explains.
+ * `POST /php/versions` refuses a version the index does not have, so a test that installs one
+ * must say what the index holds. Everything else fails, as {@see fakeUsableSqlEngine()} explains.
  */
 function fakePhpPackageIndex(): void
 {
@@ -246,13 +215,8 @@ function grantPermission(User $user, string $permissionName, bool $view = true, 
 /**
  * `install.sh`, for the tests that assert on it as source text.
  *
- * Shared because two test files needed it and the second one redeclaring it
- * was a fatal error that took the whole suite down — not a failing test, a
- * parse-time death with no test names in the output.
- *
- * Skips rather than fails when the file is absent: the backend is also checked
- * out on its own, and a test that cannot see the installer has nothing to say
- * about it.
+ * Shared: a second file redeclaring it was a fatal error that took the whole suite down.
+ * Skips rather than fails when the file is absent: the backend is also checked out on its own.
  */
 function installerSource(): string
 {
@@ -298,14 +262,11 @@ function installerCode(): string
 /**
  * What `systemctl show` replies for the units named in $command.
  *
- * One blank-line separated block per unit asked about, in the order asked —
- * systemd's real shape, including a block for units that do not exist. The
- * panel now inspects its whole service catalog in a single call, so a fake
- * that answers with one block regardless of how many units were named would
- * hand every unit after the first somebody else's state, or none at all.
+ * One blank-line separated block per unit asked about, in the order asked, as systemd does,
+ * including a block for units that do not exist. The panel inspects its whole service catalog
+ * in one call, so a one-block fake would hand every later unit someone else's state.
  *
- * Shared because three test files had each hand-rolled this, all three of them
- * single-block, and all three broke together the moment the caller batched.
+ * Shared because three test files had each hand-rolled a single-block version.
  *
  * @param  array<int, string>  $command  the faked process command
  * @param  array<string, array{load?: string, active?: string, file?: string, id?: string, reload?: bool}>  $units
@@ -348,10 +309,9 @@ function systemctlShowOutput(array $command, array $units = [], ?array $default 
  * Answer a disk-cleaner `find <dir> -maxdepth 1 -type f -name <pattern>
  * -printf "%s\t%T@\t%p\n"` from the real filesystem, the way the command would.
  *
- * The log cleaners list files through the server rather than with PHP's
- * glob() (the directories that matter are root-only), so a test that puts
- * real files in a temp directory needs its Process fake to list them. Null
- * for any other command, so a fake can fall through to its own answers.
+ * The log cleaners list files through the server, not PHP's glob() (the directories are
+ * root-only), so a test with real temp files needs its Process fake to list them. Null for any
+ * other command, so a fake can fall through to its own answers.
  */
 function answerFind($process): ?ProcessResult
 {
@@ -388,14 +348,9 @@ function answerFind($process): ?ProcessResult
 /**
  * The archive path in a tar argv, found by name rather than position.
  *
- * `$command[2]` worked only while the command was exactly `tar -czf <path>`.
- * It became `tar --use-compress-program='pigz -1' -cf <path>` when compression
- * moved off `-z`, and every fixture that indexed position 2 silently began
- * writing a file literally named `-cf` — so the real archive never appeared and
- * the step failed on `is_file()`, miles from the cause.
- *
- * Shared by BackupRunTest and RestoreRunTest. It lived in the first, so the
- * second failed whenever it ran on its own.
+ * `$command[2]` only held the path while the command was exactly `tar -czf <path>`; with
+ * `tar --use-compress-program='pigz -1' -cf <path>` a position-2 fixture wrote a file literally
+ * named `-cf`. Shared by BackupRunTest and RestoreRunTest.
  */
 function tarArchivePath(array $command): ?string
 {
@@ -422,14 +377,12 @@ function certPathProbe($process): bool
 }
 
 /**
- * One worker, `high` before `default` (nginx QA #4: a certificate waited 22
- * minutes behind queued installs). The danger is the opposite mistake — a job
- * on a queue no worker reads is never run, silently — so a job goes to `high`
- * only when the running worker is seen to read it.
+ * One worker, `high` before `default`: a certificate must not wait behind queued installs. The
+ * danger is the opposite mistake, a job on a queue no worker reads never runs, so a job goes to
+ * `high` only when the running worker is seen to read it.
  *
- * Here rather than in QueueWorkerTest, its first user: AutoIssueCertificateTest
- * calls it too, and a helper declared in another test file exists only when
- * that file happens to load first.
+ * Here because AutoIssueCertificateTest calls it too, and a helper declared in another test file
+ * exists only when that file happens to load first.
  */
 function fakeRunningWorker(?string $commandLine, string $pid = '4242'): void
 {

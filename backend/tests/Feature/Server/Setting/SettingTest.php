@@ -57,9 +57,8 @@ function fakeSettings(bool $swapActive = false, bool $swapoffOk = true, bool $ss
         }
         $bin = $cmd[0] ?? '';
 
-        // No authorized_keys on disk unless a test says otherwise — the key
-        // check now asks the server (SecuritySettings::hasSshKey()), and a
-        // catch-all success would read as a key for root and every sudoer.
+        // No authorized_keys on disk unless a test says otherwise: the key check asks the server
+        // (SecuritySettings::hasSshKey()), and a catch-all success would read as a key for root.
         if ($bin === 'test' && ($cmd[1] ?? '') === '-s' && str_ends_with((string) end($cmd), '/.ssh/authorized_keys')) {
             return Process::result(exitCode: 1);
         }
@@ -78,9 +77,8 @@ function fakeSettings(bool $swapActive = false, bool $swapoffOk = true, bool $ss
                 : Process::result(exitCode: 255, errorOutput: 'swapoff: '.$swapFile.': Cannot allocate memory');
         }
 
-        // Config writes go through ServerOps now rather than File::put, so
-        // the fake has to perform them — otherwise the file never appears
-        // and the assertions below would be checking nothing at all.
+        // Config writes go through ServerOps, not File::put, so the fake must perform them or the
+        // file never appears and the assertions check nothing.
         if ($bin === 'tee') {
             File::put($cmd[1], (string) $process->input);
 
@@ -152,10 +150,8 @@ it('reads all available setting groups', function () {
         ->assertJsonPath('settings.security.password_authentication', true)
         ->assertJsonPath('settings.updates.reboot_required', false)
         ->assertJsonPath('settings.redis.has_password', false)
-        // `enabled` is now whether the *panel's* swap file is on, not whether
-        // the machine has swap at all. The fixture's 2 GB belongs to the
-        // system, so it is reported separately and flagged unmanaged rather
-        // than shown as something this screen created.
+        // `enabled` is whether the *panel's* swap file is on, not whether the machine has swap. The
+        // fixture's 2 GB belongs to the system, so it is reported separately as unmanaged.
         ->assertJsonPath('settings.swap.enabled', false)
         ->assertJsonPath('settings.swap.size', 0)
         ->assertJsonPath('settings.swap.system_total', 2048000000)
@@ -195,29 +191,25 @@ it('disables swap and strips only its fstab line', function () {
 });
 
 it('allocates a fresh file so a smaller size really shrinks', function () {
-    // fallocate only ever allocates: given a length smaller than the file
-    // already has it succeeds and changes nothing. Resizing 2 GB down to
-    // 1.5 GB left a 2 GB file, mkswap made 2 GB of swap, and the screen came
-    // back showing the old number — which is what "downgrading doesn't work"
-    // was. Growing worked, so it only ever looked broken one way.
+    // fallocate only allocates: given a length smaller than the file it succeeds and changes
+    // nothing, so shrinking 2 GB to 1.5 GB left a 2 GB file. Growing worked, so it only looked
+    // broken one way.
     fakeSettings(swapActive: true);
     File::put(test()->swapFile, 'x');
 
     test()->withHeader('Authorization', 'Bearer '.test()->token)
         ->putJson('/api/settings/swap', ['size_mb' => 1536])->assertOk();
 
-    // A fresh file at the requested size, then moved over the old one — the
-    // old file is never removed before its replacement exists, because the
-    // usual reason an allocation fails is the full disk that prompted the
-    // resize, and that used to leave the server with no swap at all.
+    // A fresh file at the requested size, then moved over the old one. The old file is never
+    // removed first: allocation usually fails on the full disk that prompted the resize, which
+    // would leave the server with no swap at all.
     Process::assertRan(fn ($p) => $p->command === ['fallocate', '-l', '1536M', test()->swapFile.'.new']);
     Process::assertRan(fn ($p) => $p->command === ['mv', test()->swapFile.'.new', test()->swapFile]);
 });
 
 it('refuses to resize swap the server cannot give up, and says why', function () {
-    // swapoff reads every swapped-out page back into RAM and refuses when
-    // there is not enough free memory — the state a server changing its swap
-    // is most likely to be in. This used to be ignored.
+    // swapoff reads every swapped-out page back into RAM and refuses when there is not enough free
+    // memory, the state a server changing its swap is most likely to be in.
     fakeSettings(swapActive: true, swapoffOk: false);
 
     test()->withHeader('Authorization', 'Bearer '.test()->token)
@@ -323,9 +315,8 @@ it('writes the ssh drop-in, tests then reloads', function () {
 });
 
 describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
-    // The port sshd listens on belongs to ssh.socket, generated from
-    // sshd_config at daemon-reload. Reloading ssh alone left the 26.04 test
-    // server answering on 22 while every screen said 2222.
+    // The port sshd listens on belongs to ssh.socket, generated from sshd_config at daemon-reload.
+    // Reloading ssh alone leaves it answering on the old port while the screen says the new one.
     it('moves the socket when the port changes', function () {
         fakeSettings(sshSocket: true);
 
@@ -337,8 +328,8 @@ describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
         Process::assertRan(fn ($p) => array_slice($p->command, -3) === ['systemctl', 'restart', 'ssh.socket']);
     });
 
-    // Bug #7: as v7, the port SSH left is closed, not left open for the user
-    // to find. A rule the user made for that port is theirs and stays.
+    // The port SSH left is closed, not left open for the user to find. A rule the user made for
+    // that port is theirs and stays.
     it('closes the port SSH left, and keeps the new one protected', function () {
         fakeSettings(sshSocket: true);
         $old = FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
@@ -477,8 +468,7 @@ describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
         Process::assertRanTimes(fn ($p) => array_slice($p->command, -3) === ['systemctl', 'restart', 'ssh.socket'], 2);
     });
 
-    // Bug #31: jail.local resolves {ssh_port} when written, so after a move
-    // the SSH jail went on banning port 22.
+    // jail.local resolves {ssh_port} when written, so after a move the SSH jail kept banning 22.
     it('moves the fail2ban SSH jail to the new port, after SSH has moved', function () {
         fakeSettings(sshSocket: true);
         $seenPort = null;
@@ -592,10 +582,9 @@ it('writes the unattended-upgrades drop-in', function () {
         ->toContain('Automatic-Reboot-Time "03:30"');
 });
 
-// The write above only ever proved the file was correct on disk. Nothing read
-// it back, and the parser could not: every apt key it writes contains a hyphen
-// and the key pattern excluded one, so the whole group read as its defaults and
-// the toggle forgot itself on every reload.
+// Writing the file only proved it was correct on disk; nothing read it back. Every apt key it
+// writes contains a hyphen and the parser's key pattern excluded one, so the whole group read as
+// its defaults and the toggle forgot itself on every reload.
 it('reads the updates group back exactly as it was saved', function () {
     fakeSettings();
 
@@ -767,10 +756,8 @@ describe('the ssh whitelist cannot lock the administrator out', function () {
     });
 
     it('keeps every group sshd reports, not just the last one', function () {
-        // `sshd -T` prints a list keyword once PER ENTRY — measured on
-        // OpenSSH 10.2 with `AllowGroups admins devs ops`. Keeping the last
-        // line wrote `AllowGroups ssh-users sudo root ops` into a drop-in
-        // that wins, locking out `admins` and `devs`.
+        // `sshd -T` prints a list keyword once PER ENTRY (`AllowGroups admins devs ops`). Keeping
+        // the last line wrote a drop-in that wins and locks out `admins` and `devs`.
         fakeSshdPolicy("allowgroups admins\nallowgroups devs\nallowgroups ops\n");
 
         $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -807,10 +794,9 @@ describe('the ssh whitelist cannot lock the administrator out', function () {
 });
 
 it('keeps the existing swap when the new one cannot be allocated', function () {
-    // A full disk is the usual reason `fallocate` fails, and a full disk is
-    // what has somebody resizing swap in the first place. Removing the old
-    // file first meant that failure left the server with no swap at all and an
-    // fstab line pointing at nothing.
+    // A full disk is the usual reason `fallocate` fails, and the reason somebody resizes swap.
+    // Removing the old file first would leave the server with no swap and an fstab line pointing
+    // at nothing.
     fakeSettings(swapActive: true);
     File::put(test()->swapFile, 'the swap in use right now');
 
@@ -939,10 +925,8 @@ it('never rewrites the hosts file from a read that came back empty', function ()
 
 describe('a scheduled restart', function () {
     it('answers when it will happen, from the server\'s own clock', function () {
-        // `when` is "+60". A client turning that into a time with its own clock
-        // is wrong by however far the two have drifted — on the one number
-        // where being wrong means somebody expects a restart at the wrong hour.
-        // `shutdown` obeys the server's clock, so the server answers.
+        // `when` is "+60". A client turning that into a time with its own clock is wrong by however
+        // far the two have drifted, and `shutdown` obeys the server's clock, so the server answers.
         fakeSettings();
 
         $response = $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -1000,10 +984,8 @@ describe('a scheduled restart', function () {
     });
 
     it('needs no elevated privilege to answer', function () {
-        // The first version of this asked sudo, which it never needed:
-        // /run/systemd/shutdown is 0755 root. On a server whose grant was out
-        // of date that returned 500 -- from an endpoint the settings screen
-        // calls on load, so the whole page broke over a file anyone can read.
+        // sudo is not needed: /run/systemd/shutdown is 0755 root. Asking it returned 500 on a server
+        // whose grant was out of date, from an endpoint the settings screen calls on load.
         $file = $this->dir.'/shutdown-scheduled';
         File::put($file, 'USEC='.(now()->addHour()->getTimestamp() * 1_000_000)."\n");
         config(['server.reboot.scheduled_file' => $file]);
@@ -1021,8 +1003,7 @@ describe('a scheduled restart', function () {
     });
 
     it('can be cancelled', function () {
-        // `shutdown -c`, which had no route at all: a restart scheduled an
-        // hour out could be watched and not stopped.
+        // `shutdown -c`: a restart scheduled an hour out must be stoppable, not only watchable.
         fakeSettings();
 
         $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -1035,11 +1016,9 @@ describe('a scheduled restart', function () {
     });
 
     it('measures how long is left here, so the browser only has to tick', function () {
-        // The countdown on the maintenance card cannot subtract `at` from its
-        // own clock: the string carries no offset, and the two clocks disagree
-        // by however far they have drifted. So the server says how many
-        // seconds are left, and the browser is trusted only to count them off.
-        // Frozen, or this asserts against how long the request took.
+        // The countdown cannot subtract `at` from the browser's clock: the string carries no offset
+        // and the clocks drift. So the server says how many seconds are left and the browser only
+        // counts them off. Frozen, or this asserts against how long the request took.
         $this->freezeTime();
 
         $at = now()->addMinutes(15)->startOfSecond();
@@ -1054,10 +1033,9 @@ describe('a scheduled restart', function () {
     });
 
     it('opens at the delay that was asked for, not one second under it', function () {
-        // The request lands a fraction of a second after systemd's whole-second
-        // USEC, so a 15-minute restart measures 899.4 seconds away. Truncating
-        // that opens the countdown at 14:59 for a delay the user just set to 15
-        // minutes -- small, and exactly the kind of thing that reads as a bug.
+        // The request lands a fraction of a second after systemd's whole-second USEC, so a
+        // 15-minute restart measures 899.4 seconds away; truncating would open the countdown at
+        // 14:59 for a delay the user set to 15 minutes.
         $this->travelTo(Carbon::parse('2026-01-01 00:00:00.600'));
 
         $file = $this->dir.'/shutdown-scheduled';
@@ -1071,9 +1049,8 @@ describe('a scheduled restart', function () {
     });
 
     it('never counts down past zero on a deadline already gone', function () {
-        // systemd leaves the file in place between the deadline passing and
-        // the machine going down. A negative number would render as a
-        // countdown running backwards through the last thing anyone sees.
+        // systemd leaves the file in place between the deadline passing and the machine going
+        // down; a negative number would render as a countdown running backwards.
         $file = $this->dir.'/shutdown-scheduled';
         File::put($file, 'USEC='.(now()->subMinutes(5)->getTimestamp() * 1_000_000)."\n");
         config(['server.reboot.scheduled_file' => $file]);
@@ -1142,9 +1119,8 @@ describe('the Redis password in the settings response', function () {
     /**
      * A panel configured with a Redis password, and a Redis that accepts it.
      *
-     * The value now comes from the panel's own config rather than from
-     * `CONFIG GET`, so that is what the fixture sets; the ping is what decides
-     * whether it is still true.
+     * The value comes from the panel's own config, not `CONFIG GET`; the ping decides whether it
+     * is still true.
      */
     function fakeRedisWithPassword(string $password = 's3cr3t-redis', bool $accepted = true): void
     {
@@ -1180,8 +1156,7 @@ describe('the Redis password in the settings response', function () {
     }
 
     it('sends the value to someone who could change it anyway', function () {
-        // Operator decision, 2026-08-31: the panel shows and copies this the
-        // way it already shows a system user's password.
+        // The panel shows and copies this the way it already shows a system user's password.
         fakeRedisWithPassword();
 
         $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -1191,10 +1166,9 @@ describe('the Redis password in the settings response', function () {
     });
 
     it('withholds it from a read-only role, which still learns one is set', function () {
-        // This is not a system user's password: Redis backs the panel's
-        // sessions, cache and queue, so it unlocks the panel rather than one
-        // customer's account. A viewer can already see that a password exists
-        // and cannot act on the value, so it does not travel.
+        // Not a system user's password: Redis backs the panel's sessions, cache and queue, so it
+        // unlocks the panel, not one customer's account. A viewer can see that a password exists
+        // but cannot act on the value, so it does not travel.
         fakeRedisWithPassword();
 
         $viewer = User::factory()->create();
@@ -1207,11 +1181,9 @@ describe('the Redis password in the settings response', function () {
     });
 
     it('says when the stored password no longer opens Redis', function () {
-        // Someone changed `requirepass` on the server. The panel's copy is
-        // stale, and until now nothing said so: the field simply went blank,
-        // on the screen you would open to work out what was wrong. The value
-        // is still shown -- it is what the panel is using, and seeing it is
-        // how you notice it is not what Redis wants.
+        // Someone changed `requirepass` on the server, so the panel's copy is stale. The value is
+        // still shown: it is what the panel uses, and seeing it is how you notice Redis wants
+        // something else.
         fakeRedisWithPassword('stale-value', accepted: false);
 
         $redis = $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -1253,8 +1225,8 @@ describe('the Redis password in the settings response', function () {
 
 describe('whether the SSH-access toggle is enforced', function () {
     it('says not enforced until an AllowGroups names ssh-users', function () {
-        // A fresh server: the toggle reads off and the person logs in anyway
-        // (reproduced 2026-09-23). The list says so instead of implying it.
+        // A fresh server: the toggle reads off and the person logs in anyway. The list says so
+        // instead of implying it.
         fakeSshdPolicy('');
 
         $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -1283,9 +1255,8 @@ describe('whether the SSH-access toggle is enforced', function () {
 });
 
 /*
- * RC-9 (frontend QA, 12 Oct): GET /settings was cached whole, sentences
- * included, so the first request's language won — a Russian page read
- * "Проверено: há 6 horas" right after a Portuguese request.
+ * GET /settings was cached whole, sentences included, so the first request's language won: a
+ * Russian page read "Проверено: há 6 horas" right after a Portuguese request.
  */
 it('answers each language in its own words when the settings are cached', function () {
     config(['server.probe_cache_seconds' => 60]);

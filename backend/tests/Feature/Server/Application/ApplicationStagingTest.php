@@ -80,9 +80,7 @@ function fakeStagingServer(bool $testPasses = true): void
 {
     Process::fake(function ($process) use ($testPasses) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-        // Production's search-engine visibility. Read before the database is
-        // replaced and written back after, so a push cannot de-index a live
-        // site — an unreadable value refuses the push outright.
+        // Production's blog_public is read before the DB swap and written back after.
         if (in_array('option', $args, true) && in_array('get', $args, true)) {
             return Process::result(output: "1\n");
         }
@@ -131,7 +129,7 @@ it('creates a staging site with its own database, linked back to production', fu
         ->and($staging->status->value)->toBe('active')
         // Without a slug the document root collapses to the system user's
         // home, which production's own clone would land in too. `slug` is not
-        // fillable, so mass assignment used to drop it here in silence.
+        // fillable, so it must be set explicitly.
         ->and($staging->slug)->not->toBeNull()
         ->and($staging->slug)->not->toBe($this->production->slug)
         ->and(app(ApplicationProvisioner::class)
@@ -154,7 +152,7 @@ it('refuses a second staging site for the same application', function () {
     fakeStagingServer();
     $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
 
-    // A 422 that says why (bug #88), not a 500 with a reference to quote.
+    // A 422 that says why, not a 500 with a reference to quote.
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl(), ['domain' => 'staging2.shop.test'])
         ->assertUnprocessable()
@@ -196,11 +194,8 @@ it('refuses staging for a site type with no staging recipe', function () {
         'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
     ]);
 
-    // 404, not 403/500: the `permission:app_` middleware already refuses any
-    // app_-prefixed route for a site type that doesn't declare the feature
-    // (CheckPermission.php) — the same "this screen does not exist here"
-    // guard every other per-app feature already gets, before StagingManager
-    // ever runs.
+    // 404, not 403/500: the `permission:app_` middleware refuses any app_-prefixed route for a
+    // site type that doesn't declare the feature (CheckPermission.php), before StagingManager runs.
     $this->withHeaders(stagingHeaders())
         ->postJson('/api/applications/'.$static->id.'/staging', ['domain' => 'staging.landing.test'])
         ->assertStatus(404);
@@ -220,9 +215,7 @@ it('pushes files-only without dumping the production database', function () {
     $dumps = [];
     Process::fake(function ($process) use (&$dumps) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-        // Production's search-engine visibility. Read before the database is
-        // replaced and written back after, so a push cannot de-index a live
-        // site — an unreadable value refuses the push outright.
+        // Production's blog_public is read before the DB swap and written back after.
         if (in_array('option', $args, true) && in_array('get', $args, true)) {
             return Process::result(output: "1\n");
         }
@@ -255,9 +248,7 @@ it('dumps a local safety copy before a full push', function () {
     $dumps = [];
     Process::fake(function ($process) use (&$dumps) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-        // Production's search-engine visibility. Read before the database is
-        // replaced and written back after, so a push cannot de-index a live
-        // site — an unreadable value refuses the push outright.
+        // Production's blog_public is read before the DB swap and written back after.
         if (in_array('option', $args, true) && in_array('get', $args, true)) {
             return Process::result(output: "1\n");
         }
@@ -287,9 +278,7 @@ it('restores production files before re-enabling when a push fails partway', fun
 
     Process::fake(function ($process) use (&$rsyncCalls, &$snapshotRemoved) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-        // Production's search-engine visibility. Read before the database is
-        // replaced and written back after, so a push cannot de-index a live
-        // site — an unreadable value refuses the push outright.
+        // Production's blog_public is read before the DB swap and written back after.
         if (in_array('option', $args, true) && in_array('get', $args, true)) {
             return Process::result(output: "1\n");
         }
@@ -332,9 +321,7 @@ it('restores the production database as well as files after a full push fails', 
 
     Process::fake(function ($process) use (&$rsyncCalls, &$databaseRestores) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-        // Production's search-engine visibility. Read before the database is
-        // replaced and written back after, so a push cannot de-index a live
-        // site — an unreadable value refuses the push outright.
+        // Production's blog_public is read before the DB swap and written back after.
         if (in_array('option', $args, true) && in_array('get', $args, true)) {
             return Process::result(output: "1\n");
         }
@@ -377,9 +364,7 @@ it('leaves production disabled and preserves recovery files when rollback fails'
 
     Process::fake(function ($process) use (&$rsyncCount, &$snapshotRemoved) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-        // Production's search-engine visibility. Read before the database is
-        // replaced and written back after, so a push cannot de-index a live
-        // site — an unreadable value refuses the push outright.
+        // Production's blog_public is read before the DB swap and written back after.
         if (in_array('option', $args, true) && in_array('get', $args, true)) {
             return Process::result(output: "1\n");
         }
@@ -419,9 +404,7 @@ it('never runs the marketplace installer against the copied files', function () 
     $installCalls = [];
     Process::fake(function ($process) use (&$installCalls) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-        // Production's search-engine visibility. Read before the database is
-        // replaced and written back after, so a push cannot de-index a live
-        // site — an unreadable value refuses the push outright.
+        // Production's blog_public is read before the DB swap and written back after.
         if (in_array('option', $args, true) && in_array('get', $args, true)) {
             return Process::result(output: "1\n");
         }
@@ -462,11 +445,9 @@ it('refuses without manage permission', function () {
 });
 
 /*
- * The failure path, which had no test at all — every existing one fakes a
- * server where nothing goes wrong, so "what happens when it does" was never
- * asked. A staging attempt creates its Application row before it provisions,
- * and that row satisfies the one-staging-per-site guard. Left behind, it
- * meant a single failure locked staging off for that site permanently.
+ * The failure path: a staging attempt creates its Application row before it provisions, and
+ * that row satisfies the one-staging-per-site guard. Left behind after a failure, it would
+ * lock staging off for that site permanently.
  */
 describe('when creating staging fails', function () {
     it('leaves nothing behind and lets the user try again', function () {
@@ -511,9 +492,7 @@ describe('when creating staging fails', function () {
 
         Process::fake(function ($process) use (&$filesCopied) {
             $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-            // Production's search-engine visibility. Read before the database is
-            // replaced and written back after, so a push cannot de-index a live
-            // site — an unreadable value refuses the push outright.
+            // Production's blog_public is read before the DB swap and written back after.
             if (in_array('option', $args, true) && in_array('get', $args, true)) {
                 return Process::result(output: "1\n");
             }
@@ -550,9 +529,7 @@ describe('when creating staging fails', function () {
     it('does not keep staging when its secret config cannot be secured', function (string $command) {
         Process::fake(function ($process) use ($command) {
             $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-            // Production's search-engine visibility. Read before the database is
-            // replaced and written back after, so a push cannot de-index a live
-            // site — an unreadable value refuses the push outright.
+            // Production's blog_public is read before the DB swap and written back after.
             if (in_array('option', $args, true) && in_array('get', $args, true)) {
                 return Process::result(output: "1\n");
             }
@@ -589,15 +566,9 @@ describe('when creating staging fails', function () {
 /*
  * What a push must never carry from staging to production.
  *
- * Reported from a live site: after pushing, production was serving the
- * staging URL. The cause was not the URL rewrite — that ran and worked. The
- * rsync had no exclusion for `wp-config.php`, so staging's config landed on
- * production carrying staging's DB_NAME/DB_USER/DB_PASSWORD and its
- * WP_HOME/WP_SITEURL. Those are PHP constants, so they override whatever
- * `wp_options` says: the live site connected to the staging database and
- * answered on the staging URL, and the search-replace was overruled in
- * silence. The mail trap rode across in the same sync, which stops a live
- * site sending email at all.
+ * `wp-config.php` holds PHP constants (DB_*, WP_HOME/WP_SITEURL) that override `wp_options`, so
+ * syncing staging's copy points the live site at the staging database and URL whatever the
+ * search-replace did. The mail trap must not ride across either: it stops a live site sending mail.
  */
 
 /** Records every command a push runs, so the sync and the wp-cli calls can be read back. */
@@ -626,11 +597,9 @@ function recordStagingPush(array &$commands): void
 /**
  * The rsync that pushes staging onto production.
  *
- * Not simply the first one: a push starts by rsyncing production's own files
- * into the rollback snapshot directory, and that copy is deliberately
- * unfiltered — a safety copy with exclusions would not restore the site. An
- * earlier version of this helper matched that one and reported the push as
- * having no exclusions at all.
+ * Not simply the first one: a push starts by rsyncing production's own files into the rollback
+ * snapshot directory, and that copy is deliberately unfiltered — a safety copy with exclusions
+ * would not restore the site.
  */
 function pushRsyncArgs(array $commands): array
 {
@@ -797,9 +766,7 @@ it('refuses to finish a push that left production wearing staging identity', fun
 
     Process::fake(function ($process) use ($stagingDatabase) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-        // Production's search-engine visibility. Read before the database is
-        // replaced and written back after, so a push cannot de-index a live
-        // site — an unreadable value refuses the push outright.
+        // Production's blog_public is read before the DB swap and written back after.
         if (in_array('option', $args, true) && in_array('get', $args, true)) {
             return Process::result(output: "1\n");
         }
@@ -854,9 +821,7 @@ it('dumps a safety copy before replacing the database', function () {
     $dumps = [];
     Process::fake(function ($process) use (&$dumps) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-        // Production's search-engine visibility. Read before the database is
-        // replaced and written back after, so a push cannot de-index a live
-        // site — an unreadable value refuses the push outright.
+        // Production's blog_public is read before the DB swap and written back after.
         if (in_array('option', $args, true) && in_array('get', $args, true)) {
             return Process::result(output: "1\n");
         }
@@ -911,9 +876,7 @@ it('restores the database but not the files when a database push fails', functio
     $restores = [];
     Process::fake(function ($process) use (&$restores) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
-        // Production's search-engine visibility. Read before the database is
-        // replaced and written back after, so a push cannot de-index a live
-        // site — an unreadable value refuses the push outright.
+        // Production's blog_public is read before the DB swap and written back after.
         if (in_array('option', $args, true) && in_array('get', $args, true)) {
             return Process::result(output: "1\n");
         }
@@ -962,15 +925,10 @@ it('accepts all three modes and refuses anything else', function () {
 /*
  * Search-engine visibility, in both directions.
  *
- * A staging site is the same content on a second address, which to a search
- * engine is the same page published twice: the copy gets indexed, splits the
- * ranking signals, and can outrank the original.
- *
- * Fixing that creates the opposite hazard, and it is the worse of the two.
- * Once staging is `blog_public = 0`, every database push carries that row
- * onto production — de-indexing a live site with no error, no visible change,
- * and nobody noticing until the traffic goes. So production's own value is
- * read before the database is replaced and written back afterwards.
+ * Staging is the same content on a second address, so it must be `blog_public = 0` or it splits
+ * ranking signals with the original. But then every database push carries that row onto
+ * production and silently de-indexes the live site, so production's own value is read before
+ * the database is replaced and written back afterwards.
  */
 
 it('hides a new staging site from search engines', function () {
@@ -1114,15 +1072,11 @@ it('refuses the push when production visibility cannot be read', function () {
 });
 
 it('gives the staging site a primary domain row, not just the mirror column', function () {
-    // The Domains screen reads `application_domains`; `applications.domain` is
-    // only the mirror of whichever row is primary. CreateApplication writes
-    // that row, StagingManager does not go through it, and staging came up
-    // serving its domain with an empty Domains section.
+    // The Domains screen reads `application_domains`; `applications.domain` only mirrors the
+    // primary row. CreateApplication writes that row, StagingManager does not go through it.
     //
-    // Worse than cosmetic: `serverNames()` falls back to the column only while
-    // the relation is empty, so adding one alias afterwards made the relation
-    // non-empty without the primary in it and the next vhost dropped the
-    // staging site's own domain.
+    // `serverNames()` falls back to the column only while the relation is empty, so adding one
+    // alias afterwards would make the next vhost drop the staging site's own domain.
     fakeStagingServer();
 
     $response = $this->withHeaders(stagingHeaders())
@@ -1149,18 +1103,12 @@ it('gives the staging site a primary domain row, not just the mirror column', fu
 /*
  * Media.
  *
- * Reported from a live site: media uploaded in staging appeared in
- * production's Media Library after a push and every image 404'd. WordPress
- * stores an upload as two things — a row in `wp_posts` and a file under
- * `wp-content/uploads` — and the database half crosses in a push whether
- * anyone asks it to or not. `wp-content/uploads/` was in `syncExcludes()`, so
- * the file half never crossed at all: the library was reading rows that
- * described files which did not exist.
+ * A WordPress upload is a `wp_posts` row plus a file under `wp-content/uploads`. The database
+ * half always crosses in a push, so excluding `wp-content/uploads/` alone left production's
+ * Media Library reading rows for files that did not exist.
  *
- * The exclusion was not wrong, only half right. The main sync carries
- * `--delete`, and a photo added to production while somebody worked in
- * staging must survive a push. So uploads stay out of *that* pass and get an
- * additive one of their own.
+ * The exclusion stays: the main sync carries `--delete`, and a photo added to production
+ * meanwhile must survive a push. So uploads get an additive pass of their own.
  */
 
 /** The additive media pass, if it ran. Distinguished by its destination. */
@@ -1198,9 +1146,8 @@ it('carries uploaded media to production, without deleting production media', fu
 });
 
 it('carries existing media into a new staging site', function () {
-    // The direction nobody notices until they look: a staging site cloned
-    // from a real shop had no media at all, so every existing image was
-    // broken in staging from the moment it was created.
+    // The other direction: a staging site cloned from a real shop must start with its media,
+    // or every existing image is broken in staging from the start.
     $commands = [];
 
     Process::fake(function ($process) use (&$commands) {
@@ -1263,9 +1210,8 @@ it('copies media before the destination is chowned, not after', function () {
 });
 
 it('pushes a site that has never had an upload', function () {
-    // rsync exits non-zero on a missing source, and a site whose only fault is
-    // that nobody has added a photo yet has no uploads directory. Failing the
-    // push for that would be the fix causing a worse bug than the one it fixed.
+    // rsync exits non-zero on a missing source, and a site nobody has added a photo to yet has
+    // no uploads directory. That must not fail the push.
     fakeStagingServer();
     $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
 
@@ -1329,9 +1275,8 @@ it('refuses the push when it cannot tell whether media exists', function () {
 });
 
 describe('one push at a time', function () {
-    // Pushes ran inside the request with no lock: a double-click started two
-    // that overwrote and rolled back the same production site at once, and
-    // nothing stopped one during a restore (found in code review 2026-09-29).
+    // Without a lock a double-click started two pushes that overwrote and rolled back the same
+    // production site at once, and nothing stopped one during a restore.
     it('refuses a second push while one is running', function () {
         fakeStagingServer();
         $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
@@ -1383,8 +1328,7 @@ describe('one push at a time', function () {
 });
 
 it('keeps only the newest pre-push database dumps', function () {
-    // Each is a full copy of production's database, written before every
-    // push and never removed (found in code review 2026-09-29).
+    // Each is a full copy of production's database, written before every push and never removed.
     fakeStagingServer();
     $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
 
@@ -1793,9 +1737,8 @@ describe('updating staging from live', function () {
 });
 
 /*
- * RC-16 (frontend QA, 16 Oct): push and update-from-live ran inside the
- * request, so a large site answered 504 while the copy carried on and nothing
- * could say how it ended. They run on the queue now; the run is the answer.
+ * Push and update-from-live run on the queue, not in the request: a large site answered 504
+ * while the copy carried on and nothing could say how it ended. The run is the answer.
  */
 describe('push and update from live on the queue (RC-16)', function () {
     beforeEach(function () {
@@ -1978,7 +1921,7 @@ describe('the safety copy switch on push and pull (2026-10-29)', function () {
         app()->instance(LocalBackupFolder::class, $folder);
         config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1024 ** 3 - 4095]);
 
-        // Refused before anything is queued (2026-10-29), with the numbers.
+        // Refused before anything is queued, with the numbers.
         $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'database'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('disk_space');
@@ -2043,7 +1986,7 @@ describe('the safety copy switch on push and pull (2026-10-29)', function () {
     });
 });
 
-/** `$usable` bytes free above the reserve, on every disk (2026-10-29 space check). */
+/** `$usable` bytes free above the reserve, on every disk. */
 function stagingUsableSpace(int $usable): void
 {
     $folder = Mockery::mock(LocalBackupFolder::class, [app(ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();

@@ -19,16 +19,8 @@ use Illuminate\Support\Facades\Queue;
 /**
  * Creating a site from a repository and ending up with the repository on disk.
  *
- * Three separate defects made that impossible, and each one hid the next:
- *
- *  1. provisioning wrote a placeholder into the document root, and `git clone`
- *     refuses a destination that is not empty — so the first deploy of every
- *     git application failed;
- *  2. nothing dispatched that deploy anyway, so the failure was never even
- *     reached: the site just sat there serving the placeholder;
- *  3. the placeholder was written after `chown -R`, leaving a root-owned file
- *     in the site user's directory that the File Manager could list but never
- *     edit or delete.
+ * A placeholder in the document root makes `git clone` refuse the directory, the first deploy
+ * must be dispatched on its own, and nothing may be written root-owned after `chown -R`.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -63,10 +55,7 @@ function firstDeployApp(array $overrides = []): Application
     ], $overrides));
 }
 
-/**
- * Records every command, and lets a test decide what the document root
- * contains when git asks.
- */
+/** Records every command, and lets a test decide what the document root contains when git asks. */
 function fakeFirstDeploy(string $contents = ''): ArrayObject
 {
     $ran = new ArrayObject;
@@ -132,12 +121,8 @@ it('creates the directory it is about to chown, serve and deploy into', function
 
     $documentRoot = app(ApplicationProvisioner::class)->documentRoot($app->fresh()->load('systemUser'));
 
-    // A git site used to get `releases/<timestamp>/public` and a `current`
-    // symlink here instead — the layout `4059aa0` removed — so the directory
-    // everything downstream uses was never made. `chown -R` on a path that
-    // does not exist exits 1, and provisioning died at `set_ownership` for
-    // every git application. Faked processes report success, which is why the
-    // command list, not the exit code, is what this asserts.
+    // `chown -R` on a missing path exits 1 and provisioning dies at `set_ownership`. Faked
+    // processes report success, so the command list, not the exit code, is what this asserts.
     expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'mkdir'
         && in_array($documentRoot, $args, true)))->toBeTrue();
 
@@ -154,18 +139,14 @@ it('gives a git site an .env above the document root, owned by the site user', f
     $fresh = $app->fresh()->load('systemUser');
     $env = $fresh->rootPath().'/.env';
 
-    // Above the served directory, because it holds the application's secrets
-    // and anything under the document root is a URL.
+    // Above the served directory: it holds secrets and anything under the document root is a URL.
     expect($env)->not->toStartWith(app(ApplicationProvisioner::class)->documentRoot($fresh));
 
     expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'touch'
         && in_array($env, $args, true)))->toBeTrue();
 
-    // `touch` runs elevated; left root-owned, the site's own process could not
-    // write it and the File Manager could not edit it.
-    // `-h`: where a site has a web root, `.env` is in the user's own folder,
-    // and a plain chown follows a link planted there (the `.panel` class of
-    // bug, 2026-09-29).
+    // `touch` runs elevated; left root-owned, the site could not write it.
+    // `-h`: a plain chown follows a link planted in the user's own folder.
     expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'chown'
         && ($args[1] ?? '') === '-h'
         && in_array('deploy:deploy', $args, true)
@@ -194,8 +175,7 @@ it('still writes a placeholder for a blank PHP site, as the site user after taki
     $order = [];
 
     foreach ($ran as $args) {
-        // Root taking its own `conf/` folder back (SiteConfFolder) is not the
-        // hand-over to the site user this is about.
+        // Root taking its own `conf/` folder back (SiteConfFolder) is not the hand-over to the user.
         if (($args[0] ?? '') === 'chown' && ($args[1] ?? '') === '-R' && ! in_array('root:root', $args, true)) {
             $order[] = 'chown';
         } elseif (($args[0] ?? '') === 'runuser' && ($args[4] ?? '') === 'tee' && str_ends_with((string) end($args), '/index.php')) {
@@ -205,20 +185,13 @@ it('still writes a placeholder for a blank PHP site, as the site user after taki
         }
     }
 
-    // As the user it is theirs by construction; as root it followed a link
-    // planted at index.php on every re-provision (the `.panel` class of bug,
-    // 2026-09-29).
+    // As the user it is theirs by construction; as root it followed a link planted at index.php.
     expect($order)->toBe(['chown', 'tee as user']);
 });
 
 it('uses init, not clone, even when the directory is empty', function () {
-    // Deliberately never `git clone`: it used to be the fast path for an
-    // empty directory, gated by a separate pre-check, but the check and the
-    // clone are two separate commands and anything landing in the directory
-    // between them (a second deploy racing this one, a retry) makes `git
-    // clone` refuse with "already exists and is not an empty directory" —
-    // a real production failure this replaces. `git init` never refuses
-    // based on directory contents, so there is no gap left to race.
+    // Never `git clone`: a file landing between the emptiness check and the clone (a racing
+    // deploy, a retry) makes it refuse. `git init` never refuses on directory contents.
     $app = firstDeployApp(['status' => 'active']);
     $ran = fakeFirstDeploy(contents: '');
 
@@ -231,8 +204,7 @@ it('uses init, not clone, even when the directory is empty', function () {
 it('fetches instead of cloning when the directory already has files', function () {
     $app = firstDeployApp(['status' => 'active']);
 
-    // A migrated server's existing files, or our own placeholder. `git clone`
-    // is a fatal error here, so the deploy has to take the other path.
+    // A migrated server's existing files, or our own placeholder: `git clone` would fail here.
     $ran = fakeFirstDeploy(contents: "index.php\n.env");
 
     runFirstDeploy($app);
@@ -240,8 +212,7 @@ it('fetches instead of cloning when the directory already has files', function (
     expect(firstDeployRan($ran, fn ($args) => (firstDeployGit($args)[0] ?? '') === 'git' && (firstDeployGit($args)[1] ?? '') === 'clone'))->toBeFalse()
         ->and(firstDeployRan($ran, fn ($args) => (firstDeployGit($args)[0] ?? '') === 'git' && (firstDeployGit($args)[1] ?? '') === 'init'))->toBeTrue()
         ->and(firstDeployRan($ran, fn ($args) => (firstDeployGit($args)[0] ?? '') === 'git' && in_array('fetch', $args, true)))->toBeTrue()
-        // The reset is what makes it equivalent to a clone rather than a merge
-        // with whatever happened to be in the directory.
+        // The reset makes it equivalent to a clone rather than a merge with what was there.
         ->and(firstDeployRan($ran, fn ($args) => in_array('reset', $args, true) && in_array('--hard', $args, true)))->toBeTrue();
 });
 
@@ -272,14 +243,11 @@ it('deploys a git site automatically once it is provisioned', function () {
     );
 
     // "Create a site from this repository" includes fetching the repository.
-    // Before this the user got a provisioned site showing a placeholder and no
-    // indication that a second, manual step existed.
     Queue::assertPushed(DeployApplication::class);
 
     $deployment = Deployment::first();
 
-    // Recorded with its own trigger: nobody pressed anything, and a history
-    // that claims they did makes the rest of the history untrustworthy.
+    // Recorded with its own trigger: nobody pressed anything, so the history must not claim so.
     expect($deployment)->not->toBeNull()
         ->and($deployment->trigger)->toBe(DeploymentTrigger::Initial);
 });
@@ -313,8 +281,7 @@ it('does not deploy when provisioning failed', function () {
         app(ActivityLogger::class),
     );
 
-    // Cloning into a site whose directory was never made would fail second and
-    // report a confusing reason for a problem that already had a clear one.
+    // A clone into a directory that was never made would fail second, with a confusing reason.
     expect($app->fresh()->status->value)->toBe('failed');
     Queue::assertNotPushed(DeployApplication::class);
 });
@@ -322,11 +289,8 @@ it('does not deploy when provisioning failed', function () {
 /*
  * The deploy script at creation time.
  *
- * The first deploy runs on its own the moment provisioning finishes, and it is
- * the one deploy that decides whether the site works at all — a Laravel
- * repository whose `php artisan migrate` lives in the deploy script came up
- * 500ing, because the field could only be filled in afterwards on the
- * Deployment screen and the automatic first deploy had already run without it.
+ * The first deploy runs on its own as soon as provisioning finishes, so the script has to be
+ * given at creation: filled in afterwards, the first deploy has already run without it.
  */
 describe('a deploy script given at creation', function () {
     it('runs on the very first deploy', function () {
@@ -356,9 +320,8 @@ describe('a deploy script given at creation', function () {
             ->filter(fn ($a) => is_string($a) && str_contains($a, 'artisan migrate'))
             ->first();
 
-        // Not both, and not the older field: GitDeployer::script() prefers
-        // deploy_script and falls back to build_command, and the first deploy
-        // must not be an exception to that.
+        // GitDeployer::script() prefers deploy_script over build_command; the first deploy is no
+        // exception.
         expect($script)->not->toBeNull()
             ->and($script)->not->toContain('composer install');
     });
@@ -377,17 +340,12 @@ describe('a deploy script given at creation', function () {
 });
 
 it('seeds a fresh checkout .env from the repository .env.example', function () {
-    // Provisioning touches an empty file so the path exists and belongs to the
-    // site user; nothing filled it, and no repository carries its own .env —
-    // every framework gitignores it. So a git-deployed Laravel site arrived
-    // with a zero-byte environment file and no APP_KEY, and the panel screen
-    // reporting exactly that looked like a screen that had failed to load.
+    // Provisioning only touches an empty .env and repositories gitignore theirs, so without
+    // seeding a git-deployed Laravel site gets a zero-byte file and no APP_KEY.
     $app = firstDeployApp();
     $ran = fakeFirstDeploy();
 
-    // The deploy ends by curling the deployed URL, and the faked curl answers
-    // with no status code at all, so it throws at `verify`. Irrelevant here:
-    // seeding happens well before that, and what this asserts is the command.
+    // The faked curl has no status code, so `verify` throws; seeding runs well before that.
     try {
         app(GitDeployer::class)->deploy($app->load('systemUser'), $app->codePath());
     } catch (ProvisioningFailedException) {
@@ -402,39 +360,24 @@ it('seeds a fresh checkout .env from the repository .env.example', function () {
     $script = (string) $seed[6];
 
     expect($script)
-        // Never over a file with anything in it: this runs on every deploy,
-        // not just the first, and the user's settings are not ours to replace.
+        // Never over a file with content: this runs on every deploy and the user's settings win.
         ->toContain('if [ -s "$env" ]; then exit 0; fi')
         // A repository with no example is left alone rather than guessed at.
         ->toContain('if [ ! -f "$root/.env.example" ]; then exit 0; fi')
         // Deliberately NOT key:generate — see the test below.
         ->not->toContain('key:generate')
-        // The example's APP_URL is the framework's development default. Only
-        // replaced, never appended: a repository whose example has no APP_URL
-        // is not a Laravel-shaped one, and adding the key would be guessing at
-        // somebody else's config format.
+        // Only replaced, never appended: no APP_URL in the example means a non-Laravel config.
         ->toContain('if grep -q "^APP_URL=" "$env"; then')
         ->toContain('APP_URL='.$app->url())
-        // key:generate writes to base_path('.env'). Where the panel keeps the
-        // file somewhere else, running it would create a second one.
+        // key:generate writes to base_path('.env'); with the file elsewhere it would make a second.
         ->toContain('[ "$env" = "$root/.env" ]')
         // As the site user — a root-owned .env is one the site cannot write.
         ->and($seed[1] ?? '')->toBe('-u');
 });
 
 it('generates the app key without needing the dependencies it does not have yet', function () {
-    // The bug: seeding ran `php artisan key:generate`, and `artisan` requires
-    // vendor/autoload.php on line 10. `vendor/` is created by `composer
-    // install`, which lives in the deploy script — and the deploy script runs
-    // *after* this step. So the first deploy of any Laravel repository died
-    // here:
-    //
-    //   PHP Fatal error: Failed opening required '…/vendor/autoload.php'
-    //     in …/artisan on line 10
-    //
-    // And the re-run passed, because the `.env` copied moments before the
-    // fatal made the whole step exit at its first line. "Fails once, works on
-    // retry" — with the deploy itself never at fault.
+    // `artisan` needs vendor/autoload.php, which `composer install` creates in the deploy script,
+    // after this step. A `key:generate` here died on the first deploy and passed on the re-run.
     $app = firstDeployApp();
     $ran = fakeFirstDeploy();
 
@@ -451,33 +394,25 @@ it('generates the app key without needing the dependencies it does not have yet'
     expect($script)
         ->not->toContain('artisan')
         ->not->toContain('key:generate')
-        // 32 random bytes base64-encoded is exactly what key:generate writes
-        // for the default cipher, and openssl needs nothing to boot.
+        // 32 random bytes base64-encoded is what key:generate writes; openssl needs nothing to boot.
         ->toContain('openssl rand -base64 32')
         // `|` as the sed delimiter: base64 can carry a `/` and never a `|`.
         ->toContain('sed -i "s|^APP_KEY=.*|APP_KEY=base64:$key|"')
-        // Only when there is no real key already — this runs on every deploy,
-        // and rotating a live app's key would log every session out.
+        // Only when there is no real key: this runs on every deploy, and rotating it logs users out.
         ->toContain('! grep -q "^APP_KEY=base64:." "$env"');
 });
 
 describe('the page a new site serves', function () {
     /*
-     * It used to be `<h1>domain</h1>` and one sentence of unstyled text, which
-     * answered "is it up?" and looked like a broken site while doing it.
-     *
-     * The rules below are not cosmetic. This page is publicly reachable from
-     * the second a site provisions and a blank site can sit for months, so what
-     * it does *not* contain matters more than what it does.
+     * The page is publicly reachable from the moment a site provisions and a blank site can sit
+     * for months, so what it does not contain matters more than what it does.
      */
 
     /**
      * Everything piped into a `tee`, keyed by the path written.
      *
-     * An ArrayObject rather than an array, for the reason the helper above it
-     * already uses one: the fake fills it long after this returns, and a plain
-     * array would be copied empty at the return and every assertion would run
-     * against nothing.
+     * An ArrayObject, not an array: the fake fills it after this returns, and an array would be
+     * copied empty.
      */
     function teedFiles(): ArrayObject
     {
@@ -517,10 +452,8 @@ describe('the page a new site serves', function () {
     });
 
     it('proves PHP is running instead of claiming it', function () {
-        // The actual question behind "is my site working". A static file
-        // served from a misconfigured pool looks exactly like a working one
-        // until the first real request, so the page prints something only PHP
-        // could produce.
+        // A static file served from a misconfigured pool looks like a working site, so the page
+        // prints something only PHP could produce.
         $app = firstDeployApp(['site_type' => 'php', 'repository_url' => null, 'branch' => null]);
         $written = teedFiles();
 
@@ -528,21 +461,17 @@ describe('the page a new site serves', function () {
 
         $page = $written['/home/deploy/public_html/index.php'] ?? '';
 
-        // Literal PHP in the written file -- Blade *executes* a `<?php` block
-        // it finds in a view rather than emitting one, so this only works
-        // because the fragment is passed in as data.
+        // Literal PHP in the written file: Blade executes a `<?php` block in a view, so the
+        // fragment is passed in as data.
         expect($page)->toContain('<?php echo htmlspecialchars(date(')
-            // And the template was rendered, not copied: an unrendered Blade
-            // directive reaching the customer's document root would be text
-            // their visitors read.
+            // The template was rendered, not copied: a raw Blade directive would show to visitors.
             ->and($page)->not->toContain('{{')
             ->and($page)->not->toContain('@if')
             ->and($page)->not->toContain('@endif');
     });
 
     it('says nothing a scanner could use', function () {
-        // No version, no path, no server software, no phpinfo. Publicly
-        // reachable for as long as the site stays blank.
+        // No version, no path, no server software, no phpinfo: the page is public.
         $app = firstDeployApp(['site_type' => 'php', 'repository_url' => null, 'branch' => null]);
         $written = teedFiles();
 
@@ -559,9 +488,7 @@ describe('the page a new site serves', function () {
     });
 
     it('fetches nothing from anywhere', function () {
-        // A server with no outbound network renders a dead stylesheet, and a
-        // broken layout is worse than the plain text this replaced. It also
-        // means the page cannot report a visitor to a third party.
+        // No outbound network means a dead stylesheet; it also keeps visitors off third parties.
         $app = firstDeployApp(['site_type' => 'php', 'repository_url' => null, 'branch' => null]);
         $written = teedFiles();
 
@@ -576,8 +503,7 @@ describe('the page a new site serves', function () {
     });
 
     it('leaves the PHP fragment out of a static site', function () {
-        // Nothing to prove there, and a `<?php` block in an `index.html` is
-        // text the visitor reads.
+        // A `<?php` block in an `index.html` is text the visitor reads.
         $app = firstDeployApp([
             'site_type' => 'static',
             'serving_profile' => 'static',

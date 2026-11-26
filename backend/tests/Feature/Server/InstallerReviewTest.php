@@ -13,12 +13,11 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Sleep;
 
 /*
- * install.sh's fixes from the installer review of 2026-11-02
- * (reports/installer-review-20261102.md), each run for real under bash: the
- * installer's own functions, pulled out of install.sh, against a temporary
- * root with the commands they call stubbed.
+ * install.sh's fixes from the installer review, each run for real under bash: the installer's
+ * own functions, pulled out of install.sh, against a temporary root with the commands they
+ * call stubbed.
  *
- * Each block names the finding it guards and the symptom it had on main.
+ * Each block names the failure it guards.
  */
 
 /**
@@ -53,11 +52,9 @@ function reviewDir(): string
 
 describe('R1: the failure report after the admin password is unset', function () {
     /*
-     * setup_backend unsets PANEL_ADMIN_PASSWORD once the admin exists, and
-     * redact_log named it without a default. Under `set -u` every failure
-     * after that — the frontend build running out of memory is the usual one
-     * — printed "PANEL_ADMIN_PASSWORD: unbound variable" instead of the log
-     * tail and the "What to do" advice, then a second, misleading box.
+     * setup_backend unsets PANEL_ADMIN_PASSWORD once the admin exists; redact_log must name it
+     * with a default, or under `set -u` every later failure printed "unbound variable" instead of
+     * the log tail and the "What to do" advice.
      */
     function failureAfterAdminCreated(string $unset): array
     {
@@ -123,11 +120,9 @@ function reviewRooted(string $source, string $root, array $prefixes): string
 
 describe('R4: OpenLiteSpeed reloads after its certificate renews', function () {
     /*
-     * certbot --nginx and --apache reload their server on renewal; certbot
-     * certonly --webroot, the only way to issue on OpenLiteSpeed, has no
-     * installer and reloads nothing. The panel's own certificate renewed on
-     * disk while lshttpd went on serving the old one from memory, and the
-     * panel showed an expired certificate about 30 days after the renewal.
+     * certbot --nginx and --apache reload their server on renewal; `certonly --webroot` (the only
+     * way to issue on OpenLiteSpeed) reloads nothing, so lshttpd kept serving the old certificate
+     * from memory after it renewed on disk.
      */
     function olsTls(bool $issued): array
     {
@@ -185,12 +180,9 @@ describe('R4: OpenLiteSpeed reloads after its certificate renews', function () {
 
 describe('S1: the web interface cannot use the panel account\'s sudo', function () {
     /*
-     * The frontend unit runs as APP_USER, whose sudoers grant is
-     * root-equivalent (tee, sh, chown … see configure_sudoers), and nothing
-     * stopped its processes from using it: on a real OpenLiteSpeed install
-     * (2026-11-02) `systemd-run -p User=panel sudo -n id -u` printed 0. A
-     * code-execution bug in Next or any of its dependencies was one command
-     * from root. The interface never needs sudo.
+     * The frontend unit runs as APP_USER, whose sudoers grant is root-equivalent (see
+     * configure_sudoers); nothing stopped its processes from using it, so a code-execution bug in
+     * Next was one command from root. The interface never needs sudo.
      */
     function installedUnits(): array
     {
@@ -230,12 +222,9 @@ describe('S1: the web interface cannot use the panel account\'s sudo', function 
 
 describe('S2: the sudoers grant is replaced only by a validated one', function () {
     /*
-     * configure_sudoers redirected the render straight into
-     * /etc/sudoers.d/<slug>. On a re-run the `>` emptied the working grant
-     * before anything was rendered, and a render or visudo failure then
-     * removed the file: the panel had no privileges at all until a later run
-     * succeeded. The new file was also in sudo's directory, world-readable
-     * and unvalidated, until the chmod and visudo after it.
+     * configure_sudoers redirected the render straight into /etc/sudoers.d/<slug>: on a re-run the
+     * `>` emptied the working grant before rendering, and a render or visudo failure then removed
+     * it. The new file was also world-readable and unvalidated until the chmod and visudo after it.
      */
     function sudoersRun(string $render, int $visudo = 0): array
     {
@@ -300,11 +289,9 @@ describe('S2: the sudoers grant is replaced only by a validated one', function (
 
 describe('S4: values from the command line and environment are checked first', function () {
     /*
-     * --domain, --branch, --repo and --email were used as given, and so were
-     * PANEL_SLUG, APP_USER and APP_DIR from the environment. A pasted
-     * `https://panel.example.com/` went into every vhost's server_name and
-     * failed late, at certbot; a value with `;` or `}` rewrote the nginx
-     * config around it; a `/` broke the Apache fallback's sed.
+     * --domain, --branch, --repo, --email and the PANEL_SLUG, APP_USER and APP_DIR environment
+     * values were used as given. A pasted `https://panel.example.com/` failed late, at certbot; a
+     * value with `;` or `}` rewrote the nginx config around it; a `/` broke the Apache sed.
      */
     function inputsRun(array $args = [], array $env = []): array
     {
@@ -375,8 +362,8 @@ describe('S4: values from the command line and environment are checked first', f
     ]);
 
     it('does not show an earlier install\'s log as the reason', function () {
-        // Found on a real re-run (2026-11-02): the refusal printed the last
-        // install's log tail and "What to do" under "Install stopped".
+        // A re-run's refusal printed the last install's log tail and "What to do" under
+        // "Install stopped".
         $dir = reviewDir();
         $run = reviewBash(installerFunctions('validate_inputs', 'redact_log', 'log_tail', 'report_failure', 'save_install_state', 'send_progress', 'json_str', 'json_text', 'one_line', 'report_log_tail').'
             die() { report_failure "$*"; exit 1; }
@@ -420,10 +407,9 @@ it('S4: ends git clone\'s options before the repository and directory', function
 
 describe('R2: a directory in the panel\'s place is moved aside, never deleted', function () {
     /*
-     * fetch_source found APP_DIR without a .git, called it "a leftover from
-     * an interrupted attempt" and ran rm -rf on it. With the fresh-server
-     * guard taking any directory there for a re-run, that was somebody
-     * else's application. Even a real leftover costs nothing to keep.
+     * fetch_source found APP_DIR without a .git, called it "a leftover from an interrupted attempt"
+     * and ran rm -rf on it. With the fresh-server guard treating any directory there as a re-run,
+     * that was somebody else's application.
      */
     it('keeps what was there, beside the new checkout', function () {
         $root = reviewDir();
@@ -472,11 +458,9 @@ function installerFnBefore(string $name, string $next): string
 
 describe('R3: a TLS config OpenLiteSpeed rejects is taken back out', function () {
     /*
-     * install_ols_certificate appended vhssl{} to the vhosts and a Defaultssl
-     * listener to httpd_config.conf, and when `openlitespeed -t` rejected the
-     * result it only set SCHEME=http. The running server was fine; at the
-     * next restart or reboot lshttpd read the broken file and did not start,
-     * taking the panel and every site with it.
+     * install_ols_certificate appended vhssl{} and a Defaultssl listener to the OpenLiteSpeed
+     * config and, when `openlitespeed -t` rejected the result, only set SCHEME=http: the next
+     * restart read the broken file and lshttpd did not start, taking the panel and every site down.
      */
     function olsCertificateRun(int $test): array
     {
@@ -530,11 +514,9 @@ describe('R3: a TLS config OpenLiteSpeed rejects is taken back out', function ()
 
 describe('R5: a re-run that gets a real certificate drops the self-signed fallback', function () {
     /*
-     * When Let's Encrypt failed (common on nip.io) the installer wrote a
-     * self-signed site, <slug>-tls, beside the port-80 one and told the user
-     * to re-run later. Nothing removed it on that re-run: after certbot
-     * succeeded two server blocks answered on 443 for the same name, and the
-     * stale self-signed one could be the one served.
+     * When Let's Encrypt failed the installer wrote a self-signed site, <slug>-tls, beside the
+     * port-80 one. Nothing removed it on the re-run: after certbot succeeded, two server blocks
+     * answered on 443 for the same name and the stale one could be served.
      */
     function tlsRerun(string $webServer, bool $issued): array
     {
@@ -592,11 +574,9 @@ describe('R5: a re-run that gets a real certificate drops the self-signed fallba
 
 describe('R6: a rejected OpenLiteSpeed config on a re-run restores this run\'s copy', function () {
     /*
-     * configure_ols saved httpd_config.conf as .preinstall on the first run
-     * only, and restored THAT copy whenever `openlitespeed -t` rejected the
-     * generated config. On a re-run the live file also holds every site the
-     * panel registered since (OlsSharedConfig writes them there), so the
-     * restore deleted those sites from the web server.
+     * configure_ols saved httpd_config.conf as .preinstall on the first run only and restored that
+     * copy whenever `openlitespeed -t` rejected the generated config. On a re-run the live file
+     * also holds the sites the panel registered since, so the restore deleted them.
      */
     function olsRerun(): array
     {
@@ -640,11 +620,9 @@ describe('R6: a rejected OpenLiteSpeed config on a re-run restores this run\'s c
 
 describe('S3: what is run or trusted as root is checked first', function () {
     /*
-     * Composer's installer and fnm's install script were downloaded to fixed
-     * names in /tmp and run as root; the sury.org and Docker apt keys were
-     * installed as fetched. Nothing compared any of them with anything, so a
-     * compromised upstream or CDN was root on every new server. The
-     * LiteSpeed keys were already pinned; these now are too.
+     * Composer's installer, fnm's install script and the sury.org and Docker apt keys were fetched
+     * and used unchecked, so a compromised upstream or CDN was root on every new server. Each is
+     * now pinned (the LiteSpeed keys already were).
      */
     $download = '
         run() { "$@"; }
@@ -784,12 +762,10 @@ describe('S3: what is run or trusted as root is checked first', function () {
 
 describe('R7: OpenLiteSpeed stops at once if the panel\'s own PHP cannot be installed', function () {
     /*
-     * install_ols_packages installed lsphp and every extension in one apt
-     * call and only warned when it failed. Since the install-speed work this
-     * runs only when the one big transaction has already failed, but then a
-     * missing name still left the panel's own PHP (lsphp on this stack) or
-     * its curl/intl/sqlite3/redis extensions uninstalled, and the install
-     * went on to fail later, in composer or artisan, far from the cause.
+     * install_ols_packages (the fallback after the one big apt transaction failed) installed
+     * lsphp and every extension in one call and only warned on failure, so a missing name left the
+     * panel's own PHP or its curl/intl/sqlite3/redis extensions out and the install failed later,
+     * in composer or artisan, far from the cause.
      */
     function olsPackagesRun(string $missing): array
     {
@@ -834,10 +810,9 @@ describe('R7: OpenLiteSpeed stops at once if the panel\'s own PHP cannot be inst
 
 describe('S5: OpenLiteSpeed\'s WebAdmin console listens on this server only', function () {
     /*
-     * harden_ols_webadmin said ":7080 is not opened in the firewall", but
-     * the installer never enables ufw, so on a stock Ubuntu box the console
-     * answered on every address (`ss` showed *:7080 on a real install,
-     * 2026-11-03). Now its listener is bound to 127.0.0.1.
+     * harden_ols_webadmin claimed ":7080 is not opened in the firewall", but the installer never
+     * enables ufw, so on a stock Ubuntu box the console answered on every address. Its listener is
+     * now bound to 127.0.0.1.
      */
     $shipped = "accessControl {\n  allow                 ALL\n}\nlistener adminListener{\n  address               *:7080\n  secure                1\n  keyFile               \$SERVER_ROOT/admin/conf/webadmin.key\n}\n";
 
@@ -943,11 +918,9 @@ describe('S5: OpenLiteSpeed\'s WebAdmin console listens on this server only', fu
 
 describe('R11: the firewall allows the SSH port set in sshd_config itself', function () {
     /*
-     * configure_firewall read the port from sshd_config.d drop-ins only, and
-     * so did the panel (SshPort). With `Port 2222` in sshd_config itself, the
-     * installer allowed 22 — on a server whose ufw is already on (as on
-     * TeamCompute's images), that is the one rule between the owner and a
-     * lockout the day 22 is closed.
+     * configure_firewall read the port from sshd_config.d drop-ins only (as did the panel's
+     * SshPort). With `Port 2222` in sshd_config itself it allowed 22: on a server whose ufw is
+     * already on, the one rule between the owner and a lockout the day 22 is closed.
      */
     function sshFixture(?string $main, array $dropIns = []): string
     {
@@ -1013,13 +986,10 @@ describe('R11: the firewall allows the SSH port set in sshd_config itself', func
 
 describe('P1: nginx installs and starts on a host without IPv6', function () {
     /*
-     * On a server booted with ipv6.disable=1 (no AF_INET6 at all), main
-     * stopped at "Installing packages": Ubuntu's nginx package starts nginx
-     * with its default site, which listens on [::]:80, and nginx failed with
-     * "socket() [::]:80 failed (97: Address family not supported by
-     * protocol)". The installer's own vhosts had the same `listen [::]`
-     * lines. The sysctl disable_ipv6 switch does not reproduce it — binding
-     * [::] still works there — which is why the check is /proc/net/if_inet6.
+     * On a server booted with ipv6.disable=1 (no AF_INET6 at all) nginx failed to start on its
+     * default site's `listen [::]:80`, and the installer's own vhosts had the same lines. The
+     * sysctl disable_ipv6 switch does not reproduce it (binding [::] still works), which is why
+     * the check is /proc/net/if_inet6.
      */
     $vhost = "server {\n    listen 80;\n    listen [::]:80;\n    server_name panel.example.com;\n}\nserver {\n    listen 443 ssl;\n    listen [::]:443 ssl;\n}\n";
 
@@ -1119,10 +1089,8 @@ describe('P1: nginx installs and starts on a host without IPv6', function () {
 
 describe('R13: a failed install gives needrestart its unit back', function () {
     /*
-     * protect_from_needrestart writes a conf.d drop-in naming the unit the
-     * install runs as (Central's systemd-run), and only finish() removed it.
-     * On a real server whose install failed, the drop-in was still there
-     * afterwards, and needrestart went on skipping that unit's name.
+     * protect_from_needrestart writes a conf.d drop-in naming the unit the install runs as, and
+     * only finish() removed it: after a failed install needrestart went on skipping that unit.
      */
     function needrestartExit(string $failure): array
     {
@@ -1167,13 +1135,9 @@ describe('R13: a failed install gives needrestart its unit back', function () {
 
 describe('R10: a swap file the kernel will not turn off stops the install with the reason', function () {
     /*
-     * configure_swap ran `swapoff "$swapfile" 2>/dev/null || true` and then
-     * `rm -f`. When the kernel refuses swapoff (what the file holds does not
-     * fit back into RAM), the review expected the file to be deleted while in
-     * use. On a real server (kernel 6.8) the kernel refused the unlink too, so
-     * nothing was lost, but the install died on "rm -f /swapfile-panel" with
-     * swapoff's "Cannot allocate memory" thrown away. PANEL_SWAP_MB went into
-     * arithmetic and fallocate unchecked.
+     * configure_swap ran `swapoff "$swapfile" 2>/dev/null || true` and then `rm -f`: when the
+     * kernel refuses swapoff, the install died on "rm -f /swapfile-panel" with swapoff's "Cannot
+     * allocate memory" thrown away. PANEL_SWAP_MB also went into arithmetic and fallocate unchecked.
      */
     function swapResize(int $ours, bool $swapoffWorks): array
     {
@@ -1244,10 +1208,9 @@ describe('R10: a swap file the kernel will not turn off stops the install with t
 
 describe('S6: the self-signed nginx fallback is TLS 1.2+ and plain HTTP redirects', function () {
     /*
-     * When Let's Encrypt failed, the nginx fallback's 443 blocks set no
-     * ssl_protocols, so they took nginx.conf's stock list (TLS 1.0 and 1.1
-     * included), and port 80 went on serving the whole panel, logins and all,
-     * in plain text beside the encrypted copy.
+     * When Let's Encrypt failed, the nginx fallback's 443 blocks set no ssl_protocols, so
+     * nginx.conf's stock list (TLS 1.0 and 1.1 included) applied, and port 80 kept serving the
+     * whole panel, logins and all, in plain text beside the encrypted copy.
      */
     function selfSigned(bool $singleHost, bool $valid): array
     {
@@ -1295,8 +1258,8 @@ describe('S6: the self-signed nginx fallback is TLS 1.2+ and plain HTTP redirect
         expect($run['code'])->toBe(0, $run['out'])
             ->and($run['out'])->toContain('TLS_STATE=self-signed')
             ->and(substr_count((string) $run['tls'], 'ssl_protocols TLSv1.2 TLSv1.3;'))
-            // `ssl` or `ssl http2`: the panel's 443 blocks follow the sites'
-            // options for this nginx (nginx_listen_http2, 2026-11-24).
+            // `ssl` or `ssl http2`: the panel's 443 blocks follow the sites' options for this nginx
+            // (nginx_listen_http2).
             ->toBe(preg_match_all('/listen 443 ssl( http2)?;/', (string) $run['tls']))
             ->toBe($singleHost ? 1 : 2);
     })->with(['one host' => [true], 'panel and API hosts' => [false]]);
@@ -1327,9 +1290,8 @@ describe('S6: the self-signed nginx fallback is TLS 1.2+ and plain HTTP redirect
 
 describe('S7: the install state file is for administrators only', function () {
     /*
-     * The login script shows the install's status to root and the sudo group
-     * only, but the file it reads was 0644: any account on the box, a site's
-     * own SSH user included, could read the failure reason, which can quote a
+     * The login script shows the install's status to root and the sudo group only, but the file it
+     * reads was 0644: any account on the box could read the failure reason, which can quote a
      * command line.
      */
     function stateFile(bool $chgrpWorks): array
@@ -1377,10 +1339,9 @@ describe('S7: the install state file is for administrators only', function () {
 
 describe('R8: a failed copy of the interface\'s assets fails its start', function () {
     /*
-     * The frontend unit's ExecStartPre ended in `2>/dev/null || true`, which
-     * covered the whole `&&` chain (`sh -c 'false && true || true'` exits 0):
-     * when copying .next/static failed, the interface started anyway, served
-     * pages with no CSS or JS, and nothing said why.
+     * The frontend unit's ExecStartPre ended in `2>/dev/null || true`, which covered the whole
+     * `&&` chain (`sh -c 'false && true || true'` exits 0): a failed copy of .next/static still
+     * started the interface, with no CSS or JS and no message.
      */
     function assetCopy(bool $static, bool $public): array
     {
@@ -1447,12 +1408,10 @@ describe('R8: a failed copy of the interface\'s assets fails its start', functio
 
 describe('R9: a failed config rewrite is not carried on past', function () {
     /*
-     * `awk … >"$tmp" && mv -f "$tmp" "$conf"`: under `set -e` a failure on the
-     * left of `&&` neither stops the script nor fires the ERR trap, so a failed
-     * awk left OpenLiteSpeed's config as shipped (the Example vhost, :8088),
-     * a stray .panel-tmp beside it, and the install saying all was well. The
-     * self-signed fallbacks' last-resort `configtest && reload` said nothing
-     * when the config still failed.
+     * `awk … >"$tmp" && mv -f "$tmp" "$conf"`: under `set -e` a failure left of `&&` neither stops
+     * the script nor fires the ERR trap, so a failed awk left OpenLiteSpeed's config as shipped and
+     * the install reporting success. The self-signed fallbacks' `configtest && reload` had the same
+     * silence.
      */
     $shipped = "listener Default{\n    address                  *:8088\n    secure                   0\n    map                      Example *\n}\n\nvirtualHost Example{\n    vhRoot                   Example/\n}\n";
 
@@ -1573,10 +1532,9 @@ describe('R9: a failed config rewrite is not carried on past', function () {
 
 describe('R12: the final screen names the right way to a real certificate', function () {
     /*
-     * After a self-signed fallback the last screen said
-     * `sudo certbot --nginx -d <panel host>` on every stack: the wrong plugin
-     * on Apache, nothing that works on OpenLiteSpeed, and without the API
-     * host in two-host mode, which is the default.
+     * After a self-signed fallback the last screen said `sudo certbot --nginx -d <panel host>` on
+     * every stack: wrong on Apache, useless on OpenLiteSpeed, and without the API host in two-host
+     * mode (the default).
      */
     function certificateHint(string $webServer, bool $singleHost): string
     {
@@ -1609,12 +1567,9 @@ describe('R12: the final screen names the right way to a real certificate', func
 
 describe('C4: the helpers that replaced duplicated installer code', function () {
     /*
-     * Clean-up of 2026-11-03: the self-signed certificate was written by two
-     * copies of the same four lines (OpenLiteSpeed's and nginx/Apache's
-     * fallback), the MongoDB key by two copies of the same download, and the
-     * LiteSpeed key's scratch directory was created outside the install's own
-     * temp dir, so a failed download left it behind. Behaviour is unchanged;
-     * these run the helpers for real.
+     * The self-signed certificate and the MongoDB key were each written by two copies of the same
+     * code, and the LiteSpeed key's scratch directory was created outside the install's own temp
+     * dir. Behaviour is unchanged; these run the helpers for real.
      */
     function selfSignedCertificate(): array
     {
@@ -1711,8 +1666,8 @@ describe('C4: the helpers that replaced duplicated installer code', function () 
             OS_CODENAME=noble; LOG_FILE=/dev/null
             add_ols_repository');
 
-        // The download failed and the install stopped, as it always did; what
-        // changes is that the scratch directory went with the install's own.
+        // The download failed and the install stopped; the scratch directory went with the install's
+        // own.
         expect($run['code'])->not->toBe(0)
             ->and(glob($root.'/tmp/*'))->toBe([]);
     });

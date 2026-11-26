@@ -14,12 +14,11 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /*
- * Image discovery (DS-02): search, tags and inspect, read from registry APIs
- * without pulling. Every registry here is faked; the shapes are the real ones,
- * captured from Docker Hub, GHCR and Quay on 2026-10-07.
+ * Image discovery: search, tags and inspect, read from registry APIs without pulling. Every
+ * registry here is faked; the shapes are the real ones from Docker Hub, GHCR and Quay.
  *
- * Helpers are prefixed `img` — Pest loads every test file into one process
- * and a bare helper name collides with another suite's.
+ * Helpers are prefixed `img`: Pest loads every test file into one process and a bare helper
+ * name collides with another suite's.
  */
 
 beforeEach(function () {
@@ -35,8 +34,8 @@ beforeEach(function () {
 
     config(['server.docker.images.architecture' => 'amd64']);
 
-    // Every name resolves to a public address unless a test says otherwise:
-    // since DS-08 a name the panel cannot resolve is not connected to at all.
+    // Every name resolves to a public address unless a test says otherwise: a name the panel
+    // cannot resolve is not connected to at all.
     RemoteHost::resolveUsing(fn (string $host): array => ['203.0.113.10']);
 });
 
@@ -180,7 +179,7 @@ function imgMemos(): array
 }
 
 /*
- * The contract. DS-04's frontend is built against exactly these keys.
+ * The contract: the frontend is built against exactly these keys.
  */
 
 it('inspects a Hub image through its manifest list and returns the DS-02 contract', function () {
@@ -366,7 +365,7 @@ it('marks settings required only from the documented table', function () {
 });
 
 /*
- * /app — what DS-01 measured, read the same way appscan.py did.
+ * /app, read the same way appscan.py reads it.
  */
 
 it('detects an image that keeps its program in /app', function (array $config, array $history, bool $expected) {
@@ -439,9 +438,8 @@ it('warns about a large download', function () {
 });
 
 it('gives every warning a code beside its sentence, in the same order (RC-32)', function () {
-    // All five that can occur together: postgres is a documented required
-    // setting, `EXTRA=` is an empty one, the only build is arm64, the download
-    // is over the threshold, and nothing declares a port.
+    // All five that can occur together: a documented required setting (postgres), an empty one
+    // (`EXTRA=`), an arm64-only build, a download over the threshold, and no declared port.
     config(['server.docker.images.large_bytes' => 1]);
     imgRegistry(['docker.io/library/postgres:18' => ['index' => [
         'arm64' => imgConfig(['Env' => ['EXTRA=']], [], 'arm64'),
@@ -671,7 +669,7 @@ it('ranks Hub tags: exact versions first, newest first, then variants, then movi
 });
 
 it('recommends a dotted release over a bare number that only outranks it numerically', function () {
-    // The real codercom/code-server tag list, newest first (2026-10-07).
+    // The real codercom/code-server tag list, newest first.
     Http::fake(['hub.docker.com/v2/repositories/codercom/code-server/tags*' => Http::response(['results' => array_map(
         fn (string $name): array => ['name' => $name, 'last_updated' => '2026-10-02T00:00:00Z', 'tag_status' => 'active'],
         ['4.140.0-39', '39', '4.140.0-fedora', 'fedora', '4.140.0-trixie', 'trixie', '4.140.0', 'latest'],
@@ -690,9 +688,8 @@ it('recommends a dotted release over a bare number that only outranks it numeric
 });
 
 it('recommends a dated release pinned to its commit over latest (DS-14)', function () {
-    // The real corentinth/it-tools list: no plain version, only date-commit
-    // releases. `latest` was recommended beside a "pick a numbered version"
-    // warning while numbered versions were listed.
+    // The real corentinth/it-tools list: no plain version, only date-commit releases. `latest`
+    // must not be recommended while numbered versions are listed.
     Http::fake(['hub.docker.com/v2/repositories/corentinth/it-tools/tags*' => Http::response(['results' => array_map(
         fn (string $name): array => ['name' => $name, 'last_updated' => '2024-10-22T00:00:00Z', 'tag_status' => 'active'],
         ['latest', '2024.10.22-7ca5933', '2024.5.13-a0bc346', '2023.12.21-5ed3693', 'nightly'],
@@ -712,10 +709,9 @@ it('recommends a dated release pinned to its commit over latest (DS-14)', functi
 });
 
 /**
- * GHCR repositories answering `tags/list` with these names, in the order the
- * registry sorts them, and Hub repositories answering with these tag rows.
- * One fake for both: Laravel keeps the first fake that matches, so a second
- * call in the same test would never be reached.
+ * GHCR repositories answering `tags/list` with these names, in the order the registry sorts
+ * them, and Hub repositories answering with these tag rows. One fake for both: Laravel keeps the
+ * first fake that matches, so a second call in the same test would never be reached.
  *
  * @param  array<string, list<string>>  $ghcr
  * @param  array<string, list<array<string, string>>>  $hub
@@ -748,8 +744,8 @@ function imgTagSources(array $ghcr, array $hub = []): void
 }
 
 it('does not recommend a leftover date tag over the current version (DS-09)', function () {
-    // tags/list carries no dates: a date-shaped tag beside real versions is
-    // a leftover, and numerically it beat them.
+    // tags/list carries no dates: a date-shaped tag beside real versions is a leftover, though
+    // numerically it wins.
     imgTagSources([
         'acme/heimdall' => ['2.8.2', '2.8.3', '2021.11.28', 'latest'],
         'home-assistant/home-assistant' => ['2026.10.1', '2026.9.4', 'beta', 'stable'],
@@ -787,8 +783,8 @@ it('prefers a tag that says it is stable over the alphabetically first one, and 
 });
 
 it('always lists the version it recommends (DS-09)', function () {
-    // Thirty bare-number aliases rank above the one dotted release, and the
-    // recommendation skips them — it was at ranked index 31 of a list of 20.
+    // Thirty bare-number aliases rank above the one dotted release, which sits past the 20-tag
+    // page: the recommendation must still be in the list.
     Http::fake(['hub.docker.com/v2/repositories/acme/aliases/tags*' => Http::response(['results' => array_map(
         fn (string $name): array => ['name' => $name, 'last_updated' => '2026-10-02T00:00:00Z', 'tag_status' => 'active'],
         [...array_map('strval', range(60, 30)), '4.104.1', 'latest'],
@@ -848,8 +844,7 @@ function imgHubTags(array $names): array
 }
 
 it('never recommends a pre-release, and flags it in the list (RC-33)', function () {
-    // The shape of Hub's openjdk list: an early-access build is the newest
-    // number, and it was "the newest stable".
+    // The shape of Hub's openjdk list: an early-access build is the newest number but not stable.
     imgTagSources([], ['library/openjdk' => imgHubTags([
         '28-ea-oraclelinux9', '28-ea-jdk-slim', '27-jdk-oraclelinux9', '25-jdk-oraclelinux9', '21-jdk-oraclelinux9',
     ])]);
@@ -936,9 +931,8 @@ it('skips a newer pre-release for the newest stable tag, and leaves the order of
 });
 
 it('keeps no state between images on one ImageTags (DS-12)', function () {
-    // The demoted date tags lived on the instance, shared by rank() and
-    // recommended(). Correct while every call ran both in order; wrong the
-    // day the class is a singleton or recommended() gains a second caller.
+    // Demoted date tags must not live on the instance shared by rank() and recommended(): it
+    // breaks as soon as the class is a singleton or recommended() gets a second caller.
     $state = array_filter(
         (new ReflectionClass(ImageTags::class))->getProperties(),
         fn (ReflectionProperty $property): bool => ! $property->isPromoted() && ! $property->isStatic(),
@@ -1022,7 +1016,7 @@ it('ranks search results official first, then by pulls', function () {
 });
 
 it('puts the exact name typed first, and the project\'s own publisher above a busier repackage', function () {
-    // Hub's real answers on 2026-10-07, pull counts included.
+    // Hub's real answers, pull counts included.
     Http::fake([
         'hub.docker.com/v2/search/repositories/?query=umami*' => Http::response(['results' => [
             ['repo_name' => 'elestio/umami', 'pull_count' => 56242, 'is_official' => false],
@@ -1045,9 +1039,8 @@ it('puts the exact name typed first, and the project\'s own publisher above a bu
 });
 
 it('never lets a matching publisher with almost no pulls outrank the image people use', function (string $query, array $results, string $first) {
-    // Hub's real answers on 2026-10-07 (DS-09). Ranked publisher-first, each
-    // of these preselected the near-empty repository, and the form deploys
-    // the preselected one in one click.
+    // Hub's real answers. Ranked publisher-first, each preselected the near-empty repository,
+    // and the form deploys the preselected one in one click.
     Http::fake(['hub.docker.com/v2/search/repositories/*' => Http::response(['results' => array_map(
         fn (array $row): array => ['repo_name' => $row[0], 'pull_count' => $row[1], 'is_official' => false],
         $results,
@@ -1060,14 +1053,13 @@ it('never lets a matching publisher with almost no pulls outrank the image peopl
     'kavita' => ['kavita', [['kavitaatdesign/kavita', 57], ['kizaing/kavita', 4817680], ['jvmilazz0/kavita', 11860769], ['linuxserver/kavita', 809855]], 'jvmilazz0/kavita'],
     'shiori' => ['shiori', [['shioriapp/shiori', 483], ['shioriex/shiori', 140], ['nicholaswilde/shiori', 166639], ['radhifadlillah/shiori', 3639784]], 'radhifadlillah/shiori'],
     'jupyter' => ['jupyter', [['jupyter/cdn.jupyter.org', 1345], ['jupyter/tensorflow-notebook', 75390823], ['jupyter/scipy-notebook', 93201063]], 'jupyter/scipy-notebook'],
-    // A registered look-alike well past the floor still needs a fifth of
-    // the real image's pulls to win.
+    // A registered look-alike well past the floor still needs a fifth of the real image's pulls.
     'busy squatter' => ['memos', [['memosapp/memos', 1000000], ['neosmemo/memos', 11672941]], 'neosmemo/memos'],
 ]);
 
 it('weights a matching publisher on a ramp, not a step (DS-12)', function (array $results, string $first) {
-    // With a 10k floor, one pull either side of it decided the order: the
-    // project's own image at 9,999 lost to an unrelated 10,001.
+    // With a hard 10k floor one pull decided the order: the project's own image at 9,999 lost to
+    // an unrelated 10,001.
     Http::fake(['hub.docker.com/v2/search/repositories/*' => Http::response(['results' => array_map(
         fn (array $row): array => ['repo_name' => $row[0], 'pull_count' => $row[1], 'is_official' => false],
         $results,
@@ -1083,8 +1075,8 @@ it('weights a matching publisher on a ramp, not a step (DS-12)', function (array
 ]);
 
 it('weights the project, not every repository its publisher owns (DS-12)', function () {
-    // Hub's real pull counts, 2026-10-08. Matched as a substring, the
-    // renderer plugin took third place from promtail on a "grafana" search.
+    // Hub's real pull counts. Matched as a substring, the renderer plugin would outrank promtail
+    // on a "grafana" search.
     Http::fake(['hub.docker.com/v2/search/repositories/*' => Http::response(['results' => [
         ['repo_name' => 'grafana/grafana-image-renderer', 'pull_count' => 899000000, 'is_official' => false],
         ['repo_name' => 'grafana/promtail', 'pull_count' => 2913000000, 'is_official' => false],
@@ -1164,7 +1156,7 @@ it('is not offered on a server that hosts no containers', function () {
 });
 
 /*
- * DS-08: what a user-chosen registry can make the panel do.
+ * What a user-chosen registry can make the panel do.
  */
 
 /**
@@ -1251,9 +1243,8 @@ it('follows a blob redirect to a CDN, without the registry token', function () {
 });
 
 it('refuses a config blob that does not match its digest, and caches nothing for that digest', function () {
-    // The review's poisoning: an attacker's registry names the digest of a
-    // real image's config and serves its own blob under it. Whoever inspects
-    // the real image next must not read the attacker's ports and volumes.
+    // Poisoning: an attacker's registry names the digest of a real image's config but serves its
+    // own blob. The next inspection of the real image must not read the attacker's ports.
     $real = imgConfig(['ExposedPorts' => ['80/tcp' => (object) []], 'Volumes' => ['/usr/share/nginx/html' => (object) []]]);
     $realDigest = imgDigest(json_encode($real));
     $evil = json_encode(imgConfig(['ExposedPorts' => ['9999/tcp' => (object) []], 'Volumes' => ["/data\n      - /:/hostfs" => (object) []]]));
