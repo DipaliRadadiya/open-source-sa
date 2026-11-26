@@ -26,14 +26,10 @@ import { CoverageCards } from "@/components/backups/coverage-cards";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
 import { DENIED } from "@/components/ui/reason-tooltip";
 
-// How long a "Run backup" press keeps the page polling on its own: long enough
-// for the queue to pick the job up, short enough to stop if it never starts.
 const JUST_STARTED_MS = 90_000;
 
-// The URL keys the Overview's filters live under; cleared together.
 const FILTER_KEYS = ["search", "state", "type"];
 
-// One page at a time: search, filters, sort and paging are the server's (RC-42), from the URL.
 export function CoverageCard({
   coverage,
   applications,
@@ -49,21 +45,16 @@ export function CoverageCard({
   const t = useTranslations("backups.coverage");
   const th = useTranslations("backups.history");
   const { refreshAndWait } = useRefresh();
-  // Run backup is refused for the site a restore is writing to: a copy taken mid-restore
-  // would be saved as Complete.
+  // Blocked during a restore: a copy taken mid-restore would be saved as complete.
   const { active } = useRestoreWatch();
   const restoringId = RESTORE_IN_FLIGHT.includes(active?.status) ? active.application_id : null;
   const [setupFor, setSetupFor] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  // Runs are queued, so several can start at once; each row keeps its own spinner.
   const starting = usePendingKeys();
-  // Covers the gap before the row shows a new run. Cleared by a timer, not
-  // `Date.now()`, to keep render pure.
   const [justStarted, setJustStarted] = useState(() => backupStartedWithin(JUST_STARTED_MS));
 
   const searchParams = useSearchParams();
   const hasFilters = FILTER_KEYS.some((key) => searchParams.get(key));
-  // Already in the server's order (failing first); nothing is filtered here.
   const rows = coverage.rows;
 
   const exposed = coverage.total - coverage.protected;
@@ -79,8 +70,6 @@ export function CoverageCard({
     starting.start(applicationId);
     try {
       await runBackupNow(applicationId);
-      // Before the refresh: the row the server sends next still carries the
-      // previous backup's finished status (see `watching`).
       setJustStarted(true);
       await refreshAndWait();
       toast.success(t("started", { name }));
@@ -91,29 +80,24 @@ export function CoverageCard({
     }
   }
 
-  // Stop watching if the run never shows up, rather than polling indefinitely.
   useEffect(() => {
     if (!justStarted) return undefined;
     const id = setTimeout(() => setJustStarted(false), JUST_STARTED_MS);
     return () => clearTimeout(id);
   }, [justStarted]);
 
-  // The Schedule column's time zone, only when every row on the page agrees. An older backend
-  // that sends none leaves it unnamed rather than assuming UTC.
   const scheduleZones = new Set(rows.map((row) => row.target?.timezone).filter(Boolean));
   const scheduleTimezone = scheduleZones.size === 1 ? [...scheduleZones][0] : null;
 
   const listProps = { rows, options: backupOptions, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyIds: starting.pendingKeys, restoringId, scheduleTimezone };
 
-  // Right after a run is accepted the row still shows the previous backup, so
-  // status alone would never start the poller.
+  // Right after starting, the row still shows the previous backup.
   const inFlight = coverage.rows.some((row) => BACKUP_IN_FLIGHT.includes(row.lastBackup?.status));
   const watching = inFlight || justStarted;
 
   const toolbar = (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <SearchInput placeholder={t("searchPlaceholder")} />
-      {/* "Not protected" is no settings, paused and failing together; the last two also alone. */}
       <FacetSelect
         paramKey="state"
         allLabel={th("allStatuses")}
@@ -126,7 +110,6 @@ export function CoverageCard({
         ]}
         className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
       />
-      {/* Phone: the last filter and Refresh share a row, so Refresh is not left alone on one. */}
       <div className="flex items-center gap-3 sm:contents">
         <FacetSelect
           paramKey="type"
@@ -149,15 +132,12 @@ export function CoverageCard({
       {watching ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
       <div className="space-y-6">
-        {/* Above the coverage banner: a well-configured site can still be
-            backing up to a bucket that rejects every write. */}
         <DestinationHealth
           destinations={destinations}
           inUse={destinationUsage.inUse}
           lastBackups={destinationUsage.lastBackups}
         />
 
-        {/* Warning (amber), not danger: unprotected sites are a risk, not a breakage. */}
         <div
           data-slot="notice"
           className={`flex flex-col items-start gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:gap-4 ${
@@ -192,8 +172,6 @@ export function CoverageCard({
           </Button>
         </div>
 
-        {/* Inside the list's card, as on Applications: filters on top, the count and
-            time zone underneath. Loose above the table they read as part of the banner. */}
         <div className="@container/coverage">
           {rows.length === 0 ? (
             <ListCard toolbar={toolbar}>
@@ -205,8 +183,6 @@ export function CoverageCard({
               />
             </ListCard>
           ) : (
-            // Container query, not viewport. The table from 900px (a 1280 laptop with the
-            // sidebar open); the status is a badge beside the name, not a column.
             <ListCard from="c900" toolbar={toolbar} footer={footer}>
               <div className="@min-[900px]/page:hidden">
                 <CoverageCards {...listProps} />

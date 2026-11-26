@@ -1,10 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-/*
- * Every screen opens with `PageHeader`, so titles and spacing stay consistent. Deliberate
- * exceptions are listed by name below.
- */
+// Every screen must open with PageHeader (exceptions listed below).
 
 const ALLOWED = new Map([
   [
@@ -32,10 +29,6 @@ const ALLOWED = new Map([
   ["components/ui/page-header.jsx", "the component itself"],
 ]);
 
-// Comments first. `components/ui/card.jsx` explains in a docblock why a card
-// title takes an `as` prop — "left whole pages with a single <h1>" — and a bare
-// grep read its own explanation as the thing it forbids. Allow-listing the file
-// would have been the wrong fix: it would then permit a real <h1> there too.
 const code = (source) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
@@ -61,8 +54,6 @@ for (const file of [...walk("app"), ...walk("components")]) {
   const allowed = ALLOWED.has(file);
 
   if (hasHeading && !allowed) offenders.push(file);
-  // An allowance that no longer describes anything is a comment pretending to
-  // be a rule — it would silently permit a future <h1> in that file.
   if (allowed && !hasHeading) staleAllowances.push(file);
 }
 

@@ -1,10 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-/*
- * Nothing in the panel is smaller than 12px (`text-xs`); arbitrary sizes like `text-[11px]`
- * step around the type scale.
- */
+// Nothing smaller than 12px (text-xs).
 
 const FLOOR = 12;
 
@@ -21,10 +18,6 @@ function walk(dir, out = []) {
   return out;
 }
 
-// Comments masked, not stripped, so reported line numbers stay true. A docblock
-// explaining why a size CHANGED quotes the old one — `disk-io-chart.jsx` says
-// "It was text-[10px] at 80% opacity" — and a bare grep reads a component's own
-// history as a fresh offence.
 const mask = (s) =>
   s
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))

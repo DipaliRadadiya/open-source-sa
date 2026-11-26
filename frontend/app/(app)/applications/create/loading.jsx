@@ -2,7 +2,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SK_CARD, SkHeader, SkInput, SkOptions } from "@/components/ui/skeleton-kit";
 import { cn } from "@/lib/utils";
 
-// Create application: numbered step cards, each a title over a rule, then its body.
 function StepCard({ children }) {
   return (
     <div className={cn(SK_CARD, "overflow-hidden")}>
@@ -22,7 +21,6 @@ export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">
       <SkHeader />
-      {/* Same grid as the form: steps, then the review column from 1280. */}
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0 space-y-6">
           <StepCard>
@@ -52,7 +50,6 @@ export default function Loading() {
           <StepCard>
             <Skeleton className="h-10 w-full rounded-lg" />
           </StepCard>
-          {/* The Cancel / Create bar at the end of the form. */}
           <div className={cn(SK_CARD, "flex justify-end gap-2 px-5 py-3")}>
             <Skeleton className="h-9 w-24 rounded-lg" />
             <Skeleton className="h-9 w-40 rounded-lg" />

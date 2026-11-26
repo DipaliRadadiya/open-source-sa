@@ -4,7 +4,6 @@ import { extractFile } from "@/lib/api/files";
 import { dirname } from "@/lib/files/path-helpers";
 import { TargetPathDialog } from "@/components/applications/files/target-path-dialog";
 
-// Defaults to the archive's own directory. Extraction can overwrite, so that is stated up front.
 export function ExtractDialog({ appId, file, open, onOpenChange }) {
   const t = useTranslations("applications.files");
   if (!file) return null;
@@ -27,7 +26,6 @@ export function ExtractDialog({ appId, file, open, onOpenChange }) {
       successMessage={() => t("extractDialog.done", { name: file.name })}
       failureMessage={t("extractDialog.failed")}
       warning={t("extractDialog.warning")}
-      // The whole field is the target folder here, so no `destinationOf`.
       destinationLabel={t("targetDialog.destination")}
     />
   );

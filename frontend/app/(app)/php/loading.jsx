@@ -2,8 +2,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SkCard, SkHeader, SkTabs } from "@/components/ui/skeleton-kit";
 import { VersionsCardSkeleton } from "@/components/runtime/versions-skeleton";
 
-// PHP: the Installed versions card, then the selected version's settings — heading
-// with the version picker, the tabs, and the extensions grid.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

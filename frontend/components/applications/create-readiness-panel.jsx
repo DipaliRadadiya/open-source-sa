@@ -4,27 +4,21 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Container query, not a breakpoint: the card is narrow at wide viewports and wide at narrow ones.
-// `className` lets the side column cap its height: then only the list scrolls and the
-// footer buttons stay on screen on a short laptop.
 export function CreateReadinessPanel({ items = [], onSelectItem, footer = null, className }) {
   const t = useTranslations("applications");
   const done = items.filter((item) => item.ready).length;
-  // What is still missing comes first: it is what the reader has to act on.
   const ordered = [...items.filter((item) => !item.ready), ...items.filter((item) => item.ready)];
   const complete = items.length > 0 && done === items.length;
 
   return (
     <Card className={cn("@container gap-0 py-0", className)}>
       <CardHeader className="shrink-0 space-y-1 border-b py-4">
-        {/* The title keeps its line; the badge drops below it when the column is narrow. */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
           <CardTitle icon={ListChecks} as="h2" className="shrink-0">{t("guided.stageReview")}</CardTitle>
           <Badge variant={complete ? "success" : "muted"} className="font-normal">
             {complete ? t("readiness.ready") : t("readiness.needsAttention")}
           </Badge>
         </div>
-        {/* A progress bar shows how much is left, which the sentence alone does not. */}
         {items.length ? (
           <div className="space-y-1.5 pt-1">
             <div className="h-1.5 overflow-hidden rounded-full bg-primary/10">
@@ -62,7 +56,6 @@ export function CreateReadinessPanel({ items = [], onSelectItem, footer = null, 
                 <button
                   type="button"
                   onClick={() => onSelectItem(item.target ?? item.key)}
-                  // Amber, not the link green: green means "done".
                   className="rounded-sm text-left font-medium text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] underline decoration-dotted underline-offset-4 hover:decoration-solid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-warning"
                 >
                   {t(item.invalid ? "readiness.fix" : "readiness.complete", { field: item.label })}

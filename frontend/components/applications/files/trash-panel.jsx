@@ -22,7 +22,6 @@ import { formatFileSize } from "@/lib/format/bytes";
 import { parseApiWallClock } from "@/lib/format/api-date";
 import { FileSize } from "@/components/applications/files/file-size";
 
-// No "restore all": the API restores one `{batch, path}` per call against a 30/min throttle.
 export function TrashPanel({
   appId,
   trash,
@@ -37,25 +36,19 @@ export function TrashPanel({
 }) {
   const t = useTranslations("applications.files.trash");
   const format = useFormatter();
-  // The server's wall clock in the reader's format, as in the restore dialog: the raw
-  // "16-11-2026 09:16:41" reads as another date where months come first.
   const deletedLabel = (stamp, fallback) => {
     const when = parseApiWallClock(stamp);
     return when ? format.dateTime(when, { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }) : (stamp ?? fallback);
   };
   const { pending: refreshing, refresh, refreshThen } = useRefresh();
-  // Emptying runs in a dialog that stays open until done; per-row restores can
-  // overlap, so they are tracked separately.
   const [pending, setPending] = useState(null);
   const restoring = usePendingKeys();
-  // Removed from the list as soon as the API confirms, so Restore cannot be pressed
-  // again before the refresh lands ("already exists").
+  // Removed as soon as the API confirms, or Restore can be pressed again before the refresh.
   const [restored, setRestored] = useState(() => new Set());
   const [confirming, setConfirming] = useState(null);
 
   const manageReason = canManage ? null : DENIED;
 
-  // Map keeps insertion order, so the API's newest-first order survives.
   const batches = new Map();
   for (const entry of trash.filter((e) => !restored.has(`${e.batch}:${e.path}`))) {
     if (!batches.has(entry.batch)) batches.set(entry.batch, []);
@@ -72,8 +65,6 @@ export function TrashPanel({
       toast.success(t("restored", { name: entry.path }));
       refresh();
     } catch (error) {
-      // 422 is the non-overwrite rule: something is already back at that path. The
-      // API's message says so.
       toast.error(apiMessage(error, t("restoreFailed")));
     } finally {
       restoring.finish(key);
@@ -98,13 +89,11 @@ export function TrashPanel({
 
   return (
     <Card>
-      {/* A card, like every other panel on this screen. */}
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-48 space-y-1">
             <CardTitle icon={Trash2}>{t("title")}</CardTitle>
             <CardDescription>{t("subtitle")}</CardDescription>
-            {/* The retention window is per-install and must never be hardcoded. */}
             {trash.length > 0 && (totalSize != null || retentionDays) ? (
               <p className="text-sm text-muted-foreground">
                 {totalSize != null ? (
@@ -127,8 +116,6 @@ export function TrashPanel({
             </Button>
             {trash.length > 0 ? (
               <ReasonTooltip reason={manageReason}>
-                {/* Outline, not solid: Restore is the common action, and two solid red buttons
-                    compete. */}
                 <Button
                   variant="destructive"
                   size="sm"
@@ -149,15 +136,12 @@ export function TrashPanel({
       {failed ? (
         <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
       ) : trash.length === 0 ? (
-        // An empty trash is normal, so this explains the feature rather than offering an
-        // action.
         <EmptyState icon={Undo2} title={t("empty.title")} description={t("empty.description")} />
       ) : (
         <div className="space-y-3">
           {[...batches].map(([batch, entries]) => (
             <div key={batch} className="rounded-xl border">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2.5">
-                {/* Labelled, or a bare timestamp reads as an id. */}
                 <div className="flex min-w-48 flex-wrap items-baseline gap-x-2 gap-y-0.5">
                   <span className="text-xs text-muted-foreground">{t("deletedAt")}</span>
                   <span className="text-sm font-medium tabular-nums">
@@ -189,14 +173,11 @@ export function TrashPanel({
                       key={`${entry.batch}:${entry.path}`}
                       className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
                     >
-                      {/* Name first, folder underneath; the folder says which file it was and where
-                          Restore puts it back. */}
                       <div className="flex min-w-48 items-start gap-2.5">
                         <FileIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
                           <p className="flex flex-wrap items-baseline gap-x-2">
                             <span className="font-medium break-all">{basename(entry.path)}</span>
-                            {/* Size helps decide which batch to empty. */}
                             <FileSize bytes={entry.size} className="text-xs tabular-nums text-muted-foreground" />
                           </p>
                           <p className="font-mono text-xs break-all text-muted-foreground">

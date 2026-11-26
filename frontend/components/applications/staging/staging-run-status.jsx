@@ -9,16 +9,10 @@ import { Note } from "@/components/ui/note";
 
 const Spinner = ({ className }) => <Loader2 className={`${className ?? ""} animate-spin`} />;
 
-/**
- * The last push or update-from-live (RC-16). Both run on the queue now, so the dialog
- * only starts them; this says while one runs, re-reading the page until it ends, and
- * then how it ended — including the reason when it failed, which nothing else shows.
- */
 export function StagingRunStatus({ run, production, staging }) {
   const t = useTranslations("applications.staging.run");
   const previous = useRef(run);
 
-  // The run finished while this page was open: say so once, like the other jobs do.
   useEffect(() => {
     const before = previous.current;
     previous.current = run;
@@ -35,7 +29,6 @@ export function StagingRunStatus({ run, production, staging }) {
   if (stagingRunActive(run)) {
     return (
       <>
-        {/* Until it ends; a push can take minutes on a large site. */}
         <AutoRefresh intervalMs={3000} stopAfterMs={30 * 60 * 1000} />
         <Note icon={Spinner} title={t(`${kind}Running`, { domain: target ?? "" })}>
           {run.status === "queued" ? t("queued") : kind === "push" ? t("pushOffline", { domain: target ?? "" }) : t("running")}

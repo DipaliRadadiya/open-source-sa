@@ -35,8 +35,6 @@ import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { RelinkGitAccountDialog } from "@/components/applications/relink-git-account-dialog";
 import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
 
-// Best-effort commit link from a public repo URL, only for hosts whose commit
-// paths are known; otherwise the copyable SHA. Never a guessed link.
 function commitUrl(repositoryUrl, sha) {
   if (!repositoryUrl || !sha) return null;
   try {
@@ -53,8 +51,6 @@ function commitUrl(repositoryUrl, sha) {
   }
 }
 
-// A hairline cell with a mono caps label, like Source and
-// deployment on the application dashboard. Callers still pass an icon; it is not drawn.
 function Fact({ label, children }) {
   return (
     <div className={FACT_CELL}>
@@ -64,13 +60,10 @@ function Fact({ label, children }) {
   );
 }
 
-// `verify` ran everything and the site still did not answer, so its evidence is the runtime log.
 function evidenceFor(step, application) {
   if (step !== "verify") return { kind: "build" };
   return {
     kind: "logs",
-    // A static or client-rendered site runs no process and has no application log;
-    // the web server's error log explains its 404/500.
     source: application.has_process ? "application_error" : "error",
   };
 }
@@ -87,23 +80,15 @@ export function DeployCard({
   const t = useTranslations("applications.deployment");
   const tSource = useTranslations("applications.source");
   const [relinking, setRelinking] = useState(false);
-  // The deploy's Git account was deleted: no credential, so a deploy can only fail
-  // at the fetch.
   const unlinked = Boolean(application.git_account_missing);
-  // Deploys write the same `steps[]` as provisioning, whose labels live under
-  // `details`.
   const ts = useTranslations("applications.details");
   const stepLabel = (step) => provisionStepLabel(step, ts);
   const commit = liveCommit(application);
   const incomplete = isDeployIncomplete(application);
   const repository = application.repository ?? application.repository_url;
   const branch = application.branch ?? "main";
-  // The site still serves the OLD code, so a failed_step is a deploy warning, not
-  // an outage.
   const deployFailed =
     application.status === "active" && (Boolean(application.failed_step) || incomplete);
-  // A git app starts "active" serving a placeholder; until the first deploy there
-  // is no code, so say what to do instead of "—".
   const neverDeployed = !application.last_deployed_at && !commit;
   const commitHref = commitUrl(application.repository_url, commit);
   const steps = application.steps ?? [];
@@ -111,16 +96,13 @@ export function DeployCard({
 
   return (
     <Card className={cn(PANEL_CARD, "border-primary/20 bg-gradient-to-br from-primary/[0.04] via-card to-card")}>
-      {/* No description: the title and Deploy now share one centred row. */}
       <CardHeader className="items-center">
         <CardTitle className="flex items-center gap-2.5">
-          {/* Filled rather than tinted: this card is not a peer of the tab cards. */}
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-e1">
             <Rocket className="size-4" />
           </span>
           {t("deploy.title")}
         </CardTitle>
-        {/* Hidden from roles that cannot deploy. */}
         <CardAction className="row-span-1 self-center">
             <ReasonTooltip
               reason={!canManage ? DENIED : deploying ? null : unlinked ? tSource("accountMissing") : null}
@@ -165,8 +147,6 @@ export function DeployCard({
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="space-y-0.5">
-                {/* "Previous version still live" is only true when the deploy failed before its
-                    checkout; after it, the new commit is serving half-built, per the backend. */}
                 {incomplete ? (
                   <>
                     {application.failed_step ? (
@@ -183,7 +163,6 @@ export function DeployCard({
                   </p>
                 ) : null}
               </div>
-              {/* Points to where the evidence for the failed step is. */}
               {evidence.kind === "logs" ? (
                 canViewLogs ? (
                   <Button variant="outline" size="sm" asChild>
@@ -286,8 +265,6 @@ export function DeployCard({
         </dl>
         </div>
 
-        {/* Same shape as the "setting up your site" screen. No percentage: which steps run
-            depends on the site, so there is no real denominator. */}
         {deploying ? (
           <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
             <p className="flex items-center gap-2 text-sm font-medium">
@@ -307,7 +284,6 @@ export function DeployCard({
           </div>
         ) : null}
 
-        {/* A deploy is fetch + reset --hard, so server-side edits are discarded; warn first. */}
         {canManage && !deploying ? (
           <p className="text-xs text-muted-foreground">
             {t("deploy.resetNote", { branch })}

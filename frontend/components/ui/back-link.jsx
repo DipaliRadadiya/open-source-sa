@@ -1,7 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "@/components/ui/app-link";
 
-/** "← Back to …" above a detail page's title. */
 export function BackLink({ href, children }) {
   return (
     <Link

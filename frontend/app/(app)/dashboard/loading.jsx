@@ -2,8 +2,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SkCard, SkChart, SkFacts, SkNote } from "@/components/ui/skeleton-kit";
 import { DashboardOverviewSkeleton } from "@/components/dashboard/dashboard-overview-section";
 
-
-// The dashboard: banner, attention lines, Right now, Server information, the I/O charts.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

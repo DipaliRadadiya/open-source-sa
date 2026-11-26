@@ -7,7 +7,6 @@ const EMPTY = {
   meta: { current_page: 1, per_page: 10, total: 0, last_page: 1 },
 };
 
-// Carries which failure (refusal, crash, unreachable) so the page can name it.
 const failedWith = (result) => ({
   ...EMPTY,
   failed: true,
@@ -17,17 +16,14 @@ const failedWith = (result) => ({
   debug: result.debug,
 });
 
-// Returns a safe empty result on failure.
 export async function getMyActivity(searchParams = {}, scope) {
   const perPage = await perPageFrom(searchParams.per_page);
   const page = Math.max(1, Number(searchParams.page) || 1);
 
-  // No filter[user_id]: the endpoint is always scoped to the caller, and
-  // `search` matches type + action only.
   const result = await read("/activity-log", myActivityResponseSchema, {
     searchParams: {
       search: searchParams.search?.trim() || undefined,
-      // Fixed by the page, not the URL, so the query string cannot widen it.
+      // Set by the page, not the URL, so the query string can't widen it.
       "filter[scope]": scope || undefined,
       "filter[type]": searchParams.type || undefined,
       "filter[action]": searchParams.action || undefined,
@@ -36,8 +32,6 @@ export async function getMyActivity(searchParams = {}, scope) {
     },
   });
 
-  // A failure is flagged, not returned as an empty list (which would read as
-  // "no activity" or "no matches"), and not thrown: the rest of the page works.
   if (result.failed) return failedWith(result);
 
   return { ...result.data, failed: false, status: result.status, failure: null, message: null, debug: false };

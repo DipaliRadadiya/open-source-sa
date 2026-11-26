@@ -27,16 +27,13 @@ import {
 } from "@/components/ui/select";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-// Shared by create and edit; every provider's inputs come from `lib/storage/providers`.
 export function DestinationFormFields({
-  // True when editing, where changing the folder affects existing archives.
   existing = false,
   form,
   preset,
   onPresetChange,
   disabled,
-  // Never render credentials when editing: the API reads their presence as "rotate"
-  // and would overwrite the stored secret.
+  // Never render credentials on edit: the API treats them as a rotation.
   hideSecrets = false,
   localSettings = null,
 }) {
@@ -60,8 +57,6 @@ export function DestinationFormFields({
               </SelectTrigger>
             </FormControl>
             <SelectContent>
-              {/* Legacy providers stay resolvable for destinations that already
-                  use them, but are not offered for new ones. */}
               {PRESETS.filter((p) => !p.legacy).map((p) => (
                 <SelectItem key={p.value} value={p.value}>
                   {t(`providers.${p.value}`)}
@@ -86,7 +81,6 @@ export function DestinationFormFields({
         )}
       />
 
-      {/* Provider constraints, stated before credentials are entered. */}
       {warning ? (
         <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs leading-relaxed">
           <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />
@@ -108,7 +102,6 @@ export function DestinationFormFields({
         />
       ))}
 
-      {/* The folder path already is the folder: a second one inside it would only confuse. */}
       {provider === "local" ? null : (
       <FormField
         control={form.control}
@@ -129,7 +122,6 @@ export function DestinationFormFields({
             <p className="text-xs text-muted-foreground">
               {provider === "s3" ? t("prefixHint") : t("prefixHintRemote")}
             </p>
-            {/* Stored keys are relative to the folder, so changing it strands every archive. */}
             {existing ? (
               <Caution size="md" className="mt-1">
                 <p className="leading-relaxed">{t("prefixChangeWarning")}</p>
@@ -144,19 +136,14 @@ export function DestinationFormFields({
   );
 }
 
-// Labels and help text are looked up by field name; no per-provider branch.
 function ConfigField({ definition, form, preset, disabled, endpointHint, existing = false, localSettings = null, t }) {
   const { name, kind, mono, placeholder, warnWhenOff, hintsEndpoint, changeWarning } = definition;
-  // The S3 service of an existing destination is unknown, so endpoint and region follow
-  // `editStorageDestinationSchema`, not a preset.
   const sharedS3Rule = existing && providerForPreset(preset) === "s3" && (name === "endpoint" || name === "region");
   const required = !sharedS3Rule && isRequired(definition, preset);
   const local = name === "path" ? localStorageSettings(localSettings) : null;
   const help = local
     ? local.allowed_roots.length ? t("help.path", { roots: local.allowed_roots.join(", ") }) : t("help.noLocalRoots")
     : t.has(`help.${name}`) ? t(`help.${name}`) : null;
-  // A translated placeholder when one exists, else the definition's literal
-  // (numeric port defaults).
   const hint = local ? t("placeholders.path", { path: local.default_path }) : t.has(`placeholders.${name}`) ? t(`placeholders.${name}`) : placeholder;
 
   return (
@@ -165,8 +152,6 @@ function ConfigField({ definition, form, preset, disabled, endpointHint, existin
       name={`config.${name}`}
       render={({ field }) => {
         if (kind === TOGGLE) {
-          // `field.value` can be undefined on first paint, before reset applies
-          // the declared default.
           const on = field.value !== false;
 
           return (
@@ -174,7 +159,6 @@ function ConfigField({ definition, form, preset, disabled, endpointHint, existin
               <div className="space-y-1">
                 <FormLabel>{t(`fields.${name}`)}</FormLabel>
                 {help ? <p className="text-xs text-muted-foreground">{help}</p> : null}
-                {/* Shown only when off, naming what travels unencrypted. */}
                 {warnWhenOff && !on ? (
                   <p className="flex items-start gap-1.5 text-xs text-warning">
                     <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />

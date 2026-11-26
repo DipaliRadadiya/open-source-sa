@@ -23,9 +23,6 @@ export default async function BackupsLayout({ children }) {
   ]);
 
   if (!can(permissions, "backup", "view")) return <PermissionDenied title={t("title")} />;
-  // Seeded from the server so it survives a reload and shows in other browsers. Same
-  // rule as the application page: a finished restore stays (with its Undo) until it
-  // is dismissed, instead of vanishing on the next refresh.
   const active = await getActiveRestore(undefined, {
     dismissed: parseDismissedRestores((await cookies()).get(DISMISSED_RESTORES_COOKIE)?.value),
   });
@@ -34,7 +31,6 @@ export default async function BackupsLayout({ children }) {
     <div className="space-y-6">
       <PageHeader title={t("title")} />
 
-      {/* Lets a restore started on any tab raise the banner immediately. */}
       <RestoreWatch initial={active}>
         <BackupsTabs />
         {children}

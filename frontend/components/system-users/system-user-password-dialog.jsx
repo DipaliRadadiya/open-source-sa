@@ -42,8 +42,7 @@ export function SystemUserPasswordDialog({
   async function onSubmit(values) {
     try {
       await setSystemUserPassword(user.id, values);
-      // Saving… holds until the list has the new value, so reopening never shows the
-      // old one.
+      // Wait for the list to have the new value so reopening doesn't show the old one.
       await new Promise((resolve) => refreshThen(resolve));
       toast.success(t("toast.passwordSet"));
       handleOpenChange(false);
@@ -60,8 +59,7 @@ export function SystemUserPasswordDialog({
 
   const isSubmitting = form.formState.isSubmitting;
 
-  // Clear values and errors on close: the form stays mounted, so stale errors would
-  // show on reopen.
+  // The form stays mounted, so clear errors on close.
   function handleOpenChange(next) {
     if (!next) form.reset();
     onOpenChange?.(next);
@@ -74,8 +72,6 @@ export function SystemUserPasswordDialog({
         onOpenChange={handleOpenChange}
         asForm
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
-        // Focus the new password, not the reveal button, whose tooltip would swallow the
-        // first Escape.
         initialFocus="input[name=password]"
         icon={KeyRound}
         title={`${t("password.title")} — ${user?.username ?? ""}`}
@@ -97,7 +93,6 @@ export function SystemUserPasswordDialog({
           </>
         }
       >
-        {/* "Server login password" overpromises when sshd refuses passwords. */}
         {sshPasswordOff ? (
           <Note>
             <p>{t("password.sshSignInOff")}</p>
@@ -132,7 +127,6 @@ export function SystemUserPasswordDialog({
                     {...field}
                   />
                 </FormControl>
-                {/* Same control as the create dialog; fills both fields. */}
                 <Button
                   type="button"
                   variant="link"

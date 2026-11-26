@@ -1,11 +1,9 @@
 import { z } from "zod";
 
-// supervisord execs the command directly, not through a shell, so pipes,
-// redirects and `$(…)` would be literal arguments. Mirrors `SaveWorkerRequest`.
+// supervisord doesn't use a shell, so pipes and $(...) would be passed as literal arguments.
 const SHELL_METACHARACTERS = /[|;&`$<>()]/;
 
-// These paths go into a supervisord config run as root: no climbing out of the site,
-// and one value cannot become two directives.
+// Runs as root: no climbing out of the site, and no newline that adds a second directive.
 const noTraversal = (v) => !v.includes("..");
 const singleLine = (v) => !/[\r\n]/.test(v);
 
@@ -27,12 +25,10 @@ const nameField = z
 const advancedDefaults = {
   directory: "",
   stop_wait_seconds: 30,
-  // Empty means "let the server decide", matching an absent value on the API.
   user: "",
   log_file: "",
   log_level: "",
   extra_config: "",
-  // supervisord's own default; makes the worker come back after a reboot.
   auto_start: true,
 };
 
@@ -48,13 +44,10 @@ export const workerFormSchema = z.object({
     .refine(noTraversal, "noTraversal")
     .refine(singleLine, "noLineBreaks")
     .optional(),
-  // 600 matches the API's limit.
   stop_wait_seconds: z.coerce.number().int().min(1, "min1").max(600, "max600"),
   auto_restart: z.boolean(),
   restart_on_deploy: z.boolean(),
   enabled: z.boolean(),
-  // Optional, matching the API's rules: a lowercase unix name, an absolute log
-  // path, one of supervisord's seven levels. Empty values are not sent.
   user: z
     .string()
     .trim()
@@ -67,7 +60,6 @@ export const workerFormSchema = z.object({
     .trim()
     .max(255, "max255")
     .startsWith("/", "absolutePath")
-    // `noTraversalPath`, not `noTraversal`: that message is about folders.
     .refine(noTraversal, "noTraversalPath")
     .refine(singleLine, "noLineBreaks")
     .optional()
@@ -76,17 +68,12 @@ export const workerFormSchema = z.object({
     .enum(["critical", "error", "warn", "info", "debug", "trace", "blather"])
     .optional()
     .or(z.literal("")),
-  // Appended verbatim inside this worker's program block, so `[` would open a
-  // second, unmanaged program. The API refuses it.
   extra_config: z
     .string()
     .trim()
     .max(2000, "max2000")
     .refine((v) => !v.includes("["), "noSectionHeader")
-    // The panel already writes `environment=`; a duplicate key stops the worker starting.
     .refine((v) => !/^\s*environment\s*=/im.test(v), "noEnvironmentLine")
-    // Keys the panel writes itself; overriding them (e.g. `user=`) would run
-    // the worker differently from what the page shows.
     .refine(
       (v) => !/^\s*(user|command|directory|stdout_logfile|stderr_logfile)\s*=/im.test(v),
       "noManagedWorkerKeys",
@@ -96,7 +83,6 @@ export const workerFormSchema = z.object({
   auto_start: z.boolean().optional(),
 });
 
-// An absolute working directory or log file must be inside the application's folder.
 export function workerFormSchemaFor(appRoot = "") {
   const root = String(appRoot ?? "").replace(/\/+$/, "");
   if (!root) return workerFormSchema;
@@ -149,22 +135,16 @@ export const workerSchema = z.object({
   state: z.enum(["running", "degraded", "stopped"]).catch("stopped"),
   state_title: z.string().nullish(),
   directory: z.string().nullish(),
-  // `effective_user` is what `user` resolves to (the site's system user when unset).
   user: z.string().nullish(),
   effective_user: z.string().nullish(),
-  // Where supervisord writes this program's output; the panel reads logs from it.
   log_file: z.string().nullish(),
   log_level: z.string().nullish(),
-  // Raw supervisord directives for settings the panel does not model.
   extra_config: z.string().nullish(),
-  // Starts with supervisord, as opposed to only when started by hand.
   auto_start: z.boolean().nullish(),
   stop_wait_seconds: z.number().nullish(),
   auto_restart: z.boolean(),
   restart_on_deploy: z.boolean(),
   enabled: z.boolean(),
-  // Journal identifier for a "View logs" link into `/logs?source=`, like a cron
-  // job's log_key. Not a key into the app-logs endpoints.
   log_identifier: z.string().nullish(),
   created_at: z.string().optional(),
   created_at_human: z.string().optional(),
@@ -176,6 +156,4 @@ export const workersResponseSchema = z.object({
   checks: z.array(workerCheckSchema).default([]),
 });
 
-// Restart is graceful (queue:restart and horizon:terminate finish the current
-// job), so only Stop, which leaves jobs unprocessed, asks for confirmation.
 export const DISRUPTIVE_ACTIONS = ["stop"];

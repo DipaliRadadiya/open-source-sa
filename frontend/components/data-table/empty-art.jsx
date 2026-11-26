@@ -1,10 +1,6 @@
 import { Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// One recipe for every empty state, so 50-odd screens get a picture without 50 drawings.
-// The subject's own icon in thin line work inside a bordered
-// square with the banner's green corner brackets, and a small square badge saying what to
-// do next. Brand colour comes from the theme, so a white-labelled panel recolours it.
 const SIZES = {
   default: { box: "size-20", icon: "size-9", bracket: "size-3", badge: "-top-2 -right-2 size-7", glyph: "size-3.5" },
   compact: { box: "size-14", icon: "size-6", bracket: "size-2", badge: "-top-1.5 -right-1.5 size-5", glyph: "size-3" },

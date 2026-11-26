@@ -1,5 +1,5 @@
 import { z } from "zod";
-// Relative, not `@/`: the alias is a bundler feature and breaks `node --test`.
+// Relative import: the @/ alias breaks node --test.
 import { fieldsFor, isRequired, providerForPreset } from "../storage/providers.js";
 import { localStorageSettings } from "../storage/local-settings.js";
 
@@ -7,25 +7,16 @@ export const storageDestinationSchema = z
   .object({
     id: z.number(),
     name: z.string(),
-    // The real provider, read from the API; never infer it from the endpoint.
     provider: z.string().default("s3"),
     provider_title: z.string().nullish(),
-    // Addressing detail only (bucket/region for S3, host/port for FTP/SFTP);
-    // shape varies by provider, so never assume a bucket exists.
     config: z.record(z.string(), z.any()).default({}),
     prefix: z.string().nullish(),
-    // Computed from the encrypted config; secrets are never sent.
     has_credentials: z.boolean().default(false),
-    // The last connection probe, as the backend remembers it. Cleared whenever
-    // the connection changes.
     status: z.string().nullish(),
     status_title: z.string().nullish(),
     last_tested_at: z.string().nullish(),
     last_tested_at_human: z.string().nullish(),
-    // `null` is "never tested", which is a different state from `false`.
     last_test_success: z.boolean().nullish(),
-    // A stable category (`invalid_credentials`, `unreachable`, …). Always keep a fallback:
-    // an unknown category must degrade to the generic message.
     last_test_error: z.string().nullish(),
     created_at: z.string().nullish(),
     created_at_human: z.string().nullish(),
@@ -37,17 +28,13 @@ export const storageDestinationSchema = z
 export const storageDestinationsResponseSchema = z.object({
   storage_destinations: z.array(storageDestinationSchema).default([]),
 
-  // The callback URL to register with Google. Panel-wide and needed before
-  // the first destination exists; optional for older APIs.
   google_oauth_redirect_uri: z.string().optional().nullable(),
-  // RC-39: the same roots the server validates against; absent on older APIs.
   local: z.object({
     allowed_roots: z.array(z.string()),
     default_path: z.string(),
   }).nullish(),
 });
 
-// Answers **200 even when the probe fails**; the verdict is in `test.success`.
 export const storageTestResponseSchema = z.object({
   test: z.object({
     success: z.boolean().default(false),
@@ -58,9 +45,7 @@ export const storageTestResponseSchema = z.object({
   }),
 });
 
-// Mirror the backend rules so common mistakes are caught before a round trip.
 const nameField = z.string().trim().min(1, "required_name").max(100, "max100");
-// `.` and `..` segments refused: they escape the bucket or the FTP/SFTP root.
 const prefixField = z
   .union([
     z.literal(""),
@@ -76,22 +61,15 @@ const prefixField = z
 const bucketField = z.string().trim().max(255, "max255").regex(/^[A-Za-z0-9._-]+$/, "bucketFormat");
 const regionField = z.string().trim().max(64, "max64").regex(/^[A-Za-z0-9-]+$/, "regionFormat");
 
-// Optional, but when given it must be https: the backend refuses loopback and
-// the metadata range, and plain http would send credentials in clear.
+// Must be https; plain http would send credentials in clear text.
 const endpointField = z
   .string()
   .trim()
   .max(255, "max255")
-  // `http://` gets its own message so a missing "s" is named, not reported as
-  // an incomplete address.
   .refine((value) => !/^http:\/\//i.test(value.trim()), "endpointInsecure")
   .regex(/^https:\/\/[^\s/$.?#].[^\s]*$/i, "endpointFormat")
-  // <…> means the example was copied without filling in the account id or
-  // region; it passes every other check and fails at the first backup.
   .refine((value) => !/[<>]/.test(value), "endpointPlaceholder");
 
-// A bare hostname or IP, never a URL. Mirrors `SafeRemoteHost`, which refuses
-// a pasted URL rather than silently truncating it.
 const hostField = z
   .string()
   .trim()
@@ -105,7 +83,6 @@ const hostField = z
 
 const portField = z.union([z.literal(""), z.coerce.number().int().min(1, "portRange").max(65535, "portRange")]).optional();
 
-// A remote path; `..` traversal is refused.
 const rootField = z
   .union([
     z.literal(""),
@@ -118,19 +95,15 @@ const rootField = z
   ])
   .optional();
 
-// The server still checks links, ownership and disk access. Here we only prevent
-// obvious path mistakes using its advertised roots, never a second fixed list.
 function localPathField(settings) {
   const roots = localStorageSettings(settings).allowed_roots.map((root) => root.replace(/\/+$/, ""));
   return z.string().trim().max(255, "max255")
     .regex(/^\//, "localPathAbsolute")
     .refine((v) => !roots.includes(v.replace(/\/+$/, "")), "localPathRoot")
     .refine((v) => !/(^|\/)\.{1,2}(\/|$)/.test(v), "rootTraversal")
-    // An older API does not advertise its config: let it decide which roots apply.
     .refine((v) => settings == null || roots.some((root) => v.startsWith(`${root}/`) && v.replace(/\/+$/, "") !== root), "localPathAllowed");
 }
 
-/** Per-field validators, keyed by the config key they validate. */
 const CONFIG_FIELDS = {
   bucket: bucketField,
   region: regionField,
@@ -149,7 +122,6 @@ const CONFIG_FIELDS = {
   path: localPathField(),
 };
 
-// Built from the declaration the form renders from, so shown and validated fields cannot drift.
 function configSchemaFor(preset, { requireSecrets = true, localSettings = null } = {}) {
   const provider = providerForPreset(preset);
   const shape = {};
@@ -159,8 +131,6 @@ function configSchemaFor(preset, { requireSecrets = true, localSettings = null }
     const required = isRequired(field, preset) && (requireSecrets || field.kind !== "secret");
 
     if (required) {
-      // Emptiness is judged BEFORE the field's own rules: untouched is `undefined` and "" fails format rules.
-      // `requiredField`, not `required_<name>`: these names are the API's snake_case.
       const rules = schema;
       schema = z.any().superRefine((value, ctx) => {
         if (String(value ?? "").trim() === "") {
@@ -168,7 +138,6 @@ function configSchemaFor(preset, { requireSecrets = true, localSettings = null }
           return;
         }
         const parsed = rules.safeParse(value);
-        // Something was typed, so the field's own rule is the useful answer.
         if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue(issue);
       });
     } else {
@@ -181,7 +150,6 @@ function configSchemaFor(preset, { requireSecrets = true, localSettings = null }
   return z.object(shape).passthrough();
 }
 
-// No `preset` key: it lives in component state, and declaring it here fails every submit silently.
 export function createStorageDestinationSchema(preset, localSettings = null) {
   const provider = providerForPreset(preset);
 
@@ -192,7 +160,6 @@ export function createStorageDestinationSchema(preset, localSettings = null) {
       config: configSchemaFor(preset, { localSettings }),
     })
     .superRefine((values, ctx) => {
-      // SFTP authenticates with a password OR a private key; require at least one.
       if (provider !== "sftp") return;
 
       const hasPassword = Boolean(values.config?.password?.trim?.());
@@ -204,7 +171,6 @@ export function createStorageDestinationSchema(preset, localSettings = null) {
     });
 }
 
-// No credentials: PATCH treats a present credential as "rotate". Provider is immutable on the API.
 export function editStorageDestinationSchema(destination, localSettings = null) {
   if (destination?.provider !== "s3") {
     return z.object({
@@ -214,7 +180,6 @@ export function editStorageDestinationSchema(destination, localSettings = null) 
     });
   }
 
-  // The S3 preset is unknown on edit, so only the shared rule applies: an endpoint, or a region for Amazon S3.
   return z
     .object({
       name: nameField,
@@ -233,7 +198,6 @@ export function editStorageDestinationSchema(destination, localSettings = null) 
     });
 }
 
-/** Rotation: only the credential fields, all of them required. */
 export function replaceCredentialsSchema(destination) {
   const provider = destination?.provider ?? "s3";
   const shape = {};
@@ -246,7 +210,7 @@ export function replaceCredentialsSchema(destination) {
   return z
     .object(shape)
     .superRefine((values, ctx) => {
-      // At least one credential must be typed, or "replace" would blank them.
+      // At least one credential, or replace would blank them.
       const supplied = Object.entries(values).filter(([, v]) => String(v ?? "").trim() !== "");
 
       if (supplied.length === 0) {

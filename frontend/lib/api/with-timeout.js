@@ -1,4 +1,3 @@
-// For optional data only. The request is not aborted, only no longer awaited.
 export function withTimeout(promise, ms, fallback = null) {
   let timer;
   return Promise.race([

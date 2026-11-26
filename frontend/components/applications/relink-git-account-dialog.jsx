@@ -14,11 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Only the account changes; the server keeps repo/branch/mode and 422s an account that cannot list branches.
 export function RelinkGitAccountDialog({ application, accounts = [], open, onOpenChange }) {
   const t = useTranslations("applications.source");
   const { refreshAndWait } = useRefresh();
-  // Resets target this default, not "": the dialog is not remounted between opens.
   const defaultAccountId = accounts.length === 1 ? String(accounts[0].id) : "";
   const [accountId, setAccountId] = useState(defaultAccountId);
   const [pending, setPending] = useState(false);
@@ -62,7 +60,6 @@ export function RelinkGitAccountDialog({ application, accounts = [], open, onOpe
         <SelectContent>
           {accounts.map((account) => (
             <SelectItem key={account.id} value={String(account.id)}>
-              {/* Switching providers disables deploy-on-push: webhooks verify per provider. */}
               {account.label} · {account.provider_title ?? account.provider}
             </SelectItem>
           ))}

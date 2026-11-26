@@ -1,5 +1,3 @@
-// nginx/Apache `combined` lines for requests the firewall *would* have refused. No field says
-// which check matched, so the panel must not claim to know why.
 const LINE =
   /^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) ([^"]*?) (\S+)" (\d{3}) (\S+) "([^"]*)" "([^"]*)"/;
 
@@ -8,7 +6,6 @@ const MONTHS = {
   Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
 };
 
-// "13/Aug/2026:05:12:33 +0000" — not a format Date can read.
 function parseStamp(value) {
   const m = /^(\d{2})\/(\w{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2}) ([+-]\d{4})$/.exec(value ?? "");
   if (!m || !(m[2] in MONTHS)) return null;
@@ -18,7 +15,6 @@ function parseStamp(value) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-// Input is newest last (file order); output newest first, unparseable lines dropped.
 export function parseDetectLog(lines) {
   const list = Array.isArray(lines) ? lines : String(lines ?? "").split("\n");
   const out = [];

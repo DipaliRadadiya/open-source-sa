@@ -5,22 +5,18 @@ export const deploymentSchema = z
     id: z.number(),
     status: z.string(),
     status_title: z.string().nullish(),
-    // The API decides what counts as still running; poll on this.
     in_flight: z.boolean().default(false),
     trigger: z.string().nullish(),
     trigger_title: z.string().nullish(),
-    // Null for a webhook deploy.
     user: z.object({ id: z.number(), username: z.string() }).nullable().optional(),
     branch: z.string().nullish(),
     commit_hash: z.string().nullish(),
     commit_short: z.string().nullish(),
     commit_message: z.string().nullish(),
     commit_author: z.string().nullish(),
-    // Raw step keys ("script", "restart_app"); the API sends no titles for them.
     steps: z.array(z.string()).default([]),
     failed_step: z.string().nullish(),
     reference: z.string().nullish(),
-    // Detail view only.
     output: z.string().nullish(),
     duration: z.union([z.number(), z.string()]).nullish(),
     started_at: z.string().nullish(),
@@ -34,10 +30,7 @@ export const deploySettingsSchema = z
   .object({
     branch: z.string().nullish(),
     repository: z.string().nullish(),
-    // What will actually run: the user's script, or the legacy build command fallback.
     deploy_script: z.string().nullish(),
-    // False means `deploy_script` is the fallback; the screen offers the default
-    // instead of presenting it as the user's own.
     deploy_script_customised: z.boolean().default(false),
     default_deploy_script: z.string().nullish(),
     auto_deploy: z.boolean().default(false),
@@ -45,9 +38,8 @@ export const deploySettingsSchema = z
     last_commit: z.string().nullish(),
     last_deployed_at: z.string().nullish(),
     last_deployed_at_human: z.string().nullish(),
-    // Sent rather than hardcoded, the same way the cron presets are.
     placeholders: z.array(z.string()).default([]),
-    // Token → what the deploy substitutes. PHP sends an empty map as `[]`.
+    // PHP sends an empty map as [].
     placeholder_values: z
       .preprocess((v) => (Array.isArray(v) ? {} : v), z.record(z.string(), z.string().nullable()))
       .default({}),
@@ -61,10 +53,9 @@ export const deploymentsResponseSchema = z.object({
 
 export const deploymentResponseSchema = z.object({ deployment: deploymentSchema });
 
-/** `GET /deployments/latest`: the newest row, the same shape as the history's. */
 export const latestDeploymentResponseSchema = z.object({ latest: deploymentSchema.nullable() });
 
-// systemd execs `ExecStart` directly, so shell constructs would fail only at start.
+// systemd runs ExecStart directly, so shell syntax would only fail at start.
 export const runtimeFormSchema = z.object({
   start_command: z
     .string()
@@ -72,7 +63,6 @@ export const runtimeFormSchema = z.object({
     .min(1, "requiredField")
     .max(500, "max500")
     .refine((v) => !/(&&|\|\||[|;<>`&]|\$\()/.test(v), "shellInStartCommand"),
-  // Blank means "pick a free one"; only a typed value is checked.
   app_port: z
     .string()
     .trim()
@@ -81,18 +71,12 @@ export const runtimeFormSchema = z.object({
     .default(""),
 });
 
-// The API accepts `webhook_enabled`, not `auto_deploy`, which it silently drops.
 export const deploySettingsFormSchema = z.object({
-  // A git ref: it lands in `git fetch origin <ref>`. Same charset as the backend.
   branch: z
     .string()
     .trim()
     .min(1, "requiredField")
     .max(255, "max255")
     .regex(/^[A-Za-z0-9._/-]+$/, "gitRef"),
-  // Only length-capped, matching the backend: a script the user runs as their
-  // own site user.
   deploy_script: z.string().max(65535, "max65535").default(""),
-  // The auto-deploy toggle is NOT here: the webhook card owns that flag and
-  // saves it through its own endpoint.
 });

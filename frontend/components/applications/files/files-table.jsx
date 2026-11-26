@@ -22,11 +22,6 @@ import { measuredSize, sizeSortKey } from "@/lib/files/folder-sizes";
 import { FileSize } from "@/components/applications/files/file-size";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// Cells are module-level so flexRender's identity stays stable across re-renders
-// (see workers-table.jsx).
-
-// "DD-MM-YYYY HH:mm:ss" (every API date) does not sort as a string; parse to a
-// number, falling back to 0 rather than throwing on an unexpected shape.
 function parseApiDate(value) {
   const m = /^(\d{2})-(\d{2})-(\d{4}) (\d{2}):(\d{2}):(\d{2})$/.exec(value ?? "");
   if (!m) return 0;
@@ -34,9 +29,6 @@ function parseApiDate(value) {
   return new Date(+yyyy, +mm - 1, +dd, +hh, +min, +ss).getTime();
 }
 
-// Folders always sort above files regardless of column or direction; each column
-// supplies its own tiebreaker. TanStack negates the result for a descending sort,
-// so the folder/file order is pre-negated to survive it.
 function withDirsFirst(compare, desc = false) {
   return (rowA, rowB) => {
     const aDir = rowA.original.type === "dir";
@@ -49,7 +41,6 @@ function withDirsFirst(compare, desc = false) {
 const byName = (a, b) => a.name.localeCompare(b.name);
 const byModified = (a, b) => parseApiDate(a.modified_at) - parseApiDate(b.modified_at);
 
-// Keyed by path, not row index, which points at the wrong file after a re-sort.
 function SelectCell({ row, table }) {
   const t = useTranslations("applications.files");
   const { selected, onToggle } = table.options.meta;
@@ -73,7 +64,6 @@ function SelectAllHeader({ table }) {
   const some = !all && rows.some((path) => selected.includes(path));
   return (
     <Checkbox
-      // "This folder" only: select-all must never reach past what is visible.
       checked={all ? true : some ? "indeterminate" : false}
       onCheckedChange={() => onToggleAll(rows, !all)}
       aria-label={t("bulk.selectAll")}
@@ -121,8 +111,6 @@ function NameCell({ row, table }) {
             <HoverHint content={file.name}><span className={FILE_NAME}>
               {file.name}
             </span></HoverHint>
-            {/* Shown inline: a link's name says nothing about what it is, and a dangling one
-                looks like a working one. */}
             {file.link_target ? (
               <span className="truncate font-mono text-xs text-muted-foreground">
                 → {file.link_target}
@@ -137,8 +125,6 @@ function NameCell({ row, table }) {
     );
   }
 
-  // Archives and binaries cannot be opened; opening needs manage, so view-only
-  // roles get plain text, not a 403.
   if (!canManage || !canOpenFile(file.name)) {
     return (
       <span className="flex w-full min-w-0 items-center gap-2 font-medium">
@@ -154,8 +140,6 @@ function NameCell({ row, table }) {
     <button
       type="button"
       onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
-      // `w-full`: a <button> sizes to its content even as a flex box, so `truncate`
-      // would not clip at the cell. Folders render as an <a>, which fills the cell.
       className="flex w-full min-w-0 items-center gap-2 rounded text-left font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <FileThumb file={file} appId={appId} className="size-5" canPreview={canManage} />
@@ -183,7 +167,6 @@ function SizeCell({ row, table }) {
     return folderSizes?.loading ? (
       <Skeleton className="ml-auto h-3.5 w-12" />
     ) : (
-      // Not measured is not zero.
       <HoverHint content={t("sizes.notMeasured")}><span className="text-muted-foreground">—</span></HoverHint>
     );
   }
@@ -194,8 +177,6 @@ function ModifiedCell({ row }) {
   const format = useFormatter();
   const file = row.original;
   if (!file.modified_at) return <span className="text-muted-foreground">—</span>;
-  // Exact time on hover in words: the API's day-first "23-09-2026 11:28:55" reads as
-  // a US date. Parsed as wall-clock so it stays in the server's clock.
   const when = parseApiWallClock(file.modified_at);
   const exact = when
     ? format.dateTime(when, { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" })
@@ -203,8 +184,6 @@ function ModifiedCell({ row }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {/* Not a tab stop (seven per row adds up); the exact time still reaches screen
-            readers and the tooltip opens on hover. */}
         <span className="text-muted-foreground">
           {file.modified_at_human ?? file.modified_at}
           <span className="sr-only"> ({exact})</span>
@@ -215,15 +194,11 @@ function ModifiedCell({ row }) {
   );
 }
 
-// Always `user:group`, even when equal, so the column means the same on every row.
 function OwnerCell({ row }) {
   const file = row.original;
 
-  // Null for a symlink, whose ownership is not meaningful (its mode is omitted too).
   if (!file.owner) return <span className="text-muted-foreground">—</span>;
 
-  // Stacked owner over group, like Permissions, so it needs only the longer name's
-  // width; `truncate` with the full value on hover is the last resort.
   return (
     <HoverHint content={file.group ? `${file.owner}:${file.group}` : file.owner}><span
       className="flex min-w-0 flex-col gap-0.5 font-mono text-xs text-muted-foreground"
@@ -241,11 +216,8 @@ function PermissionsCell({ row }) {
   if (!file.mode) return <span className="text-muted-foreground">—</span>;
   const worldWritable = isWorldWritable(file.mode);
   const symbolic = symbolicMode(file.mode, file.type);
-  // The picker's plain-language sentence, on hover.
   const sentence = sentenceFor(file.mode);
   return (
-    // Both notations stacked: one line overflowed this column at 1024-1280px.
-    // One tooltip for the whole cell, plus the world-writable warning when it applies.
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="flex flex-col gap-0.5 whitespace-nowrap font-mono text-xs w-fit cursor-help rounded text-muted-foreground">
@@ -255,10 +227,7 @@ function PermissionsCell({ row }) {
             </span>
             {worldWritable ? <TriangleAlert className="size-3.5 shrink-0 text-destructive" aria-hidden /> : null}
           </span>
-          {/* Omitted when the mode has no symbolic form; the line above is already octal. */}
           {symbolic ? <span>{file.mode}</span> : null}
-          {/* The tooltip's sentence for screen readers, since the cell is not a tab stop
-              (see ModifiedCell). */}
           {sentence ? <span className="sr-only">{sentence}</span> : null}
         </span>
       </TooltipTrigger>
@@ -299,12 +268,9 @@ export function FilesTable({
   initialSort = [{ id: "name", desc: false }],
 }) {
   const t = useTranslations("applications.files");
-  // Mirrors the table's sort so each comparator knows its direction.
   const [sorting, setSorting] = useState(initialSort);
   const isDesc = (id) => sorting.some((s) => s.id === id && s.desc);
 
-  // Percentages with `fixedLayout`, so widths are bounded. The checkbox is a fixed
-  // 48px, so shares sum to 92-93; a hidden column's share is not redistributed.
   const columns = [
     {
       id: "select",
@@ -336,7 +302,6 @@ export function FilesTable({
       sortingFn: withDirsFirst(byModified, isDesc("modified_at")),
     },
     {
-      // Not sortable: sort would use `owner` alone while the cell shows `owner:group`.
       accessorKey: "owner",
       header: t("columns.owner"),
       meta: { className: "hidden w-[14%] px-4 whitespace-normal hyphens-auto xl:table-cell" },
@@ -361,7 +326,6 @@ export function FilesTable({
 
   return (
     <DataTable
-      // The checkboxes only feed the bulk actions, which need manage.
       columns={canManage ? columns : columns.filter((column) => column.id !== "select")}
       data={data}
       meta={{

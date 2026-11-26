@@ -1,4 +1,3 @@
-// The shipped policy, used only when `GET /basic-info` cannot be read.
 export const DEFAULT_PASSWORD_POLICY = {
   min_length: 10,
   requires_mixed_case: true,
@@ -8,7 +7,6 @@ export const DEFAULT_PASSWORD_POLICY = {
 
 const SYMBOL = /[^A-Za-z0-9]/;
 
-// Upper and lower case are one rule.
 export function passwordRules(value, policy = DEFAULT_PASSWORD_POLICY) {
   const password = typeof value === "string" ? value : "";
   const active = { ...DEFAULT_PASSWORD_POLICY, ...(policy ?? {}) };

@@ -8,7 +8,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 export function DeleteRoleDialog({ role, open, onOpenChange }) {
   const t = useTranslations("roles");
   const { run, pending } = useAction();
-  // The row and the ⋯ that opened this are gone once it is deleted.
   const removed = useRef(false);
 
   async function onConfirm() {

@@ -1,9 +1,6 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 
-// The backup screens are written for an application. For a database, a sentence
-// that names the application is swapped for the database's own; every other
-// string (schedule, storage, buttons) is shared.
 export function useSubjectTranslations(base, override, subject) {
   const tBase = useTranslations(base);
   const tOverride = useTranslations(override);

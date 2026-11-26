@@ -6,7 +6,6 @@ import { ArrowRight, ChevronRight, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SectionJumpLink } from "@/components/ui/section-jump-link";
 
-// The icon sits in a square edged in its tone.
 const TONE = {
   success: { tile: "border-success/45 bg-success/10 text-success", value: "text-foreground" },
   warning: { tile: "border-warning/45 bg-warning/10 text-warning", value: "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" },
@@ -14,12 +13,8 @@ const TONE = {
   info: { tile: "border-primary/45 bg-primary/10 text-[var(--primary-700,var(--primary))] dark:text-primary", value: "text-foreground" },
   neutral: { tile: "border-border bg-muted/40 text-muted-foreground", value: "text-foreground" },
 };
-// The label in mono caps, like the dashboard's stat cells.
 const LABEL = "font-mono text-xs font-medium tracking-[0.1em] break-words hyphens-auto text-muted-foreground uppercase";
 
-// Also drawn on the Services page; `action` sits where a linked tile shows its chevron.
-// `compact` puts label and value beside the icon in one row, for short values that
-// left the stacked tile mostly empty.
 export function Tile({ icon: Icon, label, value, detail, tone, href, action, compact = false }) {
   const t = TONE[tone] ?? TONE.neutral;
   const end = href ? (
@@ -33,7 +28,6 @@ export function Tile({ icon: Icon, label, value, detail, tone, href, action, com
         <Icon className="size-5" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
-        {/* hyphens-auto: a long German compound broke mid-word ("Handlungsbed / arf") in a 2×2 phone grid. */}
         <p className={LABEL}>{label}</p>
         <p className={cn("text-[15px] font-semibold tracking-tight text-pretty break-words", t.value)}>{value}</p>
         {detail ? <p className="line-clamp-2 text-xs text-muted-foreground">{detail}</p> : null}
@@ -50,7 +44,6 @@ export function Tile({ icon: Icon, label, value, detail, tone, href, action, com
         {end}
       </div>
       <div className="min-w-0">
-        {/* Wraps, never truncates: German "Deployment fehlgeschlagen" was cut mid-word. */}
         <p className={cn("text-[15px] font-semibold tracking-tight text-pretty break-words", t.value)}>{value}</p>
         {detail ? <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{detail}</p> : null}
       </div>
@@ -73,7 +66,6 @@ export function Tile({ icon: Icon, label, value, detail, tone, href, action, com
   );
 }
 
-// What needs attention on an application's overview, one line each with its fix.
 export function AttentionList({ alerts = [] }) {
   const t = useTranslations("applications");
   if (!alerts.length) return null;

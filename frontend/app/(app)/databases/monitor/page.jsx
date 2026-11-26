@@ -43,7 +43,6 @@ export default async function DatabaseMonitorPage({ searchParams }) {
   if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
 
-  // Only a running engine has data; `?engine=` picks when more than one runs.
   const running = engines.filter((engine) => engine.running);
   const selected =
     running.find((engine) => engine.engine === sp?.engine) ?? running[0] ?? null;
@@ -53,7 +52,6 @@ export default async function DatabaseMonitorPage({ searchParams }) {
       <div className="space-y-6">
         <PageCrumb>{t("crumb")}</PageCrumb>
         <Header t={t} />
-        {/* A failed request is not evidence that no engine is running. */}
         {enginesFailed ? (
           <LoadFailed description={t("loadFailed")} status={enginesStatus} failure={enginesFailure} message={enginesMessage} />
         ) : (
@@ -80,8 +78,6 @@ export default async function DatabaseMonitorPage({ searchParams }) {
       <Header t={t} engine={selected} />
 
       <div className="space-y-4">
-        {/* Only with a real choice; with one engine its name is in the title. Only
-            running engines are listed, so each carries the green running dot. */}
         {running.length > 1 ? (
           <div className={TAB_LINK_GROUP}>
             {running.map((engine) => (
@@ -103,10 +99,6 @@ export default async function DatabaseMonitorPage({ searchParams }) {
 
         <EngineStatusCards status={status} processes={processes} />
 
-        {/* The day's chart beside what is running now; stacked below xl, queries first,
-            since running queries are what the reader came to see. */}
-        {/* The chart sets the row's height; the queries card fills it and scrolls
-            inside (absolute, so a long list cannot make the row taller). */}
         <div className="grid gap-4 xl:grid-cols-3">
           <div className="xl:relative xl:order-2">
             <div className="xl:absolute xl:inset-0">
@@ -127,8 +119,6 @@ export default async function DatabaseMonitorPage({ searchParams }) {
   );
 }
 
-/** Plain title; engine, version and uptime live in the health summary below. The back
-    link was asked for (1 Oct) even with the breadcrumb, so it stays. */
 function Header({ t }) {
   return (
     <div className="space-y-3">

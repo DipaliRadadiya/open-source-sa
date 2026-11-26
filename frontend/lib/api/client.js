@@ -1,20 +1,16 @@
 import axios from "axios";
 import { isRestartBlip, RESTART_RETRY_MS } from "./restart-blip.js";
 
-// All backend routes are under /api, so bake the prefix into baseURL —
-// endpoint calls stay clean (api.post("/login") -> .../api/login).
 export const api = axios.create({
   baseURL: `${process.env.NEXT_PUBLIC_API_URL}/api`,
   withCredentials: true,
   xsrfCookieName: "XSRF-TOKEN",
   xsrfHeaderName: "X-XSRF-TOKEN",
-  // Axios >= 1.6 only attaches the XSRF header same-origin unless this is set;
-  // the API is a different origin (Sanctum SPA), so without it mutations 419.
+  // Needed for cross-origin Sanctum, otherwise writes fail with 419.
   withXSRFToken: true,
 });
 
-// Send the UI locale (NEXT_LOCALE cookie) so backend messages match; otherwise
-// the browser's own Accept-Language applies.
+// Send the UI locale so backend messages come back in the same language.
 api.interceptors.request.use((config) => {
   if (typeof document !== "undefined") {
     const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/);
@@ -25,8 +21,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// The CSRF-cookie endpoint sits at the root, NOT under /api, so it can't go
-// through this instance's baseURL.
+// The CSRF cookie endpoint is not under /api, so it can't use the baseURL.
 function refreshCsrfCookie() {
   return axios.get(`${process.env.NEXT_PUBLIC_API_URL}/sanctum/csrf-cookie`, {
     withCredentials: true,
@@ -39,19 +34,17 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const config = error.config;
 
-    // 419 = expired XSRF token: fetch a fresh one and replay exactly once
-    // (`_csrfRetried`), so a genuinely rejected token surfaces instead of looping.
+    // 419 = expired XSRF token. Refresh it and retry once.
     if (status === 419 && config && !config._csrfRetried && typeof window !== "undefined") {
       config._csrfRetried = true;
       try {
         await refreshCsrfCookie();
         return api(config);
       } catch {
-        // Couldn't renew — fall through and report the original failure.
+        // couldn't renew; report the original error
       }
     }
 
-    // Opted in per call (install buttons): one replay after a restart 503, then the error stands.
     if (config?.retryRestart && !config._restartRetried && isRestartBlip(error)) {
       config._restartRetried = true;
       await new Promise((resolve) => setTimeout(resolve, RESTART_RETRY_MS));

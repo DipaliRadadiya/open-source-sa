@@ -1,13 +1,10 @@
 import { z } from "zod";
 import { databaseInstallProgressSchema } from "./database.js";
 
-// The endpoint to POST to install a component (or an option). `null` means the
-// current server configuration cannot install it — render no button.
 const actionSchema = z
   .object({ method: z.string(), endpoint: z.string() })
   .nullable();
 
-// A database engine choice (only the database component carries these).
 const optionSchema = z
   .object({
     value: z.string(),
@@ -25,14 +22,11 @@ const componentSchema = z
     key: z.string(),
     title: z.string(),
     description: z.string().nullish(),
-    // Detected live, never remembered.
     state: z.enum(["installed", "pending", "installing", "failed"]).catch("pending"),
     detail: z.string().nullish(),
     recommended: z.boolean().default(false),
     action: actionSchema.default(null),
     options: z.array(optionSchema).default([]),
-    // reason/message may linger from a prior attempt; show them only when
-    // state === "failed".
     reason: z.string().nullish(),
     message: z.string().nullish(),
     retryable: z.boolean().default(false),
@@ -50,7 +44,6 @@ export const setupResponseSchema = z.object({
       label: z.string().nullish(),
       stack: z.string().nullish(),
       web_server: z.string().nullish(),
-      // Ubuntu's own updates (unattended-upgrades) are running; installs wait for them.
       system_updates_running: z.boolean().catch(false).default(false),
       components: z.array(componentSchema).default([]),
     })

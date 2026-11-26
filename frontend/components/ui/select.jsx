@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { ReasonTooltip, readOnlyReason, useDisabledReason } from "@/components/ui/reason-tooltip"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-// Radix keeps `disabled` on the root; the trigger needs it to show why.
+// Radix keeps disabled on the root; the trigger needs it to show why.
 const SelectDisabledContext = React.createContext(false);
 
 function Select({
@@ -61,12 +61,10 @@ function SelectTrigger({
     </SelectPrimitive.Trigger>
   );
 
-  // Same rule as Button and Input: a parent already showing a tooltip wins.
   if (disabled && inheritedReason?.handled && !disabledReason) return control;
 
   return (
     <ReasonTooltip
-      // The wrapper takes the trigger's width only when the trigger fills its row.
       className={/(^|\s)w-full(\s|$)/.test(className ?? "") ? "flex w-full" : "inline-flex"}
       reason={disabled ? readOnlyReason(disabledReason ?? inheritedReason?.reason) : null}
     >
@@ -75,7 +73,7 @@ function SelectTrigger({
   );
 }
 
-// `popper`, not Radix's `item-aligned`, which covers the trigger.
+// popper, because item-aligned covers the trigger.
 function SelectContent({
   className,
   children,
@@ -102,8 +100,7 @@ function SelectContent({
         <SelectPrimitive.Viewport
           data-position={position}
           className={cn(
-            // NOT `h-(--radix-select-trigger-height)`, which pins the list to
-            // the trigger's height; Content already caps its max height.
+            // Not h-(--radix-select-trigger-height), which pins the list to the trigger's height.
             "data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)"
           )}>
           {children}

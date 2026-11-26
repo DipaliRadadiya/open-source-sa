@@ -16,9 +16,6 @@ import {
 import { cn } from "@/lib/utils";
 import { SELECT_WELL } from "@/components/data-table/toolbar-well";
 
-// `extraQuery` is merged into every navigation so the account page keeps its tab.
-// No action filter: the API only filters by exact, untranslated event ids.
-// `security` (admin log only) adds "Security events" — sign-ins, failed sign-ins, user and role changes.
 export function ActivityToolbar({ types, kinds = [], security = false, searchKey = "searchPlaceholder", extraQuery }) {
   const t = useTranslations("activity");
   const setQuery = useSetQuery();
@@ -27,25 +24,19 @@ export function ActivityToolbar({ types, kinds = [], security = false, searchKey
   const selectedType = searchParams.get("type") ?? "all";
   const selectedKind = searchParams.get("security") === "1" ? "security" : (searchParams.get("kind") ?? "all");
 
-  // Own-history types come from existing rows, so empty means no activity at all.
   const hasFilters = types.length > 0;
 
   const apply = (updates) => setQuery({ ...updates, ...extraQuery }, { resetPage: true });
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      {/* The admin log also searches actor names; a personal history has one actor. */}
       <SearchInput placeholder={t(searchKey)} extraQuery={extraQuery} />
 
-      {/* Phone: the filter and Refresh share a row, so Refresh is not left alone on one. */}
-      {/* flex-wrap + flex-auto: a filter whose label does not fit takes its own line rather
-          than cutting it ("Tous les événements"); sm:min-w-40, not w-40, for the same reason. */}
       <div className="flex flex-wrap items-center gap-3 sm:contents">
         {hasFilters ? (
           <Select
             value={selectedType}
             onValueChange={(v) =>
-              // The current action may not apply to the new type.
               apply({ type: v === "all" ? undefined : v, action: undefined })
             }
           >

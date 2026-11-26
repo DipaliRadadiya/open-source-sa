@@ -28,17 +28,13 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Adminer's one-click sign-in, the sibling of PhpmyadminButton and the same flow:
-// the token lives 60s and is single-use, so the tab opens only on the URL.
 export function AdminerButton({
   database,
   canManage,
   compact = false,
-  // Card overflow menus reuse the same installation and sign-in flow.
   menuItem = false,
   variant = "outline",
   size = "sm",
-  // Null when the lookup failed (NOT "none").
   sites = null,
 }) {
   const t = useTranslations("databases.adminer");
@@ -52,7 +48,6 @@ export function AdminerButton({
     users: userCount(database),
   });
 
-  // The session it opens is the database user's and can write: `database` manage.
   if (state === "hidden" || !canManage) return null;
 
   const Action = menuItem ? DropdownMenuItem : Button;
@@ -99,7 +94,6 @@ export function AdminerButton({
 
       openUrlInNewTab(url);
     } catch (error) {
-      // The API names the reason: no Adminer, no HTTPS, a password the panel never knew.
       toast.error(apiMessage(error, t("failed")));
     } finally {
       setOpening(false);
@@ -113,7 +107,6 @@ export function AdminerButton({
   );
   const label = opening ? t("signingShort") : compact && !menuItem ? "Adminer" : t("open");
 
-  // Leave the menu open while signing in so the pending item blocks repeat requests.
   const select = (event, siteId) => {
     event.preventDefault();
     open(siteId);
@@ -188,7 +181,6 @@ export function AdminerButton({
 
   return (
     <DisabledReasonProvider denied={!canManage}>
-      {/* An arrow function: `onClick={open}` would pass the event as the site id. */}
       <Button
         type="button"
         variant={variant}

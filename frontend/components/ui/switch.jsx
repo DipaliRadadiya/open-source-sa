@@ -6,11 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { DENIED, ReasonTooltip, readOnlyReason, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils"
 
-/**
- * `readOnly`: the role cannot change it, so the state is shown as an On/Off pill instead of a
- * locked switch (a greyed switch reads as broken). Also on inside a `denied`
- * area or with a DENIED reason.
- */
+// readOnly shows an On/Off pill instead of a locked switch.
 function Switch({
   className,
   size = "default",
@@ -24,8 +20,6 @@ function Switch({
   if (readOnly || (disabled && (disabledReason === DENIED || inheritedReason?.denied || inheritedReason?.reason === DENIED))) {
     return <SwitchState checked={props.checked} label={props["aria-label"]} t={t} />;
   }
-  // Disabled = no pointer events, like Button, so taps reach the wrapping
-  // ReasonTooltip instead of the widened hit area.
   const control = (
     <SwitchPrimitive.Root
       data-slot="switch"
@@ -42,7 +36,6 @@ function Switch({
     </SwitchPrimitive.Root>
   );
 
-  // A parent already showing a tooltip here wins, to avoid two bubbles.
   if (disabled && inheritedReason?.handled && !disabledReason) return control;
 
   return (

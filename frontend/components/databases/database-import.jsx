@@ -27,21 +27,14 @@ import { SizeText } from "@/components/ui/size-text";
 import { localizeSizeText } from "@/lib/format/bytes";
 
 const POLL_MS = 2500;
-// Older imports fold away so the history cannot push the page out of reach.
 const HISTORY_SHOWN = 3;
 
-// Failures that stop before anything is dropped, so the data is as it was.
 const UNTOUCHED = ["wrong_format", "client_command", "truncated", "unreadable", "backup_failed", "no_account", "database_missing", "abandoned"];
 
-// Brand names, not translated.
 const FAMILY_NAME = { sql: "MySQL / MariaDB", pgsql: "PostgreSQL", mongo: "MongoDB" };
 
 const TONE = { completed: "success", failed: "destructive", running: "muted", queued: "muted", uploading: "muted" };
 
-// Upload a dump and replace the database with it. The user confirms before the
-// upload, so a two-gigabyte file is not sent only to be declined; the run then
-// starts by itself. The server backs the database up first and puts it back if
-// the load fails — the card says so before and after.
 export function DatabaseImport({ database, imports: initial = [], exports = [], canManage, unavailable = null }) {
   const t = useTranslations("databases.import");
   const tDb = useTranslations("databases");
@@ -58,24 +51,18 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
   const [dragOver, setDragOver] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [chosen, setChosen] = useState(null);
-  // Ticked by default; reset for every file so a skipped copy is never carried over.
   const [safetyCopy, setSafetyCopy] = useState(true);
-  // What this tab chose per import, so "Start again" repeats it; otherwise the API default (a copy).
   const safetyChoiceRef = useRef(new Map());
-  // { file, progress } while the browser is sending the file.
   const [upload, setUpload] = useState(null);
   const [busyRow, setBusyRow] = useState(null);
   const [removing, setRemoving] = useState(null);
-  // The run this tab started, so its end gets a toast. A ref: only the poll reads it.
   const watchingRef = useRef(null);
 
   const rows = polled ?? initial;
   const running = rows.find((row) => IMPORT_IN_FLIGHT.includes(row.status)) ?? null;
   const formats = importFormat(database);
-  // An id, not the row: every poll makes a new row object and would restart the interval.
   const runningId = running?.id ?? null;
 
-  // Leaving mid-upload stops it; the browser's own exits are covered too.
   useWatchUnsaved("database-import", upload !== null);
 
   useEffect(() => {
@@ -88,8 +75,6 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
         if (!parsed.success) return;
         setPolled(parsed.data.imports);
 
-        // The run this tab started has ended: say how, and refresh so the
-        // automatic backup appears in Exports and the table count updates.
         const row = parsed.data.imports.find((r) => r.id === watchingRef.current);
         if (row && (row.status === "completed" || row.status === "failed")) {
           watchingRef.current = null;
@@ -98,7 +83,7 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
           router.refresh();
         }
       } catch {
-        // The next poll runs shortly.
+        // retry on the next poll
       }
     }, POLL_MS);
     return () => {
@@ -107,7 +92,6 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
     };
   }, [runningId, database.id, database.name, router, t]);
 
-  // Said before a file is chosen: the server refuses the start (422) after the user confirmed.
   const noAccount = !hasImportAccount(database);
   const blocked = !canManage
     ? DENIED
@@ -153,7 +137,6 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
       } else {
         toast.error(apiMessage(error, t("uploadFailed")));
       }
-      // A refused start leaves an uploaded row behind; show it.
       router.refresh();
     } finally {
       controllerRef.current = null;
@@ -191,24 +174,19 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
     }
   }
 
-  // The stepper follows the browser while it uploads, then the server's row.
   const stage = upload ? "uploading" : importStage(running);
-  // No copy, no "Backing up" step: the run goes straight from checking to importing.
   const skipsCopy = upload ? upload.safetyCopy === false : running?.safety_copy === false;
   const steps = skipsCopy ? IMPORT_STEPS.filter((step) => step !== "backing_up") : IMPORT_STEPS;
   const activeFile = upload?.file.name ?? running?.file_name ?? "";
   const activeSize = upload ? formatBytes(upload.file.size, format) : localizeSizeText(running?.size_human ?? "", format);
   const history = rows.filter((row) => row.id !== running?.id);
-  // A warning, not a block: the name may be wrong, and a failed run puts the data back.
   const mismatch = chosen ? engineMismatch(chosen.name, database) : null;
-  // The backup this import took first, when it is still on disk and downloadable.
   const backupFor = (row) => {
     if (!canManage || !row.safety_export_id) return null;
     const found = exports.find((e) => e.id === row.safety_export_id);
     return found?.status === "completed" && found.available && found.download_url ? found.download_url : null;
   };
 
-  // A role that cannot import sees past imports only, and no card when there are none.
   if (!canManage && !stage && history.length === 0) return null;
 
   return (
@@ -264,7 +242,6 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
               <p className="text-xs text-muted-foreground">{upload ? t("keepOpen") : t("serverNote")}</p>
             </div>
           ) : !canManage ? null : (
-            // One row: the button is the way in, the whole row also takes a dropped file.
             <div
               onDragOver={(e) => {
                 e.preventDefault();
@@ -297,7 +274,6 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
                 ref={inputRef}
                 type="file"
                 accept={formats.accept}
-                // Hidden, not sr-only: screen readers announced it as a second "Choose file".
                 className="hidden"
                 tabIndex={-1}
                 onChange={(e) => {
@@ -333,7 +309,6 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
                     row={row}
                     canManage={canManage}
                     busy={busyRow === row.id}
-                    // A finished upload whose start was refused can be started again.
                     canStart={canManage && !running && !upload && row.status === "uploading" && row.received_bytes === row.size_bytes}
                     onStart={() => startAgain(row)}
                     onRemove={() => setRemoving(row)}
@@ -362,7 +337,6 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
         tone="destructive"
         confirmVariant="destructive"
         title={t("confirmTitle", { name: database.name })}
-        // Short: one sentence, then the file on its own, then the safety net.
         description={t("confirmDescription")}
         cancelLabel={t("cancel")}
         confirmLabel={t("confirmLabel")}
@@ -383,7 +357,6 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
                 {t("mismatch", { fileEngine: FAMILY_NAME[mismatch], engine: tDb(`engines.${database.engine}`) })}
               </p>
             ) : null}
-            {/* The whole row is the label, so a tap anywhere on it toggles. */}
             <label htmlFor="import-safety-copy" className="flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5">
               <Checkbox
                 id="import-safety-copy"
@@ -428,7 +401,6 @@ export function DatabaseImport({ database, imports: initial = [], exports = [], 
 
 function ImportRow({ row, canManage, busy, canStart, onStart, onRemove, backup = null }) {
   const t = useTranslations("databases.import");
-  // Safe: nothing was dropped, or the backup was put back. Otherwise the backup is in Exports.
   const safe = row.restored || UNTOUCHED.includes(row.reason);
 
   return (
@@ -445,7 +417,6 @@ function ImportRow({ row, canManage, busy, canStart, onStart, onRemove, backup =
           {[
             row.requested_by ? t("by", { user: row.requested_by.username }) : null,
             row.finished_at_human ?? row.created_at_human,
-            // Only once it has run: an upload that never started took no copy either way.
             row.status !== "uploading" && row.safety_copy != null ? t(row.safety_copy ? "withCopy" : "withoutCopy") : null,
           ]
             .filter(Boolean)
@@ -463,7 +434,6 @@ function ImportRow({ row, canManage, busy, canStart, onStart, onRemove, backup =
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        {/* Matters most when a failed import could not put the data back. */}
         {backup ? (
           <Tooltip>
             <TooltipTrigger asChild>

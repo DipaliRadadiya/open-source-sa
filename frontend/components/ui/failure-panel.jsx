@@ -1,8 +1,6 @@
 import { TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// What every error boundary renders. No hooks and no data: the root boundary
-// renders this, and nothing would catch a throw here.
 export function FailurePanel({
   title,
   description,
@@ -25,7 +23,7 @@ export function FailurePanel({
       <div className="space-y-1">
         <p className="font-medium">{title}</p>
         <p className="max-w-md text-sm text-muted-foreground">{description}</p>
-        {/* The digest, not `error.message`, which can leak server internals. */}
+        {/* The digest, not error.message, which can leak server details. */}
         {detail ? (
           <p className="pt-1 font-mono text-xs text-muted-foreground">{detail}</p>
         ) : null}

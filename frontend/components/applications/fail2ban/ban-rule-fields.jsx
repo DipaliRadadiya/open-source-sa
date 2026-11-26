@@ -6,10 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-/**
- * The site's ban rules as plain fields, laid out like the server's Ban rules card.
- * Every change is written straight into the jail or filter text the page saves.
- */
 export function BanRuleFields({
   jail,
   numbers,
@@ -24,13 +20,11 @@ export function BanRuleFields({
 }) {
   const t = useTranslations("applications.fail2ban");
   const ts = useTranslations("fail2ban");
-  // An empty path is only flagged once the field has been left, or on a Save attempt.
   const [pathTouched, setPathTouched] = useState(false);
 
   const maxretry = readJailValue(jail, "maxretry") ?? "";
   const findtime = readJailValue(jail, "findtime") ?? "";
   const bantime = readJailValue(jail, "bantime") ?? "";
-  // The saved length stays a choice of its own, even "1h" written by hand.
   const presets = APP_BAN_PRESETS.map(String);
   if (bantime && !presets.includes(bantime)) presets.unshift(bantime);
   const banLabel = (seconds) => (Number(seconds) < 0 ? ts("settings.permanent") : humanDuration(ts, seconds) ?? `${seconds}`);
@@ -53,8 +47,6 @@ export function BanRuleFields({
               onChange={(event) => onLoginChange(event.target.value, loginAnswer)}
               onBlur={() => setPathTouched(true)}
             />
-            {/* Save's reason is only a tooltip while there are changes, so the field says it:
-                as a plain hint until the field is left empty, then as an error. */}
             <p id="fail2ban-login-path-hint" className={shownPathProblem ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
               {pathProblem ? t(`loginRule.errors.${pathProblem}`) : t("loginRule.pathHint")}
             </p>
@@ -124,7 +116,6 @@ export function BanRuleFields({
               </SelectContent>
             </Select>
           </div>
-          {/* The rule in one sentence, as on the server's Ban rules card. */}
           <div className="min-w-0 self-end rounded-lg bg-muted/60 px-3 py-2.5 text-sm leading-relaxed">
             {numberProblem
               ? ts("settings.previewInvalid")

@@ -1,15 +1,11 @@
 import { z } from "zod";
 
-/** A copy of `SavePhpSettingsRequest`'s rule; covered in `tests/backend-mirror.test.mjs`. */
 export const PHP_SIZE_PATTERN = /^(-1|\d+[KMG]?)$/i;
 
 export const PM_TYPES = ["ondemand", "dynamic", "static"];
 
-/** `SavePhpSettingsRequest::MAX_CHILDREN`. */
 export const MAX_CHILDREN = 100;
 
-// Mirrors `ApplicationPhpSettings::toBytes()`; `-1` counts as 128M so unlimited pools
-// are not reported as empty.
 export function phpSizeToBytes(value) {
   const trimmed = String(value ?? "").trim();
 
@@ -26,13 +22,10 @@ export function phpSizeToBytes(value) {
   return number;
 }
 
-// Mirrors `ApplicationPhpSettings::memoryCeilingBytes()`: the API only returns it for
-// saved settings, and the budget bar needs it for unsaved ones.
 export function memoryCeilingBytes(memoryLimit, maxChildren) {
   return phpSizeToBytes(memoryLimit) * (Number(maxChildren) || 0);
 }
 
-/** `committed` already includes this site's saved ceiling, so it is subtracted first. */
 export function budgetWith(memory, memoryLimit, maxChildren) {
   const total = memory?.total ?? 0;
   const others = Math.max(0, (memory?.committed ?? 0) - (memory?.this_site ?? 0));
@@ -50,7 +43,6 @@ export function budgetWith(memory, memoryLimit, maxChildren) {
   };
 }
 
-// Stricter than the API: a bare `64` is 64 BYTES, and `0`/`-1` switch the limit off.
 const sizeWithUnit = z
   .string()
   .trim()
@@ -61,7 +53,6 @@ const sizeWithUnit = z
 
 const MIN_MEMORY = 16 * 1024 * 1024;
 
-/** `GET /applications/{id}/php`. */
 export const applicationPhpSchema = z
   .object({
     application_id: z.number(),
@@ -71,8 +62,6 @@ export const applicationPhpSchema = z
     isolated_at: z.string().nullish(),
     isolation_supported: z.boolean().default(true),
     runs_as: z.string().nullish(),
-    // False when the pool file was hand-edited (saving would overwrite it);
-    // null when the pool file could not be read.
     managed: z.boolean().nullable().default(true),
     settings: z
       .object({
@@ -86,15 +75,12 @@ export const applicationPhpSchema = z
         pm_type: z.string().default("ondemand"),
         pm_max_children: z.number().default(5),
         pm_max_requests: z.number().default(500),
-        // Null = derived from pm_max_children (start c/2, min c/4, max 3c/4), idle 30 s, no spawn rate.
         pm_start_servers: z.number().nullish(),
         pm_min_spare_servers: z.number().nullish(),
         pm_max_spare_servers: z.number().nullish(),
         pm_process_idle_timeout: z.number().nullish(),
         pm_max_spawn_rate: z.number().nullish(),
         open_basedir_enabled: z.boolean().default(false),
-        // Only the user-added paths; the backend always prepends app root,
-        // this site's sessions and /tmp.
         open_basedir_paths: z.string().nullish(),
         disable_functions: z.string().nullish(),
         allow_url_fopen: z.boolean().default(true),
@@ -103,8 +89,6 @@ export const applicationPhpSchema = z
         additional_directives: z.string().nullish(),
       })
       .passthrough(),
-    // False means the panel default shows through; needed for "Reset to default", since
-    // an override equal to the default looks identical.
     overridden: z.record(z.string(), z.boolean()).default({}),
     presets: z
       .array(
@@ -127,15 +111,11 @@ export const applicationPhpSchema = z
         this_site: z.number().default(0),
       })
       .default({ total: 0, committed: 0, available: 0, over_committed: false, sites: 0, this_site: 0 }),
-    // `effective`: what the panel would write (null when off). `live`: the pool file on
-    // disk, null meaning undetermined, never "no restriction". `recommended`: not for the paths box.
     open_basedir_effective: z.string().nullish(),
     open_basedir_live: z.string().nullish(),
     open_basedir_recommended: z.string().nullish(),
 
     suggested_disable_functions: z.string().default(""),
-    // `disable_functions` starting points, safest first, localized by the API.
-    // Prefer this over `suggested_disable_functions`.
     disable_functions_presets: z
       .array(
         z.object({
@@ -151,7 +131,6 @@ export const applicationPhpSchema = z
 
 export const applicationPhpResponseSchema = z.object({ php: applicationPhpSchema });
 
-// "" and null mean "automatic"; anything else must be a whole number in range.
 function optionalCount(max, message) {
   return z.preprocess(
     (value) => (value === "" || value === null || value === undefined ? null : value),
@@ -159,7 +138,6 @@ function optionalCount(max, message) {
   );
 }
 
-/** Mirrors `SavePhpSettingsRequest`'s bounds so values are refused before a 422. */
 export const phpSettingsFormSchema = z.object({
   php_version: z.string().min(1, "requiredField"),
   memory_limit: sizeWithUnit.refine((value) => phpSizeToBytes(value) >= MIN_MEMORY, "phpMemoryMin"),
@@ -172,14 +150,13 @@ export const phpSettingsFormSchema = z.object({
   pm_type: z.enum(PM_TYPES),
   pm_max_children: z.coerce.number().int("integer").min(1, "rangeWorkers").max(MAX_CHILDREN, "rangeWorkers"),
   pm_max_requests: z.coerce.number().int("integer").min(0, "rangeMaxRequests").max(100000, "rangeMaxRequests"),
-  // Empty = automatic (sent as null).
   pm_start_servers: optionalCount(MAX_CHILDREN, "rangeWorkers"),
   pm_min_spare_servers: optionalCount(MAX_CHILDREN, "rangeWorkers"),
   pm_max_spare_servers: optionalCount(MAX_CHILDREN, "rangeWorkers"),
   pm_process_idle_timeout: optionalCount(86400, "rangeIdleTimeout"),
   pm_max_spawn_rate: optionalCount(1024, "rangeSpawnRate"),
   open_basedir_enabled: z.boolean().default(false),
-  // Backend rules: absolute only, never bare `/` (would allow everything), and no `..`.
+  // No bare / (would allow everything) and no ..
   open_basedir_paths: z
     .string()
     .trim()
@@ -195,8 +172,6 @@ export const phpSettingsFormSchema = z.object({
             : path.includes("..")
               ? "basedirTraversal"
               : null;
-        // No placeholder in the message: FormMessage translates the key with
-        // no values, so a `{path}` in the string would throw at render.
         if (problem) {
           ctx.addIssue({ code: "custom", message: problem });
           return;
@@ -204,7 +179,6 @@ export const phpSettingsFormSchema = z.object({
       }
     })
     .default(""),
-  // Function names and commas only: it lands in the pool file verbatim.
   disable_functions: z
     .string()
     .trim()
@@ -217,18 +191,13 @@ export const phpSettingsFormSchema = z.object({
     .string()
     .trim()
     .max(255, "max255")
-    // `not_regex:/\.\./` on the backend.
     .refine((value) => !value.includes(".."), "pathNoTraversal")
     .default(""),
-  // Ini, so newlines are fine; a `[section]` header would start a second pool.
   additional_directives: z
     .string()
     .trim()
     .max(4000, "max4000")
     .refine((value) => !/^\s*\[/m.test(value), "noSections")
-    // Same line grammar as App\Services\Server\Php\AdditionalDirectives: `name = value` or
-    // `php_[admin_]value|flag[name] = value`, or a pool line such as `env[NAME] = value`.
-    // The server refuses settings with their own field and pool lines it does not allow.
     .refine(
       (value) =>
         value
@@ -245,12 +214,10 @@ export const phpSettingsFormSchema = z.object({
     .default(""),
 });
 
-// Rules that need server facts: memory within the machine's, and a POST limit at least
-// the upload limit (PHP otherwise drops $_POST).
+// post_max_size must be >= upload limit or PHP drops $_POST.
 export function phpSettingsFormSchemaFor(totalMemoryBytes = 0, applicationPath = "") {
   const root = String(applicationPath ?? "").replace(/\/+$/, "");
   return phpSettingsFormSchema.superRefine((values, ctx) => {
-    // PHP runs this file on every request; keep it inside the site.
     const prepend = values.auto_prepend_file ?? "";
     if (prepend.startsWith("/") && (!root || !prepend.startsWith(`${root}/`))) {
       ctx.addIssue({ code: "custom", path: ["auto_prepend_file"], message: "prependOutsideSite" });
@@ -267,10 +234,6 @@ export function phpSettingsFormSchemaFor(totalMemoryBytes = 0, applicationPath =
   });
 }
 
-/**
- * php-fpm refuses to start a dynamic pool unless min spare ≤ start ≤ max spare ≤ max children,
- * and the backend takes all three or none (`SavePhpSettingsRequest::spareServersAgree`).
- */
 export function spareServersAgree({ pm_start_servers: start, pm_min_spare_servers: min, pm_max_spare_servers: max, pm_max_children: children }) {
   const set = [start, min, max].filter((value) => value !== null && value !== undefined && value !== "");
   if (set.length === 0) return true;
@@ -279,7 +242,6 @@ export function spareServersAgree({ pm_start_servers: start, pm_min_spare_server
   return a <= b && b <= c && c <= d;
 }
 
-/** What the pool uses when the three numbers are left empty (`PoolManager::spareServers`). */
 export function derivedSpareServers(children) {
   const c = Math.max(1, Number(children) || 1);
   return {

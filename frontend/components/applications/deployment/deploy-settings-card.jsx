@@ -29,18 +29,13 @@ import {
 } from "@/components/ui/form";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// `deploy_script` comes back filled from the build command even when unset;
-// `deploy_script_customised` marks a real one and decides whether Reset is offered.
 export function DeploySettingsCard({ applicationId, application, settings, canManage }) {
   const t = useTranslations("applications.deployment.settings");
   const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
-  // Only resolved outcomes live in state; the rest is derived from props
-  // (react-hooks/set-state-in-effect).
   const [resolved, setResolved] = useState(null);
 
-  // Branches load on the client: most visits never need them, and a dead
-  // credential must not fail the whole page.
+  // Loaded on the client so a dead credential can't fail the whole page.
   const accountId = application?.git_account_id;
   const repository = application?.repository;
   const linked = Boolean(accountId) && Boolean(repository) && !application?.git_account_missing;
@@ -85,20 +80,15 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     },
   });
 
-  // Without this a sidebar click silently discards the edit.
   useWatchUnsaved("app-deploy-settings", form.formState.isDirty);
 
   const script = useWatch({ control: form.control, name: "deploy_script" });
   const isDefault = script === (settings.default_deploy_script ?? "");
 
-  // The branch as typed, not as saved: the placeholder list should describe the
-  // deploy about to happen.
   const branchNow = useWatch({ control: form.control, name: "branch" });
 
-  // `{path}` expands to the document root, not the site directory.
   const scriptRef = useRef(null);
 
-  // Inserts a token at the cursor so exact values never need typing.
   function insertToken(token) {
     const el = scriptRef.current;
     const current = form.getValues("deploy_script") ?? "";
@@ -110,14 +100,12 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     const end = el.selectionEnd ?? start;
     const next = `${current.slice(0, start)}${token}${current.slice(end)}`;
     form.setValue("deploy_script", next, { shouldDirty: true });
-    // Place the caret after the inserted token.
     requestAnimationFrame(() => {
       el.focus();
       el.setSelectionRange(start + token.length, start + token.length);
     });
   }
 
-  // The server's own substitutions; only `{branch}` follows the unsaved field.
   const placeholderValues = {
     ...settings.placeholder_values,
     "{branch}": branchNow || settings.placeholder_values?.["{branch}"] || "main",
@@ -142,8 +130,6 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     <DisabledReasonProvider denied={!canManage}>
       <Form {...form}>
         <form noValidate onSubmit={form.handleSubmit(save)}>
-          {/* Uses the shared settings `Section`/`Row` layout: label and hint left of a
-              fixed control column, Save inside the card's action band. */}
           <Section
             icon={FileCode2}
             title={t("title")}
@@ -171,13 +157,9 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
                 <Row
                   wide
                   label={t("branch")}
-                  /* `unlinked`/`missing` must be fixed, so they use Row's destructive `error`
-                     slot; the other notices describe a fallback already applied. */
                   hint={notice && notice !== "unlinked" && notice !== "missing" ? t(`branchNotice.${notice}`) : t("branchHint")}
                   error={notice === "unlinked" || notice === "missing" ? t(`branchNotice.${notice}`) : undefined}
                 >
-                  {/* Picker when the list is reliable, free text otherwise (see branch-picker.js);
-                      never an empty disabled picker, which reads as "your branch is gone". */}
                   {mode === "picker" ? (
                     <Combobox
                       options={branchOptions(branches, field.value)}
@@ -199,7 +181,6 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
               )}
             />
 
-            {/* `wide`: a multi-line script does not fit the 14rem control column. */}
             <FormField
               control={form.control}
               name="deploy_script"
@@ -256,7 +237,6 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
   );
 }
 
-// Each token inserts itself at the cursor; one the panel cannot resolve keeps its row.
 function TokenList({ label, tokens, values, onInsert }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
@@ -279,7 +259,6 @@ function TokenList({ label, tokens, values, onInsert }) {
                 </code>
               )}
             </dt>
-            {/* break-all: a long document root must wrap rather than widen the card. */}
             <dd className="min-w-0 self-center font-mono text-xs break-all text-muted-foreground">
               {values[token] ?? ""}
             </dd>

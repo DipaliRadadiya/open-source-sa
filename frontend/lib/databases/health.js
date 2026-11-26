@@ -1,21 +1,14 @@
-// A verdict from `/databases/status` and the live process list only.
-
-/** Connections above this share of the ceiling are worth flagging. */
 const CONNECTIONS_HIGH = 75;
 const CONNECTIONS_CRITICAL = 90;
 
-/** Seconds. Matches the thresholds the query list colours rows by. */
 export const SLOW_SECONDS = 10;
 export const STUCK_SECONDS = 60;
 
-/** Slow queries per hour. Below one an hour is background noise. */
 const SLOW_RATE_HIGH = 1;
 const SLOW_RATE_CRITICAL = 10;
 
-/** An engine restarted this recently explains almost any odd reading. */
 const RECENTLY_RESTARTED_SECONDS = 3600;
 
-/** normal < high < review, so the worst of a set is just a max. */
 const RANK = { normal: 0, high: 1, review: 2 };
 
 export function worstTone(tones) {
@@ -37,10 +30,8 @@ export function connectionsTone(status) {
   return "normal";
 }
 
-/** Slow queries per hour of uptime: the raw counter only ever grows. */
 export function slowQueryRate(status) {
-  // `null` means not measured (PostgreSQL without `pg_stat_statements`).
-  // Must not become 0, which would read as healthy.
+  // null = not measured (no pg_stat_statements). Don't turn it into 0.
   if (status?.slow_queries == null) return null;
 
   const slow = Number(status.slow_queries);
@@ -57,27 +48,23 @@ export function slowQueriesTone(status) {
   return "normal";
 }
 
-/* Idle connection commands: MySQL says `Sleep`, PostgreSQL says `idle`. */
 const IDLE_COMMANDS = new Set(["sleep", "idle"]);
 
 export function isIdle(process) {
   return IDLE_COMMANDS.has((process?.command ?? "").toLowerCase());
 }
 
-// Internal processes `pg_stat_activity` lists beside connections; never offer "Stop query".
-// Detected by no db and no statement, not by user (autovacuum runs as `postgres`).
+// autovacuum runs as postgres, so detect workers by having no db and no query.
 export function isBackgroundWorker(process) {
   return !process?.db && !process?.query;
 }
 
-/** Non-idle connections, longest first — the shape the whole page reads by. */
 export function activeQueries(processes = []) {
   return processes
     .filter((p) => !isIdle(p) && !isBackgroundWorker(p))
     .sort((a, b) => (b?.time ?? 0) - (a?.time ?? 0));
 }
 
-/** Rated by the longest-running active query, not the count. */
 export function activityTone(processes = []) {
   const longest = activeQueries(processes)[0]?.time ?? 0;
   if (longest >= STUCK_SECONDS) return "review";
@@ -90,7 +77,6 @@ export function recentlyRestarted(status) {
   return Number.isFinite(uptime) && uptime > 0 && uptime < RECENTLY_RESTARTED_SECONDS;
 }
 
-// `issues` holds keys and counts; the copy lives in the message catalogue.
 export function assessHealth({ status, processes = [] }) {
   const issues = [];
 
@@ -123,7 +109,6 @@ export function assessHealth({ status, processes = [] }) {
   return {
     tone: worstTone(issues.map((issue) => issue.tone)),
     issues,
-    // Context, not an issue: explains small counters after a restart.
     recentlyRestarted: recentlyRestarted(status),
   };
 }

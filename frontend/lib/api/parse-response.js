@@ -1,6 +1,3 @@
-// A silently discarded parse looks like the server sent nothing, so mismatches warn with the field.
-
-// Lets callers tell "the server said no" from "this build cannot read the response".
 export class ResponseShapeError extends Error {
   constructor(source, issues) {
     super(`${source}: the server's reply did not match the expected shape`);
@@ -10,7 +7,6 @@ export class ResponseShapeError extends Error {
   }
 }
 
-/** `field.path: message` for each problem, capped at five. */
 function describe(issues) {
   return issues
     .slice(0, 5)
@@ -28,7 +24,6 @@ function warn(source, issues) {
   );
 }
 
-/** Parse, or warn and return `fallback`. For read paths that degrade rather than fail. */
 export function parsedOr(schema, data, source, fallback = null) {
   const result = schema.safeParse(data);
 
@@ -41,7 +36,6 @@ export function parsedOr(schema, data, source, fallback = null) {
   return fallback;
 }
 
-// For action paths, where swallowing the failure would make the caller believe it worked.
 export function parsedOrThrow(schema, data, source) {
   const result = schema.safeParse(data);
 

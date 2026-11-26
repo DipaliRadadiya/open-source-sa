@@ -31,7 +31,6 @@ export default async function RegisterPage() {
       getTranslations("auth"),
     ]);
   } catch (error) {
-    // Handled here, not in error.jsx, which only receives a digest in production.
     if (isRateLimited(error)) return <RateLimitedCard />;
     if (isPanelUnavailable(error)) return <PanelUnavailableCard />;
     if (isRequestFailed(error)) return <RequestFailedCard {...requestFailureProps(error)} />;
@@ -39,7 +38,6 @@ export default async function RegisterPage() {
   }
 
   if (user) redirect("/");
-  // Registration is bootstrap-only: once the admin exists the backend closes it.
   if (!basicInfo.registration_open) redirect("/login");
 
   return (
@@ -49,7 +47,6 @@ export default async function RegisterPage() {
         <CardTitle className="text-xl">{t("registerTitle")}</CardTitle>
         <CardDescription>{t("registerSubtitle")}</CardDescription>
       </CardHeader>
-      {/* pt: as on sign-in, the first label would sit on the header band's line. */}
       <CardContent className="grid gap-6 pt-6">
         <RegisterForm policy={basicInfo.password_policy} />
         <p className="text-center text-sm text-muted-foreground">

@@ -15,7 +15,6 @@ const TOOLBAR = (
         </div>
 );
 
-// Backups history: the four counts, then the list card.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

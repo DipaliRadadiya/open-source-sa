@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { SEARCH_WELL } from "@/components/data-table/toolbar-well";
 
-// In-memory counterpart to {@link SearchInput} (URL-driven); the parent holds `value` and filters.
 export function LocalSearchInput({ value, onChange, placeholder, className }) {
   const tc = useTranslations("common");
   return (
@@ -14,8 +13,6 @@ export function LocalSearchInput({ value, onChange, placeholder, className }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        // Room for the clear button only once there is something to clear, so an empty
-        // box gives its placeholder the full width.
         className={cn(SEARCH_WELL, "pl-9", value ? "pr-8" : "pr-3")}
       />
       {value ? (

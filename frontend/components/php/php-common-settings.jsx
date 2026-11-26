@@ -21,7 +21,6 @@ import { Row, Section, SectionActions } from "@/components/settings/setting-row"
 import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
-// Told to the php.ini tab (and back) so neither saves over the other's change.
 export const PHP_INI_CHANGED = "php-ini-changed";
 
 const FIELDS = ["memory_limit", "upload_max_filesize", "max_execution_time", "max_input_time", "max_input_vars"];
@@ -46,15 +45,10 @@ async function fetchSettings(version, failedText) {
   }
 }
 
-/**
- * The common php.ini settings of one version as fields (RC-8), so nobody has to edit
- * the file for a memory or upload limit. The file stays on its own tab.
- */
 export function PhpCommonSettings({ version, canManage }) {
   const t = useTranslations("php.common");
   const [state, setState] = useState({ loading: true, settings: null, error: null });
 
-  // State changes only once the answer is in, so this can run from an effect.
   const load = useCallback(
     () =>
       fetchSettings(version, t("loadFailed")).then((result) => {
@@ -71,7 +65,6 @@ export function PhpCommonSettings({ version, canManage }) {
     };
   }, [version, t]);
 
-  // The php.ini tab saved the file: what these fields show may have changed.
   useEffect(() => {
     const onChange = (event) => {
       if (event.detail?.version === version && event.detail?.source === "ini") load();
@@ -83,7 +76,6 @@ export function PhpCommonSettings({ version, canManage }) {
   if (state.loading) return <SettingsCardSkeleton rows={5} />;
   if (state.error) return <LoadFailed description={t("loadFailed")} status={state.status} failure={state.failure} message={state.error} />;
 
-  // Keyed on what was loaded, so a reload resets the form to the file.
   return (
     <SettingsForm
       key={JSON.stringify(state.settings)}
@@ -100,7 +92,6 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
   const tApp = useTranslations("applications.php");
   const defaults = toForm(settings);
   const [pending, setPending] = useState(false);
-  // Keep php.ini.panel-bak; on again after each save or discard.
   const [safetyCopy, setSafetyCopy] = useState(true);
   const tc = useTranslations("common");
 
@@ -112,17 +103,14 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
   const upload = useWatch({ control: form.control, name: "upload_max_filesize" });
 
   async function save(values) {
-    // Only what changed and is filled in: empty means "leave the file as it is".
     const payload = {};
     for (const key of FIELDS) {
-      // The resolver coerces the numbers, so compare as text.
       const value = String(values[key] ?? "");
       if (value !== defaults[key] && value !== "") {
         payload[key] = key.startsWith("max_") ? Number(values[key]) : values[key];
       }
     }
-    // One upload field: post_max_size must be at least as large, or uploads that size
-    // still fail. Raised to match, never lowered.
+    // post_max_size must be at least the upload size, or those uploads still fail.
     if (payload.upload_max_filesize && phpSizeToBytes(settings.post_max_size ?? "8M") < phpSizeToBytes(payload.upload_max_filesize)) {
       payload.post_max_size = payload.upload_max_filesize;
     }
@@ -144,8 +132,6 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
   }
 
   const notSet = t("notSet");
-  // Same shape as the application PHP page: plain label, php.ini name, and the explanation behind the ⓘ.
-  // One wrapping child, so a narrow column moves the php.ini name to its own line instead of squeezing the label.
   const label = (field, name, explain) => (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span>{tApp(field)}</span>
@@ -196,7 +182,6 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
             render={({ field }) => (
               <Row
                 label={label("fields.upload", "upload_max_filesize", t("uploadHint", { post: settings.post_max_size ?? "8M" }))}
-                // Only the value-driven warning stays on the page.
                 hint={raisesPost ? t("uploadRaisesPost", { size: upload }) : null}
               >
                 <FormControl>
@@ -238,7 +223,6 @@ function SettingsForm({ version, settings, canManage, onSaved }) {
               </Row>
             )}
           />
-          {/* Asked only once there is something to save. */}
           {canManage && form.formState.isDirty ? (
             <div className="space-y-2">
               <SafetyCopySwitch

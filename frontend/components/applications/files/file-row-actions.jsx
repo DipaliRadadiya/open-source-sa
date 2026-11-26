@@ -15,17 +15,13 @@ import { FileActionItems } from "@/components/applications/files/file-actions-me
 import { useServerPath } from "@/components/applications/files/files-root-context";
 import { DENIED } from "@/components/ui/reason-tooltip";
 
-
 export function FileRowActions({ file, appId, canManage, onAction }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
   const { toServerPath } = useServerPath();
-  // The API refuses every symlink action except delete, so the others are shown
-  // disabled with the reason, not hidden.
   const symlink = file.type === "symlink";
   const symlinkReason = symlink ? t("symlinkHint") : null;
   const canWrite = canManage;
-  // Downloading reads the file, which needs File Manager manage.
   const downloadReason = symlinkReason ?? (canManage ? null : DENIED);
 
   async function copyPath() {
@@ -39,11 +35,8 @@ export function FileRowActions({ file, appId, canManage, onAction }) {
 
   return (
     <div className="flex items-center justify-end gap-0.5">
-      {/* Only the two safe, single-click actions sit on the row; everything else stays
-          behind "…", so nothing destructive is one accidental click away. */}
       {file.type !== "dir" ? (
         <IconTooltip label={t("actions.download")} reason={downloadReason}>
-          {/* A real disabled button when blocked: `disabled` on an <a> does nothing. */}
           {downloadReason ? (
             <Button variant="ghost" size="icon" className="size-8" disabled aria-label={t("actions.download")}>
               <Download className="size-4" />

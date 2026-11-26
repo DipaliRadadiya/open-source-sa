@@ -7,14 +7,11 @@ import { deleteBackups } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-// Reports per outcome: a batch can partly succeed.
 export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDeleted }) {
   const t = useTranslations("backups.history.delete");
   const [pending, setPending] = useState(false);
-  // Refusals and their reasons, kept on screen rather than only in a toast.
   const [failures, setFailures] = useState([]);
 
-  // Cleared here, not in onOpenChange: opening from the toolbar skips it.
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
     setWasOpen(open);
@@ -22,7 +19,6 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
   }
 
   const count = backups.length;
-  // Pre-restore safety copies: deleting them is allowed, but called out.
   const safetyCount = backups.filter((backup) => backup.is_safety).length;
 
   const { refreshAndWait } = useRefresh();
@@ -34,9 +30,7 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
       const failed = Array.isArray(data?.failed) ? data.failed : [];
       const succeeded = Array.isArray(data?.succeeded) ? data.succeeded : [];
 
-  // Successes are reported either way, so those rows leave the table now.
       onDeleted?.(succeeded, failed.map((entry) => entry.id));
-      // Re-read the list before the toast, or deleted rows stay on screen.
       await refreshAndWait();
 
       if (failed.length === 0) {
@@ -45,7 +39,6 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
         return;
       }
 
-      // Stays open listing the refusals; the selection now holds exactly those, so Delete retries them.
       setFailures(failed);
       if (succeeded.length === 0) toast.error(t("noneDeleted", { count: failed.length }));
       else toast.warning(t("partial", { done: succeeded.length, failed: failed.length }));
@@ -81,7 +74,6 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
           <ul className="space-y-2">
             {failures.map((entry) => {
               const backup = backups.find((item) => item.id === entry.id);
-              // Literal keys so check-i18n can verify them.
               const reason =
                 entry.reason === "running"
                   ? t("failures.reason.running")
@@ -92,12 +84,10 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
               return (
                 <li key={entry.id} className="space-y-0.5 text-xs">
                   <p className="font-medium">
-                    {/* Exact timestamp, not relative time, so two same-day backups are distinguishable. */}
                     {[backup?.type_title, backup?.created_at ?? backup?.created_at_human]
                       .filter(Boolean)
                       .join(" · ") || t("failures.unknownBackup")}
                   </p>
-                  {/* An unrecognised reason falls back rather than rendering a key. */}
                   <p className="text-muted-foreground">{reason}</p>
                 </li>
               );

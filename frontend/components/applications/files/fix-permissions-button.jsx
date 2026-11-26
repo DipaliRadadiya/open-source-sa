@@ -10,11 +10,9 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useModeSentence } from "@/components/applications/files/use-mode-sentence";
 import { useRefresh } from "@/hooks/use-refresh";
 
-// The API resets only these, by the same field: a Node or container app's files include
-// programs that must stay executable (422 `unsupported_runtime` otherwise).
+// Node and container files include programs that must stay executable (the API returns 422).
 const RESETTABLE_PROFILES = ["php", "static"];
 
-// Always targets the application's own document root, never a user-picked path.
 export function FixPermissionsButton({ appId, canManage, servingProfile = null }) {
   const t = useTranslations("applications.files");
   const sentenceFor = useModeSentence();
@@ -46,8 +44,6 @@ export function FixPermissionsButton({ appId, canManage, servingProfile = null }
   return (
     <>
       <ReasonTooltip reason={reason}>
-        {/* Outlined like New folder / New file; muted or ghost styles read as disabled on
-            the tinted strip. */}
         <Button
           variant="outline"
           size="sm"
@@ -72,8 +68,6 @@ export function FixPermissionsButton({ appId, canManage, servingProfile = null }
         onConfirm={onConfirm}
         className="w-full sm:!max-w-lg"
       >
-        {/* What changes, as scannable facts, with each mode described by the same helper
-            the permission picker uses. */}
         <div className="divide-y rounded-lg border">
           {[
             { label: t("fixPermissions.foldersLabel"), mode: "755" },
@@ -81,9 +75,7 @@ export function FixPermissionsButton({ appId, canManage, servingProfile = null }
           ].map(({ label, mode }) => (
             <div key={mode} className="space-y-1 px-4 py-3">
               <div className="flex items-center justify-between gap-3">
-                {/* The label is the row's subject, so it uses reading size. */}
                 <span className="text-sm font-medium">{label}</span>
-                {/* The number as a chip: a value, not a heading. */}
                 <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
                   {mode}
                 </span>

@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Radix Select cannot hold null, which is how a schedule saved before the choice says "as before".
+// Radix Select can't hold null.
 export const KEEP_DEFAULT = "default";
 
 export function useKeepLabel() {
@@ -19,8 +19,6 @@ export function useKeepLabel() {
   };
 }
 
-// `allowDefault`: only a schedule still on the old behaviour offers "Default (as before)".
-// Never disabled: changing it only re-prices the list, so a viewer may try every choice.
 export function KeepSelect({ id, value, onChange, choices, recommended, allowDefault = false, className }) {
   const label = useKeepLabel();
 

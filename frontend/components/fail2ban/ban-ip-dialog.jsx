@@ -20,16 +20,12 @@ import {
 } from "@/components/ui/select";
 import { apiMessage } from "@/lib/api/error-message";
 
-/** Bans one address by hand, in a jail the user chooses (the API requires one). */
 export function BanIpDialog({ jails = [], canManage, yourIp = null, serverIp = null }) {
   const t = useTranslations("fail2ban");
-  // Refreshes through the list's transition so the list dims until it re-reads.
   const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(false);
   const [ip, setIp] = useState("");
-  // Null until chosen, so the default follows the jail list as it changes.
   const [chosen, setChosen] = useState(null);
-  // Only enabled jails: the API refuses a ban in any other.
   const activeJails = jails.filter((j) => j.enabled);
   const jail = chosen ?? activeJails[0]?.name ?? "";
   const [pending, setPending] = useState(false);
@@ -37,8 +33,6 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null, serverIp = n
 
   const isSelf = Boolean(yourIp) && ip.trim() === yourIp;
 
-  // Reset on both open and close: the trigger's `setOpen(true)` bypasses
-  // onOpenChange, so clearing on close alone is not enough.
   function resetFields() {
     setIp("");
     setError(null);
@@ -61,8 +55,6 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null, serverIp = n
       setError(t("ban.invalidIp"));
       return;
     }
-    // The API refuses 127.0.0.1 but not the server's public IP, whose ban
-    // locks everyone out of the panel.
     if (serverIp && ip.trim() === serverIp) {
       setError(t("ban.ownServer"));
       return;
@@ -76,7 +68,6 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null, serverIp = n
       setOpen(false);
       resetFields();
     } catch (err) {
-      // 422 is usually "on the ignore list"; the server's reason is the useful text.
       setError(apiMessage(err, t("ban.failed")));
     } finally {
       setPending(false);
@@ -136,11 +127,8 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null, serverIp = n
             className="font-mono"
             required
           />
-          {/* The API takes a single address, not a range. */}
           <p className="text-xs text-muted-foreground">{t("ban.ipHint")}</p>
 
-          {/* Warns when the address is the user's own (from the browser); the
-              API refuses that ban. */}
           {isSelf ? (
             <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-xs leading-relaxed text-warning">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" />

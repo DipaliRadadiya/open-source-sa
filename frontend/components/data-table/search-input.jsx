@@ -13,8 +13,6 @@ export function SearchInput({
   placeholder,
   paramKey = "search",
   delay = 300,
-  // Merged into every navigation, for params the router doesn't own (the
-  // account page keeps its active tab in the URL via history.replaceState).
   extraQuery,
 }) {
   const searchParams = useSearchParams();
@@ -26,8 +24,7 @@ export function SearchInput({
   const first = useRef(true);
   const input = useRef(null);
 
-  // Follow URL changes from elsewhere. Synced during render, not in an effect,
-  // so a stale term is never painted.
+  // Synced during render, not in an effect, so a stale term is never painted.
   const [seenUrlValue, setSeenUrlValue] = useState(urlValue);
   if (seenUrlValue !== urlValue) {
     setSeenUrlValue(urlValue);
@@ -35,7 +32,6 @@ export function SearchInput({
   }
 
   useEffect(() => {
-    // Don't fire on mount — only on user edits.
     if (first.current) {
       first.current = false;
       return;
@@ -65,14 +61,11 @@ export function SearchInput({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
-        // Room for the clear button only once there is something to clear, so an empty
-        // box gives its placeholder the full width.
         className={cn(SEARCH_WELL, "pl-9", value ? "pr-8" : "pr-3")}
       />
       {value ? (
         <button
           type="button"
-          // Refocus the input: the × unmounts, taking focus with it.
           onClick={() => {
             setValue("");
             input.current?.focus();

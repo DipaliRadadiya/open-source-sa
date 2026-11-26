@@ -11,7 +11,6 @@ import { componentMeta } from "@/components/setup/component-meta";
 
 const RUNTIME_KEYS = new Set(["php", "node"]);
 
-// Shown right after the 202 until the first poll returns backend detail.
 const QUEUED_DATABASE_PROGRESS = {
   status: "installing",
   current_step: "queued",
@@ -42,7 +41,6 @@ function VersionInstall({ versions, action, recommended, disabled, disabledReaso
           searchPlaceholder={t("chooseVersion")}
         />
       </div>
-      {/* No spinner: this picker unmounts once its own install starts, so one could only mean another install. */}
       <Button
         className="shrink-0"
         variant={recommended ? "default" : "outline"}
@@ -57,7 +55,6 @@ function VersionInstall({ versions, action, recommended, disabled, disabledReaso
   );
 }
 
-// Identity chip: what the component is. State is carried by the pill.
 function IconChip({ meta, small = false }) {
   const { Icon, tint, chip } = meta;
   return (
@@ -67,10 +64,8 @@ function IconChip({ meta, small = false }) {
   );
 }
 
-// States where the component stands, in words (never colour alone).
 function StatusPill({ state, detail }) {
   const t = useTranslations("setup");
-  // Beside the badge, not inside: a shrink-0 badge would overflow narrow screens.
   if (state === "installed") {
     return (
       <>
@@ -97,11 +92,9 @@ function StatusPill({ state, detail }) {
   if (state === "failed") {
     return <Badge variant="destructive" className="font-normal">{t("pillFailed")}</Badge>;
   }
-  // Not-installed needs no badge: the section heading already says Recommended or Also available.
   return null;
 }
 
-// Failure UI is gated strictly on `state === "failed"`.
 export function SetupComponent({ component, versions = [], busy = false, locked = false, denied = false, tier = "secondary", note = null, onInstall }) {
   const t = useTranslations("setup");
   const { state, action, options } = component;
@@ -114,21 +107,14 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   const installed = state === "installed";
   const failed = state === "failed";
   const installing = state === "installing" || busy;
-  // `installing` is this component's own progress (spinner); `blocked` is apt's lock
-  // held elsewhere or no permission (disabled + reason only).
   const blocked = busy || locked || denied;
   const blockedReason = denied ? t("installNotPermitted") : locked ? t("lockedByOtherInstall") : null;
-  // A neutral fact, so the card sits back like a finished one.
   const unavailable = isRuntime && runtimeVersions.length === 0 && !installed && !installing;
-  // Title, sentence and one button: the button sits beside them.
   const simple = !hasOptions && !isRuntime;
   const meta = componentMeta(component.key);
 
-  /** A finished component is a compact line, so what still needs a decision carries the weight. */
   const primary = tier === "primary";
 
-  // Done: name, what is installed and a tick. The "why you need it" sentence is for
-  // deciding, and there is nothing left to decide.
   if (tier === "compact") {
     return (
       <div className="flex items-center gap-3 px-4 py-3">
@@ -179,11 +165,8 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   return (
     <div
       aria-busy={installing}
-      // Failure shows in the badge and reason box, not a red card. No tint for
-      // recommended: a primary border means "selected" elsewhere.
       className={cn(
         "rounded-2xl border border-border/70 bg-card shadow-e1 transition-colors",
-        // Primary: a banded header; secondary: the same anatomy in one block.
         primary ? "overflow-hidden" : "p-4 sm:p-5",
         !primary && unavailable && "bg-muted/30 shadow-none",
       )}
@@ -198,7 +181,6 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
         <IconChip meta={meta} small={!primary} />
 
         <div className="min-w-0">
-          {/* The interactive blocks stay outside this group so `space-y` cannot squeeze them. */}
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className={cn("font-medium leading-tight", primary && "text-base")}>
@@ -211,7 +193,6 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
             ) : null}
           </div>
 
-          {/* On a primary card the body renders below the band instead. */}
           {primary ? null : (
             <Body
               t={t}
@@ -231,8 +212,6 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
           )}
         </div>
 
-        {/* Simple states only; the others render inline above. On a phone it sits under
-            the text, lined up with it, instead of squeezing it. */}
         {trailing ? <div className="col-start-2 sm:col-start-auto">{trailing}</div> : null}
       </div>
 
@@ -260,7 +239,6 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   );
 }
 
-// Shared so the primary and secondary placements cannot drift.
 function Body({
   t,
   component,
@@ -293,7 +271,6 @@ function Body({
         />
       ) : null}
 
-      {/* Legacy fallback for APIs that predate the database progress object. */}
       {failed && !databaseProgress ? (
         <p className={cn("flex items-start gap-2 text-sm text-destructive", !flush && "mt-2.5")}>
               <CircleAlert className="mt-0.5 size-4 shrink-0" />

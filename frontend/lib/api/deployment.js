@@ -1,29 +1,21 @@
 import { api } from "@/lib/api/client";
 
-// Git apps only (422 otherwise). Disabling keeps the URL and secret so re-enabling
-// doesn't invalidate what the user pasted at the provider.
 export function updateWebhook(id, payload) {
   return api.put(`/applications/${id}/webhook`, payload);
 }
 
-// Poll target after a deploy (status goes "provisioning" → "active"); the whole
-// resource also refreshes last_commit / last_deployed_at / failed_step.
 export function readApplication(id) {
   return api.get(`/applications/${id}`);
 }
 
-// Newest deploy only, for polling. `{ latest: row | null }`.
 export function fetchLatestDeployment(id) {
   return api.get(`/applications/${id}/deployments/latest`);
 }
 
-/** One deployment, with the build output the list deliberately omits. */
 export function fetchDeployment(id, deploymentId) {
   return api.get(`/applications/${id}/deployments/${deploymentId}`);
 }
 
-// Send the toggle as `webhook_enabled`: the response calls it `auto_deploy`, but the
-// request silently drops that name.
 export function updateDeploySettings(id, payload) {
   return api.put(`/applications/${id}/deployment-settings`, payload);
 }

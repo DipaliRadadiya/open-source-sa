@@ -8,27 +8,17 @@ import { ARCHIVE_IN_FLIGHT, archiveJobsResponseSchema } from "@/lib/schemas/file
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatFileSize } from "@/lib/format/bytes";
 
-// Two rates: this must poll even when idle (jobs started in another tab or before
-// page load), so the idle rate is kept slow.
 const POLL_ACTIVE_MS = 2000;
 const POLL_IDLE_MS = 15000;
 
-// Compress/extract are queued (202), so without this the button looks broken.
-// Refreshes on completion: the listing is server-rendered.
 export function ArchiveJobsBanner({ appId }) {
   const t = useTranslations("applications.files.archiveJobs");
   const router = useRouter();
   const format = useFormatter();
   const [jobs, setJobs] = useState([]);
-  // Finished jobs already announced; completed rows stay in the response for five
-  // minutes.
   const announced = useRef(new Set());
-  // The API also returns recent completions, so the first response on each page
-  // load is not news; only jobs that finish while the page is open are announced.
   const primed = useRef(false);
 
-  // In state rather than derived from `jobs`, so the effect re-runs and the switch
-  // back to idle happens on the poll that sees the last job land.
   const [rate, setRate] = useState(POLL_IDLE_MS);
 
   useEffect(() => {
@@ -64,15 +54,13 @@ export function ArchiveJobsBanner({ appId }) {
             landed = true;
             toast.success(t(`done.${job.operation}`, { target: job.target }));
           } else {
-            // The reason is stored as a code, so the message is already in the viewer's locale.
             toast.error(job.message ?? t("failed"));
           }
         }
 
-        // Refresh only when something finished, not on every poll.
         if (landed) router.refresh();
       } catch {
-        // A failed poll is silent; the next one is two seconds away.
+        // retry on the next poll
       }
     }
 

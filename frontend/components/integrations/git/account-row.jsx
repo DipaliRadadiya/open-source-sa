@@ -26,7 +26,6 @@ import {
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 import { AccountHealth } from "@/components/integrations/git/account-health";
 
-// The user's label leads: it is how the account appears in the app-create dropdown.
 export function AccountRow({
   account,
   status,
@@ -51,7 +50,6 @@ export function AccountRow({
       const result = repositoriesResponseSchema.safeParse(data);
       if (!result.success) throw new Error("Invalid repository response");
 
-      // The endpoint returns one page, not a total; claim only what it proves.
       setRepositoryAccess(
         result.data.repositories.length > 0 ? "available" : "empty",
       );
@@ -65,7 +63,6 @@ export function AccountRow({
   return (
     <DisabledReasonProvider denied={!canManage}>
       <div className="flex flex-wrap items-start justify-between gap-3 py-3.5">
-        {/* min-w-64 + flex-1: the account keeps its width and the buttons wrap below it on a phone. */}
         <div className="flex min-w-64 flex-1 gap-3">
           <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
             <ProviderLogo provider={account.provider} />
@@ -82,7 +79,6 @@ export function AccountRow({
                   {account.identifier}
                 </span>
               ) : null}
-              {/* Self-hosted only. */}
               {account.host ? (
                 <span className="truncate font-mono text-xs text-muted-foreground">
                   {account.host}
@@ -93,7 +89,6 @@ export function AccountRow({
   
             <AccountHealth status={status} loading={loading} />
   
-            {/* The check results stay under the account; the buttons sit on the right. */}
             <div className="flex flex-wrap items-center gap-2 empty:hidden">
               {repositoryAccess === "available" ? (
                 <p
@@ -137,7 +132,6 @@ export function AccountRow({
           </div>
         </div>
   
-        {/* Checks on the right, next to the menu; below the account on a phone. */}
         <div className="flex flex-wrap items-center gap-2 max-sm:w-full max-sm:ps-11 sm:ms-auto sm:justify-end">
           <Button
             variant="outline"
@@ -163,7 +157,6 @@ export function AccountRow({
               : t("repositoryAccess.action")}
           </Button>
   
-          {/* A broken token gets its fix inline, not hidden in the menu. */}
           {broken && canManage ? (
             <Button variant="outline" size="sm" onClick={onReplace}>
               <KeyRound className="size-3.5" />
@@ -187,7 +180,6 @@ export function AccountRow({
                 <Pencil className="size-4" />
                 {t("actions.edit")}
               </DropdownMenuItem>
-              {/* Separate from Edit: replacing a token is a verified round-trip. */}
               <DropdownMenuItem onClick={onReplace}>
                 <KeyRound className="size-4" />
                 {t("actions.replace")}
@@ -204,8 +196,6 @@ export function AccountRow({
   );
 }
 
-/** Scopes and when the account was last checked, kept off the row. Colours are
- * for the dark tooltip skin; card tokens like `bg-muted` vanish on it. */
 function AccountDetails({ account }) {
   const t = useTranslations("git.details");
   const scopes = account.scopes ?? [];

@@ -1,7 +1,5 @@
 import { SkCard, SkFooter, SkHeader, SkRows, SkTerminal } from "@/components/ui/skeleton-kit";
 
-
-// Environment: the .env editor with Save, then the change history.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

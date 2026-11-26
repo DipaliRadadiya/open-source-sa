@@ -1,7 +1,5 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 
-// Presets are a convenience; the form works without them, so a failure degrades
-// to [] instead of taking the page down.
 async function fetchJson(path, pick) {
   try {
     const res = await serverFetch(path);

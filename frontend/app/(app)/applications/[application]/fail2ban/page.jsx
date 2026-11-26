@@ -31,7 +31,6 @@ export default async function ApplicationFail2banPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // Site deleted: redirect to the list, which explains why on arrival.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -44,7 +43,6 @@ export default async function ApplicationFail2banPage({ params }) {
   const settled = isSettled(application);
 
   const status = settled ? await getApplicationFail2ban(id) : null;
-  // Only once a jail exists; before that there is nothing to ban into.
   const bans = status?.config ? await getApplicationBans(id) : null;
 
   return (
@@ -56,7 +54,6 @@ export default async function ApplicationFail2banPage({ params }) {
           {t("provisioning")}
         </div>
       ) : status.failed ? (
-        // A failed read must never render as "not protected".
         <LoadFailed description={t("loadFailed")} status={status.status} failure={status.failure} message={status.message} debug={status.debug} />
       ) : (
         <div className="space-y-4">

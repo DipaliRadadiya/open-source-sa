@@ -12,8 +12,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const NAMES_SHOWN = 6;
 
-// One request for the whole selection (no per-user loop from the browser); the API
-// runs each through the single delete and reports what happened to every one.
 export function BulkDeleteDialog({ users = [], open, onOpenChange, onDone }) {
   const t = useTranslations("systemUsers.bulk");
   const { refreshThen } = useRefresh();
@@ -31,7 +29,6 @@ export function BulkDeleteDialog({ users = [], open, onOpenChange, onDone }) {
       const { data } = await deleteSystemUsers(users.map((user) => user.id), { endSessions });
       const outcome = bulkDeleteOutcome(data);
       const kept = Object.keys(outcome.failures).length;
-      // Reported once the list no longer shows the deleted rows.
       refreshThen(() => {
         if (kept === 0) toast.success(t("allDeleted", { count: outcome.succeeded.length }));
         onDone?.(outcome);
@@ -39,7 +36,6 @@ export function BulkDeleteDialog({ users = [], open, onOpenChange, onDone }) {
         setPending(false);
       });
     } catch (error) {
-      // A 422 here means nothing was deleted (an unknown id, a duplicate): say so and re-read.
       toast.error(apiMessage(error, t("failed")));
       refreshThen(() => setPending(false));
     }
@@ -69,7 +65,6 @@ export function BulkDeleteDialog({ users = [], open, onOpenChange, onDone }) {
         ))}
         {more > 0 ? <li className="px-1 py-0.5 text-xs text-muted-foreground">{t("more", { count: more })}</li> : null}
       </ul>
-      {/* The same choice as a single delete; an open session otherwise refuses that account. */}
       <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
         <Checkbox
           id="bulk-delete-su-end-sessions"

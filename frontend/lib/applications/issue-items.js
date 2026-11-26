@@ -1,17 +1,12 @@
-// The message arrives translated and is shown as sent: it carries numbers this side lacks.
-
-// Where each kind of problem is fixed; unmapped types render the label alone.
 const DESTINATIONS = {
   certificate: (id) => `/applications/${id}/domains?tab=ssl`,
   dns: (id) => `/applications/${id}/domains`,
   worker: (id) => `/applications/${id}/workers`,
   php_eol: (id) => `/applications/${id}/php`,
   deploy_failed: (id) => `/applications/${id}/deployment`,
-  // Server-level: the disk is shared by every site.
   disk: () => "/disk-cleaner",
 };
 
-/** Critical first, since the strip has no other ranking. */
 export function issueItems(issues, applicationId, actionLabel) {
   const rows = Array.isArray(issues) ? issues : [];
 
@@ -22,7 +17,6 @@ export function issueItems(issues, applicationId, actionLabel) {
     .map((issue, index) => {
       const to = DESTINATIONS[issue.type];
       return {
-        // The type is not unique, so the index is part of the key.
         key: `issue-${issue.type}-${index}`,
         label: issue.message,
         action: to ? actionLabel(issue.type) : undefined,
@@ -31,7 +25,6 @@ export function issueItems(issues, applicationId, actionLabel) {
     });
 }
 
-/** Local rows that a server issue of the same type supersedes. */
 export function localKeysSupersededBy(issues) {
   const types = new Set((Array.isArray(issues) ? issues : []).map((issue) => issue?.type));
   const superseded = new Set();

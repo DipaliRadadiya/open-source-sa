@@ -2,8 +2,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SkHeader } from "@/components/ui/skeleton-kit";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-
-// Files: the folder trail and shortcuts, the toolbar card, then the file list.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

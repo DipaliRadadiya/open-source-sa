@@ -25,11 +25,8 @@ import {
 } from "@/components/ui/card";
 import { apiMessage } from "@/lib/api/error-message";
 
-// The server refuses the 101st entry (`ignore_list_full`); checked here first.
 const MAX_IGNORE_IPS = 100;
 
-// Each Add and each remove is its own request against the list on disk, so two
-// people editing it no longer overwrite each other. No draft, no Save.
 export function IgnoreListCard({ settings, canManage }) {
   const yourIp = useBrowserIp();
   const t = useTranslations("fail2ban");
@@ -39,9 +36,7 @@ export function IgnoreListCard({ settings, canManage }) {
   const [draft, setDraft] = useState("");
   const [draftError, setDraftError] = useState(null);
   const [adding, setAdding] = useState(false);
-  // Per row: removing one entry must not freeze the others.
   const [removing, setRemoving] = useState(() => new Set());
-  // The entry the server says still keeps the SSH jail off you.
   const [confirmRemove, setConfirmRemove] = useState(null);
 
   const ipIgnored = Boolean(yourIp) && ips.includes(yourIp);
@@ -49,17 +44,14 @@ export function IgnoreListCard({ settings, canManage }) {
   async function add(value) {
     const ip = value.trim();
     if (!ip) return;
-    // Written to the config verbatim; a typo would silently protect nobody.
     if (!isIpOrCidr(ip)) {
       setDraftError(t("settings.invalidIp"));
       return;
     }
-    // Said, not swallowed: a cleared field read as "added".
     if (ips.includes(ip)) {
       setDraftError(t("settings.alreadyListed", { ip }));
       return;
     }
-    // Mirrors the API cap so the 101st entry fails here, not on the server.
     if (ips.length >= MAX_IGNORE_IPS) {
       setDraftError(t("settings.ignoreLimit", { max: MAX_IGNORE_IPS }));
       return;
@@ -73,7 +65,6 @@ export function IgnoreListCard({ settings, canManage }) {
       toast.success(t("settings.ignoreAdded", { ip }));
     } catch (error) {
       setDraftError(apiMessage(error, t("settings.failed")));
-      // Already there or full: the list changed elsewhere, so show it as it is now.
       if (error?.response?.status === 422) await refreshAndWait();
     } finally {
       setAdding(false);
@@ -89,13 +80,10 @@ export function IgnoreListCard({ settings, canManage }) {
       toast.success(t("settings.ignoreRemoved", { ip }));
     } catch (error) {
       const status = error?.response?.status;
-      // The only 422 without field errors on a remove: this entry is what keeps the
-      // running SSH jail off your own address. The server decides, ranges included.
       if (status === 422 && !error.response.data?.errors && !acknowledged) {
         setConfirmRemove(ip);
       } else {
         toast.error(apiMessage(error, t("settings.failed")));
-        // 404: someone already removed it; show the list as it is now.
         if (status === 404) await refreshAndWait();
       }
     } finally {
@@ -109,7 +97,6 @@ export function IgnoreListCard({ settings, canManage }) {
 
   return (
     <DisabledReasonProvider denied={!canManage}>
-      {/* The left editor sets the desktop row height; only this list may shrink. */}
       <Card className="@container/ignore-list min-w-0 gap-0 py-0 xl:@4xl/fail2ban-rules:h-0 xl:@4xl/fail2ban-rules:min-h-full">
         <CardHeader className="flex-none border-b px-5 py-4">
           <CardTitle icon={ShieldCheck} className="flex flex-wrap items-center gap-2 font-semibold">
@@ -120,7 +107,6 @@ export function IgnoreListCard({ settings, canManage }) {
         </CardHeader>
 
         <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-5 py-4">
-          {/* Above the list: a missing own IP is the most important fact here. */}
           {yourIp && !ipIgnored ? (
             <div data-slot="caution" className="flex flex-none items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 p-2.5">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -185,7 +171,6 @@ export function IgnoreListCard({ settings, canManage }) {
                   disabled={!canManage || !draft.trim() || adding}
                   onClick={() => add(draft)}
                 >
-                  {/* Text-only at rest, like before; the spinner says the reload is under way. */}
                   {adding ? <Loader2 className="size-4 animate-spin" /> : null}
                   {t("settings.addIp")}
                 </Button>
@@ -203,9 +188,6 @@ export function IgnoreListCard({ settings, canManage }) {
           </div>
           ) : null}
 
-          {/* Focusable native scrolling keeps warning, entry controls and Save outside.
-              Side by side it shrinks to scroll but never grows: grown to the card's height,
-              its last row looked tall (Krishna, 15 Oct). */}
           <ul
             tabIndex={0}
             aria-label={t("settings.ignore")}

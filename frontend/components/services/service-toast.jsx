@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Copy, Check, RotateCw } from "lucide-react";
 
-// Interactive parts live in the body, not Sonner's `action` slot: it won't shrink on two-line messages.
+// Sonner's action slot doesn't shrink on two-line messages.
 
 const COPIED_RESET_MS = 2000;
 
@@ -20,7 +20,7 @@ function ToastBody({ message, reference, copyLabel, copiedLabel, actionLabel, on
       await navigator.clipboard.writeText(reference);
       setCopied(true);
     } catch {
-      /* Clipboard refused — the code is on screen to select by hand. */
+      // clipboard refused; the code is still on screen
     }
   }
 
@@ -30,7 +30,6 @@ function ToastBody({ message, reference, copyLabel, copiedLabel, actionLabel, on
 
       {reference ? (
         <span className="flex w-full min-w-0 items-center gap-1.5">
-          {/* Only the reference may be truncated. */}
           <span className="min-w-0 flex-1 truncate font-mono text-xs">{reference}</span>
           <button
             type="button"
@@ -38,7 +37,6 @@ function ToastBody({ message, reference, copyLabel, copiedLabel, actionLabel, on
             onClick={copy}
             className="shrink-0 rounded p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {/* The icon swap is the confirmation; the state is announced through aria-label. */}
             {copied ? (
               <Check className="size-3.5 text-success" />
             ) : (
@@ -71,7 +69,6 @@ export function showActionError({
   retryLabel,
   onRetry,
 }) {
-  // The backend names the failed step; the reference identifies the incident.
   toast.error(title, {
     description: (
       <ToastBody
@@ -83,7 +80,6 @@ export function showActionError({
         onAction={onRetry}
       />
     ),
-  // A toast with a reference stays until dismissed, so the code can be quoted.
     duration: reference ? Infinity : 10000,
     closeButton: true,
   });

@@ -22,7 +22,6 @@ import {
 import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils";
 
-// Shown when no engine is reachable yet. No outer Card: it would be a box inside a box.
 export function EngineState({ engines = [], connections = [], canManage }) {
   const t = useTranslations("databases");
   const router = useRouter();
@@ -34,17 +33,13 @@ export function EngineState({ engines = [], connections = [], canManage }) {
     (engine) => engine.install_status === "installing",
   );
 
-  // Present on the server, whether or not the panel can talk to it. A second
-  // SQL engine can never join it.
   const sqlPresent = findPresentSqlEngine(list);
 
-  // "Recommended" is withdrawn once any engine is on the server.
   const anyPresent = list.some((engine) => engineIsPresent(engine));
 
   return (
     <>
       <section className="space-y-5">
-        {/* No Health link: the monitor needs a running engine, and none is. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-48 flex-1 items-center gap-2.5">
             <div>
@@ -59,8 +54,6 @@ export function EngineState({ engines = [], connections = [], canManage }) {
 
         </div>
 
-        {/* Two columns so each card's sentence stays readable. `items-start`
-            stops a growing card (progress, failure) stretching its neighbour. */}
         <div className="grid items-start gap-5 sm:grid-cols-2">
           {list.map((engine) => (
             <EngineCard
@@ -80,8 +73,6 @@ export function EngineState({ engines = [], connections = [], canManage }) {
         </div>
       </section>
 
-        {/* The clicked card names the engine, so it goes straight to the
-          confirmation. */}
       <InstallConfirm
         engine={pending}
         open={pending !== null}
@@ -124,27 +115,19 @@ function EngineCard({
   const conflicted =
     isSqlEngine(engine) && sqlPresent && sqlPresent !== engine;
 
-  // The nested progress object is authoritative on current APIs. The helper
-  // retains the old reason-based fallback for servers not upgraded yet.
   const deadEnd = failed && !engineInstallCanRetry(engine);
 
-  /* No button when pressing could achieve nothing: not installable, already
-   * here, not retryable, or the other SQL engine. The card text says why. */
   const useless =
     !engine.installable || present || deadEnd || conflicted;
 
-  // Reasons that are worth a tooltip on a button that could otherwise work.
   const blocked = !canManage
     ? DENIED
     : busy && !installing
       ? t("install.oneAtATime")
       : null;
 
-  // Clickable only when installing is the card's one action, so no click is swallowed.
   const clickable = !installing && !useless && !blocked;
 
-  // Only for an actionable first choice: not once an engine is present,
-  // installing or failed. Requires `installable`.
   const recommended =
     !anyPresent &&
     engine.engine === "mysql" &&
@@ -152,12 +135,8 @@ function EngineCard({
     !failed &&
     !installing;
 
-  // Whether the note explains a state that BLOCKS installing, rather than
-  // commenting on one in progress. Only these get the notice treatment.
   const blockedState = !installing && !failed && !present && !engine.installable;
 
-  // The note under the name: the server's wording for a failure, or ours for
-  // states it never reports.
   const note = engine.install_progress
     ? null
     : failed
@@ -167,8 +146,7 @@ function EngineCard({
         : installing && slow
           ? t("install.takingLonger")
           : !engine.installable
-            ? /* The API's reason (e.g. no vendor build for this Ubuntu release)
-                 is more accurate than the generic fallback. */
+            ?
               (engine.unavailable?.reason ?? t("install.notInstallable"))
             : conflicted
               ? t("install.sqlConflict", {
@@ -180,8 +158,6 @@ function EngineCard({
 
   const actions = (
     <>
-      {/* A present but silent engine: the service is stopped (Services) or the
-          panel's sign-in is wrong (Connection). */}
       {!installing && useless && present ? (
         <>
           <Button asChild variant="ghost" size="sm">
@@ -196,13 +172,10 @@ function EngineCard({
         </>
       ) : null}
 
-      {/* A span, not a Button: the card itself is the button, and nesting one
-          inside another is invalid. */}
       {clickable ? (
         <span
           aria-hidden
           className={cn(
-            /* Filled on every installable card; the badge carries the recommendation. */
             buttonVariants({ variant: failed ? "outline" : "default", size: "sm" }),
             "pointer-events-none",
           )}
@@ -211,8 +184,6 @@ function EngineCard({
         </span>
       ) : null}
 
-      {/* Not clickable but still worth offering: the reason lives on the
-          tooltip, so this stays a real disabled button. */}
       {!clickable && !installing && !useless ? (
         <ReasonTooltip reason={blocked}>
           <Button
@@ -236,17 +207,12 @@ function EngineCard({
       onClick={clickable ? onInstall : undefined}
       className={cn(
         "flex flex-col gap-3.5 rounded-xl border bg-card p-5 text-left shadow-e1 transition-all duration-200",
-        // No mt-auto: it would pad every card with empty space.
         clickable &&
           "hover:-translate-y-px hover:shadow-e2 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
-        // Faded means "nothing to do here", never "broken"; a retryable failure
-        // stays full-strength.
         !clickable && useless && "bg-muted/40",
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        {/* Wordmark logos already spell the name; only mark-only logos
-            (PostgreSQL) print it. */}
         <span className="flex min-h-8 items-center gap-2">
           <EngineLogo engine={engine.engine} />
           {engineLogo(engine.engine)?.wordmark ? (
@@ -266,7 +232,6 @@ function EngineCard({
         </div>
       </div>
 
-      {/* What it is for, in one line, sharing its row with the action. */}
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <p className="min-w-48 flex-1 text-sm leading-relaxed text-muted-foreground">
           {t(`engineList.purpose.${engine.engine}`)}
@@ -283,11 +248,7 @@ function EngineCard({
             failed
               ? "text-destructive"
               : blockedState
-                ? /*
-                   * A blocked state, not commentary: warning tone and alert
-                   * glyph, matching a blocked site-type card, so it is not
-                   * skimmed as description.
-                   */
+                ?
                   "flex items-start gap-1.5 rounded-lg border border-warning/30 bg-warning/5 p-2.5 text-warning"
                 : "text-muted-foreground",
           )}
@@ -303,7 +264,6 @@ function EngineCard({
           label={name}
           slow={slow}
           pollIssue={pollIssue}
-          // Withholding the handler tells the failure block a retry cannot help.
           onRetry={deadEnd || conflicted || busy ? undefined : onInstall}
         />
       ) : null}
@@ -338,8 +298,6 @@ function EngineBadge({ engine, present }) {
       </Badge>
     );
   }
-  // On the server but unreachable: a different problem from "absent", and not
-  // fixed by reinstalling.
   if (present) {
     return (
       <Badge variant="warning" className="font-normal">

@@ -11,9 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-// The API refuses while backups exist unless they are deleted too; keeping them means
-// pausing. `count` is null when the history read failed.
-// `subject="database"`: `application` is the database (`{ id, name }`).
 export function TurnOffBackupsDialog({ open, onOpenChange, application, subject = "application", target, count, destinationNames = [] }) {
   const t = useSubjectTranslations("backups.application.turnOff", "backups.database.turnOff", subject);
   const isDatabase = subject === "database";
@@ -21,7 +18,6 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, subject 
   const [pending, setPending] = useState(false);
   const [savingPause, setSavingPause] = useState(false);
   const [deleteBackups, setDeleteBackups] = useState(false);
-  // Stays open until the page has re-read, so the stale card is not left on screen.
   const [refreshing, startRefresh] = useTransition();
   const doneMessage = useRef(null);
   const [action, setAction] = useState(null);
@@ -34,7 +30,6 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, subject 
   const working = pending || savingPause || refreshing;
   const pauseBusy = savingPause || (refreshing && action === "pause");
   const hasBackups = count === null || count > 0;
-  // Already paused: pausing is no alternative.
   const canPause = Boolean(target?.enabled) && target?.frequency !== "manual";
 
   function handleOpenChange(next) {
@@ -61,8 +56,7 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, subject 
     }
   }
 
-  // Sends the target's own values with `enabled: false`. Never lower retention here:
-  // that deletes backups on save.
+  // Never lower retention here: that deletes backups on save.
   async function pause() {
     setAction("pause");
     setSavingPause(true);

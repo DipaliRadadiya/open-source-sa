@@ -25,7 +25,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// The API does not expose `default_port`; MySQL/MariaDB fall back to 3306.
 const DEFAULT_PORT = { mongodb: 27017, postgresql: 5432 };
 
 const SOCKET_HINT = {
@@ -34,13 +33,11 @@ const SOCKET_HINT = {
 };
 const DEFAULT_SOCKET = "/var/run/mysqld/mysqld.sock";
 
-// The password is write-only: an empty field means "keep the stored one", not "clear it".
 export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
   const t = useTranslations("databases.connection");
   const tc = useTranslations("databases");
   const { refreshAndWait } = useRefresh();
   const [testing, setTesting] = useState(false);
-  // The last test result, kept on screen rather than in a toast.
   const [result, setResult] = useState(null);
 
   const defaults = {
@@ -72,14 +69,12 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
     } else {
       payload.socket = submitted.socket;
     }
-  // Empty keeps the stored password; the API only changes it when a value is sent.
     if (submitted.password) payload.password = submitted.password;
 
     try {
       const { data } = await updateConnection(engine.engine, payload);
       const saved = data?.[engine.engine];
       await refreshAndWait();
-      // Saved and reachable are different outcomes; report both.
       if (saved?.reachable) {
         toast.success(t("savedConnected"));
         onOpenChange?.(false);
@@ -129,7 +124,6 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
         description={t("subtitle")}
         footer={
           <>
-            {/* Tests what is STORED, so it is disabled while the form is dirty. */}
             <ReasonTooltip reason={isDirty ? t("saveFirst") : null}>
               <Button
                 type="button"
@@ -231,7 +225,6 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
                       className="font-mono"
                       inputMode="numeric"
                       autoComplete="off"
-                      // The engine's own port, not MySQL's.
                       placeholder={String(DEFAULT_PORT[engine?.engine] ?? 3306)}
                       {...field}
                     />

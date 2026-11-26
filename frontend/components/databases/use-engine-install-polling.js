@@ -11,8 +11,6 @@ const POLL_MS = 5000;
 const SLOW_AFTER_MS = 3 * 60 * 1000;
 const POLL_FAILURE_LIMIT = 3;
 
-// `markStarted()` writes the queued state before the first poll, so closing the
-// dialog never leaves the page unchanged; the API is authoritative after that.
 export function useEngineInstallPolling(initialEngines = []) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState({
@@ -22,8 +20,7 @@ export function useEngineInstallPolling(initialEngines = []) {
   const [slowEngine, setSlowEngine] = useState(null);
   const [pollIssueEngine, setPollIssueEngine] = useState(null);
 
-  // A refreshed Server Component is newer than any client snapshot. Adjusted
-  // during render (not in an effect) to avoid a frame of stale rows.
+  // Adjusted during render, not in an effect, to avoid a frame of stale rows.
   if (snapshot.initial !== initialEngines) {
     setSnapshot({ initial: initialEngines, polled: null });
   }
@@ -120,8 +117,6 @@ export function useEngineInstallPolling(initialEngines = []) {
     });
   }
 
-  // Guarded on `installingEngine`: with no install both sides are null, and
-  // `null === null` would show a permanent "lost progress updates" warning.
   const installing = Boolean(installingEngine);
 
   return {

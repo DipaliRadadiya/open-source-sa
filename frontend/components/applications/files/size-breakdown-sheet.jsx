@@ -16,33 +16,26 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-// The chart library loads when the sheet's content first renders (Radix mounts it
-// only on open), with a placeholder the donut's height so nothing jumps.
+// Radix only mounts the content on open, so the chart library loads then.
 const SizeBreakdownDonut = dynamic(
   () => import("@/components/applications/files/size-breakdown-donut").then((m) => m.SizeBreakdownDonut),
   { ssr: false, loading: () => <SkeletonCard className="h-56 w-full" /> },
 );
 
-// Measured for the directory on screen, so the walk's cost is bounded.
 export function SizeBreakdownSheet({ breakdown }) {
   const t = useTranslations("applications.files.breakdown");
   const format = useFormatter();
 
-  // Memoised so a null breakdown does not create a fresh [] each render.
   const categories = useMemo(() => breakdown?.categories ?? [], [breakdown]);
   const { slices } = useMemo(() => foldCategories(categories), [categories]);
 
   const label = useCallback((key) => t(`types.${key}`), [t]);
 
-  // `getBreakdown` returns null on any failure; null is not measurable, never "no files".
   const unavailable = !breakdown || breakdown.available === false;
   const empty = breakdown?.available && categories.length === 0;
 
-  // `available: false` means too big to walk; `null` means the request failed.
   const unavailableMessage = breakdown ? t("unavailable") : t("measureFailed");
 
-  // Swatch token per category so the legend matches its segment; past the fifth,
-  // all use the tail's grey, as the bar folds them into one segment.
   const swatch = (index) =>
     index < SERIES_TOKENS.length
       ? `var(--color-${SERIES_TOKENS[index]})`
@@ -56,7 +49,6 @@ export function SizeBreakdownSheet({ breakdown }) {
           {t("trigger")}
         </Button>
       </SheetTrigger>
-      {/* Wider than the default `sm:max-w-sm`: the legend has four numeric columns. */}
       <SheetContent className="w-full sm:max-w-lg">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
@@ -77,8 +69,6 @@ export function SizeBreakdownSheet({ breakdown }) {
 
         {unavailable || empty ? null : (
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4">
-            {/* The donut shows the overall shape; the table below gives exact sizes, which
-                decide what to delete. */}
             <SizeBreakdownDonut
               slices={slices}
               label={label}
@@ -93,8 +83,6 @@ export function SizeBreakdownSheet({ breakdown }) {
               }}
             />
 
-            {/* Every category with visible values: two hues are under 3:1 here, so values
-                cannot be hover-only. */}
             <table className="w-full text-sm">
               <thead className="border-b text-xs text-muted-foreground">
                 <tr>
@@ -108,8 +96,6 @@ export function SizeBreakdownSheet({ breakdown }) {
               <tbody className="divide-y">
                 {categories.map((category, index) => (
                   <tr key={category.key}>
-                    {/* The swatch carries identity, never the text colour: light hues are illegible as
-                        type. */}
                     <td className="w-4 py-1.5">
                       <span
                         className="block size-2 rounded-full"
@@ -129,7 +115,6 @@ export function SizeBreakdownSheet({ breakdown }) {
               </tbody>
             </table>
 
-            {/* A partial total is stated, not passed off as complete. */}
             {breakdown?.truncated ? (
               <p className="text-xs text-muted-foreground">{t("truncated")}</p>
             ) : null}

@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/form";
 import { DockerRegistryPicker } from "@/components/applications/docker-registry-picker";
 
-// A starting shape, not a value: shows the 127.0.0.1 rule in the form people copy.
 const EXAMPLE = `services:
   app:
     image: nginx:1.27
@@ -24,8 +23,6 @@ const EXAMPLE = `services:
 volumes:
   data:`;
 
-// Compose mode: the file is the whole configuration, so it comes first and is
-// required (an empty one has nothing to deploy); a private registry folds below.
 export function DockerComposeSetup({ form, registryOptions = [] }) {
   const t = useTranslations("applications.dockerImage");
   const registryId = useWatch({ control: form.control, name: "registry_id" }) ?? "";

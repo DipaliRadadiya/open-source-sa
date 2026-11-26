@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
 
-// Same structure as the Git and Storage empty states.
 export function BackupsEmptyState({
   applications,
   destinations,
@@ -39,7 +38,6 @@ export function BackupsEmptyState({
               </p>
             </div>
 
-            {/* What a backup contains, like the provider chips on the other screens. */}
             <div className="flex flex-wrap justify-center gap-2">
               {["files", "database", "schedule", "offsite"].map((item) => (
                 <span
@@ -65,7 +63,6 @@ export function BackupsEmptyState({
               </ol>
             </div>
 
-            {/* Storage is the prerequisite: with no destination, send them there. */}
             {!canManage ? null : hasDestination ? (
               <Button size="lg" onClick={() => setOpen(true)}>
                 <ShieldCheck className="size-4" />

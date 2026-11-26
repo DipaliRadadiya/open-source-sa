@@ -1,7 +1,3 @@
-// `sampled_at` is `d-m-Y H:i:s` (day first, which `new Date()` misreads), parsed by position.
-// The backend writes it in UTC (app.timezone), with no offset. Read as the browser's own
-// clock it was off by the browser's offset — a Kolkata browser saw the charts 5h30 early.
-// The charts then format it in the server's zone.
 export function sampleTime(value) {
   const match = /^(\d{2})-(\d{2})-(\d{4})[ T](\d{2}):(\d{2}):(\d{2})$/.exec(
     String(value ?? "").trim(),
@@ -12,11 +8,8 @@ export function sampleTime(value) {
   return Number.isNaN(at) ? null : at;
 }
 
-// A stretch with no samples (the server was down) longer than this many usual steps
-// becomes a break in the line rather than a confident curve across it.
 const GAP_STEPS = 2.5;
 
-// `t` in milliseconds; sorted oldest first since an unsorted array draws garbage silently.
 export function historySeries(points) {
   const sorted = (points ?? [])
     .map((point) => ({ ...point, t: sampleTime(point.sampled_at) }))
@@ -25,8 +18,6 @@ export function historySeries(points) {
   return withGaps(sorted);
 }
 
-// The break is a point with no values: every series maps a missing key to null, and
-// the charts draw with connectNulls off.
 function withGaps(points) {
   if (points.length < 3) return points;
   const steps = points

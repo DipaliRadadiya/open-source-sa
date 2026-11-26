@@ -1,8 +1,6 @@
 import { api } from "@/lib/api/client";
 import { envHistoryResponseSchema } from "@/lib/schemas/environment";
 
-// A 422 on errors.raw carries syntax errors verbatim. `safetyCopy: false` keeps no
-// `.env.bak-…` of the file being replaced, so there is nothing to go back to.
 export async function saveEnvironment(appId, { raw, restart = false, safetyCopy = true }) {
   const res = await api.put(`/applications/${appId}/environment`, {
     raw,
@@ -12,15 +10,11 @@ export async function saveEnvironment(appId, { raw, restart = false, safetyCopy 
   return res.data;
 }
 
-// A save's own checks and refusals with nothing written (ENV-1): warnings come before the
-// file is replaced and the service restarted on it.
 export async function checkEnvironment(appId, raw) {
   const res = await api.post(`/applications/${appId}/environment/check`, { raw });
   return res.data;
 }
 
-// One logged change, key by key with old and new values. Fetched on demand
-// because it reads backup files.
 export async function getEnvironmentDiff(appId, logId) {
   const res = await api.get(
     `/applications/${appId}/environment/history/${logId}/diff`,
@@ -37,8 +31,6 @@ export async function restoreEnvironment(appId, { backup, restart = false, safet
   return res.data;
 }
 
-// One more page of history for "Show older changes", parsed with the same
-// schema as the first page.
 export async function getEnvironmentHistoryPage(appId, page) {
   const res = await api.get(`/applications/${appId}/environment/history`, {
     params: { page },

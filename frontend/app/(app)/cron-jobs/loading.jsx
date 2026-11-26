@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-// Mirrors the real layout (two filters left, refresh + add right, 7-column
-// table, pagination row) so content swaps in place instead of shifting.
 export default function Loading() {
   return (
     <div className="space-y-6">

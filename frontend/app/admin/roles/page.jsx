@@ -15,12 +15,10 @@ export default async function AdminRolesPage({ searchParams }) {
 
   const [rolesPage, t] = await Promise.all([getRolesPage(query), getTranslations("roles")]);
 
-
   redirectOutOfRange("/admin/roles", sp, rolesPage.meta, rolesPage.failed);
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} />
-      {/* A failed request must not render as "No roles yet". */}
       {rolesPage.failed ? (
         <LoadFailed
           description={t("loadFailed")}

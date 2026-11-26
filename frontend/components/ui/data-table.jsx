@@ -40,14 +40,10 @@ function SortableHeader({ header, label }) {
   );
 }
 
-// Server-driven by default: pagination, filtering and sorting come from URL controls.
-// `fixedLayout` makes `meta.className` widths binding rather than hints.
 export function DataTable({
   columns,
   data,
-  // Defaults to a translated t() string below, never an English literal here.
   emptyMessage,
-  // The picture over an empty list: the subject's own icon (an archive for backups…).
   emptyIcon = Rows3,
   sortable = false,
   stickyHeader = false,
@@ -56,23 +52,17 @@ export function DataTable({
   rowClassName,
   fixedLayout = false,
   contextMenu,
-  // `{ columns: [id, …], render: (rowOriginal) => node | null }`; null renders normally.
   spanCells,
-  // Drops the border and rounding, for tables already inside a Card.
   bare = false,
-  // Readable from any cell as `table.options.meta`. Use this instead of a
-  // closure: a new cell function each render remounts the cell and loses its state.
+  // Use meta instead of closures: a new cell function each render remounts the cell.
   meta,
-  // Caller-owned selection; `rowId` keeps it stable across refetch or reorder.
   rowSelection,
   onRowSelectionChange,
   rowId,
-  // Taller rows for lists people scan rather than read line by line.
   roomy = false,
 }) {
   const tc = useTranslations("common");
   const pending = useNavPending();
-  // Read once here rather than per header cell.
   const sortParam = useSearchParams().get("sort");
   const [sorting, setSorting] = useState(defaultSorting);
   const selectable = rowSelection !== undefined && onRowSelectionChange !== undefined;
@@ -105,8 +95,6 @@ export function DataTable({
           enableRowSelection: true,
         }
       : null),
-    // Key rows by record, not index, so cell state does not pass to another
-    // row when the list changes.
     ...(rowId || idsUnique ? { getRowId: rowId ?? ((row) => String(row.id)) } : null),
   });
 
@@ -114,17 +102,12 @@ export function DataTable({
     <div
       className={cn(
         "transition-opacity",
-        // Avoids a double line against the enclosing card's edge.
-        // White and lifted like a card: the page behind is tinted.
         bare ? "[&_tbody_tr:last-child]:border-0" : "rounded-2xl border border-border/70 bg-card shadow-e1",
-        // Scroll rather than clip wide tables. Skipped with stickyHeader:
-        // overflow-x:auto would nest a second scroller and break sticky.
         !stickyHeader && "overflow-x-auto",
         pending && "pointer-events-none opacity-60",
       )}
     >
       <Table className={fixedLayout ? "table-fixed" : undefined}>
-        {/* No column headings (or select-all box) over a list with nothing in it. */}
         {table.getRowModel().rows.length ? (
           <TableHeader className={cn(stickyHeader && "sticky top-0 z-10 shadow-sm")}>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -135,20 +118,11 @@ export function DataTable({
                   return (
                     <TableHead
                       key={header.id}
-                      // Sticky headers need an opaque background: the same shade as the
-                      // row's bg-muted/40 over a card, mixed solid, so they match every other table.
-                      // In srgb, as alpha blending is: oklch took the short way round the hue
-                      // wheel and tinted Firewall and Fail2ban red.
-                      // `meta.className` lets a caller constrain a column's width;
-                      // `meta.headClassName` styles the header cell alone (e.g. let it wrap).
                       className={cn(
-                        // Headers stay on one line: a wrapped header, or a sort arrow
-                        // dropped under its name, read as broken. Tables fit by their cells instead.
                         stickyHeader && "bg-[color-mix(in_srgb,var(--muted)_40%,var(--card))]",
                         header.column.columnDef.meta?.className,
                         header.column.columnDef.meta?.headClassName,
                       )}
-                      /* Server-driven columns sort via the URL; `meta.sortKey` supplies aria-sort. */
                       aria-sort={
                         canSort
                           ? { asc: "ascending", desc: "descending" }[direction] ?? "none"
@@ -180,7 +154,6 @@ export function DataTable({
                 <TableRow className={rowClassName?.(row.original)}>
                   {row.getVisibleCells().map((cell) => {
                     if (span && spanCells.columns.includes(cell.column.id)) {
-                      // Only the first of the run draws; colSpan covers the rest.
                       if (cell.column.id !== spanCells.columns[0]) return null;
                       return (
                         <TableCell key={cell.id} colSpan={spanCells.columns.length}>
@@ -211,7 +184,6 @@ export function DataTable({
           ) : (
             <TableRow className="hover:bg-transparent">
               <TableCell colSpan={columns.length} className="whitespace-normal">
-                {/* The panel's empty state, not a bare sentence: picture, then the message. */}
                 <div className="flex flex-col items-center gap-3 py-8 text-center">
                   <EmptyArt icon={emptyIcon} />
                   <p className="max-w-sm text-sm font-medium text-pretty text-foreground">

@@ -25,7 +25,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Mirrors `UpdateWebRootRequest`. A wrong value takes the site down until fixed.
 const schema = z.object({
   web_root: z
     .string()
@@ -51,7 +50,6 @@ export function WebRootDialog({ application, open, onOpenChange }) {
 
   const typed = useWatch({ control: form.control, name: "web_root" }) ?? "";
   const relative = String(typed).trim().replace(/^\/+|\/+$/g, "");
-  // web_root is relative to `path` (e.g. /etc means public_html/etc).
   const base = String(application.path ?? "").replace(/\/+$/, "");
   const resolved = base ? (relative ? `${base}/${relative}` : base) : null;
 
@@ -60,8 +58,6 @@ export function WebRootDialog({ application, open, onOpenChange }) {
     try {
       const folder = String(values.web_root ?? "").trim().replace(/^\/+|\/+$/g, "");
       if (folder) {
-        /* The API saves a missing folder and the site then answers 403. Only a clear "no"
-         * blocks: a 403 from the file list says nothing about the folder. */
         const missing = await listFiles(application.id, folder).then(
           () => false,
           (error) => [404, 422].includes(error.response?.status),
@@ -77,8 +73,6 @@ export function WebRootDialog({ application, open, onOpenChange }) {
       else toast.success(t("saved"));
       onOpenChange?.(false);
     } catch (error) {
-      // Saved and on disk, but not live: the field keeps the new value, the dialog stays
-      // open with the warning, and nothing says it worked.
       if (isReloadFailed(error)) {
         mark(application.id, error);
         form.reset({ web_root: values.web_root });

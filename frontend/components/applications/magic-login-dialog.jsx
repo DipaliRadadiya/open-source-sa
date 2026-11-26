@@ -8,15 +8,11 @@ import { launchMagicLogin } from "@/components/applications/use-magic-login";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 
-// Opened only for none or several admins. `admins` is fetched fresh on every
-// open: a stale name would lead to an unexplained refusal.
 export function MagicLoginDialog({ appId, admins, open, onOpenChange }) {
   const t = useTranslations("applications.magicLogin");
   const [pendingId, setPendingId] = useState(null);
 
   async function signIn(admin) {
-    // The chosen row's button shows the wait; the tab opens once the login URL is
-    // ready.
     setPendingId(admin.id);
     try {
       const session = await createMagicLogin(appId, admin.id);
@@ -74,7 +70,6 @@ export function MagicLoginDialog({ appId, admins, open, onOpenChange }) {
         </ul>
       )}
 
-      {/* This is impersonation, and the activity log records it by name. */}
       <p className="text-xs text-muted-foreground">{t("auditNote")}</p>
     </FormModal>
   );

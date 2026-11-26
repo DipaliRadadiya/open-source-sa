@@ -33,23 +33,17 @@ import {
 } from "@/components/ui/tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-// Enabling a risky jail asks first, every attempt: the API's `your_ip` is the panel
-// host, not the browser, so it cannot prove the user is safe.
+// your_ip from the API is the panel host, not the browser, so always ask.
 export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, asked, onAskedChange }) {
   const t = useTranslations("fail2ban");
   const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(null);
-  // Optimistic overrides keyed to the server value they were based on; owned by
-  // ProtectionSection because the ban list reads them too.
   const setAsked = onAskedChange;
   const [guarding, setGuarding] = useState(null);
-  // Which guard button is in flight; both act on the same jail.
   const [guardAction, setGuardAction] = useState(null);
   const [explaining, setExplaining] = useState(false);
   const explainerId = useId();
 
-  // Pre-filled, never trusted. Derived until typed in, because the browser IP
-  // arrives after the first render.
   const [typedIp, setIgnoreIp] = useState(null);
   const ignoreIp = typedIp ?? yourIp ?? "";
 
@@ -60,17 +54,13 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
 
   async function apply(jail, enabled, { addIp = null, acknowledged = false } = {}) {
     setPending(jail.name);
-    // Read the live server value, not the `jail` passed in: the guard dialog's
-    // copy can be stale, and a stale base would retire the override at once.
+    // Use the live server value; the dialog's copy can be stale.
     const server = (jails.find((entry) => entry.name === jail.name) ?? jail).enabled;
     setAsked((current) => ({ ...current, [jail.name]: { value: enabled, from: server } }));
     try {
-      // Before the jail: the address is safe the moment the jail starts.
       if (addIp && !ignoreIps.includes(addIp)) await ensureIgnored(addIp);
       await updateFail2ban({
-        // Required on every call: the endpoint rewrites the config as a unit.
         ...settingsPayload(settings),
-        // The API leaves omitted jails unchanged.
         jails: { [jail.name]: enabled },
         ...(acknowledged ? { acknowledged: true } : null),
       });
@@ -81,14 +71,12 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
       setGuarding(null);
     } catch (error) {
       const data = error.response?.data;
-      // Revert the switch: it must not show a refused state.
       setAsked((current) => {
         const next = { ...current };
         delete next[jail.name];
         return next;
       });
-      // The lockout refusal can arrive as a bare 422 without an `errors` bag;
-      // a 422 on switching a risky jail ON is that refusal.
+      // The lockout refusal can come as a bare 422 without errors.
       const refusedForLockout =
         Boolean(data?.errors?.["fail2ban.lockout_risk"]) ||
         (error.response?.status === 422 && enabled && jail.lockout_risk);
@@ -104,7 +92,6 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
     }
   }
 
-  // The guard's two answers; `action` names the button that spins.
   function answerGuard(action, options) {
     if (!guarding) return;
     setGuardAction(action);
@@ -112,8 +99,6 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
   }
 
   function toggle(jail, enabled) {
-    // Always ask before enabling a risky jail: whether the user's address is
-    // ignored cannot be known here.
     if (enabled && jail.lockout_risk) {
       setGuarding({ jail, enabled });
       return;
@@ -154,7 +139,6 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
                 <div
                   className={cn(
                     "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border p-4",
-                    // Highlight only actual failed attempts reported by the jail.
                     jail.stats?.currently_failed > 0 && "border-warning/40 bg-warning/5",
                   )}
                 >
@@ -175,16 +159,12 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
                       ) : null}
                       <JailState jail={jail} t={t} />
                     </div>
-                    {/* What this jail does, in one line: "SSH" and "Repeat offenders" alone
-                        did not say (Krishna, 13 Oct). Jails without a sentence show none. */}
                     {t.has(`jails.about.${jail.name}`) ? (
                       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t(`jails.about.${jail.name}`)}</p>
                     ) : null}
                     <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">{jail.name}</span>
                   </div>
 
-                  {/* The badge beside the name already says the state, so a role that
-                      cannot change it gets no switch. */}
                   {canManage ? (
                     <div className="col-start-2 row-start-1 flex justify-end">
                       <PendingSwitch
@@ -203,12 +183,10 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
         </CardContent>
       </Card>
 
-      {/* Not dismissible mid-write: closing would read as "cancelled". */}
       <Dialog
         open={guarding !== null}
         onOpenChange={(open) => !open && pending === null && setGuarding(null)}
       >
-        {/* Matches FormModal's width. */}
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-3">
@@ -222,7 +200,6 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
             </DialogDescription>
           </DialogHeader>
 
-          {/* Editable: only the user knows the address they connect from. */}
           <div className="space-y-2 py-2">
             <Label htmlFor="lockout-ip" hint={t("lockout.ipLabelHint")}>{t("lockout.ipLabel")}</Label>
             <Input
@@ -232,7 +209,6 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
               placeholder={t("lockout.ipPlaceholder")}
               autoComplete="off"
               spellCheck={false}
-              // Locked in flight: the address was already sent.
               disabled={pending !== null}
               className="font-mono text-xs"
             />
@@ -240,7 +216,6 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
           </div>
 
           <DialogFooter>
-            {/* Deliberate order: the risky choice is the quiet one. */}
             <Button
               variant="ghost"
               disabled={pending !== null}
@@ -265,7 +240,6 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
   );
 }
 
-// By urgency: attack in progress, active bans, quiet. A disabled jail says so.
 function JailState({ jail, t }) {
   const failing = jail.stats?.currently_failed ?? 0;
   const blocked = jail.stats?.currently_banned ?? 0;
@@ -285,7 +259,6 @@ function JailState({ jail, t }) {
     text = t("jails.stateUnknown");
   }
 
-  // Configuration labels never claim a stopped service is watching.
   const label = !jail.enabled
     ? t("jails.badgeOff")
     : failing > 0

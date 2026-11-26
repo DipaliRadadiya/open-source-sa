@@ -34,19 +34,15 @@ import { formatBytes } from "@/lib/format/bytes";
 import { parseModified } from "@/lib/logs/recent";
 
 const POLL_MS = 3000;
-// The tab sizes and last write, while the log is followed: each read stats every file.
 const SOURCES_POLL_MS = 30000;
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
 const RANGE_LINK =
   "rounded font-medium text-foreground underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-// Sources whose lines carry an HTTP status; `waf_detect` uses `combined` format.
 const WEB_FORMAT_KEYS = new Set(["access", "access_ssl", "waf_detect"]);
-// The web server's own logs, HTTP and HTTPS: on a process site they describe the proxy.
 const PROXY_LOG_KEYS = new Set(["access", "error", "access_ssl", "error_ssl"]);
 const groupFor = (key) => (WEB_FORMAT_KEYS.has(key) ? "web" : "system");
 
-// Lines that fit without the console needing a window-tall box.
 const SHORT_LOG = 15;
 
 export function ApplicationLogsPanel({
@@ -55,7 +51,6 @@ export function ApplicationLogsPanel({
   selected,
   initial,
   initialLines,
-  // Live per source as the reader last left it; unset keys use the defaults.
   followPrefs = {},
   canManage = false,
 }) {
@@ -63,7 +58,6 @@ export function ApplicationLogsPanel({
   const tApp = useTranslations("applications.logs");
   const format = useFormatter();
 
-  // Sizes and last writes, re-read after a clear or a reload; a new page read wins.
   const [sources, setSources] = useState(initialSources);
   const [sourcesProp, setSourcesProp] = useState(initialSources);
   if (sourcesProp !== initialSources) {
@@ -74,16 +68,12 @@ export function ApplicationLogsPanel({
     try {
       setSources(await listApplicationLogs(appId));
     } catch {
-      // The figures stay as they were; the lines are what the reader asked for.
+      // keep the old figures
     }
   }, [appId]);
 
-  // Tabs switch client-side (a navigation re-rendered the whole page on the
-  // server); the URL is still updated so a reload or link opens the same tab.
   const [current, setCurrent] = useState(selected);
-  // A real navigation to a different `?source=` (Back, a link) still wins.
   const [selectedProp, setSelectedProp] = useState(selected);
-  // Line numbers and access-log fields belong to one file, so a tab starts unfiltered.
   const [filters, setFilters] = useState(EMPTY_LOG_FILTERS);
   if (selectedProp !== selected) {
     setSelectedProp(selected);
@@ -91,22 +81,16 @@ export function ApplicationLogsPanel({
     setFilters(EMPTY_LOG_FILTERS);
   }
   const source = sources.find((s) => s.key === current) ?? null;
-  // With an app process, access/error describe the reverse proxy. Keyed on the
-  // source key, not `kind`: the unit can write to files too.
   const hasAppOutput = sources.some((s) => s.key.startsWith("application"));
 
   const [lines, setLines] = useState(() => cleanLines(initial?.log?.lines));
   const [status, setStatus] = useState(initial?.status ?? "ok");
   const [failedMessage, setFailedMessage] = useState(initial?.message ?? null);
-  // Read inside `load`'s catch: a first read that fails shows its box, a
-  // reload of lines already on screen keeps them and says so in a toast.
   const statusRef = useRef(status);
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
   const [truncated, setTruncated] = useState(Boolean(initial?.log?.truncated));
-  // Only meaningful while filtering: the API sets it when the search covered
-  // just the tail of the file.
   const [searchCapped, setSearchCapped] = useState(
     Boolean(initial?.log?.search_window_capped),
   );
@@ -116,15 +100,11 @@ export function ApplicationLogsPanel({
   const [debouncedTerm, setDebouncedTerm] = useState("");
   const [severity, setSeverity] = useState("all");
   const [wrap, setWrap] = useState(false);
-  // Oldest-first by default, like a console and the server Logs panel. The
-  // toolbar requires `onNewestFirstChange`; omitting it throws on click.
   const [newestFirst, setNewestFirst] = useState(false);
   const [prefs, setPrefs] = useState(followPrefs);
   const [follow, setFollow] = useState(() => followPrefFor(current, followPrefs));
   const [busy, setBusy] = useState(false);
   const [tailState, setTailState] = useState("idle");
-  // Each tab opens with its own follow default. The component survives tab
-  // switches, so reset during render (not in an effect) to avoid polling the wrong tab.
   const [followFor, setFollowFor] = useState(current);
   if (followFor !== current) {
     setFollowFor(current);
@@ -165,15 +145,11 @@ export function ApplicationLogsPanel({
         setFailedMessage(null);
         return true;
       } catch (error) {
-        // Cancelled by a newer read (a search, a reload), not a failure: `null`
-        // so the live tail does not count it towards pausing itself.
         if (error?.code === "ERR_CANCELED") return null;
         const code = error?.response?.status;
         if (code === 403) setStatus("locked");
         else if (code === 404) setStatus("missing");
         else {
-          // A failed first read shows the server's message; a failed reload
-          // keeps the lines on screen and toasts.
           if (statusRef.current === "loading") {
             setStatus("failed");
             setFailedMessage(apiMessage(error, null) || null);
@@ -187,7 +163,6 @@ export function ApplicationLogsPanel({
     [appId, source, lineCount, debouncedTerm, filters, t],
   );
 
-  // Re-read on source / window / filter change. The first paint is server-fed.
   const firstRun = useRef(true);
   useEffect(() => {
     if (firstRun.current) {
@@ -197,9 +172,6 @@ export function ApplicationLogsPanel({
     load();
   }, [load]);
 
-  // Live tail: no cursor, so re-read the last N (with the same grep) and replace
-  // the buffer. Every poll re-filters the whole file, so a filter needs no pause.
-  // A read from a line is a fixed window; re-reading it shows nothing new.
   const fromRead = filters.from !== "";
   useEffect(() => {
     if (!follow || disabled || fromRead) return undefined;
@@ -233,7 +205,6 @@ export function ApplicationLogsPanel({
     };
   }, [follow, disabled, fromRead, load]);
 
-  // Live grows the file the tabs measured at load, so their sizes are read again too.
   useEffect(() => {
     if (!follow || disabled) return undefined;
     const id = setInterval(() => {
@@ -244,7 +215,6 @@ export function ApplicationLogsPanel({
 
   const group = source ? groupFor(source.key) : undefined;
   const modified = parseModified(source?.modified);
-  // Non-breaking: on a phone the line wrapped between "2:27" and "PM".
   const writtenAt = modified
     ? format.dateTime(modified, { dateStyle: "medium", timeStyle: "short" }).replace(/ /g, "\u00a0")
     : null;
@@ -270,7 +240,6 @@ export function ApplicationLogsPanel({
           : "live"
         : "idle";
 
-  // Only the reader's choices are remembered, not the automatic pause after failures.
   function chooseFollow(next) {
     setFollow(next);
     const updated = { ...prefs, [current]: next };
@@ -302,7 +271,6 @@ export function ApplicationLogsPanel({
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  // Cleared locally, not re-read: a busy log may already have new lines.
   const clearLog = useCallback(async () => {
     setClearing(true);
     try {
@@ -336,7 +304,6 @@ export function ApplicationLogsPanel({
     (key) => {
       if (key === current) return;
       setCurrent(key);
-      // Clear the old tab's lines while the new tab's load.
       setLines([]);
       setTruncated(false);
       setSearchCapped(false);
@@ -351,14 +318,10 @@ export function ApplicationLogsPanel({
     [current],
   );
 
-  // Reverse proxy hint: only on the proxy logs of a process site.
   const showProxyHint = hasAppOutput && PROXY_LOG_KEYS.has(current);
 
-  // IP, status, method and URL are parsed from the access log's format only.
-  // Not `access_ssl` yet: the API refuses field filters there (422 fields_unsupported).
   const fieldFilters = current === "access";
   const serverFiltered = Boolean(debouncedTerm) || hasFieldFilters(filters);
-  // Pages only an unfiltered read: a filtered one searches 5,000 lines, not `lines`.
   const pageable = firstLine != null && !serverFiltered;
   const goToLine = (line) => setFilters({ ...filters, from: String(Math.max(1, line)) });
 
@@ -368,10 +331,7 @@ export function ApplicationLogsPanel({
       onValueChange={selectSource}
       className="gap-4"
     >
-      {/* Target of the tabs' aria-controls; text size and flex reset so the console is unchanged. */}
       <TabsContent value={current ?? ""} className="flex-none text-[length:inherit]">
-      {/* A short log gets a short console instead of a window-tall black box; past
-          SHORT_LOG lines it takes the window's height and scrolls inside. */}
       <section
         className={cn(
           "flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm",
@@ -380,15 +340,12 @@ export function ApplicationLogsPanel({
       >
         <LogToolbar
           label={source?.label ?? t("noSource")}
-          // The source switch IS the card's title: a strip above the card and the same
-          // name as its heading said it twice. Scrolls rather than wraps.
           heading={
             <ScrollFade className="-my-1 min-w-0 py-1">
               <TabsList className="!h-auto w-fit gap-1 p-1">
                 {sources.map((s) => (
                   <TabsTrigger key={s.key} value={s.key} className="!h-auto gap-2 px-3.5 py-1.5">
                     {s.label}
-                    {/* Which log is filling the disk, readable across the tabs. */}
                     {s.size != null ? (
                       <span className="text-xs font-normal tabular-nums text-muted-foreground">
                         {formatBytes(s.size, format)}
@@ -430,8 +387,6 @@ export function ApplicationLogsPanel({
               t("copiedLines", { count: visible.length }),
             )
           }
-          // Only a file can be downloaded or cleared: Docker keeps a container's
-          // output, so the API refuses the download and clear does nothing.
           downloadUrl={source?.kind === "file" ? applicationLogDownloadUrl(appId, source.key) : undefined}
           showDownload={source?.kind === "file"}
           onClear={canManage && source?.kind === "file" ? () => setConfirmClear(true) : null}
@@ -513,7 +468,6 @@ export function ApplicationLogsPanel({
           severity={severity}
           filtered={serverFiltered || fromRead || severity !== "all"}
           searchCapped={searchCapped}
-          // A filtered read searches the API's whole window, whatever `lines` says.
           searchedLines={MAX_LINES}
           wrap={wrap}
           newestFirst={newestFirst}
@@ -526,7 +480,6 @@ export function ApplicationLogsPanel({
       </section>
       </TabsContent>
 
-      {/* Names the log being cleared; this cannot be undone. */}
       <ConfirmDialog
         open={confirmClear}
         onOpenChange={setConfirmClear}

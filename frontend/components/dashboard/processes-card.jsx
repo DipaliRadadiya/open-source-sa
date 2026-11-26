@@ -19,22 +19,18 @@ import { ProcessTable } from "@/components/dashboard/process-table";
 
 const PREVIEW_COUNT = 3;
 
-// The full list expands in place: a side sheet was too narrow for the command column.
 function ProcessesCardInner({ data, failed, total, canManage }) {
   const t = useTranslations("serverDashboard");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
   return (
-    // Same chrome as every other card on this page.
-    // Title and actions over a hairline, the description opens the body.
     <Card className={cn("gap-0 [--card-spacing:--spacing(4)]", PANEL_CARD)}>
       <CardHeader className="flex flex-col gap-3 space-y-0 border-b sm:flex-row sm:items-center sm:justify-between">
         <CardTitle icon={Cpu} as="h2" className="flex items-center gap-2">
           {t("processes.title")}
         </CardTitle>
         <div className="flex items-center gap-2">
-          {/* Search only in the expanded view; three rows need no filter. */}
           {open ? (
             <>
               <div className="w-full sm:w-56">
@@ -47,7 +43,6 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
               <RefreshButton />
             </>
           ) : null}
-          {/* Default size, not sm, to match the h-9 search and refresh controls. */}
           <Button
             variant="outline"
             onClick={() => setOpen((prev) => !prev)}
@@ -64,7 +59,6 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
       </CardHeader>
 
       <CardContent className="pt-(--card-spacing)">
-        {/* ProcessTable handles the failed state itself. */}
         <ProcessTable
           data={data}
           query={query}

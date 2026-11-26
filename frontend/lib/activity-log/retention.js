@@ -1,5 +1,3 @@
-// The oldest moment a retention of `months` keeps, as the daily cleanup reckons it
-// (now minus whole months; a day the shorter month lacks falls back to its last day).
 export function retentionCutoff(now, months) {
   const d = new Date(now);
   const day = d.getUTCDate();

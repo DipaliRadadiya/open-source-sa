@@ -3,18 +3,12 @@ import { useTranslations } from "next-intl";
 import { runTotals } from "@/lib/server/sync-selection";
 import { cn } from "@/lib/utils";
 
-// Preview and apply share this screen; the preview banner states nothing is written yet.
-// `addable`: rows the scan can add. The panel itself is found and skipped on purpose, so
-// counting it said "Found 1 thing" with nothing to add.
 export function SyncSummary({ run, loaded, addable = null, running, actions = null }) {
   const t = useTranslations("sync");
   const totals = runTotals(run.totals);
   const preview = run.mode === "preview";
 
-  // The run itself died (worker killed, or reaped as stale): no item has to
-  // fail for that, and "nothing found" would be a false all-clear.
   const stopped = run.finished && run.status === "failed";
-  /* Failures lead: they are the only rows anyone needs to act on. */
   const failed = stopped || totals.failed > 0;
 
   const tone = running ? "running" : failed ? "failed" : preview ? "preview" : "done";
@@ -44,8 +38,6 @@ export function SyncSummary({ run, loaded, addable = null, running, actions = nu
             <p className="font-medium">
               {preview ? t("summary.scanning") : t("summary.adopting")}
             </p>
-            {/* A climbing count, not a percentage: the total is unknown until
-                the scan finishes. */}
             <p className="text-sm text-muted-foreground">
               {preview
                 ? t("summary.foundSoFar", { count: loaded })
@@ -90,7 +82,6 @@ export function SyncSummary({ run, loaded, addable = null, running, actions = nu
           </>
         )}
       </div>
-      {/* The page's actions live on its one summary card, not in a loose row above it. */}
       {actions}
     </div>
   );

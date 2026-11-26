@@ -30,7 +30,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Edits in place: delete + add drops the name from the vhost and can break renewal.
 export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
   const t = useTranslations("applications.domains");
   const { pending: refreshing, refreshThen } = useRefresh();
@@ -40,7 +39,6 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
     defaultValues: { type: "alias", redirect_to: "", redirect_status: 301 },
   });
 
-  // Re-seeded on each open: one instance serves every row.
   useEffect(() => {
     if (!open || !domain) return;
     form.reset({
@@ -51,18 +49,15 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
   }, [open, domain, form]);
 
   const type = useWatch({ control: form.control, name: "type" });
-  // Switching a redirect to alias makes the server clear its target; warn first.
   const dropsTarget = domain?.type === "redirect" && type === "alias" && Boolean(domain?.redirect_to);
 
   async function onSubmit(values) {
-    // Redirect fields only for redirects; the server clears them on alias.
     const body =
       values.type === "redirect"
         ? values
         : { type: values.type };
     try {
       await updateDomain(appId, domain.domain, body);
-      // Closes after the list re-reads, so the row already shows the change.
       refreshThen(() => {
         toast.success(t("toast.updated", { domain: domain.domain }));
         onOpenChange?.(false);
@@ -96,7 +91,6 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
           </>
         }
       >
-        {/* Read-only, with the reason: renaming is delete + add. */}
         <div className="space-y-2">
           <FormLabel className="text-muted-foreground">{t("edit.domain")}</FormLabel>
           <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
@@ -115,8 +109,6 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
               <Select value={field.value} onValueChange={field.onChange}>
                 <FormControl>
                   <SelectTrigger className="w-full">
-                    {/* The value box is flex, which defeats line-clamp: truncate the text itself so a long
-                        label ends in "…" instead of being cut. The open list still shows it in full. */}
                     <SelectValue>
                       <span className="min-w-0 truncate">{t(`type.${field.value}`)}</span>
                     </SelectValue>
@@ -127,7 +119,6 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
                   <SelectItem value="redirect">{t("type.redirect")}</SelectItem>
                 </SelectContent>
               </Select>
-              {/* Same hints as the add form. */}
               <p className="text-xs text-muted-foreground">
                 {type === "redirect" ? t("add.redirectHint") : t("add.aliasHint")}
               </p>

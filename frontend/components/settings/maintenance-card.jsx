@@ -73,7 +73,6 @@ import {
 
 const DAYS_OF_MONTH = Array.from({ length: MAX_DAY_OF_MONTH }, (_, i) => i + 1);
 
-// Three cards: each commits to its own endpoint; manual restart persists nothing.
 export function MaintenanceCard({
   updates,
   schedule,
@@ -84,9 +83,7 @@ export function MaintenanceCard({
   pendingReboot,
   pendingRebootFailed,
 }) {
-
   return (
-    // Without the permission, buttons are hidden and fields only show their values.
     <DisabledReasonProvider denied={!canManage}>
       <div className="space-y-4">
         <UpdatesSection updates={updates} canManage={canManage} />
@@ -109,21 +106,16 @@ export function MaintenanceCard({
   );
 }
 
-// An "on" toggle is no evidence anything ran. `unattended_last_result` tells never-run from failed.
 function UpdateStatus({ updates, action = null, meta = null, details = null }) {
   const t = useTranslations("settings.maintenance");
 
-  // Only the security count: every control here acts on security updates alone.
   const security = updates?.security_updates_available ?? null;
 
   const failed = updates?.unattended_last_result === "failed";
-  // Could not open the log, which differs from the log holding no run.
   const unreadable = updates?.unattended_log_readable === false;
   const neverRun =
     updates?.security_updates_enabled && !updates?.unattended_last_run_at;
 
-  // A failed run is reported even when the apt-check count is null. With no note,
-  // the install control still stands on its own.
   if (security == null && !failed && !unreadable && !neverRun) {
     return (
       <div className="space-y-3">
@@ -139,7 +131,7 @@ function UpdateStatus({ updates, action = null, meta = null, details = null }) {
   const tone = failed
     ? "border-destructive/30 bg-destructive/5 text-destructive"
     : unreadable || security == null
-      ? // Not green: the count is unknown.
+      ?
         "border-warning/40 bg-warning/10"
       : security > 0
         ? "border-warning/40 bg-warning/10"
@@ -160,7 +152,6 @@ function UpdateStatus({ updates, action = null, meta = null, details = null }) {
         <CircleCheck className="size-4 shrink-0 text-success" />
       )}
 
-      {/* `null` is "nobody knows", `0` is "nothing waiting". */}
       {security == null ? null : (
         <span className="font-medium">
           {security > 0
@@ -175,7 +166,6 @@ function UpdateStatus({ updates, action = null, meta = null, details = null }) {
           : t("updates.neverChecked")}
       </span>
 
-      {/* Only worth saying when the automation claims to be doing something. */}
       {failed ? (
         <span className="text-xs">{t("updates.lastFailed")}</span>
       ) : unreadable ? (
@@ -191,17 +181,14 @@ function UpdateStatus({ updates, action = null, meta = null, details = null }) {
       ) : null}
 
       {meta}
-      {/* On the right of the note it answers; wraps under it on a phone. */}
       {action ? <span className="ms-auto">{action}</span> : null}
 
-      {/* Verbatim and untranslated (searchable); `wrap-anywhere` for long package names. */}
       {failed && updates?.unattended_last_error ? (
         <p className="w-full font-mono text-xs wrap-anywhere opacity-90">
           {updates.unattended_last_error}
         </p>
       ) : null}
 
-      {/* Absent without `setting,manage` or when no excerpt could be built. */}
       {failed && updates?.unattended_last_log ? (
         <Collapsible className="group/log w-full">
           <CollapsibleTrigger asChild>
@@ -229,25 +216,21 @@ function UpdateStatus({ updates, action = null, meta = null, details = null }) {
   );
 }
 
-// Runs unattended-upgrades' own binary, so it installs exactly what the toggle allows.
 function RunSecurityUpdates({ run, canManage, frame }) {
   const t = useTranslations("settings.maintenance");
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [starting, setStarting] = useState(false);
-  // Seeded from the server render so a reload mid-upgrade still shows it.
   const [current, setCurrent] = useState(run ?? null);
   const [synced, setSynced] = useState(run ?? null);
-  // The upgrade can restart php-fpm and the frontend; shown after the second failed poll.
   const [reconnecting, setReconnecting] = useState(false);
 
-  // During render, not an effect: an effect would render the stale run first.
+  // During render, not in an effect, or the stale run renders first.
   if (run !== synced) {
     setSynced(run);
     setCurrent(run ?? null);
   }
 
-  // Derived, not stored, so a spinner cannot outlive the run.
   const running = current?.status === "running";
 
   useEffect(() => {
@@ -268,7 +251,6 @@ function RunSecurityUpdates({ run, canManage, frame }) {
         setCurrent(next);
 
         if (next && next.status !== "running") {
-          // Counts, last-run line and reboot banner are all server-rendered and now stale.
           router.refresh();
         }
       } catch {
@@ -292,7 +274,6 @@ function RunSecurityUpdates({ run, canManage, frame }) {
       setConfirming(false);
       toast.success(t("updates.runStarted"));
     } catch (error) {
-      // 409 carries the run already going; adopt it rather than report an error.
       const existing = error?.response?.data?.security_update;
       if (existing) {
         setCurrent(existing);
@@ -310,15 +291,12 @@ function RunSecurityUpdates({ run, canManage, frame }) {
       ? t("updates.runInProgress")
       : null;
 
-  // The main action, filled (it is the one thing to do here), and placed by `frame`
-  // inside the note that says why.
   const action = (
         <ReasonTooltip reason={reason}>
           <Button
             type="button"
             variant="default"
             size="sm"
-            // Wraps: in Russian the label alone is wider than a phone's card.
             className="h-auto min-h-8 py-1.5 text-left whitespace-normal"
             disabled={!canManage || running || starting}
             onClick={() => setConfirming(true)}
@@ -341,7 +319,6 @@ function RunSecurityUpdates({ run, canManage, frame }) {
           </span>
         ) : null}
 
-        {/* The last panel-initiated run, a different fact from the last automatic one. */}
         {current && !running ? (
           <span className="text-xs text-muted-foreground">
             {current.status === "succeeded"
@@ -361,7 +338,6 @@ function RunSecurityUpdates({ run, canManage, frame }) {
   const hasDetails = Boolean((current?.reboot_required_after && !running) || current?.status === "failed" || current?.output);
   const details = hasDetails ? (
     <>
-      {/* Never performed here: rebooting is its own confirmed action. */}
       {current?.reboot_required_after && !running ? (
         <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
           <RotateCcw className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -375,7 +351,6 @@ function RunSecurityUpdates({ run, canManage, frame }) {
         </p>
       ) : null}
 
-      {/* apt does not report how much is left, so no progress bar. */}
       {current?.output ? (
         <Collapsible defaultOpen={running} className="group/run">
           <CollapsibleTrigger asChild>
@@ -432,7 +407,7 @@ function UpdatesSection({ updates, canManage }) {
   const defaults = {
     security_updates_enabled: updates?.security_updates_enabled ?? false,
     auto_reboot: updates?.auto_reboot ?? false,
-    // The API also accepts "now", which a time field can't express; it shows as an editable time.
+    // The API also accepts "now", which a time field can't show.
     reboot_time: /^\d{2}:\d{2}$/.test(updates?.reboot_time ?? "")
       ? updates.reboot_time
       : "03:00",
@@ -474,7 +449,6 @@ function UpdatesSection({ updates, canManage }) {
             />
           }
         >
-          {/* What is actually waiting; the switches below only describe intent. */}
           <RunSecurityUpdates
             run={updates?.security_update ?? null}
             canManage={canManage}
@@ -521,7 +495,6 @@ function UpdatesSection({ updates, canManage }) {
             )}
           />
 
-          {/* Shown only when automatic restart is on. */}
           {autoReboot ? (
             <>
               <FormField
@@ -584,7 +557,6 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
   const defaults = {
     enabled: schedule?.enabled ?? false,
     frequency: schedule?.frequency ?? "weekly",
-    // The API adds a few minutes past the hour to avoid every other :00 cron job.
     hour: schedule?.hour ?? 3,
     day_of_week: schedule?.day_of_week ?? 0,
     day_of_month: schedule?.day_of_month ?? 1,
@@ -601,7 +573,6 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
 
   async function onSubmit(values) {
     try {
-      // Off removes the cron file, so no cadence is sent with it.
       await updateRebootSchedule(values.enabled ? values : { enabled: false });
       form.reset(values);
       await refreshAndWait();
@@ -635,7 +606,6 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
             render={({ field }) => (
               <Row
                 toggle
-                // Alone when off: the next-run cell beside it only had "Not scheduled" to say.
                 wide={!enabled}
                 label={t("schedule.enable")}
                 hint={
@@ -782,7 +752,6 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
             </>
           ) : null}
 
-          {/* Reported, not set: the API computes it from the expression on disk. */}
           {enabled ? (
             <InfoRow label={t("schedule.nextLabel")}>
               <span className="text-sm tabular-nums">
@@ -796,7 +765,6 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
   );
 }
 
-// Nothing to persist, so no Save.
 function ManualSection({
   canManage,
   rebootRequired,
@@ -831,11 +799,9 @@ function ManualSection({
       const { data } = await rebootServer(minutes);
       setConfirming(false);
 
-      // Only an immediate restart shows the curtain; a scheduled one has not started.
       if (minutes === 0) {
         start();
       } else {
-        // `at` is the server's clock; "in N minutes" is a fallback, as the browser's may drift.
         const at = data?.reboot?.at;
         await refreshAndWait();
         toast.success(
@@ -851,7 +817,6 @@ function ManualSection({
     }
   }
 
-  // A role that cannot restart sees this card only when a restart is due or scheduled.
   if (!canManage && !rebootRequired && !pendingReboot?.scheduled && !pendingRebootFailed) return null;
 
   return (
@@ -874,20 +839,17 @@ function ManualSection({
         ) : null
       }
     >
-      {/* Read from systemd, so one scheduled from a shell shows up too. */}
+      {/* Read from systemd, so a reboot scheduled from a shell shows too. */}
       {pendingReboot?.scheduled ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
           <span className="flex items-start gap-2">
             <CalendarClock className="mt-0.5 size-4 shrink-0 text-warning" />
-            {/* `at` can be null on a pending shutdown with no systemd timestamp. */}
             {pendingReboot.at ? (
               <span className="flex flex-col gap-0.5">
                 {typeof pendingReboot.seconds_remaining === "number" ? (
                   <RebootCountdown
-                    // Keyed so a refreshed measurement re-anchors the deadline.
                     key={pendingReboot.seconds_remaining}
                     secondsRemaining={pendingReboot.seconds_remaining}
-                    // At zero this server is going down; the curtain hard-reloads when it is back.
                     onElapsed={start}
                   />
                 ) : null}
@@ -911,14 +873,12 @@ function ManualSection({
           </Button>
         </div>
       ) : pendingRebootFailed ? (
-        // Not the same as "nothing scheduled".
         <p className="flex items-start gap-2 rounded-lg border p-3 text-sm text-muted-foreground">
           <CircleAlert className="mt-0.5 size-4 shrink-0" />
           {t("reboot.pendingUnknown")}
         </p>
       ) : null}
 
-      {/* Inline because it is needed before pressing. */}
       {rebootRequired ? (
         <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
           <RotateCcw className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -926,7 +886,6 @@ function ManualSection({
         </p>
       ) : null}
 
-      {/* The restart form itself only for a role that can restart. */}
       {canManage ? (
       <>
       <p className="text-sm text-muted-foreground">
@@ -935,7 +894,6 @@ function ManualSection({
 
       <InfoRow label={t("reboot.when")}>
         <Select value={delay} onValueChange={setDelay} disabled={!canManage}>
-          {/* InfoRow's label is not a <label>, so the trigger carries the same words. */}
           <SelectTrigger id="reboot-delay" aria-label={t("reboot.when")} className="w-full">
             <SelectValue />
           </SelectTrigger>

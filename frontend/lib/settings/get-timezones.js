@@ -22,8 +22,6 @@ const timezonesResponseSchema = z.object({
     .default([]),
 });
 
-// Exactly what `PUT /settings/general` validates against (the browser's list
-// differs, e.g. no `Etc/UTC`). [] on failure.
 export const getTimezones = cache(async function getTimezones() {
   try {
     const res = await serverFetch("/timezones");

@@ -1,4 +1,3 @@
-/** Seconds → words ("1 day"), echoed beside raw-seconds inputs. */
 export function humanDuration(t, seconds) {
   const n = Number(seconds);
   if (!Number.isFinite(n) || n <= 0) return null;

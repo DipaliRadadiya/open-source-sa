@@ -1,6 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Keeps the card slot filled while the page awaits session and branding. Sign-in has 2 fields, sign-up 4.
 export function AuthCardSkeleton({ fields = 2 }) {
   return (
     <div className="space-y-6 rounded-xl border bg-card p-6 shadow-sm" aria-busy="true">

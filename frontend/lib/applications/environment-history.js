@@ -1,7 +1,3 @@
-/** How a `.env` history row is read; kept out of the component for testing. */
-
-// A first save (no previous version) differs from one pruned by retention, and from a save
-// made with the copy turned off (`safety_copy: false`, once the history rows carry it).
 export function unrestorableReason(entry) {
   if (entry?.restorable) return null;
   if (!entry?.backup) return entry?.safety_copy === false ? "noCopy" : "first";
@@ -9,7 +5,6 @@ export function unrestorableReason(entry) {
   return "pruned";
 }
 
-// The backend stores a comma-joined string; "—" means no keys changed.
 export function changedKeys(entry) {
   const raw = (entry?.keys ?? "").trim();
 
@@ -21,7 +16,6 @@ export function changedKeys(entry) {
     .filter(Boolean);
 }
 
-// `is_system` first; a null user without it is a deleted account.
 export function actorOf(entry) {
   if (entry?.is_system) return { kind: "system" };
   if (entry?.user?.username) return { kind: "user", username: entry.user.username };

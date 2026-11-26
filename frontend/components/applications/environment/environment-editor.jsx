@@ -28,8 +28,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
-// Must not change: a new N8N_ENCRYPTION_KEY makes every saved n8n credential
-// unreadable; port and folder must match the service and proxy. The API only checks syntax.
+// Don't change these: a new N8N_ENCRYPTION_KEY makes every saved n8n credential unreadable. The API only checks syntax.
 const GUARDED_KEYS = ["N8N_ENCRYPTION_KEY", "N8N_PORT", "N8N_USER_FOLDER"];
 
 function envValues(text) {
@@ -47,7 +46,6 @@ function guardedChanges(saved, next) {
   return GUARDED_KEYS.filter((key) => before.has(key) && before.get(key) !== after.get(key));
 }
 
-// Keeps any indent and `export ` prefix.
 function applySuggestion(text, key, suggested) {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const line = new RegExp(`^(\\s*)(export\\s+)?${escaped}\\s*=.*$`, "m");
@@ -57,15 +55,12 @@ function applySuggestion(text, key, suggested) {
   return `${text}${sep}${key}=${suggested}\n`;
 }
 
-// The API's `max:262144` on `raw`, checked here so the error talks about size, not syntax.
 const MAX_CHARS = 262144;
 
 function overLimit(text) {
-  // `.length` (UTF-16 units) is a cheap upper bound; count code points only past it.
   return text.length > MAX_CHARS && Array.from(text).length > MAX_CHARS;
 }
 
-// The API saves an emptied file as a single newline; show it as empty.
 function editable(raw) {
   return (raw ?? "").trim() ? raw : "";
 }
@@ -78,25 +73,20 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const [contents, setContents] = useState(editable(initialEnv.raw));
   const [saving, setSaving] = useState(false);
   const [syntaxError, setSyntaxError] = useState(null);
-  // errors.raw also carries "N8N_PORT cannot be changed here": a protected key, not a syntax error.
+  // errors.raw also carries refusals for protected keys, not just syntax errors.
   const [rawRefusal, setRawRefusal] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
-  // Keep the file being replaced as a `.env.bak-…`. Holds for later saves on this page, and is on
-  // again whenever the page is opened: the choice is never remembered.
   const [safetyCopy, setSafetyCopy] = useState(true);
   const [guarded, setGuarded] = useState([]);
-  // Warnings the check found in the text about to be saved, not yet in the saved file.
   const [preflight, setPreflight] = useState([]);
 
-  // Picks up a file changed elsewhere (useState ignores later props). `seenRaw` must
-  // track only the prop, never the saved text, or the stale prop is copied back in.
+  // useState ignores later props. Track only the prop in seenRaw, never the saved text.
   const propRaw = initialEnv.raw ?? "";
   const [seenRaw, setSeenRaw] = useState(propRaw);
 
   if (propRaw !== seenRaw) {
     setSeenRaw(propRaw);
     setEnv(initialEnv);
-    // A refresh confirming this editor's own save leaves the text alone.
     if (propRaw !== (env.raw ?? "")) {
       setContents(editable(propRaw));
       setSyntaxError(null);
@@ -106,10 +96,8 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const dirty = contents !== editable(env.raw);
   const tooLarge = overLimit(contents);
 
-  // The panel guard covers in-app navigation as well as reload/close.
   useWatchUnsaved("environment-editor", dirty);
 
-  // Says whether the save also restarts, since otherwise the app may ignore the new file.
   const sendRestart = Boolean(env.requires_restart);
   const saveLabel = env.requires_restart
     ? t("saveRestart")
@@ -130,7 +118,6 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
     setSaving(true);
     setSyntaxError(null);
     if (!checked) {
-      // A failed check never blocks the save: the save runs the same checks itself.
       const result = await checkEnvironment(appId, sent).catch(() => null);
       if (result && result.saveable === false) {
         const text = (result.refused ?? []).join("\n");
@@ -153,13 +140,11 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
       const data = await saveEnvironment(appId, {
         raw: sent,
         restart: sendRestart,
-        // A first save has no file to keep.
         safetyCopy: !env.exists || safetyCopy,
       });
       const next = data?.environment;
       if (next) {
         setEnv(next);
-        // Keep anything typed while the request ran as unsaved changes.
         setContents((current) => (current === sent ? editable(next.raw ?? sent) : current));
       }
       toast.success(
@@ -170,10 +155,8 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
             : t("saved"),
       );
 
-      // The textarea keeps its own state, so it does not flicker.
       router.refresh();
     } catch (error) {
-      // Syntax errors come back verbatim under errors.raw; nothing was written.
       const raw = error.response?.data?.errors?.raw;
       if (raw) {
         const text = Array.isArray(raw) ? raw.join("\n") : String(raw);
@@ -208,7 +191,6 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   return (
     <Card>
       <CardContent className="space-y-4">
-        {/* Checks are backend-localised; shown verbatim. */}
         {env.checks?.length ? (
           <div className="space-y-2">
             {env.checks.map((check, i) => {
@@ -293,7 +275,6 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
                   {t("restore.action")}
                 </Button>
               ) : null}
-              {/* Whitespace-only counts as empty so CopyButton hides itself. */}
               <CopyButton
                 value={contents.trim() ? contents : ""}
                 label={t("copy")}
@@ -313,7 +294,6 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
           />
         </div>
 
-        {/* A first save replaces nothing, so there is no copy to choose. */}
         {canManage && env.exists ? (
           <div className="space-y-2">
             <SafetyCopySwitch
@@ -335,7 +315,6 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
         {tooLarge ? (
           <NotSaved title={t("tooLargeTitle")}>{t("tooLarge")}</NotSaved>
         ) : syntaxError ? (
-          // Nothing was written; show the backend's own message.
           <NotSaved title={t(rawRefusal ? "protectedTitle" : "syntaxTitle")}>{syntaxError}</NotSaved>
         ) : null}
 
@@ -344,7 +323,6 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
       {canManage ? (
         <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 py-4">
           <p className="text-xs text-muted-foreground">{footerNote}</p>
-          {/* Wraps: "Save & restart" is long in some languages and was cut off on a phone. */}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <ReasonTooltip reason={!dirty && !saving ? tc("nothingToRevert") : null}>
               <Button variant="ghost" onClick={revert} disabled={!dirty || saving}>
@@ -388,7 +366,6 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
         confirmLabel={t("preflight.confirm")}
         onConfirm={() => onSave({ confirmed: true, checked: true })}
       >
-        {/* Backend-localised, shown verbatim like the saved file's checks. */}
         <ul className="space-y-2 text-sm">
           {preflight.map((check, i) => (
             <li key={`${check.code}-${i}`} className="rounded-lg border border-warning/30 bg-warning/5 p-3">
@@ -412,7 +389,6 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
               setContents(editable(next.raw));
               setSyntaxError(null);
             }
-            // A restore also writes a history row.
             router.refresh();
           }}
         />

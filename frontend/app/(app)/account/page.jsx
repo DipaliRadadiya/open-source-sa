@@ -17,17 +17,13 @@ export default async function AccountPage({ searchParams }) {
     getMyActivity(sp, "account"),
     getMyActivityFilters(),
     getTranslations("account"),
-    // Security tab: the last few sign-ins and when the password last changed.
     getMyActivity({ action: "logged_in" }, "account"),
     getMyActivity({ action: "password_changed" }, "account"),
   ]);
 
-
-  // A typed or bookmarked ?page=99 must not read as an empty log.
   redirectOutOfRange("/account", sp, meta, failed);
   return (
     <div className="space-y-6">
-      {/* Reached from the user menu, not the sidebar, so it names its own trail. */}
       <PageCrumb root>{t("title")}</PageCrumb>
       <PageHeader title={t("title")} />
       <AccountIdentity user={user} />
@@ -36,7 +32,6 @@ export default async function AccountPage({ searchParams }) {
         user={user}
         entries={entries}
         meta={meta}
-        // Only the history failed; the profile half of this page is fine.
         activityFailed={failed}
         activityStatus={status}
         activityFailure={failure}

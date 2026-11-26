@@ -25,7 +25,7 @@ test("a worker that will not stay running shows the API's message as well as the
   // printed and the reference, and on an edit that the previous command was kept (RC-4).
   for (const f of ["create-worker-dialog.jsx", "edit-worker-dialog.jsx"]) {
     const s = read(`${WK}/${f}`);
-    assert.match(s, /handleValidationError\(error, form, \{ formError: true, unrendered: \["kind"\] \}\);\n\s+\/\/[^\n]*\n\s+\/\/[^\n]*\n\s+if \(error\.response\?\.data\?\.reason === "worker_did_not_start"\) \{\n\s+form\.setError\("root\.server", \{ message: apiMessage\(error, /, f);
+    assert.match(s, /handleValidationError\(error, form, \{ formError: true, unrendered: \["kind"\] \}\);\s+if \(error\.response\?\.data\?\.reason === "worker_did_not_start"\) \{\n\s+form\.setError\("root\.server", \{ message: apiMessage\(error, /, f);
   }
   // A failed edit still re-reads the list behind the message.
   assert.match(read(`${WK}/edit-worker-dialog.jsx`), /apiMessage\(error, t\("edit\.failed"\)\) \}\);\s*refresh\(\);/);

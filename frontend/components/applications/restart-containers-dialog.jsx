@@ -7,7 +7,6 @@ import { controlApplicationProcess } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-// Docker apps only: the API runs `docker compose restart` on every container of the app.
 export function RestartContainersDialog({ application, open, onOpenChange }) {
   const t = useTranslations("applications.restart");
   const { refreshThen } = useRefresh();
@@ -30,7 +29,6 @@ export function RestartContainersDialog({ application, open, onOpenChange }) {
         setPending(false);
       });
     } catch (requestError) {
-      // The 422s (paused, not ready, Docker down) carry a localized reason.
       setError(apiMessage(requestError, t("failed")));
       setPending(false);
     }

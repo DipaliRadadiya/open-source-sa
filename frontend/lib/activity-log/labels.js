@@ -5,7 +5,6 @@ export function humanizeActivity(key) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// Badge variant for a verb: green for additions, red for removals/failures.
 export function actionBadgeVariant(action) {
   if (!action) return "muted";
   const a = action.toLowerCase();
@@ -40,8 +39,7 @@ export function actionDotClass(action) {
   return "bg-muted-foreground/40";
 }
 
-// Full class strings: Tailwind scans source, so a composed `bg-${family}/12` is never generated.
-// Text mixes in the foreground: chart colours alone are too low-contrast at 12px.
+// Full class names: Tailwind can't see classes built with template strings.
 const PEOPLE = "border-transparent bg-chart-5/12 text-[color-mix(in_oklch,var(--chart-5)_55%,var(--foreground))]";
 const SECURITY = "border-transparent bg-chart-4/12 text-[color-mix(in_oklch,var(--chart-4)_55%,var(--foreground))]";
 const RUNTIME = "border-transparent bg-chart-1/12 text-[color-mix(in_oklch,var(--chart-1)_55%,var(--foreground))]";
@@ -73,7 +71,6 @@ const TYPE_FAMILY = {
   server: HOUSEKEEPING,
 };
 
-// Translated type name; a type without a key falls back to its humanised id.
 export function typeLabel(t, type) {
   if (!type) return "";
   return t.has(`types.${type}`) ? t(`types.${type}`) : humanizeActivity(type);
@@ -83,8 +80,6 @@ export function typeBadgeClass(type) {
   return TYPE_FAMILY[type] ?? "border-border text-muted-foreground";
 }
 
-// The filters endpoint is not scope-aware, so a fixed-scope page narrows the list itself.
-// Mirrors config/activity.php `scopes.account`.
 const ACCOUNT_TYPES = new Set(["user", "role", "permission", "central"]);
 
 export function typesForScope(types = [], scope) {
@@ -94,13 +89,11 @@ export function typesForScope(types = [], scope) {
   );
 }
 
-// Union of the per-type verbs for types in scope; `all` only when the API sends no breakdown.
 export function actionsForScope(actions = {}, types = [], scope) {
   if (!scope) return actions;
   const allowed = typesForScope(types, scope);
   const union = new Set();
   for (const type of allowed) for (const action of actions[type] ?? []) union.add(action);
-  // With per-type lists, an empty union means none of these verbs belong here.
   const perType = Object.keys(actions).some((key) => key !== "all");
   const scoped = { ...actions, all: union.size || perType ? [...union].sort() : (actions.all ?? []) };
   for (const type of Object.keys(scoped)) {

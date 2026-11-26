@@ -1,7 +1,5 @@
 import { api } from "@/lib/api/client";
 
-// Client-side cron job mutations. Callers refresh the server component after.
-
 export function createCronjob(values) {
   return api.post("/cronjobs", values);
 }
@@ -18,7 +16,6 @@ export function setCronjobActive(id, active) {
   return api.put(`/cronjobs/${id}`, { active });
 }
 
-/** Run now: 202 means it has started; its result arrives in the run history. */
 export function runCronjob(id) {
   return api.post(`/cronjobs/${id}/run`);
 }

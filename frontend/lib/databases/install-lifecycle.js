@@ -1,6 +1,5 @@
 export const SQL_ENGINE_NAMES = ["mysql", "mariadb"];
 
-// Older APIs had no retryable flag; keep their known terminal failures.
 const LEGACY_NON_RETRYABLE_REASONS = [
   "port_in_use_by_mysql",
   "port_in_use_by_mariadb",
@@ -35,13 +34,10 @@ export function installingEngineName(engines = []) {
   );
 }
 
-// Failed work wins so Retry cannot be displaced. MySQL/MariaDB are matched by engine name
-// (older payloads omit the driver).
 export function findInstallCandidate(engines = []) {
   return findInstallCandidates(engines)[0] ?? null;
 }
 
-/** Every engine that could be added right now, retryable failures first. */
 export function findInstallCandidates(engines = []) {
   if (installingEngineName(engines)) return [];
 
@@ -51,7 +47,6 @@ export function findInstallCandidates(engines = []) {
     !engineIsPresent(engine) &&
     engine.install_status !== "installing" &&
     (engine.install_status !== "failed" || engineInstallCanRetry(engine)) &&
-    // One SQL engine per server.
     !(hasSql && isSqlEngine(engine));
 
   const addable = engines.filter(canAdd);
@@ -69,8 +64,6 @@ export function markEngineInstalling(engines = [], engineName) {
           install_status: "installing",
           install_reason: null,
           install_message: null,
-          // A 202 proves the work is queued. Everything after this placeholder
-          // comes from the first successful poll rather than a client timer.
           install_progress: {
             status: "installing",
             started_at: null,

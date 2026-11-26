@@ -13,11 +13,6 @@ import {
 import { SELECT_WELL } from "@/components/data-table/toolbar-well";
 import { cn } from "@/lib/utils";
 
-/**
- * The "whose backups" filter of History and Restores: applications, plus the databases
- * that are backed up on their own (RC-19/RC-23) when there are any. One control writing
- * `application` or `database`, never both, so the two cannot contradict each other.
- */
 export function SubjectFilter({ applications = [], databases = [], allLabel, label, className }) {
   const t = useTranslations("backups.subjectFilter");
   const searchParams = useSearchParams();
@@ -30,7 +25,7 @@ export function SubjectFilter({ applications = [], databases = [], allLabel, lab
   const database = searchParams.get("database");
   const application = searchParams.get("application");
   const raw = database ? `database:${database}` : application ? `application:${application}` : null;
-  // Only a value offered here: Radix renders a blank trigger for an unknown one.
+  // Radix shows a blank trigger for an unknown value.
   const value = options.some((option) => option.value === raw) ? raw : "all";
   const everything = dbOptions.length ? t("all") : allLabel;
 

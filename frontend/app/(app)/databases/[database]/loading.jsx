@@ -1,7 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkCard, SkFacts, SkMasthead, SkTabs } from "@/components/ui/skeleton-kit";
 
-// One database: masthead with its button, tabs, then the Overview tab's cards.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

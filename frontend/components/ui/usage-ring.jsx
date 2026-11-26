@@ -7,8 +7,6 @@ const STROKE = {
   destructive: "stroke-destructive",
 };
 
-// A ring gauge with its reading in the middle. `percent` null draws the empty
-// track only: nothing measured is not 0%.
 export function UsageRing({ percent, label, children, size = 56, className }) {
   const stroke = 5;
   const r = (size - stroke) / 2;

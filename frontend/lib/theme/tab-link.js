@@ -1,4 +1,3 @@
-// Link-driven tabs (the choice lives in the URL) drawn like the panel's Tabs strip.
 export const TAB_LINK_GROUP = "inline-flex w-fit max-w-full flex-wrap items-center gap-1 rounded-lg bg-muted p-1";
 
 export function tabLinkClass(active) {

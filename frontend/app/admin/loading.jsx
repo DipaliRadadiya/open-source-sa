@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkCard, SkRows } from "@/components/ui/skeleton-kit";
 
-// Mirrors the admin dashboard: four status tiles, the attention lines, then the
-// activity feed beside the access card.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

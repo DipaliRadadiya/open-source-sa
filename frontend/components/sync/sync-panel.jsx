@@ -23,12 +23,8 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 
-/* One page of items per call, matching the backend's limit. A full page means
-   more is waiting, so the next poll goes out immediately. */
 const PAGE_SIZE = 500;
 const POLL_MS = 2000;
-/* A scan walks the disk; ten minutes is generous for the largest server and
-   still short enough that a dead worker is noticed in the same session. */
 const SCAN_STOP_MS = 10 * 60 * 1000;
 
 export function SyncPanel({ run: initialRun, items: initialItems, ignores: initialIgnores, canManage }) {
@@ -40,20 +36,15 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
   const [ignores, setIgnores] = useState(initialIgnores ?? []);
   const [starting, setStarting] = useState(false);
   const [adoptOpen, setAdoptOpen] = useState(false);
-  // Ignoring or restoring several rows at once, each with its own spinner.
   const ignoring = usePendingKeys();
-  // Set when the poll gives up: the run never reported finishing.
   const [stalled, setStalled] = useState(false);
 
-  /* A ref, not state: the poll loop reads it between renders, and a stale
-     closure would re-request the same rows forever. */
+  // A ref: the poll loop reads it between renders, and a stale closure would refetch forever.
   const cursor = useRef(initialItems?.length ? initialItems[initialItems.length - 1].id : 0);
 
   const runId = run?.id ?? null;
   const ignoredKeys = ignoreKeySet(ignores);
 
-  /* Keyed on the run id alone: depending on `finished` would stop the loop
-     while a full final page is still unread. The loop decides when it is done. */
   useEffect(() => {
     if (!runId) return undefined;
 
@@ -65,13 +56,11 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
       });
 
     (async () => {
-      // When this loop started, so it can stop: a run whose worker died never
-      // sets `finished`, and a deleted run 404s forever.
+      // A run whose worker died never finishes, and a deleted run 404s forever.
       const startedAt = Date.now();
 
       while (!cancelled) {
         if (Date.now() - startedAt > SCAN_STOP_MS) {
-          // Say so rather than leaving a progress bar that silently stopped.
           if (!cancelled) setStalled(true);
           return;
         }
@@ -89,21 +78,17 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
 
             if (batch.length) {
               cursor.current = batch[batch.length - 1].id;
-              /* Append: the feed is cursor-based, so each poll carries only
-                 new rows. */
               setItems((current) => [...current, ...batch]);
             }
 
             if (!cancelled) setRun(next);
 
-            // Done only when the run has ended AND the feed has run dry.
             if (next.finished && batch.length < PAGE_SIZE) return;
           }
         } catch {
-          // A dropped poll is not a failed run; wait and ask again.
+          // retry on the next poll
         }
 
-        // A full page means more is certainly waiting, so don't idle for it.
         if (batchLength !== PAGE_SIZE) await wait(POLL_MS);
       }
     })();
@@ -118,8 +103,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
     setStarting(true);
     try {
       const { data } = await startSync({
-        // A scan always reads the firewall (read-only); only adopting it is
-        // opt-in, or the opt-in checkbox could never appear.
+        // A scan always reads the firewall; only adopting it is opt-in.
         includeFirewall: mode === "preview",
         mode,
         ...options,
@@ -133,7 +117,6 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
       setRun(parsed.data.sync);
       setAdoptOpen(false);
     } catch (error) {
-      // A second live run is a 422 whose message explains it; show it as is.
       toast.error(apiMessage(error, mode === "apply" ? t("errors.addFailed") : t("errors.startFailed")));
     } finally {
       setStarting(false);
@@ -187,8 +170,6 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
       {canManage ? (
-        // Phone: the filled buttons take full rows and the two quiet ones share the
-        // last, instead of Refresh wrapping alone.
         <Button onClick={() => begin("preview")} disabled={starting || running} className="max-sm:w-full">
           {starting || running ? (
             <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -224,7 +205,6 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
 
   return (
     <div className="space-y-6">
-      {/* Above the summary, whose counts are what stopped being true. */}
       {stalled ? (
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-sm text-warning">
           {t("stalled")}
@@ -245,7 +225,6 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
       {run ? (
         <SyncSummary
           run={run}
-          // Dismissed rows stay in the list (with Undo) but are not counted.
           loaded={running ? items.length : items.filter((item) => !ignoredKeys.has(ignoreKey(item))).length}
           addable={items.filter((item) => item.action === "found" && !ignoredKeys.has(ignoreKey(item))).length}
           running={running}
@@ -256,19 +235,16 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
       {!run ? (
         <EmptyState
           icon={ScanSearch}
-          // Not "nothing matches": no scan has run yet.
           badge={null}
           title={t("empty.title")}
           description={t("empty.description")}
           action={actions}
         />
       ) : items.length === 0 && running ? (
-        // Nothing found yet is not "Nothing matches": rows stream in as the scan finds them.
         <SyncResultsPending
           message={run.mode === "preview" ? t("results.waiting") : t("results.waitingAdopt")}
         />
       ) : items.length === 0 && run.finished ? (
-        // A run that stopped proves nothing about what is left; the summary says so.
         run.status === "failed" ? null : (
           <EmptyState
             icon={ScanSearch}
@@ -287,7 +263,6 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
         />
       )}
 
-      {/* Keyed on the run so a new scan gets fresh type checkboxes. */}
       <AdoptDialog
         key={run?.id ?? "none"}
         open={adoptOpen}

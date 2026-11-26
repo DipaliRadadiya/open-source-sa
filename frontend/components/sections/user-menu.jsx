@@ -33,8 +33,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
     try {
       await logout();
     } catch (error) {
-      // Still signed in: /login would bounce back to "/". A 401/419 means the session is
-      // already gone, which is the requested outcome.
+      // Still signed in: /login would bounce back to /. 401/419 means already signed out.
       const status = error?.response?.status;
       if (status !== 401 && status !== 419) {
         toast.error(apiMessage(error, t("logOutFailed")));
@@ -42,10 +41,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
         return;
       }
     }
-    // A deliberate logout forgets the last page, so the next user does not land on the previous user's page.
     forgetRememberedPath();
-    // Deliberately not cleared, so the menu keeps saying "signing out" until the login
-    // page replaces it.
     router.push("/login");
     router.refresh();
   }
@@ -58,7 +54,6 @@ export function UserMenu({ extraItems, impersonating = false }) {
     setLeaving(true);
     try {
       await stopImpersonating();
-      // Session identity changed: hard nav so SSR re-reads the admin session.
       window.location.href = "/admin/users";
     } catch (error) {
       toast.error(apiMessage(error, tImp("banner.failed")));
@@ -109,7 +104,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
               <DropdownMenuItem
                 disabled={leaving || signingOut}
                 onSelect={(event) => {
-                  // Held open: Radix closes on select, which would hide the pending state.
+                  // Radix closes on select, which would hide the pending state.
                   event.preventDefault();
                   onBackToAccount();
                 }}
@@ -134,7 +129,6 @@ export function UserMenu({ extraItems, impersonating = false }) {
             variant="destructive"
             disabled={signingOut || leaving}
             onSelect={(event) => {
-              // Same: otherwise the menu disappears and nothing shows until the login screen.
               event.preventDefault();
               onLogout();
             }}

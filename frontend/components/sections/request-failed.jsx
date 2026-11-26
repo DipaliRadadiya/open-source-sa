@@ -3,8 +3,7 @@ import { TriangleAlert } from "lucide-react";
 import { RetryButton } from "@/components/ui/retry-button";
 import { FailureScreen, FailureFooterLabel } from "@/components/sections/failure-screen";
 
-// The request line sits in a native `<details>`: no hydration on a failure screen.
-// `trace`/`file`/`line` are never carried; only their presence is reported (debug mode).
+// Native <details>, no hydration needed on a failure screen.
 export function RequestFailedCard({ kind, method, path, host, status, serverMessage = null, debug = false }) {
   const t = useTranslations("errors");
   const values = { host: host ?? "", status: status ?? "", path };
@@ -17,7 +16,6 @@ export function RequestFailedCard({ kind, method, path, host, status, serverMess
       action={<RetryButton />}
       footer={
         <>
-          {/* Quoted and attributed so they are not mistaken for the panel's. */}
           {serverMessage ? (
             <div className="mb-5">
               <FailureFooterLabel>{t("request.serverSaid")}</FailureFooterLabel>

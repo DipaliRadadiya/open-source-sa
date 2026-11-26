@@ -27,14 +27,12 @@ export function ConfirmDialog({
   title,
   description,
   children,
-  // English defaults leaked into every locale where a caller left them out.
   cancelLabel,
   confirmLabel,
   confirmVariant,
   confirmDisabled = false,
   pending = false,
   onConfirm,
-  // Callers stay open on failure so the user can retry; without this it looks stuck.
   error = null,
   className,
   onCloseAutoFocus,
@@ -42,13 +40,11 @@ export function ConfirmDialog({
   const tc = useTranslations("common");
   cancelLabel ??= tc("cancel");
   confirmLabel ??= tc("confirm");
-  // Cannot be closed (e.g. by Escape) while the request is pending.
   function handleOpenChange(next) {
     if (!next && pending) return;
     onOpenChange?.(next);
   }
 
-  // Ignore confirm clicks in the first 400 ms: the opener's double-click can land on confirm.
   const openedAt = useRef(0);
   useEffect(() => {
     if (open) openedAt.current = Date.now();
@@ -56,13 +52,10 @@ export function ConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
-      {/* A dialog with a body gets max-w-md. The `data-[size=default]:` prefix
-          is needed: a plain `sm:max-w-md` loses to the base class on specificity. */}
       <AlertDialogContent
         className={cn(children ? "data-[size=default]:sm:max-w-md" : null, className)}
         onCloseAutoFocus={onCloseAutoFocus}
       >
-        {/* min-w-0 on both grid and flex levels, or a long title widens the dialog. */}
         <AlertDialogHeader className="min-w-0">
           <div className="flex min-w-0 items-center gap-3">
             {Icon ? (
@@ -84,11 +77,8 @@ export function ConfirmDialog({
           ) : null}
         </AlertDialogHeader>
 
-        {/* min-w-0 lets `truncate` work inside this grid item; space-y-4 matches
-            the dialog's own gap-4. */}
         {children ? <div className="min-w-0 space-y-4">{children}</div> : null}
 
-        {/* role="alert" so screen readers announce it. */}
         {error ? (
           <div
             role="alert"

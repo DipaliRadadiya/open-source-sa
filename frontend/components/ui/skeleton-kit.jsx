@@ -1,10 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Building blocks for loading screens. Each one mirrors a real piece of the panel
-// (page header, card, tiles, rows, form, chart…) so a loading screen can be put
-// together in the same shape as the page it stands in for, and nothing jumps.
-
 const CARD = "rounded-2xl border border-border/70 bg-card shadow-e1";
 
 export function SkHeader({ back = false, wide = false }) {
@@ -17,12 +13,10 @@ export function SkHeader({ back = false, wide = false }) {
   );
 }
 
-// A card with the panel's card head (title + one line, an optional button on the right).
 export function SkCard({ className, head = true, action = false, children, bodyClassName }) {
   return (
     <div className={cn(CARD, "overflow-hidden", className)} aria-hidden>
       {head ? (
-        // Bottom padding too when the card has no body, or the bars sat on the border.
         <div className={cn("flex items-start justify-between gap-4 px-5 pt-5", !children && "pb-5")}>
           <div className="space-y-2">
             <Skeleton className="h-4 w-36" />
@@ -36,7 +30,6 @@ export function SkCard({ className, head = true, action = false, children, bodyC
   );
 }
 
-// The grey strip with pills, as Tabs.
 export function SkTabs({ count = 3 }) {
   return (
     <div className="inline-flex gap-1 rounded-lg bg-muted p-1" aria-hidden>
@@ -49,7 +42,6 @@ export function SkTabs({ count = 3 }) {
   );
 }
 
-// Status tiles: an icon tile, a label, a value and a line, as on the application page.
 export function SkTiles({ count = 4, className }) {
   return (
     <div className={cn("grid gap-4 sm:grid-cols-2 xl:grid-cols-4", className)} aria-hidden>
@@ -67,7 +59,6 @@ export function SkTiles({ count = 4, className }) {
   );
 }
 
-// One compact status tile (Services, Disk Cleaner): icon, label, value and a line beside it.
 export function SkCompactTile({ action = false }) {
   return (
     <div className={cn(CARD, "flex items-center gap-3 px-4 py-3")} aria-hidden>
@@ -82,7 +73,6 @@ export function SkCompactTile({ action = false }) {
   );
 }
 
-// Divided rows, edge to edge inside a card body: an icon, two lines, something on the right.
 export function SkRows({ count = 4, icon = true, trailing = "pill" }) {
   return (
     <div className="-mx-5 -mb-5 divide-y border-t" aria-hidden>
@@ -102,7 +92,6 @@ export function SkRows({ count = 4, icon = true, trailing = "pill" }) {
   );
 }
 
-// Setting rows: a label and hint on the left, the control on the right.
 export function SkSettingRows({ count = 3 }) {
   return (
     <div className="divide-y" aria-hidden>
@@ -123,7 +112,6 @@ export function SkInput({ className }) {
   return <div className={cn("h-9 rounded-lg border border-input bg-background", className)} aria-hidden />;
 }
 
-// A form: label over input, in one or two columns.
 export function SkForm({ fields = 2, columns = 2 }) {
   return (
     <div className={cn("grid gap-5", columns === 2 && "sm:grid-cols-2")} aria-hidden>
@@ -137,7 +125,6 @@ export function SkForm({ fields = 2, columns = 2 }) {
   );
 }
 
-// The band at the foot of a card that holds Save.
 export function SkFooter() {
   return (
     <div className="-mx-5 -mb-5 mt-5 flex justify-end border-t bg-muted/30 px-5 py-3" aria-hidden>
@@ -146,7 +133,6 @@ export function SkFooter() {
   );
 }
 
-// A tinted note (info / warning / healthy), as the real ones.
 const NOTE = {
   info: "border-primary/15 bg-primary/5",
   warning: "border-warning/25 bg-warning/5",
@@ -166,7 +152,6 @@ export function SkNote({ tone = "info", className, button = false }) {
   );
 }
 
-// A chart area: faint grid lines and a soft wave where the line will be.
 export function SkChart({ className }) {
   return (
     <div className={cn("relative h-52 overflow-hidden rounded-lg", className)} aria-hidden>
@@ -185,7 +170,6 @@ export function SkChart({ className }) {
   );
 }
 
-// Dark log / editor panel with line placeholders.
 export function SkTerminal({ lines = 10, className }) {
   return (
     <div className={cn("space-y-2.5 rounded-xl bg-zinc-950 p-4", className)} aria-hidden>
@@ -196,7 +180,6 @@ export function SkTerminal({ lines = 10, className }) {
   );
 }
 
-// A centred empty-state block inside a card.
 export function SkCentered() {
   return (
     <div className="flex flex-col items-center gap-3 py-8" aria-hidden>
@@ -208,7 +191,6 @@ export function SkCentered() {
   );
 }
 
-// Choice cards (radio options), as on AI Bot Blocker or Create application.
 export function SkOptions({ count = 3, columns = 1 }) {
   return (
     <div className={cn("grid gap-3", columns === 2 && "sm:grid-cols-2", columns === 3 && "sm:grid-cols-3")} aria-hidden>
@@ -225,7 +207,6 @@ export function SkOptions({ count = 3, columns = 1 }) {
   );
 }
 
-// A grid of facts: a small label over a value.
 export function SkFacts({ count = 4, className }) {
   return (
     <div className={cn("grid gap-4 sm:grid-cols-2 xl:grid-cols-4", className)} aria-hidden>
@@ -239,7 +220,6 @@ export function SkFacts({ count = 4, className }) {
   );
 }
 
-// The masthead of a detail page: an icon tile, name, facts, buttons.
 export function SkMasthead({ buttons = 2 }) {
   return (
     <div className={cn(CARD, "flex flex-wrap items-center justify-between gap-4 px-5 py-4")} aria-hidden>
@@ -259,7 +239,6 @@ export function SkMasthead({ buttons = 2 }) {
   );
 }
 
-// A summary card: a status tile, two lines, buttons on the right (System health, Sync…).
 export function SkSummary({ tone, buttons = 1 }) {
   return (
     <div className={cn(CARD, "flex flex-wrap items-center gap-4 p-4", tone && NOTE[tone])} aria-hidden>

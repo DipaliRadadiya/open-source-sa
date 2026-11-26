@@ -7,8 +7,6 @@ import { disableApplication } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-// The holding page is served as 200, not 503, so long pauses can hurt rankings.
-// Keep the search-engine warning until the API answers 503.
 export function PauseApplicationDialog({ application, open, onOpenChange }) {
   const t = useTranslations("applications.pause");
   const { refreshThen } = useRefresh();
@@ -16,7 +14,6 @@ export function PauseApplicationDialog({ application, open, onOpenChange }) {
   const [error, setError] = useState(null);
 
   function handleOpenChange(next) {
-    // Also cleared at the open site: reopening from its own button skips onOpenChange.
     if (!next) setError(null);
     onOpenChange(next);
   }
@@ -26,14 +23,12 @@ export function PauseApplicationDialog({ application, open, onOpenChange }) {
     setError(null);
     try {
       await disableApplication(application.id);
-      // Toast once the refreshed page is on screen, so the badge agrees.
       refreshThen(() => {
         toast.success(t("paused", { name: application.name }));
         onOpenChange(false);
         setPending(false);
       });
     } catch (requestError) {
-      // A 422 usually means already paused elsewhere.
       setError(apiMessage(requestError, t("failed")));
       setPending(false);
     }

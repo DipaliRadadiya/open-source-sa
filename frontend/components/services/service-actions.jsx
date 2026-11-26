@@ -38,7 +38,6 @@ import {
 } from "@/components/ui/tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-// Ordered by disruption (reload keeps connections, restart drops them, stop ends it); colour follows.
 const ACTION_META = {
   start: { icon: Play, tone: "text-success hover:bg-success/10 hover:text-success" },
   reload: { icon: RefreshCcw, tone: "text-primary hover:bg-primary/10 hover:text-primary" },
@@ -49,19 +48,14 @@ const ACTION_META = {
   },
 };
 
-// Which verbs apply to the service's current state.
 const BY_STATUS = {
   active: ["reload", "restart", "stop"],
   inactive: ["start"],
   failed: ["start", "restart"],
 };
 
-// The one action the row leads with, by state. Everything else is in the menu.
-// `failed` leads with start: recovery means bringing it up.
 const PRIMARY = { active: "restart", inactive: "start", failed: "start" };
 
-// Stop asks first (undo can't give back the downtime); restarting a running unit asks too
-// (it drops every connection). Start and reload just run.
 export function ServiceActions({ service, canManage, phpVersion, onBusyChange }) {
   const t = useTranslations("services");
   const { refreshAndWait } = useRefresh();
@@ -69,21 +63,17 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
   const [confirming, setConfirming] = useState(null);
   const configTest = useConfigTest(service);
 
-  // Reported upward so the status cell can say "Restarting…" too.
   function setBusyAction(action) {
     setPending(action);
     onBusyChange?.(action);
   }
 
   const allowed = service.actions ?? [];
-  // Intersected with what the API permits, so a protected unit never shows Stop.
-  // Without the permission only the read-only items (logs, config test) remain.
   const actions = canManage
     ? (BY_STATUS[service.status] ?? ["restart"]).filter((a) => allowed.includes(a))
     : [];
   const busy = pending !== null;
 
-  // If the primary is not permitted (e.g. a reload-only protected unit), use whatever is allowed.
   const primary = actions.includes(PRIMARY[service.status])
     ? PRIMARY[service.status]
     : (actions[0] ?? null);
@@ -97,23 +87,18 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
     setBusyAction(action);
     try {
       await runServiceAction(service.key, action);
-      // Re-read before the toast, so the row's state matches it.
       await refreshAndWait();
       showActionSuccess({
         title: t(`toast.${action}`, { name: service.label }),
-        // Undo for Stop, the action most likely to be regretted.
         undoLabel: action === 'stop' ? t('undoStop') : undefined,
         onUndo: action === 'stop' ? () => run('start') : undefined,
       });
     } catch (error) {
       const data = error.response?.data;
-      // Name the service and action and say the state is unchanged; the API message alone does not.
       showActionError({
-        // No answer at all is not "left as it was": the server may have done it.
         title: error.response
           ? t(`error.${action}`, { name: service.label })
           : t("error.noAnswer", { name: service.label }),
-        // The title already says there was no answer.
         message: error.response ? apiMessage(error, undefined, { reference: false }) : undefined,
         reference: data?.reference,
         copyLabel: t('copyReference'),
@@ -127,7 +112,6 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
   }
 
   function trigger(action) {
-    // Restarting a running unit drops every connection; a failed unit has nothing to drop.
     const disruptive =
       DISRUPTIVE_ACTIONS.includes(action) ||
       (action === "restart" && service.status === "active");
@@ -140,18 +124,13 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
 
   return (
     <div className="flex items-center justify-end gap-1.5">
-      {/* The state's verb on one button: Restart when running, Start otherwise. */}
       {primary ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            {/* Wrapped: a disabled button swallows pointer events, and that is when the tooltip matters. */}
             <span tabIndex={busy ? 0 : -1} className="inline-flex">
               <Button
-                // Neutral, not outline: inside a card outline turns blue and overrides the verb's colour.
                 variant="neutral"
                 size="sm"
-                // Restart is every running row's button, so it stays plain: ten amber buttons
-                // read as ten warnings. Start on a stopped unit keeps its green.
                 className={cn(primary === "restart" ? null : ACTION_META[primary].tone)}
                 disabled={busy}
                 onClick={() => trigger(primary)}
@@ -192,7 +171,6 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
           </Tooltip>
 
           <DropdownMenuContent align="end" className="w-52">
-            {/* The remaining state verbs, each labelled. */}
             {secondary.map((action) => {
               const Icon = ACTION_META[action].icon;
 
@@ -208,7 +186,6 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
               );
             })}
 
-            {/* Read-only checks (logs, config test) below the verbs, after a rule. */}
             {secondary.length > 0 && (hasLogs || service.testable || phpVersion) ? (
               <DropdownMenuSeparator />
             ) : null}
@@ -217,9 +194,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
 
             {service.testable ? (
               <DropdownMenuItem
-                // A read (`nginx -t` / `php-fpm -t`); the API allows it with view access.
                 disabled={configTest.pending}
-                // Closing the menu is fine: the dialog opens at once and shows the wait.
                 onSelect={() => configTest.run()}
               >
                 {configTest.pending ? (
@@ -231,7 +206,6 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
               </DropdownMenuItem>
             ) : null}
 
-            {/* PHP version settings live on the PHP page; FPM start/stop stays here. */}
             {phpVersion ? (
               <DropdownMenuItem asChild>
                 <Link href={`/php?version=${encodeURIComponent(phpVersion)}`}>
@@ -255,7 +229,6 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
       <ConfirmDialog
         open={confirming !== null}
         onOpenChange={(open) => !open && setConfirming(null)}
-        // Restart brings the service back by itself, so it warns rather than alarms.
         icon={confirmIsRestart ? RotateCw : TriangleAlert}
         tone={confirmIsRestart ? "warning" : "destructive"}
         title={confirming ? t(`confirm.${confirming}.title`, { name: service.label }) : ""}
@@ -265,7 +238,6 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
         cancelLabel={t("confirm.cancel")}
         confirmLabel={confirming ? t(`actions.${confirming}`) : ""}
         confirmVariant={confirmIsRestart ? "default" : "destructive"}
-        // Closes on confirm: the row shows the progress, and the page stays usable.
         onConfirm={() => {
           const action = confirming;
           setConfirming(null);

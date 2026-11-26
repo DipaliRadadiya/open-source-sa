@@ -11,7 +11,6 @@ const TOKENS = [
   "popover-foreground",
 ];
 
-// Own file so the chart library loads only when the sheet opens.
 export function SizeBreakdownDonut({ slices, label, dataTable }) {
   const tokens = useChartTokens(TOKENS);
   const option = useMemo(

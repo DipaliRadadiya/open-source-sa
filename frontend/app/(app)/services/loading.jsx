@@ -2,8 +2,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SK_CARD, SkCompactTile, SkHeader, SkRows } from "@/components/ui/skeleton-kit";
 import { cn } from "@/lib/utils";
 
-// Services, in the page's own shape: four compact tiles, then the running services card
-// (a table from 900px of card width, cards below that).
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

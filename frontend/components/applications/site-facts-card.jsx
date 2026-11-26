@@ -33,8 +33,7 @@ import { NodeVersionDialog } from "@/components/applications/node-version-dialog
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// Facts that do not apply to the site type are left out, not shown as "—".
-// Full class strings for Tailwind; 3 or 4 columns keeps the last row full (6 or 8 facts).
+// Full class names for Tailwind.
 const FACT_COLUMNS = { 3: "xl:grid-cols-3", 4: "xl:grid-cols-4" };
 
 function factColumns(count) {
@@ -45,20 +44,13 @@ function factColumns(count) {
 
 function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCopy = null, onEdit, editLabel, action, note, noteTone, menu, menuLabel, menuBusy = false, plain = false, strip = false, wide = false }) {
   const noteNode = note ? (
-    // Not truncated: a filename or refusal is the content.
     <p className={`mt-0.5 text-xs leading-snug ${noteTone === "warning" ? "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" : "text-muted-foreground"}`}>
       {note}
     </p>
   ) : null;
   const controls = (
     <>
-      {/* Outlined, like every other button: as bare icons they read as decoration. */}
-      {/* In the header strip on a touch screen the copy buttons were always shown, a row of
-          small icons beside every value (Krishna, 24 Nov); there the value is selectable
-          instead. Edit, menu and the password copy stay. */}
       {copy ? <CopyButton value={String(copyValue)} label={extraCopy?.firstLabel} outlined className={`border border-border/80 bg-card shadow-xs ${strip ? "pointer-coarse:hidden" : ""}`} /> : null}
-      {/* A second value behind the same fact (the owner's password beside its username); greyed
-          with the reason when there is none to copy. */}
       {extraCopy?.value ? (
         <CopyButton value={extraCopy.value} label={extraCopy.label} icon={extraCopy.icon} outlined className="border border-border/80 bg-card shadow-xs" />
       ) : extraCopy?.reason ? (
@@ -66,16 +58,13 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
           <extraCopy.icon className="size-3.5" />
         </Button>
       ) : null}
-      {/* One menu when the tile has several actions (probe, set type by hand). */}
       {menu?.length ? (
         <DropdownMenu>
-          {/* Outside the trigger: inside it, the trigger's props would land on the tooltip, not the button. */}
           <HoverHint content={menuLabel}><DropdownMenuTrigger asChild>
             <Button
               type="button"
               variant="outline"
               size="icon-sm"
-              /* `menuBusy` too: a menu action has no Review button to show it is running. */
               disabled={menuBusy || action?.busy}
               aria-label={menuLabel}
               className="size-7 shrink-0"
@@ -98,7 +87,6 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
         </DropdownMenu>
       ) : null}
 
-      {/* `text` gives an actionable finding a labelled button; optional probes stay an icon. */}
       {action ? (
         action.text ? (
           <HoverHint content={action.label}><Button
@@ -129,7 +117,6 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
             {action.busy ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
-              // Defaults to the ruler (Measure); Detect brings its own icon.
               <action.icon className="size-3.5" />
             )}
           </Button></HoverHint>
@@ -150,11 +137,8 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
     </>
   );
 
-  // `strip`: a label over its value, no box, for the facts row in the page header.
   if (strip) {
     return (
-      // One cell of a hairline grid with a mono caps label, like Server
-      // information on the dashboard. Edges are drawn inside the cell.
       <div className={`group/fact min-w-0 px-5 py-3 shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)] ${wide ? "col-span-2 xl:col-span-1" : ""}`}>
         <dt className="font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">{label}</dt>
         <dd className="flex min-h-7 min-w-0 items-center gap-2">
@@ -163,10 +147,6 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
           >
             {value}
           </span></HoverHint>
-          {/* With a mouse, the buttons appear when the pointer
-              is on this fact, for a cleaner header. They stay visible on touch screens (no
-              hover there), for keyboard focus, while a menu is open and while busy. Hidden
-              by opacity, not removed, so nothing shifts when they appear. */}
           <span className="flex items-center gap-1.5 transition-opacity duration-150 pointer-fine:opacity-0 pointer-fine:group-hover/fact:opacity-100 pointer-fine:group-focus-within/fact:opacity-100 pointer-fine:has-[[aria-expanded=true]]:opacity-100 pointer-fine:has-[.animate-spin]:opacity-100">
             {controls}
           </span>
@@ -176,7 +156,6 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
     );
   }
 
-  // `plain`: one compact row, label left and value right.
   if (plain) {
     return (
       <div className="min-w-0 py-2.5">
@@ -196,7 +175,7 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
   }
 
   return (
-    // min-w-0: a grid item defaults to min-width:auto, so `truncate` would never fire.
+    // min-w-0: a grid item defaults to min-width:auto, so truncate never fires.
     <div className="flex min-w-0 items-center gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5">
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
@@ -213,7 +192,6 @@ function Fact({ icon: Icon, label, value, mono, copy, copyValue = value, extraCo
   );
 }
 
-// `strip`: no card, just the facts in a row, for the application header.
 export function SiteFactsCard({ application, canManage = false, canManageSystemUsers = false, siteTypes = [], nodeVersions = [], nodeVersionsFailed = false, columns = null, list = false, strip = false, className }) {
   const t = useTranslations("applications");
   const format = useFormatter();
@@ -223,8 +201,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
   const nodeSwitching = nodeChange?.status === "switching";
   const nodeRange = siteTypes.find((type) => type.name === application.site_type)?.node_version_range ?? null;
   const [measuring, setMeasuring] = useState(false);
-  // Read when the card mounts, never put in the server-rendered page.
-  // undefined until read (nothing shown), null when none is saved, else the password.
   const [ownerPassword, setOwnerPassword] = useState(undefined);
   const ownerId = application.system_user?.id ?? null;
   useEffect(() => {
@@ -232,7 +208,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
     let live = true;
     getSystemUserDetail(ownerId)
       .then((res) => live && setOwnerPassword(res.data?.system_user?.password ?? null))
-      // Unread is not "none saved": leave the button out rather than claim there is none.
       .catch(() => {});
     return () => {
       live = false;
@@ -240,20 +215,17 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
   }, [canManageSystemUsers, ownerId]);
   const [detecting, setDetecting] = useState(false);
   const [refreshing, startRefresh] = useTransition();
-  // True through the request and the re-read that shows its result.
   const probing = detecting || refreshing;
   const [relabelTo, setRelabelTo] = useState(null);
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
 
-  // On click, never on mount: files often arrive later, so an automatic probe records "nothing found"
-  // too early. Throttled 10/min server-side.
+  // On click only: files often arrive later, so an automatic probe records nothing found too early.
   async function detect() {
     setDetecting(true);
     try {
       const { data } = await detectApplicationSiteType(application.id);
 
-      // Toast the verdict from the response; the card still re-reads for the stored copy.
       const found = data?.site_type_detection;
       const type = found?.detected_title ?? found?.detected;
       if (found?.suggested) {
@@ -265,11 +237,10 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
             : t("siteTypeDetection.detected", { type }),
         );
       } else {
-        // Not an error: an empty directory is a real answer.
         toast.info(t("siteTypeDetection.detectedNothing"));
       }
 
-      // A transition keeps `refreshing` true until the new data shows (`router.refresh()` cannot be awaited).
+      // router.refresh() can't be awaited, so a transition tracks it.
       startRefresh(() => router.refresh());
     } catch (err) {
       toast.error(apiMessage(err, t("siteTypeDetection.detectFailed")));
@@ -282,7 +253,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
   const detectionState = siteTypeDetectionState(application);
   const suggestion = suggestedSiteType(application);
 
-  // Shows `matched` (a checkable file) rather than `confidence`; an empty probe says when it ran.
   const typeNote = (() => {
     if (detectionState === "suggested") {
       return detection?.matched
@@ -294,7 +264,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
             type: detection.detected_title ?? suggestion,
           });
     }
-    // Recognised but nothing to offer: state what it saw without judging the current type.
     if (detectionState === "recognised") {
       const type = detection?.detected_title ?? detection?.detected;
       return detection?.matched
@@ -305,7 +274,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
     return null;
   })();
 
-  // Type titles come from the catalog (not in frontend i18n); without one, no targets are offered.
   const typeMenu = (() => {
     if (!canManage || !canDetectSiteType(application)) return [];
 
@@ -332,37 +300,29 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
     return items;
   })();
 
-  // Resolved once, so the dialog names the target the same way the menu did.
   const relabelTitle =
     relabelTo === detection?.detected
       ? (detection?.detected_title ?? relabelTo)
       : (siteTypes.find((type) => type.name === relabelTo)?.title ?? relabelTo);
 
-  // Walks every inode, so only ever on the user's click.
   async function measure() {
     setMeasuring(true);
     try {
       await measureApplicationSize(application.id);
-      // Toast on success too: a re-measure can return the same number.
       await refreshAndWait();
       toast.success(t("size.measured"));
     } catch (error) {
-      // Throttled and refused for a site with no directory; pass the API's message on.
       toast.error(apiMessage(error, t("size.measureFailed")));
     } finally {
       setMeasuring(false);
     }
   }
 
-  // A size taken while setup was still writing the files is not shown. That one, or a new
-  // application's missing first size, is measured quietly once setup is surely done, by
-  // whoever may measure, so the open page shows it without a reload.
   const measuredDuringSetup = sizeMeasuredDuringSetup(application);
   const createdAt = parseApiDate(application.created_at);
   const needsFirstSize = measuredDuringSetup || application.directory_size_bytes == null;
   useEffect(() => {
     if (!needsFirstSize || !createdAt || !canManage || application.status !== "active") return undefined;
-    // Only a young application: an old one with no size waits for the sweep or a click.
     if (!measuredDuringSetup && Date.now() - createdAt.getTime() > NEW_APP_MS) return undefined;
     const wait = Math.max(0, createdAt.getTime() + SETUP_WINDOW_MS - Date.now());
     const timer = setTimeout(async () => {
@@ -371,7 +331,7 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
         await measureApplicationSize(application.id);
         await refreshAndWait();
       } catch {
-        // The nightly sweep measures it anyway.
+        // the nightly sweep measures it anyway
       } finally {
         setMeasuring(false);
       }
@@ -381,30 +341,17 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [application.id, application.directory_size_measured_at, application.status, canManage]);
 
-  // Null when unmeasured: shown as "Not measured", never "0 B".
   const size = measuredDuringSetup ? null : formatBytes(application.directory_size_bytes, format);
 
-  // What share of that is in Docker volumes, for a container site. The total on
-  // its own is unexplainable: 284 MB against a document root the File Manager
-  // shows as almost empty reads as a bug in the panel, and the volumes are where
-  // a container site keeps everything it owns.
-  //
-  // Null — not 0 — means the site has no volumes to measure, so every PHP, Node
-  // and static site gets no second line rather than "0 B in volumes".
   const volumeSize =
     application.volume_size_bytes === null ||
     application.volume_size_bytes === undefined
       ? null
       : formatBytes(application.volume_size_bytes, format);
 
-  // A container's type is its Source (image, compose file or recipe) and the web root is
-  // a proxy, not a folder; both were noise and pushed the row onto an empty second line.
   const container = application.serving_profile === "docker";
 
   const origin = application.origin;
-  // For an image the value is the image reference alone, copyable: "Docker image" is
-  // already the origin pill in the header, and as a prefix it pushed the reference
-  // out of the truncated value ("Docker image · tr…" on a phone).
   const originValue = origin?.kind === "recipe" && origin.recipe
     ? t("origin.factRecipe", { title: origin.recipe.title, version: origin.recipe.version })
     : origin?.kind === "image"
@@ -420,8 +367,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
       value: originValue,
       mono: origin?.kind === "image",
       copy: origin?.kind === "image" && Boolean(origin.image),
-      // A container's five facts: Source takes two cells, so 2 and 3 columns come out
-      // full. On one row (xl) every column is sized by its content instead.
       wide: container && strip,
     },
     {
@@ -429,14 +374,12 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
       label: t("columns.type"),
       value: container ? null : application.site_type_title ?? application.site_type,
       note: typeNote,
-      // The backend refuses to probe git sites. Only a suggestion gets its own button.
       action:
         canManage && suggestion
           ? {
               onClick: () => setRelabelTo(suggestion),
               busy: probing,
               label: t("siteTypeDetection.reviewHint"),
-              // Labelled because it is an invitation to decide.
               text: t("siteTypeDetection.reviewAction"),
               icon: ScanSearch,
             }
@@ -445,8 +388,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
       menu: typeMenu,
       menuBusy: probing,
     },
-    // Copyable for SFTP/SSH login. The password
-    // only for someone who may manage system users; the API withholds it from everyone else.
     {
       icon: User,
       label: t("columns.owner"),
@@ -459,7 +400,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
             label: t("facts.copyPassword"),
             firstLabel: t("facts.copyUsername"),
             icon: KeyRound,
-            // Accounts made outside the panel, or before it stored passwords, have none saved.
             reason: ownerPassword ? null : t("facts.noPasswordSaved"),
           }
         : { firstLabel: t("facts.copyUsername") },
@@ -469,17 +409,13 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
       label: t("facts.webRoot"),
       value: container ? null : application.web_root,
       mono: true,
-      // Copy the resolved server path, not the relative setting that the form edits.
       copy: Boolean(application.document_root),
       copyValue: application.document_root,
-      // The one fact on this card that is a setting rather than a record.
       onEdit: canManage ? () => setEditingWebRoot(true) : null,
     },
-    // Hidden for Node or static sites: they carry a php_version they never run.
     {
       icon: FileCode,
       label: t("facts.php"),
-      // Not in `list`: the header already says it.
       value: list ? null : !application.serving_profile || application.serving_profile === "php" ? application.php_version : null,
       mono: true,
     },
@@ -488,7 +424,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
       label: t("facts.node"),
       value: application.node_version,
       mono: true,
-      // The failure message arrives translated; the site was put back and still runs.
       note: nodeSwitching
         ? t("nodeVersion.switching", { target: nodeChange.target ?? "" })
         : nodeChange?.status === "failed"
@@ -499,8 +434,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
       onEdit: canManage && !nodeSwitching ? () => setEditingNode(true) : null,
       editLabel: t("nodeVersion.title"),
     },
-    // A container's `app_port` is the host side of nginx -> 127.0.0.1:app_port -> container;
-    // the port the user chose or the image declared is `container_port`.
     application.container_port
       ? {
           icon: Plug,
@@ -515,21 +448,16 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
       icon: HardDrive,
       label: t("columns.size"),
       value: size ?? (needsFirstSize && measuring ? t("size.measuring") : t("size.notMeasured")),
-      // Only once there is a measurement to break down. A site nobody has
-      // measured says "Not measured", and hanging "0 B in volumes" under that
-      // would be describing a number that is not there.
       note: size && volumeSize ? t("size.inVolumes", { size: volumeSize }) : null,
       action: canManage
         ? { onClick: measure, busy: measuring, label: t("size.measureHint"), icon: Ruler }
         : null,
     },
-    // Not with `columns={2}`: the page header already shows when it was created.
     (columns === 2 || list) && !strip ? null : { icon: CalendarClock, label: t("columns.created"), value: application.created_at_human },
   ].filter((fact) => fact && fact.value !== null && fact.value !== undefined && fact.value !== "");
 
   const dialogs = (
     <>
-      {/* Until the switch settles: `node_version_change` goes back to null, or to failed. */}
       {nodeSwitching ? <AutoRefresh intervalMs={3000} stopAfterMs={600000} /> : null}
 
       {application.node_version ? (
@@ -554,8 +482,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
         onOpenChange={(next) => setRelabelTo(next ? relabelTo : null)}
         application={application}
         target={relabelTo}
-        /* Type titles are not in frontend i18n. No example lookup call here: check-i18n greps
-           comments and would flag it as an unresolved key. */
         targetTitle={relabelTitle}
         siteTypes={siteTypes}
         matched={relabelTo === suggestion ? detection?.matched : null}
@@ -567,10 +493,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
     const cells = facts.reduce((count, fact) => count + (fact.wide ? 2 : 1), 0);
     return (
       <>
-        {/* One row up to six facts; seven or eight go four across, so none is left alone.
-            The one row is sized by content: equal columns left "Docker Compose" with empty
-            room while Size's note wrapped (Krishna, 20 Oct), and cut a system user to
-            "ux-wp…" beside half-empty cells (24 Nov). */}
         <dl className={`-mr-px -mb-px grid grid-cols-2 sm:grid-cols-3 ${(cells === 6 && facts.some((fact) => fact.wide)) || facts.length <= 6 ? "xl:grid-cols-none xl:grid-flow-col xl:auto-cols-[minmax(0,auto)]" : "xl:grid-cols-4"} ${className ?? ""}`}>
           {facts.map((fact) => (
             <Fact key={fact.label} editLabel={t("webRoot.title")} strip {...fact} />
@@ -589,8 +511,6 @@ export function SiteFactsCard({ application, canManage = false, canManageSystemU
         </CardTitle>
         <CardDescription>{t("facts.description")}</CardDescription>
       </CardHeader>
-      {/* `columns={2}`: the card shares its row with another, so it never goes four across. */}
-      {/* `list`: a plain one-column list for the narrow reference column. */}
       <CardContent
         className={
           list

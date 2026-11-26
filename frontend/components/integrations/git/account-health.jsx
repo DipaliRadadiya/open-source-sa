@@ -3,11 +3,9 @@ import { CircleAlert, CircleCheck, CircleHelp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
-/** Days before token expiry at which to warn, and to warn urgently. */
 const WARN_DAYS = 14;
 const URGENT_DAYS = 3;
 
-// `unknown` means the provider did not answer; never show it as an error.
 export function AccountHealth({ status, loading }) {
   const t = useTranslations("git.health");
 
@@ -20,7 +18,6 @@ export function AccountHealth({ status, loading }) {
     );
   }
 
-  // No row for this account: treated like `unknown`.
   if (!status) return <StatusText>{t("notChecked")}</StatusText>;
 
   if (status.status === "invalid") {
@@ -51,14 +48,12 @@ export function AccountHealth({ status, loading }) {
           <CircleHelp className="size-3" />
           {t("unknown")}
         </Badge>
-        {/* Said outright, because a grey badge alone still reads as trouble. */}
         <StatusText>{t("unknownHint")}</StatusText>
       </Line>
     );
   }
 
   const days = status.expires_in_days;
-  // Bitbucket tokens have no expiry: null means none, not a failed lookup.
   const expiring = typeof days === "number" && days <= WARN_DAYS;
 
   return (
@@ -82,7 +77,6 @@ function Line({ children }) {
   return <div className="flex flex-wrap items-center gap-x-2 gap-y-1">{children}</div>;
 }
 
-// Small coloured status text; distinct from the shared `Note` callout.
 function StatusText({ children, tone }) {
   if (!children) return null;
 

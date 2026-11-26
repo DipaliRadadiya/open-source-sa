@@ -8,14 +8,11 @@ import {
 import { SELECT_WELL } from "@/components/data-table/toolbar-well";
 import { cn } from "@/lib/utils";
 
-// Presentation half of `FacetSelect` for in-memory filters; `value` is "all" when unset.
-// `label` names the control for screen readers; the trigger shows only the choice.
 export function FilterSelect({ value, onChange, allLabel, options, className, label }) {
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger className={cn(SELECT_WELL, className)} aria-label={label}>
-        {/* Named here, not left to Radix: it fills the trigger only after hydration,
-            so on a slow connection the filters showed blank (Krishna, 6 Oct). */}
+        {/* Radix only fills the trigger after hydration, so name it here. */}
         <SelectValue>
           {value === "all" ? allLabel : (options.find((option) => option.value === value)?.label ?? allLabel)}
         </SelectValue>

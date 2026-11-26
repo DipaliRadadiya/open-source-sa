@@ -12,8 +12,6 @@ import { Combobox } from "@/components/ui/combobox";
 import { FormModal } from "@/components/ui/form-modal";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-// Attach, move and detach in one: the API takes a single nullable `application_id`.
-// Decides what gets backed up; rewrites no connection string.
 export function AttachApplicationDialog({
   database,
   open,
@@ -26,18 +24,13 @@ export function AttachApplicationDialog({
   const t = useTranslations("databases.attach");
   const tEngines = useTranslations("databases.engines");
   const { refreshAndWait } = useRefresh();
-  // null means untouched, so the field reads the database's current site
-  // without an effect to re-seed state on open.
   const [picked, setPicked] = useState(null);
   const [pending, setPending] = useState(false);
-  // Field-level: the API's refusals name a next action a toast would hide.
   const [error, setError] = useState(null);
 
   const current = database?.application_id ?? null;
   const value = picked ?? (current === null ? "" : String(current));
 
-  // Every close resets. Opening comes from the parent's button and never
-  // routes through here, so no seeding is needed.
   function handleOpenChange(next) {
     if (!next) {
       setPicked(null);
@@ -61,7 +54,6 @@ export function AttachApplicationDialog({
       toast.success(chosen ? t("attached") : t("detached"));
       handleOpenChange(false);
     } catch (caught) {
-  // The API returns both refusals on `application_id`.
       const field = caught.response?.data?.errors?.application_id?.[0];
       setError(field ?? apiMessage(caught, t("failed")));
     } finally {
@@ -88,8 +80,6 @@ export function AttachApplicationDialog({
           >
             {t("cancel")}
           </Button>
-          {/* Explains why Save is disabled when nothing changed; silent while
-              saving. */}
           <ReasonTooltip reason={!pending && unchanged ? t("unchanged") : null}>
             <Button type="submit" disabled={pending || unchanged}>
               {pending && <Loader2 className="size-4 animate-spin" />}
@@ -118,12 +108,10 @@ export function AttachApplicationDialog({
             { value: "", label: t("none") },
             ...applicationOptions(
               applications,
-              // The current site must stay selectable, or the dialog opens on
-              // a value its own list calls taken.
+              // Keep the current site selectable or the dialog opens on a value it marks as taken.
               excludeSelf(databaseCounts, current),
               databasesKnown,
               t("taken"),
-              // The API refuses this pairing, so it is a blocked option with a reason.
               (application) =>
                 engineAccepted({ application, siteTypes, engine: database?.engine })
                   ? undefined
@@ -142,14 +130,12 @@ export function AttachApplicationDialog({
           </p>
         ) : null}
 
-        {/* Required by the API docs: attaching does not make the site use it. */}
         <p className="text-xs text-muted-foreground">{t("hint")}</p>
       </div>
     </FormModal>
   );
 }
 
-// Excludes this database's own site, so it is not greyed out as "already has a database".
 function excludeSelf(counts, applicationId) {
   if (!counts || applicationId === null || applicationId === undefined) return counts;
 

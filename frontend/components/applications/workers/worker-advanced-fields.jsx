@@ -20,10 +20,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// supervisord's levels in the order its documentation lists them.
 const LOG_LEVELS = ["critical", "error", "warn", "info", "debug", "trace", "blather"];
 
-/** Everything behind "Advanced" on a worker, shared by the create and edit dialogs. */
 export function WorkerAdvancedFields({ form, runsAs = null, disabled = false }) {
   const t = useTranslations("applications.workers");
 
@@ -50,7 +48,6 @@ export function WorkerAdvancedFields({ form, runsAs = null, disabled = false }) 
         )}
       />
 
-      {/* Read-only by design: a free-text user would allow running as root. */}
       {runsAs ? (
         <div className="space-y-2">
           <Label htmlFor="worker-runs-as" hint={t("form.userHint")}>{t("form.user")}</Label>
@@ -166,7 +163,6 @@ export function WorkerAdvancedFields({ form, runsAs = null, disabled = false }) 
                 {...field}
               />
             </FormControl>
-            {/* The API refuses `[`: these lines go inside one program block. */}
             <FormMessage />
           </FormItem>
         )}

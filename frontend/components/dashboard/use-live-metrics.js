@@ -4,20 +4,14 @@ import { apiMessage } from "@/lib/api/error-message";
 
 const POLL_MS = 3000;
 const SLOW_POLL_MS = 15000;
-// Back off only once the failures look like an outage, not a blip.
 const FAILURES_BEFORE_BACKOFF = 3;
-// 100 points x 3s = a five-minute window, long enough to read a trend.
 const MAX_POINTS = 100;
 
-// One rolling window feeds every dashboard chart. Pauses while the tab is hidden; timestamps stay raw.
 export function useLiveMetrics(initial = null) {
   const [metrics, setMetrics] = useState(initial);
   const [series, setSeries] = useState([]);
   const [failed, setFailed] = useState(false);
-  // The API's own reason the poll is failing (e.g. "Metrics collector is not running.").
   const [reason, setReason] = useState(null);
-  // `cpu.percent`, `network` and `disk_io` are rates against the PREVIOUS poll,
-  // so the first sample after any gap is 0, meaning "not measured", not "idle".
   const [ratesReady, setRatesReady] = useState(false);
   const [updatedAt, setUpdatedAt] = useState(null);
   const controllerRef = useRef(null);
@@ -27,8 +21,6 @@ export function useLiveMetrics(initial = null) {
     let active = true;
     let failures = 0;
     let intervalMs = POLL_MS;
-  // Every gap needs a fresh baseline: mount, a hidden tab coming back, and a
-  // recovered outage all leave the server with nothing to compare against.
     let needsBaseline = true;
 
     function schedule() {
@@ -36,8 +28,6 @@ export function useLiveMetrics(initial = null) {
       timer = setInterval(tick, intervalMs);
     }
 
-    // A sustained outage drops the poll to SLOW_POLL_MS instead of hammering a
-    // dead endpoint every 3s for as long as the tab stays open.
     function applyBackoff(next) {
       const target = next >= FAILURES_BEFORE_BACKOFF ? SLOW_POLL_MS : POLL_MS;
       if (target !== intervalMs) {
@@ -47,8 +37,6 @@ export function useLiveMetrics(initial = null) {
     }
 
     async function tick() {
-      // A hidden tab stops polling; the next sample spans the absence, so it
-      // needs a new baseline.
       if (document.hidden) {
         needsBaseline = true;
         return;
@@ -67,12 +55,8 @@ export function useLiveMetrics(initial = null) {
         applyBackoff(failures);
 
         if (needsBaseline) {
-          // Baseline sample: absolute readings (memory, disk, load) are shown;
-          // rates are not, so the chart gets no point rather than a false zero.
           needsBaseline = false;
           setRatesReady(false);
-          // A valueless point makes the line break across the gap instead of
-          // drawing a straight segment over time nobody observed.
           setSeries((prev) =>
             prev.length ? [...prev, { t: Date.now() }].slice(-MAX_POINTS) : prev,
           );
@@ -91,8 +75,6 @@ export function useLiveMetrics(initial = null) {
               disk_write: Number(data.disk_io?.write ?? 0),
               cpu: Number(data.cpu?.percent ?? 0),
               memory: Number(data.memory?.percent ?? 0),
-              // Only real when the collector reports a filesystem at all;
-              // a 0 % here means "unknown", not "empty disk".
               disk: data.disk?.total ? Number(data.disk.percent ?? 0) : null,
               load_5: Number(data.load?.[5] ?? 0),
               load_15: Number(data.load?.[15] ?? 0),
@@ -104,7 +86,6 @@ export function useLiveMetrics(initial = null) {
           setFailed(true);
           setReason(apiMessage(error, null));
           failures += 1;
-          // The next success is measuring across the outage, not across a tick.
           needsBaseline = true;
           setRatesReady(false);
           applyBackoff(failures);

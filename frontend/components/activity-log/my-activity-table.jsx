@@ -11,8 +11,6 @@ import { cn } from "@/lib/utils";
 import { typeBadgeClass, typeLabel } from "@/lib/activity-log/labels";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// API timestamps may be ISO or MySQL-style ("YYYY-MM-DD HH:mm:ss"); null when
-// invalid so the tooltip is skipped instead of showing "Invalid Date".
 function toDate(value) {
   if (!value) return null;
   let d = new Date(value);
@@ -20,9 +18,6 @@ function toDate(value) {
   d = new Date(String(value).replace(" ", "T"));
   return Number.isNaN(d.getTime()) ? null : d;
 }
-
-/* Cells at module level: flexRender treats a cell function's identity as the
- * component type, so an inline cell remounts on every render. */
 
 function WhenCell({ row }) {
   const format = useFormatter();
@@ -50,7 +45,6 @@ function TypeCell({ row }) {
   const t = useTranslations("activity");
   const { type } = row.original;
   if (!type) return <span className="text-muted-foreground">—</span>;
-  // Coloured by family so a long page can be scanned.
   return (
     <Badge variant="outline" className={cn("font-normal whitespace-nowrap", typeBadgeClass(type))}>
       {typeLabel(t, type)}
@@ -72,8 +66,6 @@ const wrap = (label) => function WrappingHeader() {
   return <span className="whitespace-normal">{label}</span>;
 };
 
-// Below sm the When (and User) columns are hidden and ride under the description:
-// three columns at 390px wrapped "14 hours ago" onto three lines.
 function DescriptionCell({ row, column }) {
   const t = useTranslations("activity");
   const { description, user, created_at_human } = row.original;
@@ -89,26 +81,19 @@ function DescriptionCell({ row, column }) {
   );
 }
 
-// `showUser` adds the "who" column for the server log, which spans all users.
 export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUser = false }) {
   const t = useTranslations("activity");
 
-  // Type is hidden below xl: it is shorthand for the description, and its widest
-  // label (es "Herramientas de compilación") needs 261px in mono caps, which leaves a 1024px screen too little for the description.
   const columns = [
-    // Headers may wrap so long locales fit on a phone.
-    // Fixed widths: sized to the content, each page would lay the columns out differently.
     { accessorKey: "created_at_human", header: wrap(t("table.when")), cell: WhenCell, meta: { className: "hidden w-44 sm:table-cell" } },
     ...(showUser ? [{ id: "user", header: t("columns.user"), cell: UserCell, meta: { className: "hidden w-44 sm:table-cell" } }] : []),
     {
       accessorKey: "description",
       header: wrap(t("table.description")),
       cell: DescriptionCell,
-      // TableCell is nowrap by default; the description must wrap.
+      // TableCell is nowrap by default.
       meta: { className: "whitespace-normal", showUser },
     },
-    // Last, not before the description: its width is sized for the longest label in any
-    // locale, so in the middle it left an empty band before "What happened".
     {
       accessorKey: "type",
       header: t("table.type"),
@@ -117,8 +102,6 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
     },
   ];
 
-  // A filtered-empty table offers a way to clear the filters (same strings as
-  // the admin table).
   if (data.length === 0 && hasFilters) {
     return (
       <EmptyState

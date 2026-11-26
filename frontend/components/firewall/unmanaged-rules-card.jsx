@@ -21,11 +21,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/**
- * Rules ufw enforces that the panel has no row for — someone ran `ufw allow` on the
- * server. They work, but the list above does not show them, so they get their own
- * card: take one over (the panel manages it from then on) or remove it.
- */
 export function UnmanagedRulesCard({ rules, canManage }) {
   const t = useTranslations("firewall.unmanaged");
   const { refreshAndWait } = useRefresh();
@@ -42,7 +37,6 @@ export function UnmanagedRulesCard({ rules, canManage }) {
       toast.success(done);
       return true;
     } catch (error) {
-      // The server's own words: it names the lockout guard or why it cannot hold a rule.
       toast.error(apiMessage(error, t("failed")));
       return false;
     } finally {
@@ -68,7 +62,6 @@ export function UnmanagedRulesCard({ rules, canManage }) {
         <ul className="divide-y">
           {rules.map((rule) => {
             const adoptReason = !rule.adoptable ? (rule.reason || t("notAdoptable")) : null;
-            // The API refuses to remove a rule it cannot hold, too (422 on `key`).
             const removeReason = !rule.adoptable ? t("removeOnServer") : null;
             return (
               <li key={rule.key} className="flex items-center gap-3 px-5 py-3">

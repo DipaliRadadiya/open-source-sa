@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkCard, SkFooter, SkForm, SkHeader, SkTabs } from "@/components/ui/skeleton-kit";
 
-
-// PHP settings: the facts strip, then the tabbed form.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

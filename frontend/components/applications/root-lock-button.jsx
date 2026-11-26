@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-// A refusal keeps the dialog open with the server's reason, which names the fix.
 export function RootLockButton({ applicationId, path, canManage = true }) {
   const t = useTranslations("applications.rootLock");
   const { pending: refreshing, refreshThen } = useRefresh();
@@ -25,8 +24,6 @@ export function RootLockButton({ applicationId, path, canManage = true }) {
     setError(null);
     try {
       await lockApplicationRoot(applicationId);
-      // Toast now: the re-read marks the row Locked, which unmounts this button and
-      // any pending callback.
       toast.success(t("done"));
       refreshThen(() => setOpen(false));
     } catch (e) {

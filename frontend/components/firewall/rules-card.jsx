@@ -43,9 +43,6 @@ import {
 } from "@/components/firewall/rule-parts";
 import { apiMessage } from "@/lib/api/error-message";
 
-/* Cells at module level — flexRender treats a cell function's identity as the
- * component type, so an inline cell remounts on every render. */
-
 function NameCell({ row, table }) {
   const { enabled, labels } = table.options.meta;
   return <RuleName rule={row.original} muted={!enabled} labels={labels} />;
@@ -63,18 +60,13 @@ function SourceCell({ row, table }) {
   return <SourceText rule={row.original} labels={table.options.meta.labels} />;
 }
 
-// On/off, or why it cannot be switched off. Its own column, so the edit and delete
-// buttons line up on every row.
 function StateCell({ row, table }) {
   const { canManage, pending, onToggle, shownEnabled, labels } = table.options.meta;
   const rule = row.original;
-  // Same guard as the API: switching a seeded rule off is, to ufw, a delete.
-  // A protected rule that is off can be switched back on, the only way out of a lock-out.
   const guarded = protectedReasonFor({ rule, canManage, labels, turningOff: shownEnabled(rule) });
 
   if (isLockedOn(rule, shownEnabled(rule))) return <ProtectedTag labels={labels} />;
   return (
-    // Off keeps the rule but stops enforcing it, so a rule can be tested without deleting it.
     <ReasonTooltip reason={readOnlyReason(guarded)}>
       <PendingSwitch
         readOnly={!canManage}
@@ -122,27 +114,20 @@ export function RulesCard({
   total = rules.length,
 }) {
   const t = useTranslations("firewall");
-  // The reader's address as the browser sees it; see components/network/browser-ip.jsx.
   const yourIp = useBrowserIp();
   const { refreshAndWait } = useRefresh();
   const searchParams = useSearchParams();
   const tc = useTranslations("common");
   const setQuery = useSetQuery();
   const hasFilters = ["search", "enabled", "action", "origin", "sort"].some((key) => searchParams.has(key));
-  // Several switches can be in flight at once, so each tracks its own state; delete
-  // runs from a dialog that stays open until done.
   const toggling = usePendingKeys();
   const [deletingId, setDeletingId] = useState(null);
   const pending = deletingId === null ? toggling.pendingKeys : [...toggling.pendingKeys, deletingId];
   const [confirming, setConfirming] = useState(null);
   const [editing, setEditing] = useState(null);
-  // Pre-filled values for the add form, from a suggestion or a blocked port.
   const [adding, setAdding] = useState(null);
-  // The requested state, stored with the value it was based on so it retires once the rule moves off it.
   const [asked, setAsked] = useState({});
 
-  // An unnamed rule is named after the service on its port, from the API's preset
-  // list, so it matches the names in the add form.
   const byPort = new Map(
     presets.filter((p) => p.port != null).map((p) => [Number(p.port), p.label]),
   );
@@ -153,8 +138,6 @@ export function RulesCard({
         ? t("rules.portName", { port: rule.port_from })
         : null;
 
-  // What is listening, in words: the service the port is known for, else the program,
-  // unless the program is only a thread name ("MainThread"), which says nothing.
   const listenerName = (entry) =>
     byPort.get(Number(entry.port)) ??
     (entry.program && !/thread/i.test(entry.program) ? entry.program : null);
@@ -180,7 +163,7 @@ export function RulesCard({
   };
 
   async function onToggle(rule) {
-    // `rules` updates only when `router.refresh()` lands, so the server value can be stale for a second click.
+    // rules only updates when router.refresh() lands, so it can be stale for a second click.
     if (toggling.isPending(rule.id)) return;
     const next = !shownEnabled(rule);
     toggling.start(rule.id);
@@ -190,7 +173,6 @@ export function RulesCard({
       await refreshAndWait();
       toast.success(next ? t("rules.enabled") : t("rules.disabled"));
     } catch (error) {
-      // Revert: a switch must not show a state the server refused.
       setAsked((current) => {
         const reverted = { ...current };
         delete reverted[rule.id];
@@ -233,21 +215,15 @@ export function RulesCard({
     }
   }
 
-  // Filters earn their space once the list is long; kept while any is applied.
   const showFilters = total > 10 || hasFilters;
 
-  // Columns, so rules can be compared down a column. Name leads: it is the only
-  // part a person wrote.
   const columns = [
-    // Percent widths: `w-24` on a table cell is a minimum, not a cap, so the unsized
-    // columns would absorb all the slack.
     {
       accessorKey: "description",
       header: t("rules.name"),
       meta: { className: "w-[22%]" },
       cell: NameCell,
     },
-    // Always shown: whether a rule lets traffic in or keeps it out is the first thing read.
     { id: "action", header: t("rules.action"), meta: { className: "w-[12%]" }, cell: ActionCell },
     {
       accessorKey: "port_from",
@@ -267,9 +243,6 @@ export function RulesCard({
 
   return (
     <>
-      {/* Public ports with no rule letting them through, only while the firewall is
-          enforcing. Calm, not a warning: for a database this is the right state, and the
-          old "in use but blocked" read as an error that urged opening MariaDB to everyone. */}
       {blocked.length ? (
         <Note title={t("rules.privateTitle", { count: blocked.length })}>
           <p>{t("rules.privateBody", { count: blocked.length })}</p>
@@ -281,7 +254,6 @@ export function RulesCard({
                   key={`${entry.port}-${entry.protocol ?? ""}`}
                   className="inline-flex items-center gap-2 rounded-lg border bg-card py-1 ps-3 pe-1 text-sm text-foreground shadow-xs"
                 >
-                  {/* Unnamed: "Port 3004", like an unnamed rule in the table. */}
                   {name ? (
                     <>
                       <span className="font-medium">{name}</span>
@@ -300,8 +272,6 @@ export function RulesCard({
                       onClick={() =>
                         setAdding({
                           ports: String(entry.port),
-                          // No name from the process: it is often a thread ("MainThread"), and an
-                          // unnamed rule is already shown as "Port 3004".
                           protocol: entry.protocol === "udp" ? "udp" : "tcp",
                         })
                       }
@@ -333,10 +303,6 @@ export function RulesCard({
         </CardHeader>
 
         <CardContent className="space-y-3">
-          {/* One row when it fits: each filter is as wide as its current choice and
-              the search gives way down to 14rem (fr placeholder), then the filters wrap.
-              Fixed widths for the widest option in every language (fr "Utilisateur
-              de base de données") left no room for the search. */}
           {showFilters ? (
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <div className="sm:max-w-xs sm:min-w-56 sm:flex-1">
@@ -390,7 +356,6 @@ export function RulesCard({
 
           {rules.length === 0 ? (
             hasFilters ? (
-              // Five filters live in the URL; the button clears all of them, including sort.
               <EmptyState
                 icon={SearchX}
                 subject={Shield}
@@ -438,10 +403,7 @@ export function RulesCard({
                 />
               </div>
 
-              {/* Edge to edge at the foot of the card, as every table inside a card; up against
-                  the header band, whose line it shares (the phone cards before it are hidden). */}
               <div className="-mx-(--card-spacing) -mb-(--card-spacing) hidden max-h-[30rem] overflow-auto @min-[900px]/page:-mt-(--card-spacing) @min-[900px]/page:block">
-                {/* The API owns sort order, so pages are never re-sorted locally. */}
                 <DataTable
                   bare
                   columns={columns}
@@ -463,8 +425,7 @@ export function RulesCard({
           )}
         </CardContent>
 
-        {/* Edit, not delete-and-recreate: the API adds the replacement first, so a deny rule never lapses.
-            Keyed by id so each rule opens with its own values. */}
+        {/* The API adds the replacement before removing the old one, so a deny rule never lapses. */}
         {adding ? (
           <AddRuleDialog
             key={JSON.stringify(adding)}

@@ -23,34 +23,29 @@ import { EditDialog } from "@/components/integrations/git/edit-dialog";
 import { ReplaceTokenDialog } from "@/components/integrations/git/replace-token-dialog";
 import { DisconnectDialog } from "@/components/integrations/git/disconnect-dialog";
 
-// Health is fetched in the browser: it calls providers live, and one slow provider must not block the page.
+// Fetched in the browser: it calls providers live and a slow one mustn't block the page.
 export function AccountsCard({ accounts = [], providers = [], canManage, providersFailed }) {
   const t = useTranslations("git");
   const { name: brand } = useBranding();
   const { refreshAndWait } = useRefresh();
   const [statuses, setStatuses] = useState(null);
-  // Only the manual re-check spins the button; rows show their own "checking".
   const [rechecking, setRechecking] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  // The provider picked from the empty state; null opens the provider picker.
   const [connectProvider, setConnectProvider] = useState(null);
-  // The account just connected in this tab (cleared on refresh/navigation);
-  // the next-step prompt names it and links with its id.
   const [justConnected, setJustConnected] = useState(null);
   const [editing, setEditing] = useState(null);
   const [replacing, setReplacing] = useState(null);
   const [disconnecting, setDisconnecting] = useState(null);
   const testing = usePendingKeys();
 
-  // No setState before the first await: it is called from an effect.
+  // No setState before the first await: it's called from an effect.
   const load = useCallback(async (signal) => {
     try {
       const { data } = await getAccountStatuses({ signal });
       const parsed = gitStatusesResponseSchema.safeParse(data);
-      // On a malformed response every badge stays "not checked".
       if (parsed.success) setStatuses(parsed.data.statuses);
     } catch {
-      // Deliberately quiet: a background check.
+      // background check, stay quiet
     }
   }, []);
 
@@ -141,8 +136,6 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
 
         <CardContent className="px-5 py-0">
           {accounts.length === 0 ? (
-            // The same two columns as the Storage empty state: what this is and the
-            // action on the left, the steps on the right, each provider in step 1 opening its form.
             <div className="grid gap-6 py-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:items-center md:gap-10">
               <div className="flex flex-col items-center gap-4 text-center md:items-start md:text-left">
                 <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
@@ -212,8 +205,6 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
                         </p>
                       </div>
                     </div>
-                    {/* Opens the create form on the Git type with this account
-                        preselected; the create page validates both. */}
                     <Button size="sm" asChild className="shrink-0">
                       <Link
                         href={
@@ -252,7 +243,6 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
 
       {canManage ? (
         <>
-          {/* Keyed on the starting provider: a new one starts a fresh form. */}
           <ConnectDialog
             key={connectProvider?.name ?? "picker"}
             initialProvider={connectProvider}
@@ -261,8 +251,6 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
             onAccountConnected={setJustConnected}
             onOpenChange={setConnecting}
           />
-          {/* Keyed and mounted only while open, so no previous account's values
-              flash on open. */}
           {editing ? (
             <EditDialog
               key={`edit-${editing.id}`}

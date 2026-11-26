@@ -22,7 +22,6 @@ import { RecentSignIns } from "@/components/account/recent-sign-ins";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 
 const TABS = ["profile", "security", "activity"];
-// !h-auto overrides shadcn TabsList's hard-coded h-8, so py padding takes effect.
 const TRIGGER =
   "!h-auto flex-none gap-2 px-4 py-2 hover:bg-background/60 data-active:shadow-sm";
 
@@ -56,14 +55,11 @@ export function AccountTabs({
     const params = new URLSearchParams(window.location.search);
     params.set("tab", next);
     window.history.replaceState(null, "", `?${params.toString()}`);
-    // The log was read with the page; a password or profile change made since is in it only after a re-read.
     if (next === "activity") refresh();
   }, [refresh]);
 
   const onChange = useCallback(
     (next) => {
-      // Confirm before leaving Profile with unsaved edits (a styled dialog,
-      // not beforeunload).
       if (tab === "profile" && next !== "profile" && profileDirty) {
         setPendingTab(next);
         return;
@@ -75,7 +71,6 @@ export function AccountTabs({
 
   return (
     <Tabs value={tab} onValueChange={onChange} className="gap-6">
-      {/* Scrolls rather than wraps, like the Settings tab bar; ScrollFade hints at overflow. */}
       <ScrollFade className="-mx-1 px-1 pb-1">
         <TabsList className="!h-auto w-fit gap-1 p-1">
           <TabsTrigger value="profile" className={TRIGGER}>
@@ -113,14 +108,12 @@ export function AccountTabs({
       <TabsContent value="activity">
         <NavTransitionProvider>
           <div className="space-y-4">
-            {/* extraQuery keeps ?tab=activity: the tab is set via history.replaceState, which the router does not see. */}
             <ActivityToolbar
               types={typesForScope(filters.types, "account")}
               actions={actionsForScope(filters.actions, filters.types, "account")}
               extraQuery={{ tab: "activity" }}
               searchKey="searchOwn"
             />
-            {/* Checked before "no entries", so a failure never reads as "no matches". */}
             {activityFailed ? (
               <LoadFailed status={activityStatus} failure={activityFailure} message={activityMessage} />
             ) : entries.length ? (

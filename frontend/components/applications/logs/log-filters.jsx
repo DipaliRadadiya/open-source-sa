@@ -25,7 +25,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Radix Select cannot hold an empty value.
 const ANY_METHOD = "any";
 
 const FIELD_KEYS = ["ip", "status", "method", "url"];
@@ -35,7 +34,6 @@ export const activeFilterKeys = (filters) =>
 
 export const hasFieldFilters = (filters) => FIELD_KEYS.some((key) => filters[key] !== "");
 
-// Applied on submit, not per keystroke: each change re-reads the log on the server.
 export function LogFiltersButton({ filters, onApply, fieldFilters, fromAllowed, disabled }) {
   const t = useTranslations("applications.logs.filters");
   const [open, setOpen] = useState(false);
@@ -47,7 +45,6 @@ export function LogFiltersButton({ filters, onApply, fieldFilters, fromAllowed, 
   const label = count ? t("buttonActive", { count }) : t("button");
 
   function openChange(next) {
-    // Opens on what is applied, not on an abandoned edit.
     if (next) form.reset(filters);
     setOpen(next);
   }
@@ -186,7 +183,6 @@ export function LogFiltersButton({ filters, onApply, fieldFilters, fromAllowed, 
   );
 }
 
-// What is applied, visible without opening the popover; each one removable on its own.
 export function ActiveLogFilters({ filters, onChange }) {
   const t = useTranslations("applications.logs.filters");
   const tc = useTranslations("common");

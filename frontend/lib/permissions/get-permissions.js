@@ -9,7 +9,6 @@ import { RequestFailedError } from "@/lib/api/request-failed";
 import { readErrorBody } from "@/lib/api/error-body";
 import { signedOutPath } from "@/lib/auth/signed-out-path";
 
-// With an application id the API also filters by what the site type supports.
 export const getPermissions = cache(async (level, applicationId) => {
   const cookieStore = await cookies();
   const locale = await serverLocale();
@@ -19,8 +18,7 @@ export const getPermissions = cache(async (level, applicationId) => {
   if (applicationId) query.set("application_id", String(applicationId));
   const suffix = query.size ? `?${query}` : "";
 
-  // An empty catalog means "may do nothing", so a failed request must NEVER degrade to [].
-  // 401/419 redirects here because layouts do not re-run on client navigation.
+  // A failed request must never become [] (no permissions). Layouts don't re-run on client navigation, hence the redirect.
   const url = `${process.env.NEXT_PUBLIC_API_URL}/api/permissions${suffix}`;
 
   let res;
@@ -44,13 +42,11 @@ export const getPermissions = cache(async (level, applicationId) => {
 
   if (res.status === 401 || res.status === 419) redirect(await signedOutPath());
 
-  // Rate-limited and mid-update are not "may do nothing"; throw instead of [].
   if (res.status === 429) throw new RateLimitedError("permissions");
 
   if (res.status === 503) throw new PanelUnavailableError("permissions");
 
   if (!res.ok) {
-    // Carry the API's own explanation when it gave one.
     const { message, debug } = await readErrorBody(res);
     throw new RequestFailedError({ url, status: res.status, serverMessage: message, debug });
   }

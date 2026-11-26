@@ -7,7 +7,6 @@ import { appShortcuts } from "@/lib/files/app-shortcuts";
 
 const ICONS = { uploads: ImageIcon, themes: Palette, plugins: Plug, config: FileCog };
 
-// Renders nothing for a site type with no confirmed layout.
 export function FileShortcuts({ appId, siteType, path, onAction, canManage = true }) {
   const t = useTranslations("applications.files");
   const shortcuts = appShortcuts(siteType);
@@ -23,7 +22,6 @@ export function FileShortcuts({ appId, siteType, path, onAction, canManage = tru
         const Icon = ICONS[key];
         const label = t(`shortcuts.${key}`);
         if (type === "file") {
-          // A file opens in the editor rather than navigating to its parent folder.
           const name = target.split("/").pop();
           return (
             <ReasonTooltip key={key} reason={canManage ? null : DENIED}>

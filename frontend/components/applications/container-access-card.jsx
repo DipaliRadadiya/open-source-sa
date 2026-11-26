@@ -52,7 +52,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Throws on a response the card cannot render, so it hides like a failed read.
 function readAccess(data) {
   const access = containerAccessSchema.parse(data?.data ?? data);
   if (access.owner.container_login && !access.commands) {
@@ -63,10 +62,6 @@ function readAccess(data) {
 
 const linkClass = "font-medium text-primary underline-offset-4 hover:underline";
 
-/**
- * Once container login is on, the app's system user's SSH login opens its container (no
- * sudo). Off: one row and Turn on; on: the shell line to copy. A failed read hides the card.
- */
 export function ContainerAccessCard({
   application,
   canSeeSystemUsers = false,
@@ -80,7 +75,6 @@ export function ContainerAccessCard({
   const [failed, setFailed] = useState(false);
   const [offPending, setOffPending] = useState(false);
   const [turningOn, setTurningOn] = useState(false);
-  // The owner's System User row (for its id) and whether the server enforces SSH access.
   const [sshUser, setSshUser] = useState(null);
   const [confirmOff, setConfirmOff] = useState(false);
   const [alsoSsh, setAlsoSsh] = useState(false);
@@ -122,7 +116,6 @@ export function ContainerAccessCard({
 
   const enforced = sshUser?.enforced ?? null;
 
-  // After POST or DELETE: the answer if it carries the card's data, else a re-read.
   async function settle(response) {
     try {
       setAccess(readAccess(response?.data));
@@ -137,7 +130,6 @@ export function ContainerAccessCard({
     }
   }
 
-  // With server SSH still possible after it, Turn off asks first; otherwise one click as before.
   function requestTurnOff() {
     const afterOff = { ...access, owner: { ...access.owner, container_login: false } };
     if (hostSshStillOn(afterOff, enforced)) {
@@ -163,7 +155,6 @@ export function ContainerAccessCard({
       return;
     }
     if (alsoServerSsh && sshUser?.user) {
-      // Only after container login is off; a failure here leaves SSH exactly as it was.
       try {
         await setSystemUserSsh(sshUser.user.id, false);
         toast.success(t("commands.turnedOffBoth", { username: name }));
@@ -188,7 +179,6 @@ export function ContainerAccessCard({
 
   return (
     <Card className={className} aria-labelledby="container-access-heading">
-      {/* The dashboard card head: title with its state, the one action on the right. */}
       <CardHeader className="items-center border-b">
         <CardTitle icon={SquareTerminal} id="container-access-heading" as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}
@@ -365,7 +355,6 @@ function TurnOnDialog({ open, onOpenChange, access, applicationId, canOpenSecuri
   const submitting = form.formState.isSubmitting;
   const rootError = form.formState.errors.root?.server?.message;
 
-  // Each opening starts clean: a dialog opened by our own button skips onOpenChange.
   const { reset } = form;
   useEffect(() => {
     if (open) reset();
@@ -538,7 +527,6 @@ function Commands({ access, canSeeSystemUsers }) {
         }
       />
 
-      {/* The app's own commands stay open: a recipe's first sign-in can depend on one. */}
       {access.cli_examples.length > 0 ? (
         <section className="space-y-3" aria-labelledby="container-access-app-commands">
           <h3 id="container-access-app-commands" className="text-sm font-medium">
@@ -564,7 +552,6 @@ function Commands({ access, canSeeSystemUsers }) {
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-4 pt-3">
-          {/* Side by side on the full-width card; stacked when it is narrow. */}
           <div className="@container/cmds">
             <div className="grid gap-4 @2xl/cmds:grid-cols-2">
               <CommandLine label={t("exec")} command={commands.exec_example} testId="container-access-exec" />
@@ -609,8 +596,6 @@ function CommandLine({ label, command, testId, aside = null, quiet = false }) {
         <p className={quiet ? "text-sm text-muted-foreground" : "text-sm font-medium"}>{label}</p>
         {aside}
       </div>
-      {/* The line and its Copy in one well, like a database's connection string. Wraps
-          instead of scrolling so the whole line is visible at 390px. */}
       <div className="flex items-start gap-2 rounded-lg border bg-muted/40 py-1.5 pr-1.5 pl-3">
         <pre
           data-testid={testId}

@@ -17,7 +17,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormModal } from "@/components/ui/form-modal";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-// Unlike git, the API does NOT verify these before storing; the test runs straight after.
 export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
   const t = useTranslations("storage.replace");
   const tf = useTranslations("storage.form");
@@ -41,7 +40,6 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
 
   async function onSubmit(values) {
     try {
-      // Only what was typed: empty means "not rotating this one" (SFTP rotates password or key).
       const config = Object.fromEntries(
         Object.entries(values)
           .map(([key, value]) => [key, String(value ?? "").trim()])
@@ -60,7 +58,6 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
       );
       if (verdict.ok) toast.success(t("replacedAndTested"));
       else toast.error(verdict.message, { duration: 10000 });
-      // The card shows the stored verdict: refresh so it is this test's, not the old credentials'.
       if (!verdict.notRun) await refreshAndWait();
     } catch (error) {
       handleValidationError(error, form, { fallback: t("failed") });
@@ -101,7 +98,6 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
           </>
         }
       >
-        {/* States what breaks; this endpoint does not verify first. */}
         <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
           <p>{t("warning")}</p>
@@ -114,7 +110,6 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
             name={definition.name}
             render={({ field }) => (
               <FormItem>
-                {/* The form's `help.<field>` text behind a "?"; `t.has` skips fields without help. */}
                 <FormLabel
                   hint={
                     tf.has(`help.${definition.name}`)
@@ -131,7 +126,6 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
                       className="font-mono text-xs"
                       autoComplete="off"
                       spellCheck={false}
-                      // Says what an empty box means here: the current value stays.
                       placeholder={t("keepCurrent")}
                       disabled={submitting}
                       {...field}
@@ -153,7 +147,6 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
           />
         ))}
 
-        {/* SFTP takes a password OR a key, so only the changed one is filled. */}
         <p className="text-xs text-muted-foreground">{t("onlyWhatYouChange")}</p>
       </FormModal>
     </Form>

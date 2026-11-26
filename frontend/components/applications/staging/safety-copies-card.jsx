@@ -12,9 +12,6 @@ import { formatBytes } from "@/lib/format/bytes";
 import { useRefresh } from "@/hooks/use-refresh";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// The undo for a database push: each push saves the live database first. Restoring one
-// saves the current database too, so a restore is itself undoable.
-// `ns`: the same card on a staging copy, where the copies are of staging's own database.
 export function SafetyCopiesCard({ appId, copies, ns = "safetyCopies" }) {
   const t = useTranslations(`applications.staging.${ns}`);
   const format = useFormatter();

@@ -8,8 +8,6 @@ import {
 } from "@/components/ui/tooltip";
 import { typeLabel } from "@/lib/activity-log/labels";
 
-// Backend timestamps may be ISO or MySQL-style ("YYYY-MM-DD HH:mm:ss"); null
-// when neither parses, so the tooltip is skipped instead of "Invalid Date".
 function toDate(value) {
   if (!value) return null;
   let d = new Date(value);
@@ -17,9 +15,6 @@ function toDate(value) {
   d = new Date(String(value).replace(" ", "T"));
   return Number.isNaN(d.getTime()) ? null : d;
 }
-
-/* Cells at module level: flexRender treats a cell function's identity as the
- * component type, so an inline cell remounts on every render of this table. */
 
 function WhenCell({ row }) {
   const format = useFormatter();
@@ -54,7 +49,6 @@ function TypeCell({ row }) {
   );
 }
 
-// Below sm When is hidden and rides under the description, as on the Activity Log.
 function DescriptionCell({ row }) {
   return (
     <>
@@ -68,14 +62,12 @@ export function AccountActivity({ data }) {
   const t = useTranslations("account");
 
   const columns = [
-    // Fixed widths: sized to the content, each page would lay the columns out differently.
     { accessorKey: "created_at_human", header: t("activity.when"), cell: WhenCell, meta: { className: "hidden w-44 sm:table-cell" } },
     { accessorKey: "type", header: t("activity.type"), cell: TypeCell, meta: { className: "hidden w-68 xl:table-cell" } },
     {
       accessorKey: "description",
       header: t("activity.descriptionHeader"),
       cell: DescriptionCell,
-      // TableCell is nowrap by default; on a phone this is the only column.
       meta: { className: "whitespace-normal" },
     },
   ];

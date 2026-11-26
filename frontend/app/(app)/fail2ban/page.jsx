@@ -33,11 +33,9 @@ export default async function Fail2banPage() {
 
   if (!can(permissions, "fail2ban", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "fail2ban", "manage");
-  // fail2ban has one log for all jails. Hidden without Logs permission, since
-  // the link would only redirect.
   const logHref = can(permissions, "logs", "view") ? "/logs?source=fail2ban" : null;
 
-  // The server's own address: a ban on it is refused, as it would lock out the panel.
+  // Banning the server's own address would lock out the panel, so it's refused.
   const [{ data, failed, status, failure, message }, { serverIp }] = await Promise.all([
     getFail2ban(),
     getServerCapabilities(),
@@ -47,19 +45,15 @@ export default async function Fail2banPage() {
     <div className="space-y-6">
       <PageHeader title={t("title")} />
 
-      {/* A failed read must never render as "no protection". */}
       {failed || !data ? (
         <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
       ) : !data.installed ? (
         <>
-          {/* Polls while installing (apt can take minutes); `/fail2ban` is on the
-              API's polling allowance. */}
           {data.install?.status === "installing" ? <AutoRefresh intervalMs={4000} /> : null}
           <InstallPrompt canManage={canManage} install={data.install ?? null} />
         </>
       ) : (
         <div className="space-y-4">
-          {/* Bans expire and arrive on their own, so keep the page fresh. */}
           <AutoRefresh intervalMs={10000} />
 
           {!data.running ? <StoppedAlert t={t} /> : null}
@@ -69,8 +63,6 @@ export default async function Fail2banPage() {
             status={data.running ? <RunningBadge data={data} t={t} /> : null}
             ignoreIps={data.settings?.ignore_ips ?? []}
             live={
-              // One client component: the ban list's visibility follows the switches, so
-              // they share state.
               <ProtectionSection
                 jails={data.jails}
                 settings={data.settings}
@@ -83,7 +75,6 @@ export default async function Fail2banPage() {
             }
             settings={
               data.settings ? (
-                // Split only when both the desktop and actual content width fit the editors.
                 <div className="@container/fail2ban-rules">
                   <div className="grid items-start gap-4 xl:@4xl/fail2ban-rules:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
                     <BanRulesCard
@@ -107,7 +98,6 @@ export default async function Fail2banPage() {
   );
 }
 
-// Installed but stopped: jails still read "enabled" while nothing is watching.
 function StoppedAlert({ t }) {
   return (
     <div

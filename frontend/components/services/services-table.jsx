@@ -10,8 +10,7 @@ import { ServiceVersion } from "@/components/services/service-version";
 import { installHome } from "@/lib/services/install-home";
 import { SizeText } from "@/components/ui/size-text";
 
-// Cells are module-level on purpose: flexRender uses the function as the
-// component type, so inline cells would remount on every poll and lose state.
+// Cells at module level: inline cells remount on every poll and lose state.
 
 function ServiceCell({ row }) {
   const t = useTranslations("services");
@@ -29,15 +28,10 @@ function ServiceCell({ row }) {
   const home = installHome(key);
   const installed = state === "installed";
 
-  // Only what the badge does not already say; the generic `unknown` sentence
-  // adds nothing, so the retry link is the useful content there.
   const note = installReason && installReason !== "unknown" ? installMessage : null;
 
-  // `whitespace-normal` is load-bearing: the inherited `whitespace-nowrap`
-  // would paint the reason across the other columns.
   let secondLine = null;
   if (installed) {
-  // The unit name (what systemctl takes), quietly under the friendly name.
     secondLine = (
       <p className="font-mono text-xs whitespace-normal wrap-anywhere text-muted-foreground">
         {unit}
@@ -51,8 +45,6 @@ function ServiceCell({ row }) {
         {retryable ? (
           <>
             {note ? " " : null}
-            {/* The retry belongs on the screen that owns this install, so two
-                installs cannot run at once. */}
             <Link
               href={home.href}
               className="font-medium whitespace-nowrap text-foreground underline underline-offset-2"
@@ -109,8 +101,6 @@ function BootCell({ row, table }) {
   const { canManage, setRowBusy } = table.options.meta;
   return (
     <div className="flex items-center justify-center">
-      {/* Balance PendingSwitch's reserved spinner slot so the switch itself,
-          not just its enclosing group, aligns with the column heading. */}
       {!row.original.protected ? <span aria-hidden className="w-6 shrink-0" /> : null}
       <ServiceBootSwitch
         service={row.original}
@@ -123,8 +113,6 @@ function BootCell({ row, table }) {
 
 function ActionsCell({ row, table }) {
   const { canManage, setRowBusy, phpVersions } = table.options.meta;
-  // Matched on the key the API itself supplies, never on a unit name parsed out
-  // of the version string.
   const php = phpVersions.find((v) => v.service === row.original.key);
   return (
     <ServiceActions
@@ -136,7 +124,6 @@ function ActionsCell({ row, table }) {
   );
 }
 
-// `busy` is owned by the panel so the table and card layouts agree.
 export function ServicesTable({ data, phpVersions = [], canManage = false, busy, setRowBusy }) {
   const t = useTranslations("services");
 
@@ -145,7 +132,6 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
       accessorKey: "label",
       header: t("columns.service"),
       meta: { className: "w-[15%]" },
-      // No lock icon here: the "Always on" cell already carries one.
       cell: ServiceCell,
     },
     {
@@ -154,7 +140,6 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
       meta: { className: "w-[22%] text-center" },
       cell: StatusCell,
     },
-      // Two plain columns; the header labels them.
     {
       id: "memory",
       header: () => <span className="block text-right">{t("memoryShort")}</span>,
@@ -163,15 +148,12 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
     },
     {
       id: "cpu",
-      // Padding lives on the column class, which covers header and body cells;
-      // repeating it here would misalign the label.
       header: () => <span className="block text-right">{t("cpuShort")}</span>,
       meta: { className: "w-[10%] text-right" },
       cell: CpuCell,
     },
     {
       id: "boot",
-      // Wraps: "Beim Systemstart starten" is twice the column's width.
       header: () => <span className="block whitespace-nowrap">{t("columns.boot")}</span>,
       meta: { className: "w-[16%] text-center" },
       cell: BootCell,
@@ -189,16 +171,12 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
       bare
       columns={columns}
       data={data}
-      // With `auto`, a failed install's sentence pushed Actions off screen.
       fixedLayout
       meta={{ busy, setRowBusy, canManage, phpVersions }}
       emptyMessage={t("empty.title")}
-      // Failed units get a tinted row; cells are tighter than the default.
       rowClassName={(service) =>
         cn(
           "[&_td]:py-2",
-          // Only a real unit that failed. A failed install also reports
-          // `status: failed` but already explains itself beside the name.
           service.status === "failed" &&
             service.state === "installed" &&
             "bg-destructive/5 hover:bg-destructive/10",
@@ -208,7 +186,6 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
   );
 }
 
-// Null renders as an em dash, never 0: "not measured" and "used none" differ.
 function Measure({ value }) {
   if (value == null || value === "") {
     return <span className="text-sm text-muted-foreground">—</span>;

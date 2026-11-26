@@ -1,5 +1,3 @@
-// No back button: the breadcrumb handles navigation. `actions` sit to the
-// right of the title (the page's one primary action), wrapping below on a phone.
 export function PageHeader({ title, subtitle, actions = null, children }) {
   const heading = (
     <div className="min-w-0 space-y-1">

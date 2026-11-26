@@ -9,7 +9,6 @@ import { Caution } from "@/components/ui/caution";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { GoogleDriveRedirectUri } from "@/components/integrations/storage/google-drive-redirect-uri";
 
-// `defaultOpen`: open when adding a destination, closed when editing.
 export function GoogleDriveSetup({ redirectUri, defaultOpen = false }) {
   const t = useTranslations("storage.oauth.setup");
   const [open, setOpen] = useState(defaultOpen);
@@ -36,8 +35,6 @@ export function GoogleDriveSetup({ redirectUri, defaultOpen = false }) {
           </Step>
 
           <Step n={2} title={t("step2.title")}>
-            {/* Without the Drive API, consent succeeds but the first Drive call
-                403s, which looks like a credential problem. */}
             <p>{t("step2.body")}</p>
             <ConsoleLink
               href="https://console.cloud.google.com/apis/library/drive.googleapis.com"
@@ -47,8 +44,6 @@ export function GoogleDriveSetup({ redirectUri, defaultOpen = false }) {
 
           <Step n={3} title={t("step3.title")}>
             <p>{t("step3.body")}</p>
-            {/* An app left in "Testing" issues refresh tokens that expire in
-                about a week, so backups stop with nothing changed in the panel. */}
             <Caution className="mt-2">
               <p className="text-xs leading-5">{t("step3.publish")}</p>
             </Caution>
@@ -60,7 +55,6 @@ export function GoogleDriveSetup({ redirectUri, defaultOpen = false }) {
 
           <Step n={4} title={t("step4.title")}>
             <p>{t("step4.body")}</p>
-            {/* Shown at the step where it is pasted; Google compares it byte for byte. */}
             <GoogleDriveRedirectUri uri={redirectUri} className="mt-2" />
             <ConsoleLink
               href="https://console.cloud.google.com/apis/credentials"
@@ -85,7 +79,6 @@ export function GoogleDriveSetup({ redirectUri, defaultOpen = false }) {
 function Step({ n, title, children }) {
   return (
     <li className="flex gap-2.5">
-      {/* Numbered because the steps are strictly ordered. */}
       <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums">
         {n}
       </span>

@@ -21,11 +21,10 @@ function readDismissed() {
   }
 }
 
-// `names`: which ones; a bare "2 recommended components left" left users guessing.
 export function SetupBanner({ remaining, names = [] }) {
   const t = useTranslations("setup");
   const format = useFormatter();
-  // A hidden server snapshot keeps hydration matching, so a dismissed banner never flashes in.
+  // A hidden server snapshot keeps hydration matching.
   const stored = useSyncExternalStore(subscribeStorage, readDismissed, () => true);
   const [justDismissed, setJustDismissed] = useState(false);
   const dismissed = stored || justDismissed;
@@ -37,17 +36,15 @@ export function SetupBanner({ remaining, names = [] }) {
     try {
       window.localStorage.setItem(DISMISS_KEY, "1");
     } catch {
-      // Private mode / storage disabled — the banner just reappears next load.
+      // storage blocked; ignore
     }
   }
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-4 py-3">
-      {/* The icon in a bordered square, the card a plain hairline. */}
       <span className="flex size-8 shrink-0 items-center justify-center rounded-[2px] border">
         <Sparkles className="size-4 text-primary" />
       </span>
-      {/* min-w-48, not min-w-0: flex-1 would shrink it to one word per line instead of wrapping. */}
       <p className="min-w-48 flex-1 text-sm">
         <span className="font-medium">{t("bannerTitle")}</span>{" "}
         <span className="text-muted-foreground">
@@ -56,7 +53,6 @@ export function SetupBanner({ remaining, names = [] }) {
             : t("bannerBody", { count: remaining })}
         </span>
       </p>
-      {/* One flex child so the action and dismiss wrap together. */}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <Button asChild size="sm">
           <Link href="/setup">

@@ -3,8 +3,7 @@ import { cn } from "@/lib/utils";
 import { connectionStringParts } from "@/lib/databases/connection-parts";
 import { CopyButton } from "@/components/ui/copy-button";
 
-// Each part in its own colour so user, host, port and database can be told apart at a
-// glance; the password is never on screen, only in what Copy puts on the clipboard.
+// The password is never on screen, only in what Copy puts on the clipboard.
 const PART = {
   user: "text-sky-700 dark:text-sky-300",
   host: "text-emerald-700 dark:text-emerald-300",
@@ -17,7 +16,6 @@ function Coloured({ value }) {
   if (!parts) return value.replace(/:[^:@/]*@/, ":••••••@");
   return (
     <>
-      {/* <wbr>: the line breaks between parts, not inside a name ("db_without_ap" / "p"). */}
       <span className="text-muted-foreground">{parts.scheme}://</span>
       <wbr />
       <span className={PART.user}>{parts.username}</span>
@@ -41,10 +39,6 @@ function Coloured({ value }) {
   );
 }
 
-/**
- * `block`: a labelled panel with a "Copy connection string" button (Overview).
- * `inline`: the string and a small Copy button in one well (a user's row).
- */
 export function ConnectionString({ value, variant = "block", hint = null, className }) {
   const t = useTranslations("databases.credentials");
   if (!value) return null;
@@ -55,7 +49,6 @@ export function ConnectionString({ value, variant = "block", hint = null, classN
         <code className="min-w-0 flex-1 truncate font-mono text-xs">
           <Coloured value={value} />
         </code>
-        {/* "Copy": the row it sits in already names what is copied. */}
         <CopyButton value={value} text />
       </div>
     );
@@ -69,7 +62,6 @@ export function ConnectionString({ value, variant = "block", hint = null, classN
         </p>
         <CopyButton value={value} label={t("copyString")} text />
       </div>
-      {/* Wraps between parts; inside one only when a single part is wider than the card. */}
       <code className="block font-mono text-[13px] leading-relaxed [overflow-wrap:anywhere]">
         <Coloured value={value} />
       </code>

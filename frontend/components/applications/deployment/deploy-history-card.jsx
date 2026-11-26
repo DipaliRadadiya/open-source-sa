@@ -23,9 +23,7 @@ import {
 
 const LOG_POLL_MS = 3000;
 
-// `duration` is seconds; raw it reads like an id.
 function humanDuration(seconds) {
-  // Null until the deploy finishes; `Number(null)` is 0, which would print "0s".
   if (seconds === null || seconds === undefined || seconds === "") return null;
   const total = Number(seconds);
   if (!Number.isFinite(total) || total < 0) return null;
@@ -42,15 +40,12 @@ const TONE = {
   queued: { icon: Loader2, badge: "muted", dot: "text-muted-foreground", spin: true },
 };
 
-// Build output is only on the detail call, so a row opens it.
 export function DeployHistoryCard({ ref, applicationId, deployments }) {
   const t = useTranslations("applications.deployment.history");
   const [open, setOpen] = useState(null);
   const [loading, setLoading] = useState(false);
-  // A log that failed to load is not a deploy that printed nothing.
   const [logFailed, setLogFailed] = useState(false);
 
-  // The API decides what counts as running; no local list of terminal statuses.
   const running = deployments.some((deployment) => deployment.in_flight);
 
   const show = useCallback(
@@ -72,8 +67,6 @@ export function DeployHistoryCard({ ref, applicationId, deployments }) {
     [applicationId, t],
   );
 
-  // The backend appends each step's output as it ends, so re-read an open log until
-  // the deploy stops.
   const openId = open?.id ?? null;
   const openRunning = Boolean(open?.in_flight);
   useEffect(() => {
@@ -85,7 +78,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments }) {
         const parsed = deploymentResponseSchema.safeParse(data);
         if (live && parsed.success) setOpen(parsed.data.deployment);
       } catch {
-        // Keep what is on screen; the next read may answer.
+        // retry on the next poll
       }
     }, LOG_POLL_MS);
     return () => {
@@ -94,9 +87,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments }) {
     };
   }, [applicationId, openId, openRunning]);
 
-  // Lets the Deploy card's failure banner open a build log here without an effect.
   useImperativeHandle(ref, () => ({ show }), [show]);
-
 
   if (deployments.length === 0) {
     return <EmptyState icon={Rocket} title={t("empty.title")} description={t("empty.description")} />;
@@ -104,7 +95,6 @@ export function DeployHistoryCard({ ref, applicationId, deployments }) {
 
   return (
     <Card className={cn("gap-0 overflow-hidden py-0", PANEL_CARD)}>
-      {/* Without this the row says "Running" until a reload. */}
       {running ? <AutoRefresh intervalMs={5000} stopAfterMs={900000} /> : null}
 
       <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
@@ -146,7 +136,6 @@ export function DeployHistoryCard({ ref, applicationId, deployments }) {
                     ) : null}
                     {deployment.branch ? <span className="font-mono">{deployment.branch}</span> : null}
                     <span>{deployment.trigger_title ?? deployment.trigger}</span>
-                    {/* Null for a push: no one pressed anything, so no actor is named. */}
                     <span>{deployment.user?.username ?? t("system")}</span>
                     {deployment.created_at_human ? <span>{deployment.created_at_human}</span> : null}
                     {humanDuration(deployment.duration) ? (

@@ -31,7 +31,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 
 const POLL_MS = 5000;
-// Taken off the browser's clock before it is sent, for a few seconds of skew against the server.
 const CLOCK_MARGIN_MS = 15000;
 
 const ICONS = {
@@ -50,19 +49,12 @@ const ICONS = {
   panel_update: ArrowUpCircle,
 };
 
-/**
- * Background jobs in the top bar (RC-20): a quiet icon, or "2 running" while work is
- * in flight, opening the running jobs and those finished in the last day. Each job
- * still shows its own progress on its own page; this is for when you have left it.
- */
 export function OperationsIndicator({ canOpenApplications = false }) {
   const t = useTranslations("operations");
   const [active, setActive] = useState([]);
   const [all, setAll] = useState(null);
   const [open, setOpen] = useState(false);
   const known = useRef(null);
-  // Finished jobs already announced (or already finished when the panel opened), so the
-  // overlap the margin creates never says the same thing twice.
   const announced = useRef(new Set());
   const lastPoll = useRef(null);
 
@@ -85,7 +77,6 @@ export function OperationsIndicator({ canOpenApplications = false }) {
       const key = `${operation.kind}:${operation.id}`;
       if (announced.current.has(key)) return;
       announced.current.add(key);
-      // Already on the job's own page: that page says how it ended; one message, not two.
       const href = operationHref(operation, { canOpenApplications });
       if (href && window.location.pathname === href) return;
       if (operation.state === "failed") toast.error(t("toast.failed", { job: label(operation) }));
@@ -94,7 +85,6 @@ export function OperationsIndicator({ canOpenApplications = false }) {
     [label, t, canOpenApplications],
   );
 
-  // A job that left the running list finished while you were elsewhere: say how.
   const announce = useCallback(
     async (gone) => {
       const recent = await fetchList(false).catch(() => null);
@@ -123,7 +113,6 @@ export function OperationsIndicator({ canOpenApplications = false }) {
         const running = rows.filter(isActive);
         const finished = rows.filter((row) => !isActive(row));
         const key = (row) => `${row.kind}:${row.id}`;
-        // The first answer is the starting point, not news.
         if (known.current) {
           finished.forEach(say);
           const ids = new Set([...running, ...finished].map(key));
@@ -135,9 +124,7 @@ export function OperationsIndicator({ canOpenApplications = false }) {
         known.current = running;
         setActive(running);
       } catch (error) {
-        // 422: more than a day back (a tab hidden overnight); the next poll starts afresh.
         if (since && error?.response?.status === 422) lastPoll.current = null;
-        // A failed poll keeps the last known state; the next tick tries again.
       }
     }
 
@@ -151,7 +138,6 @@ export function OperationsIndicator({ canOpenApplications = false }) {
     };
   }, [fetchList, announce, say]);
 
-  // The full list only while the panel is open.
   useEffect(() => {
     if (!open) return undefined;
     let stopped = false;

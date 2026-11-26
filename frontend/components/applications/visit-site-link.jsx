@@ -2,8 +2,7 @@ import { ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// The scheme is never assumed: no certificate means no TLS listener, and certificates cover named hosts only.
-// Callers pass `secure` from evidence (the app's `url`, or `certificate.domains`).
+// Never assume https: no certificate means no TLS listener.
 export function VisitSiteLink({ href, domain, secure = false, label, className }) {
   const url = href ?? `${secure ? "https" : "http"}://${domain}`;
 
@@ -12,7 +11,6 @@ export function VisitSiteLink({ href, domain, secure = false, label, className }
       href={url}
       target="_blank"
       rel="noreferrer"
-      // The surrounding row or card is often a link; keep the click from reaching it.
       onClick={(event) => event.stopPropagation()}
       aria-label={label}
       className={cn(

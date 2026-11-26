@@ -2,8 +2,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SK_CARD, SkHeader, SkTabs, SkTerminal } from "@/components/ui/skeleton-kit";
 import { cn } from "@/lib/utils";
 
-// Logs: one card whose header is the Access / Error switch with Live on the
-// right, then the tools row, then the log itself.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

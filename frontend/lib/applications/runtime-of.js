@@ -1,7 +1,5 @@
 import { phpVersionShown } from "@/lib/applications/php-version-shown";
 
-// What an application runs on, for lists: PHP with its version, Node.js with its
-// version, a container, or plain files. `null` while the API has not said.
 export function runtimeOf(application) {
   const php = phpVersionShown(application);
   if (php) return { kind: "php", version: php };
@@ -12,9 +10,6 @@ export function runtimeOf(application) {
   return null;
 }
 
-// The words for a runtime. `t` is the "applications" namespace, `tDocker` "docker".
-// Node shows its major line ("Node.js 24"); `full` gives the
-// exact version, for a tooltip.
 export function runtimeLabel(runtime, t, tDocker, { full = false } = {}) {
   if (!runtime) return null;
   if (runtime.kind === "php") return t("phpFact", { version: runtime.version });

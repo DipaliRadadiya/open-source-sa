@@ -9,8 +9,6 @@ import {
   useReloadPendingActions,
 } from "@/components/applications/reload-pending-provider";
 
-// Stays until a web server restart or reload from this browser succeeds:
-// the API keeps no "not applied" marker to read back.
 export function ReloadPendingNotice({ appId, className }) {
   const t = useTranslations("applications.reloadPending");
   const record = useReloadPending(appId);

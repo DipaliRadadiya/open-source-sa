@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
-// A pull takes the same three modes as a push, pointed the other way.
 import { PUSH_MODES } from "@/lib/schemas/application-staging";
 import { pullApplicationStaging } from "@/lib/api/applications";
 import { apiMessage, mayStillBeRunning } from "@/lib/api/error-message";
@@ -35,29 +34,24 @@ import {
 
 const MODE_ICONS = { files: FileText, database: Database, full: Layers };
 
-// No typed domain, unlike a push: live is only read, and staging's database is
-// saved first. Staging's own file changes are not kept, so no mode is preselected.
-// Callers MUST pass a `key` that changes on open.
+// Callers must pass a key that changes on open.
 export function PullStagingDialog({ appId, production, staging, open, onOpenChange }) {
   const t = useTranslations("applications.staging.pullDialog");
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
   const [mode, setMode] = useState(null);
   const [pending, setPending] = useState(false);
-  // Only an update that replaces staging's database takes the copy; files are always saved for the swap.
   const [safetyCopy, setSafetyCopy] = useState(true);
   const replacesDatabase = mode === "database" || mode === "full";
 
   async function pull() {
     setPending(true);
     try {
-      // 202 with a run (RC-16): it has only started; the page shows how it ends.
       await pullApplicationStaging(appId, mode, { safetyCopy: !replacesDatabase || safetyCopy });
       await refreshAndWait();
       onOpenChange(false);
       toast.info(t("started", { domain: staging?.domain ?? "" }));
     } catch (error) {
-      // A retry would only be refused as "already running"; close and let the page catch up.
       if (mayStillBeRunning(error)) {
         onOpenChange(false);
         toast.warning(t("stillRunning", { domain: staging?.domain ?? "" }), { duration: 20000 });
@@ -111,7 +105,6 @@ export function PullStagingDialog({ appId, production, staging, open, onOpenChan
                 <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
                 <span>{t(`modes.${mode}.consequence`)}</span>
               </p>
-              {/* Files are always put back on a failure; the database copy is the user's choice. */}
               {replacesDatabase ? (
                 <>
                   <SafetyCopySwitch
@@ -145,7 +138,6 @@ export function PullStagingDialog({ appId, production, staging, open, onOpenChan
           <ReasonTooltip reason={mode ? null : t("pickMode")}>
             <AlertDialogAction
               onClick={(event) => {
-                // Stays open until the request returns; copying a site takes minutes.
                 event.preventDefault();
                 pull();
               }}

@@ -14,9 +14,6 @@ import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useHoverPopover } from "@/lib/hooks/use-hover-popover";
 
-// Shared by the table and the mobile cards; copy arrives as a `labels` object.
-
-/** Seeded rules have no description, so an unnamed rule borrows its port's service name. */
 export function RuleName({ rule, muted, labels }) {
   const off = rule.enabled === false;
   return (
@@ -39,7 +36,6 @@ export function RuleName({ rule, muted, labels }) {
   );
 }
 
-/** Allow and deny never share a colour. */
 export function ActionBadge({ rule, labels }) {
   const deny = rule.action === "deny";
   return (
@@ -54,7 +50,6 @@ export function PortText({ rule }) {
   return <span className="whitespace-nowrap font-mono text-sm">{port ?? "—"}</span>;
 }
 
-/** Port and protocol read as one value ("443 / TCP"), so they share a column. */
 export function PortProtocol({ rule, labels }) {
   return (
     <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
@@ -65,12 +60,7 @@ export function PortProtocol({ rule, labels }) {
   );
 }
 
-/**
- * In place of the switch and delete on a panel-seeded rule that is on: both are refused,
- * and two faded controls read as broken rather than as kept on purpose.
- */
 export function ProtectedTag({ labels }) {
-  // A Popover, not a Tooltip: the reason has to open on a phone tap too.
   const { open, onOpenChange, triggerProps, contentProps } = useHoverPopover({ focusOpens: true });
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -96,7 +86,6 @@ export function ProtectedTag({ labels }) {
   );
 }
 
-/** Seeded and on: the switch and delete would both be refused. */
 export function isLockedOn(rule, shownOn) {
   return Boolean(rule.protected) && shownOn;
 }
@@ -110,7 +99,6 @@ export function ProtocolText({ rule, labels }) {
   );
 }
 
-/** No source means every address, stated in words. */
 export function SourceText({ rule, labels }) {
   return (
     <span
@@ -126,10 +114,6 @@ export function SourceText({ rule, labels }) {
 
 export { protectedReasonFor };
 
-/**
- * The row's ⋯ menu, as on every other list: Edit, then Delete. Delete stays in the menu on a
- * protected rule, disabled with the reason, so the menu reads the same on every row.
- */
 export function RuleRowMenu({ rule, enabled, canManage, pending, onDelete, onRename, deletable = true, labels }) {
   if (!canManage) return null;
   const deleteReason = protectedReasonFor({ rule, enabled, canManage, labels });

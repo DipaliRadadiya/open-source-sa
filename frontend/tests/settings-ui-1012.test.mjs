@@ -21,7 +21,7 @@ test("every settings card shows its icon, and colour lives in the chip, not the 
 });
 
 test("the clock switch spans the card under name and timezone", () => {
-  assert.match(read("components/settings/general-form.jsx"), /toggle\s*\n\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*wide\s*\n\s*label=\{t\("ntp"\)\}/);
+  assert.match(read("components/settings/general-form.jsx"), /toggle\s*\n\s*wide\s*\n\s*label=\{t\("ntp"\)\}/);
 });
 
 test("SSH answers are cards, one question per row, and the port has its own ruled row", () => {

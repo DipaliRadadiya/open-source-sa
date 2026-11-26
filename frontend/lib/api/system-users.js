@@ -1,19 +1,14 @@
 import { api } from "@/lib/api/client";
 import { systemUsersResponseSchema } from "@/lib/schemas/application";
 
-// Client-side System User mutations; callers refresh the server component after.
-
 export function createSystemUser(values) {
   return api.post("/system-users", values);
 }
 
-// `endSessions`: kill the account's processes first (an open SSH session refuses the delete).
 export function deleteSystemUser(id, { endSessions = false } = {}) {
   return api.delete(`/system-users/${id}`, { params: endSessions ? { end_sessions: 1 } : undefined });
 }
 
-// Several at once (37c8e56e): each goes through the single delete, one refusal does
-// not stop the others. Answers `{deleted, succeeded: [ids], failed: [{id, username, reason}]}`.
 export function deleteSystemUsers(ids, { endSessions = false } = {}) {
   return api.delete("/system-users", { data: { ids, end_sessions: endSessions } });
 }
@@ -34,7 +29,6 @@ export function setSystemUserSsh(id, ssh_access) {
   return api.put(`/system-users/${id}/ssh`, { ssh_access });
 }
 
-// One user by exact name, plus whether the server enforces SSH access (the list's meta).
 export async function findSystemUser(username) {
   const { data } = await api.get("/system-users", { params: { search: username } });
   const parsed = systemUsersResponseSchema.safeParse(data);
@@ -45,14 +39,10 @@ export async function findSystemUser(username) {
   };
 }
 
-// Accepted shells, localised. Client-side because the create dialog also opens
-// from the applications form.
 export function getShellCatalog() {
   return api.get("/system-users/shells").then((res) => res.data?.shells ?? []);
 }
 
-// Full detail (applications with domain/status/php) — the list only returns
-// minimal apps, so the Apps modal fetches this on open.
 export function getSystemUserDetail(id) {
   return api.get(`/system-users/${id}`);
 }

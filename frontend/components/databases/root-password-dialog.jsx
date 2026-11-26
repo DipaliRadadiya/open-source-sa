@@ -17,9 +17,6 @@ import { CopyablePasswordInput } from "@/components/system-users/copyable-passwo
 import { PasswordInput } from "@/components/ui/password-input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-// Set, change or reset the MySQL/MariaDB root password (5fdb2007). The old one is asked
-// for only when the panel cannot reach root either as the server's own root account or
-// with the password it stored (`root_unreachable`, e.g. a server moved from v7).
 const ASK_CURRENT = new Set(["root_unreachable", "current_password_wrong"]);
 
 export function RootPasswordDialog({ engine, connection, open, onOpenChange }) {
@@ -40,7 +37,6 @@ export function RootPasswordDialog({ engine, connection, open, onOpenChange }) {
   }, [askCurrent, form]);
 
   function handleOpenChange(next) {
-    // The form stays mounted: clear values and errors so a reopen starts clean.
     if (!next) {
       form.reset();
       setAskCurrent(false);
@@ -61,14 +57,12 @@ export function RootPasswordDialog({ engine, connection, open, onOpenChange }) {
     } catch (error) {
       const data = error.response?.data;
       if (error.response?.status === 422 && ASK_CURRENT.has(data?.reason)) {
-        // The first time it is a question, not a mistake: the field appears with its hint.
         if (askCurrent || data.reason === "current_password_wrong") {
           form.setError("current_password", { message: data.errors?.current_password?.[0] ?? data.message });
         }
         setAskCurrent(true);
         return;
       }
-      // `errors.engine` (a change already running) has no field here.
       handleValidationError(error, form, { fallback: t("failed"), formError: true });
     }
   }
@@ -99,7 +93,6 @@ export function RootPasswordDialog({ engine, connection, open, onOpenChange }) {
           </>
         }
       >
-        {/* What changes for root's other way in: MariaDB keeps it, MySQL cannot. */}
         <Note>{engine === "mysql" ? t("noteMysql") : t("noteMariadb")}</Note>
 
         {rootError ? (

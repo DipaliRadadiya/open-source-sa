@@ -8,7 +8,6 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Several sources become a submenu. The API only lists sources that exist on the box.
 export function ServiceLogItems({ service }) {
   const t = useTranslations("services");
   const keys = service.log_keys ?? [];
@@ -37,7 +36,6 @@ export function ServiceLogItems({ service }) {
           <DropdownMenuItem key={key} asChild>
             <Link href={`/logs?source=${encodeURIComponent(key)}`}>
               <ScrollText className="size-4" />
-              {/* The raw key: the Logs page owns the friendly labels. */}
               <span className="font-mono text-xs">{key}</span>
             </Link>
           </DropdownMenuItem>

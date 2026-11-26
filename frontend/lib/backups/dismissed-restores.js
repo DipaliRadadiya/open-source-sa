@@ -1,5 +1,3 @@
-// A cookie so the server can leave dismissed restores out; hiding them after
-// hydration would flash the banner on every reload.
 export const DISMISSED_RESTORES_COOKIE = "sv_dismissed_restores";
 
 const KEEP = 20;

@@ -37,7 +37,6 @@ export function ProfileForm({ user, onDirtyChange }) {
   const isSubmitting = form.formState.isSubmitting;
   const isDirty = form.formState.isDirty;
 
-  // Report dirty state up so the tab switcher can confirm before discarding.
   useEffect(() => {
     onDirtyChange?.(isDirty);
     return () => onDirtyChange?.(false);
@@ -46,8 +45,6 @@ export function ProfileForm({ user, onDirtyChange }) {
   return (
     <Form {...form}>
       <form noValidate onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
-        {/* The Settings card: icon head, two columns, a named Save in its own band.
-            SectionActions also guards the sidebar, header links and reload. */}
         <Section
           icon={UserRound}
           title={t("profile.title")}

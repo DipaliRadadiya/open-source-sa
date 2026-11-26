@@ -3,7 +3,6 @@ import { KeyRound, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 
-// The only time this key is readable. Inline, not a dialog: Escape would dismiss it by reflex.
 export function KeyReveal({ token, onDone }) {
   const t = useTranslations("central");
 

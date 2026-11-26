@@ -23,7 +23,6 @@ import { ListCard } from "@/components/data-table/list-card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-// A colour per outcome: every status was grey, so "Found" and "Skipped" looked alike.
 const ACTION_VARIANTS = {
   adopted: "success",
   skipped: "muted",
@@ -31,10 +30,8 @@ const ACTION_VARIANTS = {
   found: "default",
 };
 
-// `default` is a label style; as a status it gets the same pill shape as the others.
 const ACTION_CLASSES = { found: "h-6 rounded-4xl px-2.5" };
 
-// Percentages, so the bars shrink with a phone-width column instead of widening the table.
 const PENDING_NAME_WIDTHS = ["w-[45%]", "w-[60%]", "w-[38%]", "w-[52%]"];
 
 function ResultsHeader() {
@@ -43,7 +40,6 @@ function ResultsHeader() {
     <TableHeader>
       <TableRow className="bg-muted/40 hover:bg-muted/40">
         <TableHead className="w-10 px-1 sm:px-2" />
-        {/* Below sm the type moves under the name so the row fits a phone. */}
         <TableHead className="hidden w-[16%] sm:table-cell">{t("results.columns.type")}</TableHead>
         <TableHead>{t("results.columns.name")}</TableHead>
         <TableHead className="w-[19%]">{t("results.columns.outcome")}</TableHead>
@@ -53,7 +49,6 @@ function ResultsHeader() {
   );
 }
 
-// The results table before its first row arrives: same columns, placeholder rows.
 export function SyncResultsPending({ message }) {
   return (
     <div className="space-y-4">
@@ -89,7 +84,6 @@ export function SyncResultsPending({ message }) {
   );
 }
 
-// One table, not per-type sections: type counts are uneven; the chips carry counts.
 export function SyncResults({
   items,
   ignoredKeys,
@@ -112,7 +106,6 @@ export function SyncResults({
     return counts;
   }, [items]);
 
-  // Only types this run produced, in the backend's dependency order.
   const presentTypes = useMemo(
     () => SYNC_RESOURCE_TYPES.filter((type) => countsByType.has(type)),
     [countsByType],
@@ -140,11 +133,8 @@ export function SyncResults({
   }
 
   return (
-    // One card, as every list: search and type filters on top, rows below.
     <ListCard
       toolbar={
-        // One row: search, type chips, then the count at the far end, so the right
-        // side is not left empty.
         <div className="flex flex-wrap items-center gap-3">
           <LocalSearchInput
             value={search}
@@ -170,7 +160,6 @@ export function SyncResults({
             </ToggleGroup>
           ) : null}
 
-          {/* Only while filtering: "Showing 5 of 5" said nothing and pushed onto its own line. */}
           {visible.length !== items.length ? (
             <p className="text-sm text-muted-foreground sm:ms-auto">
               {t("results.showing", { shown: visible.length, total: items.length })}
@@ -206,8 +195,6 @@ export function SyncResults({
               {visible.map((item) => {
                 const key = ignoreKey(item);
                 const ignored = ignoredKeys.has(key);
-                // One line standing for every item of a type (unreadable until the
-                // sites exist); its key is the type itself.
                 const wholeType = item.action === "skipped" && item.resource_key === item.resource_type;
                 const isOpen = expanded.has(item.id);
 
@@ -217,7 +204,6 @@ export function SyncResults({
                     className={cn(ignored && "opacity-55")}
                   >
                     <TableCell className="px-1 align-top sm:px-2">
-                      {/* A whole-type line has no details to open. */}
                       {wholeType ? null : (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -225,8 +211,6 @@ export function SyncResults({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              // -my-1: a 28px button on a 20px first line sat 4px below
-                              // the type and name beside it.
                               className="-my-1 size-7"
                               aria-expanded={isOpen}
                               aria-label={t("results.toggleDetails", { name: item.resource_key })}
@@ -247,8 +231,6 @@ export function SyncResults({
                     <TableCell className="hidden align-top text-sm text-muted-foreground sm:table-cell">
                       {t(`types.${item.resource_type}`)}
                     </TableCell>
-                    {/* Wraps: TableCell is nowrap, so a long reason would set
-                        the table's width. */}
                     <TableCell className="align-top whitespace-normal">
                       {wholeType ? (
                         <span className="text-sm">{t("results.wholeType")}</span>
@@ -260,7 +242,6 @@ export function SyncResults({
                       <p className="text-xs text-muted-foreground sm:hidden">
                         {t(`types.${item.resource_type}`)}
                       </p>
-                      {/* The backend localizes the reason, so it is shown as is. */}
                       {item.reason ? (
                         <p className={cn("mt-0.5 text-xs text-muted-foreground", wholeType ? "max-w-xl" : "line-clamp-2 break-words")}>
                           {item.reason}
@@ -279,9 +260,7 @@ export function SyncResults({
                       >
                         {t(`outcomes.${item.action}`)}
                       </Badge>
-                      {/* What the status means, in a few words. */}
                       {t.has(`outcomeHints.${item.action}`) ? (
-                        // Phone: the badge alone; three-line hints filled the narrow column.
                         <p className="mt-1 hidden text-xs whitespace-normal text-muted-foreground sm:block">
                           {t(`outcomeHints.${item.action}`)}
                         </p>
@@ -290,7 +269,6 @@ export function SyncResults({
                     <TableCell className="px-1 align-top sm:px-2">
                       {canManage && !wholeType ? (
                         <Tooltip>
-                          {/* A span: a disabled button swallows pointer events, hiding the tooltip. */}
                           <TooltipTrigger asChild>
                             <span className="inline-flex">
                               <Button
@@ -306,7 +284,6 @@ export function SyncResults({
                                 }
                                 onClick={() => (ignored ? onUnignore(item) : onIgnore(item))}
                               >
-                                {/* A spinner, since disabling alone is not feedback. */}
                                 {pendingKeys.includes(key) ? (
                                   <Loader2 className="size-4 animate-spin" aria-hidden />
                                 ) : ignored ? (

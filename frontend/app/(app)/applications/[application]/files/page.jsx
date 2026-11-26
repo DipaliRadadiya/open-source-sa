@@ -25,7 +25,6 @@ import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
-// Mirrors App\Rules\SafeRelativePath to reject a mangled ?path= early.
 function isSafePath(path) {
   if (!path) return true;
   if (path.startsWith("/")) return false;
@@ -46,9 +45,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
   const { path: rawPath, trash: rawTrash, hidden: rawHidden, open: rawOpen } = await searchParams;
   const path = typeof rawPath === "string" ? rawPath : "";
   const openName = typeof rawOpen === "string" ? rawOpen : null;
-  // The trash is a view of this screen, not its own route.
   const showTrash = rawTrash === "1";
-  // An explicit ?hidden= wins over the remembered cookie (lib/files/view-prefs.js).
   const cookieStore = await cookies();
   const showHidden = resolveShowHidden(rawHidden, cookieStore.get(HIDDEN_COOKIE)?.value);
   const initialSort = parseSort(cookieStore.get(SORT_COOKIE)?.value);
@@ -61,7 +58,6 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // Site deleted: redirect to the list, which explains why on arrival.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -78,13 +74,10 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
     settled && !showTrash
       ? getFiles(id, path, showHidden)
       : Promise.resolve({ path: "", files: [], failed: false, notFound: false }),
-    // Never blocks: a folder too large to walk returns null.
     settled && !showTrash ? getBreakdown(id, path) : Promise.resolve(null),
   ]);
   const trashResult = settled && showTrash ? await getTrash(id) : null;
 
-  // The listing answers 404 for files too: if the path is a file in its
-  // parent, open the parent with that file open.
   if (filesResult.notFound && path) {
     const parent = dirname(path);
     const name = basename(path);
@@ -99,8 +92,6 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
     <div className="space-y-6">
       <PageHeader title={t("pageTitle")} />
 
-      {/* The panel rewrites compose.yml here from its own copy every time it applies
-          the container, so an edit in Files looks saved and is then lost. */}
       {settled && application.serving_profile === "docker" ? (
         <Note icon={FileCode}>
           {t.rich("dockerNote", {
@@ -134,14 +125,12 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
           backHref={`/applications/${id}/files`}
         />
       ) : filesResult.notFound && !path ? (
-        // Root 404: nothing was ever provisioned here.
         <EmptyState
           icon={FolderSearch}
           title={t("notProvisioned.title")}
           description={t("notProvisioned.description")}
         />
       ) : filesResult.notFound ? (
-        // The path is gone (deleted or stale link): not a load failure.
         <EmptyState
           icon={FolderX}
           title={t("pathNotFound.title")}
@@ -155,8 +144,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
       ) : filesResult.failed ? (
         <LoadFailed description={t("loadFailed")} status={filesResult.status} failure={filesResult.failure} message={filesResult.message} debug={filesResult.debug} />
       ) : (
-        /* Keyed on path so a folder change drops the old folder's selection and dialogs.
-           `showHidden` deliberately does not remount, so a selection survives the toggle. */
+        // Keyed on path so changing folder resets the selection and dialogs.
         <FilesRootProvider value={filesRoot(application)}>
           <FilesPanel
             key={filesResult.path}

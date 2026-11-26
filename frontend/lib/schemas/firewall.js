@@ -2,8 +2,6 @@ import { z } from "zod";
 import { isIpOrCidr } from "@/lib/validation/ip";
 import { listMetaSchema } from "@/lib/schemas/list";
 
-// Render the API's localized `summary`, not a sentence from the parts.
-// `protected` rules cannot be deleted while the firewall is on (lockout guard).
 export const firewallRuleSchema = z.object({
   id: z.union([z.number(), z.string()]),
   port_from: z.number().nullable().optional(),
@@ -14,8 +12,6 @@ export const firewallRuleSchema = z.object({
   description: z.string().nullable().optional(),
   origin: z.string().nullable().optional(),
   protected: z.boolean().optional(),
-  // A disabled rule is kept but removed from UFW, so it can be taken out of
-  // service without being lost.
   enabled: z.boolean().optional().default(true),
   summary: z.string().nullable().optional(),
   created_at: z.string().nullable().optional(),
@@ -23,7 +19,6 @@ export const firewallRuleSchema = z.object({
 });
 
 export const firewallResponseSchema = z.object({
-  // Null when the panel could not read ufw (FirewallController): not "off".
   enabled: z.boolean().nullable(),
   status_reference: z.string().nullish(),
   default_policy: z
@@ -31,12 +26,8 @@ export const firewallResponseSchema = z.object({
     .nullable()
     .optional(),
   rules: z.array(firewallRuleSchema).default([]),
-  // The real SSH port, provided here because a firewall-only user gets a 403
-  // from Settings and would fall back to 22.
   ssh_port: z.number().nullable().optional(),
   your_ip: z.string().nullable().optional(),
-  // A socket on 127.0.0.1 cannot be exposed by any rule. `program` is usually
-  // null and is deliberately not inferred from the port.
   listening: z
     .array(
       z.object({
@@ -48,21 +39,17 @@ export const firewallResponseSchema = z.object({
       }),
     )
     .default([]),
-  // Derived from the engines on this server. `installed: false` still warns:
-  // opening the port before the engine arrives is the same mistake.
   risky_ports: z
     .array(
       z.object({
         port: z.number(),
         label: z.string(),
         reason: z.string().nullable().optional(),
-        // null = unknown, neither true nor false; must not fail the response.
+        // null = unknown.
         installed: z.boolean().nullable().optional(),
       }),
     )
     .default([]),
-  // Rules ufw enforces that the panel has no row for (added with the ufw command).
-  // Null when ufw could not be read: unknown, not "none".
   unmanaged_rules: z
     .array(
       z.object({
@@ -78,7 +65,6 @@ export const firewallResponseSchema = z.object({
 export const firewallPresetSchema = z.object({
   key: z.string(),
   label: z.string(),
-  // null for `custom`: the UI shows raw port fields instead of filling them.
   port: z.number().nullable().optional(),
   protocol: z.string().nullable().optional(),
 });
@@ -87,7 +73,6 @@ export const firewallPresetsResponseSchema = z.object({
   presets: z.array(firewallPresetSchema).default([]),
 });
 
-// `meta` is required: treating a page as the complete list would hide later rules.
 export const firewallRulesResponseSchema = z.object({
   rules: z.array(firewallRuleSchema).default([]),
   meta: listMetaSchema,
@@ -95,42 +80,33 @@ export const firewallRulesResponseSchema = z.object({
 
 export const CUSTOM_PRESET = "custom";
 
-// Ports are ONE field, split by `parsePorts`. Blank `source_ip` means anywhere.
 export const createFirewallRuleSchema = z
   .object({
     preset: z.string().default(CUSTOM_PRESET),
-    // "required", not "requiredField": add-rule-dialog translates a fixed list
-    // of keys and passes anything else through as literal text.
     ports: z.string().min(1, { message: "required" }),
     protocol: z.enum(["all", "tcp", "udp"]),
     action: z.enum(["allow", "deny"]),
     source_ip: z.string().optional(),
-    // Matches the API's `max:255`; the Name field has no server-error slot.
     description: z.string().max(255, { message: "nameTooLong" }).optional(),
   })
   .superRefine((values, ctx) => {
     const parsed = parsePorts(values.ports);
     if (!parsed) {
       ctx.addIssue({ code: "custom", path: ["ports"], message: "portShape" });
-      // 1–65535 on both ends, as FirewallRule::PORT_MIN/PORT_MAX.
     } else if (parsed.from < 1 || parsed.from > 65535 || (parsed.to && parsed.to > 65535)) {
       ctx.addIssue({ code: "custom", path: ["ports"], message: "portRange" });
     } else if (parsed.to && parsed.to < parsed.from) {
       ctx.addIssue({ code: "custom", path: ["ports"], message: "portOrder" });
     } else if (parsed.to && parsed.to !== parsed.from && values.protocol === "all") {
-      // The server's firewall accepts a range only with a single protocol.
       ctx.addIssue({ code: "custom", path: ["protocol"], message: "rangeNeedsProtocol" });
     }
 
     const source = values.source_ip?.trim();
-    // Blank is meaningful ("anywhere"); only a non-empty value has to parse.
     if (source && !isIpOrCidr(source)) {
       ctx.addIssue({ code: "custom", path: ["source_ip"], message: "invalidSource" });
     }
   });
 
-// "443" | "8000-8090" | "8000:8090" → `{from, to}`. Null otherwise, so
-// "unparseable" and "out of range" get different messages.
 export function parsePorts(input) {
   const text = String(input ?? "").trim();
   if (!text) return null;

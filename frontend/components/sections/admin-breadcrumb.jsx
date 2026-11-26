@@ -43,7 +43,6 @@ export function AdminBreadcrumb() {
         </BreadcrumbItem>
         {current && (
           <>
-            {/* A slash, as in the server panel's trail. */}
             <BreadcrumbSeparator className="text-muted-foreground/50">/</BreadcrumbSeparator>
             <BreadcrumbItem className="min-w-0">
               <BreadcrumbPage className="truncate font-medium">{t(`nav.${current.key}`)}</BreadcrumbPage>

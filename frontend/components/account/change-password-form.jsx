@@ -42,7 +42,6 @@ export function ChangePasswordForm({ lastChanged = null }) {
           icon={KeyRound}
           title={t("password.title")}
           description={t("password.description")}
-          // Opposite the button, where Settings says who changed a card last.
           changedBy={lastChanged ? t("password.lastChanged", { when: lastChanged }) : null}
           actions={
             <SectionActions
@@ -65,7 +64,6 @@ export function ChangePasswordForm({ lastChanged = null }) {
               </Row>
             )}
           />
-          {/* Current alone on its row, the new pair side by side below it. */}
           <FormField
             control={form.control}
             name="password"

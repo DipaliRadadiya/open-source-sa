@@ -30,16 +30,13 @@ export default async function LogsPage({ searchParams }) {
     cookies(),
   ]);
 
-  // Read on the server so the tail does not start and then stop on hydration.
   const followPreference = cookieStore.get(FOLLOW_COOKIE)?.value ?? null;
   const lines = parseLinesPref(cookieStore.get(LINES_COOKIE)?.value, DEFAULT_LINES);
 
   if (!can(permissions, "logs", "view")) return <PermissionDenied title={t("title")} />;
-  // Emptying a log is a different trust from reading one.
   const canManage = can(permissions, "logs", "manage");
 
   const { logs: sources, failed, status, failure, message } = await getLogSources();
-  // Default to the first readable source.
   const selected =
     sources.find((s) => s.key === sp.source)?.key ??
     sources.find((s) => s.readable)?.key ??
@@ -51,18 +48,15 @@ export default async function LogsPage({ searchParams }) {
     : { status: "ok", log: null };
 
   const lockedCount = sources.filter((s) => !s.readable).length;
-  // The clock the source list's "written just now" dots are drawn against.
   const renderedAt = new Date().getTime();
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={t("title")}
-        // Only the locked count is worth a line under the title.
         subtitle={lockedCount > 0 ? t("subtitleWithLocked", { count: lockedCount, total: sources.length }) : null}
       />
 
-      {/* A failed request must never render as "there are no logs". */}
       {failed ? (
         <LoadFailed description={t("loadFailedSources")} status={status} failure={failure} message={message} />
       ) : sources.length === 0 ? (

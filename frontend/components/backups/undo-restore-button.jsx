@@ -11,8 +11,6 @@ import { RestoreDialog } from "@/components/backups/restore-dialog";
 import { useRestoreWatch } from "@/components/backups/restore-watch";
 import { DENIED } from "@/components/ui/reason-tooltip";
 
-// The restore row names its exact safety copy, so Undo opens the restore of that copy,
-// as the banner's Undo does — not the site's whole history.
 export function UndoRestoreButton({ restore, canRestore = false, className }) {
   const t = useTranslations("backups.restores");
   const tp = useTranslations("backups.progress");
@@ -30,10 +28,8 @@ export function UndoRestoreButton({ restore, canRestore = false, className }) {
       const response = await fetchBackup(restore.safety_backup_id);
       const found = response.data?.backup;
       if (!found) throw new Error("missing");
-      // Put back only what this restore replaced (e.g. database only).
       setBackup({ ...found, application_domain: restore.application_domain, preferred_type: restore.type });
     } catch (error) {
-      // Only the newest two safety copies are kept, so an older one can be gone.
       if (error?.response?.status === 404) toast.info(t("safetyGone"));
       else toast.error(apiMessage(error, tp("undoFailed")));
     } finally {

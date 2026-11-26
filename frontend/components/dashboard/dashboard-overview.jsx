@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { FirewallQuickSwitch } from "@/components/dashboard/firewall-quick-switch";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// Same hairline cells as the "Right now" strip, so the two read as one family.
 const CELL = "min-w-0 bg-card shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)]";
 
 const FIREWALL = {
@@ -15,9 +14,6 @@ const FIREWALL = {
   unknown: { icon: ShieldQuestion, tone: "neutral", value: "text-muted-foreground" },
 };
 
-// Steel tiles (the one-line version looked plain): the icon in a square edged
-// in its tone, the label above the number, an arrow where the tile opens its page. The firewall
-// tile ends in its switch instead, centred on the same line as the icon.
 const TONES = {
   info: "border-primary/45 bg-primary/10 text-[var(--primary-700,var(--primary))] dark:text-primary",
   success: "border-success/45 bg-success/10 text-success",
@@ -53,16 +49,11 @@ function Tile({ href, icon: Icon, label, value, sub, hint, tone = "info", valueT
       ) : (
         <div className="flex min-w-0 flex-1 items-center gap-3">{body}</div>
       )}
-      {/* Beside the link, not inside it: a switch inside a link would also navigate. */}
       {control ? <span className="flex shrink-0 items-center">{control}</span> : null}
     </li>
   );
 }
 
-/**
- * What is on this server, and whether its firewall is on.
- * Only parts the user may open; an unread count is "—", never 0.
- */
 export async function DashboardOverview({ applications, overview, canManageFirewall = false }) {
   const t = await getTranslations("serverDashboard.overview");
   const ta = await getTranslations("applications");
@@ -74,7 +65,6 @@ export async function DashboardOverview({ applications, overview, canManageFirew
 
   const tiles = [];
   if (applications !== undefined) {
-    // How many are online is the status bar's line just above; here only the count.
     tiles.push({
       key: "applications",
       href: "/applications",
@@ -97,13 +87,9 @@ export async function DashboardOverview({ applications, overview, canManageFirew
       valueTone: look.value,
       label: tf("title"),
       value: t(`firewall.${state}`),
-      // Only the rule count, and only when on ("Off" with a sentence under it looked
-      // messy). The red Off and its icon say enough; the hint is the tile's tooltip.
       sub: state === "on" && rules !== null ? t("firewallRules", { count: rules }) : null,
       hint: t(`firewall.${state}Hint`),
-      // Two cells where the grid has room to spare (2 and 3 columns), so no row ends half empty.
       className: "col-span-2 lg:col-span-1",
-      // The tile's own value already says On or Off, so a role that cannot change it gets no switch.
       control: canManageFirewall ? (
         <FirewallQuickSwitch enabled={overview.firewall.enabled} canManage={canManageFirewall} label={tf("title")} />
       ) : null,
@@ -114,7 +100,6 @@ export async function DashboardOverview({ applications, overview, canManageFirew
 
   return (
     <section aria-label={t("label")} className="overflow-hidden rounded-xl border bg-card">
-      {/* -mr/-mb hide the outermost cells' edges under the card's clipped border. */}
       <ul className="-mr-px -mb-px grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
         {tiles.map(({ key, ...tile }) => (
           <Tile key={key} {...tile} />

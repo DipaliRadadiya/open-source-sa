@@ -4,8 +4,6 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-// Route changes focus the new h1 without scrolling; the first render and hash-only
-// jumps keep the browser's own focus.
 export function PanelFocus() {
   const pathname = usePathname();
   const t = useTranslations("common");

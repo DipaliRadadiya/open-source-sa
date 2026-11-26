@@ -7,12 +7,9 @@ import { RecommendedSetup } from "@/components/fail2ban/recommended-setup";
 import { JailsCard } from "@/components/fail2ban/jails-card";
 import { BannedCard } from "@/components/fail2ban/banned-card";
 
-// One component so the jail switches and ban list cannot disagree: fail2ban still
-// reports bans for a while after a jail is off.
+// fail2ban still reports bans for a while after a jail is turned off.
 export function ProtectionSection({ jails, settings, banned, ignoreIps, canManage, logHref, serverIp = null }) {
   const yourIp = useBrowserIp();
-  // name -> requested enabled value plus the server value it was based on, so
-  // it retires itself once the refresh lands.
   const [asked, setAsked] = useState({});
 
   const shownJails = jails.map((jail) => {
@@ -42,8 +39,6 @@ export function ProtectionSection({ jails, settings, banned, ignoreIps, canManag
         onAskedChange={setAsked}
       />
 
-      {/* Shown only when a jail is on or bans exist. The provider dims the
-          table while the page re-reads fail2ban after a ban or unban. */}
       {shownJails.some((jail) => jail.enabled) ||
       (banned.length > 0 && Object.keys(asked).length === 0) ? (
         <NavTransitionProvider>

@@ -37,14 +37,10 @@ import { LINE_OPTIONS, MAX_LINES, MIN_LINES, normalizeLineCount } from "@/lib/sc
 import { SEVERITY_FILTERS } from "@/lib/logs/severity";
 import { toast } from "sonner";
 
-// Not a line count, so it can never collide with one.
 const CUSTOM_LINES = "custom";
 
-// The line under the title reports the result only when a filter narrowed it or the file is short.
 export function LogToolbar({
   label,
-  // Replaces the title, e.g. the app page's Access / Error switch (a tab
-  // strip above the card and the same name as the card title said it twice).
   heading = null,
   shown,
   loaded,
@@ -53,7 +49,6 @@ export function LogToolbar({
   onTermChange,
   severity,
   onSeverityChange,
-  // Access logs have no level: the same buckets are read from the HTTP status, so say that.
   statusFilter = false,
   lines,
   onLinesChange,
@@ -66,40 +61,28 @@ export function LogToolbar({
   onReload,
   onCopyVisible,
   downloadUrl,
-  // App logs have no download endpoint, so the action is hidden there.
   showDownload = true,
   downloadReason = null,
   followHint = null,
-  // Facts about the open source (e.g. its last write), before the clock note.
   details = [],
-  // Emptying the log; null when unavailable or without `manage` (hidden, not disabled).
   onClear = null,
   clearReason = null,
   clearing = false,
   busy,
   disabled,
-  // After a failed read, Reload stays usable while other controls are disabled.
   reloadable = false,
-  // Why Reload is off: the log is locked or gone.
   reloadReason = null,
   searchRef,
   tailState = "idle",
   onResume,
-  // A control inside the search box's right edge, e.g. the app logs' Filters:
-  // as its own button it pushed Clear log onto a second row in five locales.
   searchAddon = null,
 }) {
   const t = useTranslations("logs");
-  // Swaps the preset selector for a number field, and back once applied.
   const [customLines, setCustomLines] = useState(false);
 
-  // In the head beside Live, not at the end of the filter row: in the narrower system-logs card it
-  // wrapped onto a row of its own.
   const clearButton = onClear ? (
     <Button
       type="button"
-      // The destructive variant, not outline + red classes: inside a card the outline
-      // variant's tint outranks them and the button rendered blue.
       variant="destructive"
       size="sm"
       className="h-8 rounded-lg border-destructive/40"
@@ -113,13 +96,8 @@ export function LogToolbar({
   ) : null;
 
   return (
-    // Two rows, as the panel's cards: the header (title, Live) over a rule, then the
-    // tools. One grey block holding both read as clutter.
     <div className="flex flex-col">
-      {/* Wraps the tail pill below rather than squeezing the heading: min-w-48, not
-          min-w-0 (ru "Paused while filtering" left one word per line at 390). */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3">
-        {/* With the source switch as heading, Live drops below it on a phone so no tab is cut. */}
         <div className={cn("min-w-48 flex-1", heading && "max-sm:basis-full")}>
           <div className="flex items-center gap-2">
             {heading ?? <h2 className="truncate text-[15px] font-semibold tracking-tight">{label}</h2>}
@@ -127,12 +105,9 @@ export function LogToolbar({
               <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
             ) : null}
           </div>
-          {/* No count for an unopened log ("0 lines" would be false), nor when the selector says it. */}
           {!disabled ? (
             <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
-              {/* The clock note stays permanently: timestamps are server time. */}
               {[
-                // Severity hides part of the buffer, so both numbers matter; grep runs server-side.
                 severity !== "all"
                   ? t("shownOfLoaded", { shown, loaded })
                   : term
@@ -152,7 +127,6 @@ export function LogToolbar({
 
         <div className="flex shrink-0 items-center gap-2">
         {clearButton}
-        {/* Fixed height in every state so the pill does not resize when the tail drops. */}
         <div
           className={cn(
             "flex h-8 shrink-0 items-center gap-2 rounded-full px-3",
@@ -167,7 +141,6 @@ export function LogToolbar({
               tailState === "paused" && "text-destructive",
               tailState === "live" &&
                 "animate-pulse text-success motion-reduce:animate-none",
-              // Filtering is an expected pause, not a fault: muted, not amber.
               (tailState === "idle" || tailState === "filtering") &&
                 "text-muted-foreground",
             )}
@@ -201,8 +174,6 @@ export function LogToolbar({
         </div>
       </div>
 
-      {/* Filter anchored left (takes the slack), view actions pushed right. */}
-      {/* White, not tinted: the search and select wells are grey and vanished on a grey band. */}
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
         <div className="relative w-full min-w-40 flex-1 sm:max-w-sm">
           <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -210,7 +181,6 @@ export function LogToolbar({
             ref={searchRef}
             value={term}
             onChange={(e) => onTermChange(e.target.value)}
-            // The API's own limit (grep ≤ 200).
             maxLength={200}
             placeholder={t("searchPlaceholder")}
             disabled={disabled}
@@ -235,10 +205,7 @@ export function LogToolbar({
           ) : null}
         </div>
 
-        {/* `contents`: each control wraps on its own. As one group, a narrow card (System Logs,
-            beside its source list) wrapped Clear log onto a line of its own (Krishna, 13 Oct). */}
         <div className="contents">
-          {/* Severity filters the loaded buffer, so it works while tailing (grep cannot). */}
           <div role="group" aria-label={t(statusFilter ? "statusFilterLabel" : "severityLabel")} className="flex items-center gap-1">
             {SEVERITY_FILTERS.map((key) => (
               <button
@@ -258,7 +225,6 @@ export function LogToolbar({
             ))}
           </div>
 
-          {/* A non-preset value gets its own item, or the trigger would render empty. */}
           {customLines ? (
             <div className="flex items-center gap-1.5">
               <Input
@@ -280,10 +246,8 @@ export function LogToolbar({
                     setCustomLines(false);
                   }
                 }}
-                // Applied on blur, not per keystroke: each change refetches the log.
                 onBlur={(event) => {
                   const next = normalizeLineCount(event.target.value);
-                  // Values above the cap are clamped; say so.
                   if (Number.parseInt(event.target.value, 10) > MAX_LINES) {
                     toast.info(t("linesCapped", { max: MAX_LINES }));
                   }
@@ -324,7 +288,6 @@ export function LogToolbar({
             </Select>
           )}
 
-          {/* One segmented group; h-9 matches the controls beside it. */}
           <div className="flex h-9 items-center overflow-hidden rounded-lg border divide-x">
             <IconAction
               icon={newestFirst ? ArrowUpNarrowWide : ArrowDownNarrowWide}
@@ -376,7 +339,6 @@ function IconAction({ icon: Icon, label, onClick, href, active, disabled }) {
   const shared = {
     variant: "ghost",
     size: "icon",
-    // The group's border and dividers do the framing, so buttons are square segments.
     className: cn(
       "size-9 h-full rounded-none",
       active && "bg-secondary text-secondary-foreground",
@@ -388,7 +350,6 @@ function IconAction({ icon: Icon, label, onClick, href, active, disabled }) {
     <Tooltip>
       <TooltipTrigger asChild>
         {href ? (
-          // Disabled it is a <button>, not the link, so it needs its own name.
           <Button {...shared} asChild={!disabled} aria-label={disabled ? label : undefined}>
             {disabled ? (
               <span>

@@ -31,14 +31,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Only an active certificate matters: a pending or failed one serves nothing.
 export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, certificate = null }) {
   const t = useTranslations("applications.domains");
   const tForm = useTranslations("applications.form");
   const { pending: refreshing, refreshThen } = useRefresh();
 
   const active = certificate?.status === "active" ? certificate : null;
-  // An uploaded certificate cannot be re-issued here, so the advice differs.
   const uploaded = active?.type === "custom";
 
   const form = useForm({
@@ -48,7 +46,6 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
 
   const type = useWatch({ control: form.control, name: "type" });
   const typedDomain = useWatch({ control: form.control, name: "domain" });
-  // Capitals alone are not worth a suggestion: the form lowercases them.
   const suggestedDomain = isValidApplicationDomain(typedDomain) ? null : suggestApplicationDomain(typedDomain);
 
   async function onSubmit(values) {
@@ -58,7 +55,6 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
         : { domain: values.domain, type: values.type };
     try {
       await addDomain(appId, body);
-      // On a secured site, the toast repeats that the new name is not covered yet.
       refreshThen(() => {
         toast.success(t("toast.added"), {
           description: active
@@ -113,7 +109,6 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
               <FormControl>
                 <Input placeholder="example.com" autoComplete="off" spellCheck={false} {...field} />
               </FormControl>
-              {/* Offer the hostname inside a pasted URL, as the create form does. */}
               {suggestedDomain ? (
                 <FormDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span>{tForm("domainSuggestion")}</span>
@@ -141,10 +136,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
               <FormLabel hint={t("add.typeHint")}>{t("add.type")}</FormLabel>
               <Select value={field.value} onValueChange={field.onChange}>
                 <FormControl>
-                  {/* w-full: SelectTrigger defaults to w-fit. */}
                   <SelectTrigger className="w-full">
-                    {/* The value box is flex, which defeats line-clamp: truncate the text itself so a long
-                        label ends in "…" instead of being cut. The open list still shows it in full. */}
                     <SelectValue>
                       <span className="min-w-0 truncate">{t(`type.${field.value}`)}</span>
                     </SelectValue>
@@ -155,8 +147,6 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
                   <SelectItem value="redirect">{t("type.redirect")}</SelectItem>
                 </SelectContent>
               </Select>
-              {/* Users often pick "alias" when they mean "redirect"; spell out
-                  the difference. */}
               <p className="text-xs text-muted-foreground">
                 {type === "redirect" ? t("add.redirectHint") : t("add.aliasHint")}
               </p>
@@ -192,7 +182,6 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
-                    {/* Options are named, with the status code kept alongside. */}
                     <SelectContent>
                       {REDIRECT_STATUSES.map((code) => (
                         <SelectItem key={code} value={String(code)}>
@@ -208,9 +197,6 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
           </>
         ) : null}
 
-        {/* On a secured site the neutral text is used: `dnsNote` promises HTTPS "can be issued". */}
-        {/* Icon on the first line of text, not centred on the block: when the IP wraps
-            below, a centred icon floated between the two lines (Krishna, 9 Oct). */}
         <div className="flex items-start gap-2.5 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
           <Info className="mt-px size-3.5 shrink-0" aria-hidden />
           {serverIp ? (
@@ -228,7 +214,6 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
           )}
         </div>
 
-        {/* On HTTPS the new name answers on 443 with a certificate that does not cover it. */}
         {active ? (
           <Caution size="md">
             <p>
@@ -236,8 +221,6 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
                 current: active.type_title ?? "",
               })}
             </p>
-            {/* With force-HTTPS on, port 80 also redirects to that certificate
-                error, so the name is unreachable. */}
             {active.force_https ? <p>{t("add.certNoticeForceHttps")}</p> : null}
           </Caution>
         ) : null}

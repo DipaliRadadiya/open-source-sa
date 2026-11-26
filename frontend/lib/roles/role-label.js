@@ -1,6 +1,4 @@
-// The built-in Administrator role is seeded in English and cannot be renamed or edited,
-// so its name and description are translated here. Every other role is the admin's
-// own text and is shown as written. `t` is useTranslations("roles").
+// The built-in Administrator role is seeded in English and can't be edited, so translate it here.
 const isBuiltInAdministrator = (role) => Boolean(role?.is_system) && role?.slug === "administrator";
 
 export function roleName(role, t) {

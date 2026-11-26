@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkCard, SkHeader, SkTerminal } from "@/components/ui/skeleton-kit";
 
-
-// System logs: the list of logs beside the open log.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

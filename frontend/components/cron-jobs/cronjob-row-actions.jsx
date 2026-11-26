@@ -31,7 +31,6 @@ export function CronjobRowActions({
   prevPage = null,
   canManage = true,
   canViewLogs = true,
-  // The API records runs and can start one (fb0819c9); an older one gets the plain log link.
   historySupported = false,
 }) {
   const t = useTranslations("cronJobs");
@@ -40,12 +39,9 @@ export function CronjobRowActions({
   const [runOpen, setRunOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
-  // Offered only when both PHPs are known: the switch swaps one recognised interpreter for another.
   const mismatch = phpMismatch(job, applications);
   const switchTo = mismatch?.current && mismatch.target ? mismatch.target : null;
   const runReason = !canManage ? DENIED : !job.active ? t("runNow.paused") : null;
-  // Only an item that opens a dialog keeps focus off the ⋯ button (the dialog
-  // takes it, then hands it back); Escape or a click away returns it there.
   const openingDialog = useRef(false);
 
   return (
@@ -88,7 +84,6 @@ export function CronjobRowActions({
             </MenuItemHint>
           ) : job.log_key ? (
             <DropdownMenuItem asChild>
-              {/* New tab: this leaves Cron Jobs for the server-wide Logs page. */}
               <Link
                 href={`/logs?source=${encodeURIComponent(job.log_key)}`}
                 target="_blank"

@@ -38,20 +38,13 @@ export default async function DashboardPage() {
     getTranslations("common.permissionDenied"),
   ]);
 
-  // Only someone who could act on setup gets the nudge (streamed in below).
   const canViewSetup = can(permissions, "setting", "view");
 
-  // Without `view` the page stays empty rather than redirecting: it is the
-  // landing route, so a redirect would loop.
+  // No redirect without view permission: this is the landing route, so it would loop.
   const allowed = can(permissions, "dashboard", "view");
   const canManage = can(permissions, "dashboard", "manage");
-  // Needed to lead with the "create an application" invitation on an empty server.
   const canViewApplications = can(permissions, "application", "view");
-  // Engines from `/databases/engines`, not `/server/facts`: facts misreport
-  // MariaDB and miss MongoDB and PostgreSQL.
   const canViewDatabases = can(permissions, "database", "view");
-  // The two slow reads (about a second each) start now, beside the others, and stream
-  // into their own Suspense boundaries: nothing else waits for them.
   const overviewRead = allowed
     ? getDashboardOverview({
         databases: canViewDatabases,
@@ -61,37 +54,27 @@ export default async function DashboardPage() {
       })
     : null;
   const setupRead = canViewSetup ? getSetup() : null;
-  // History is the last 24 hours at five-minute samples, so fetched once per
-  // render rather than polled.
   const [facts, processResult, health, history, appResult, engineResult] = allowed
     ? await Promise.all([
         getServerFacts(),
         getServerProcesses(),
-        // Null when services cannot be read; the card then shows no verdict.
         getServiceHealth(),
         getServerHistory(),
-        // The whole list (up to the API maximum of 100), not one page, so
-        // problems beyond the first page are still found.
         canViewApplications ? getAllApplications() : Promise.resolve(null),
-        // Without database `view` the engine chips are simply omitted.
         canViewDatabases ? getEngines() : Promise.resolve({ engines: [] }),
       ])
     : [null, { data: [], failed: false }, null, [], null, { engines: [] }];
 
-  // A failed read must never become "no sites" or "everything is fine".
   const known = Boolean(appResult && !appResult.failed);
   const applications = known ? appResult.applications : [];
   const firstRun = known && applications.length === 0;
-  // Each finding links only where the role may go ("Set up SSL" opened a refusal).
   const appCatalog = await getPermissions("application").catch(() => null);
   const attention = attentionFindings(applications, appCatalog);
   const canViewServices = can(permissions, "service", "view");
-  // With neither answer there is nothing the panel could vouch for.
   const showAttention = canViewApplications || Boolean(health);
 
   return (
     <div className="space-y-6">
-      {/* The banner is the page heading; without `view` there is nothing for it to report. */}
       {allowed ? (
         <DashboardHero
           facts={facts}
@@ -106,8 +89,6 @@ export default async function DashboardPage() {
       )}
 
       {allowed ? (
-        // Right under the status bar: what is on this server, and whether the firewall is on.
-        // Streamed: the firewall read is slow, and the rest of the page need not wait for it.
         <Suspense fallback={<DashboardOverviewSkeleton />}>
           <DashboardOverviewSection
             applications={canViewApplications ? (known ? applications : null) : undefined}
@@ -125,15 +106,12 @@ export default async function DashboardPage() {
 
       {allowed ? (
         <>
-          {/* Only on an empty server, and only on a list we actually received. */}
           {firstRun ? (
             <GettingStarted
               canCreate={can(permissions, "application", "manage")}
               ip={facts?.public_ip ?? facts?.ip}
             />
           ) : null}
-          {/* First after the banner: what needs doing outranks how busy the server is.
-              Renders nothing when all is well; the banner already says so. */}
           {showAttention ? (
             <AttentionPanel
               findings={attention}
@@ -150,7 +128,6 @@ export default async function DashboardPage() {
                 facts={facts}
                 health={health}
                 engines={engineResult?.engines ?? []}
-                /* A failed read, distinct from "no databases". */
                 enginesFailed={Boolean(engineResult?.failed)}
                 canViewServices={canViewServices}
               />
@@ -159,14 +136,11 @@ export default async function DashboardPage() {
           <ProcessesCard
             data={processResult.data}
             failed={processResult.failed}
-            /* Server-wide count, not rows returned. Null on APIs without `meta.total`. */
             total={processResult.total}
             canManage={canManage}
           />
         </>
       ) : (
-        /* Same copy as <PermissionDenied />, which cannot be used here because
-           this landing route renders its own header first. */
         <EmptyState
           icon={ShieldOff}
           title={tDenied("title", { feature: t("title") })}

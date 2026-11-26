@@ -17,7 +17,6 @@ import { DENIED } from "@/components/ui/reason-tooltip";
 
 const ARCHIVE_RE = /\.(zip|tar\.gz|tgz)$/i;
 
-// Shared by the row dropdown and context menu; their `Item`/`Separator` share one prop API.
 export function FileActionItems({
   file,
   appId,
@@ -25,8 +24,6 @@ export function FileActionItems({
   onAction,
   Item,
   Separator,
-  // The "…" dropdown already has Download/Copy path as icon buttons beside it; the
-  // context menu has none, so it includes them here.
   showQuickActions = true,
 }) {
   const t = useTranslations("applications.files");
@@ -37,7 +34,6 @@ export function FileActionItems({
   const canWrite = canManage;
   const permReason = symlinkReason ?? (canWrite ? null : DENIED);
   const isArchive = file.type === "file" && ARCHIVE_RE.test(file.name);
-  // Downloading reads the file, which needs File Manager manage.
   const downloadReason = symlinkReason ?? (canManage ? null : DENIED);
 
   async function copyPath() {

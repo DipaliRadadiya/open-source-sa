@@ -3,11 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { ArrowUpCircle, CircleAlert, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Square mono chips, as on the server dashboard's banner.
 const CHIP = "inline-flex h-6 items-center gap-1.5 rounded-[2px] px-2 font-mono text-xs font-medium tracking-[0.08em] uppercase ring-1 ring-[var(--hero-line)]";
 
-// The page's h1, in the server dashboard's banner: one line on whether the panel is
-// fine, plus version, update and Central.
 export async function AdminHero({ userName = null, doctor = null, update = null, central = null }) {
   const t = await getTranslations("admin.hero");
 
@@ -30,7 +27,6 @@ export async function AdminHero({ userName = null, doctor = null, update = null,
               {t("greeting", { name: userName })}
             </p>
           ) : null}
-          {/* One step below the server banner's title (too big here). */}
           <h1 className="mt-0.5 flex items-center gap-2 text-lg font-semibold tracking-tight text-balance">
             {failed ? <CircleAlert className="size-[18px] shrink-0" aria-hidden /> : null}
             {title}
@@ -55,14 +51,11 @@ export async function AdminHero({ userName = null, doctor = null, update = null,
         </div>
 
         <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">
-          {/* Filled when it is the only action; an outline button beside Update. The banner's
-              see-through style read as a label on its own (Krishna, 17 Oct). */}
           <Button asChild variant={available ? "outline" : "default"} className="shadow-none">
             <Link href="/admin/doctor" prefetch={false}>
               <Stethoscope /> {t("health")}
             </Link>
           </Button>
-          {/* The main action only when there is one to take. */}
           {available ? (
             <Button asChild className="shadow-none">
               <Link href="/admin/panel-update" prefetch={false}>

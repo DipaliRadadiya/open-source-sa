@@ -21,9 +21,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// A failed redeploy leaves the old code serving, so the card reports the last successful deploy.
 export function SourceCard({ application, gitAccounts = [], canDeploy = false, canSeeDeployment = true, deployInFlight = false, className }) {
-  // Hidden when the account is gone: `git_account_missing` has its own banner.
   const account = gitAccounts.find((a) => a.id === application.git_account_id) ?? null;
   const providerTitle = application.git_account_missing ? null : account?.provider_title;
   const t = useTranslations("applications.source");
@@ -37,7 +35,6 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
   const incomplete = isDeployIncomplete(application);
   const repository = application.repository ?? application.repository_url;
   const pushToDeploy = application.webhook?.enabled;
-  // The old code is still serving, so this is a deploy warning, not an outage.
   const deployFailed =
     application.status === "active" && (Boolean(application.failed_step) || incomplete);
 
@@ -46,8 +43,6 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
     try {
       await deployApplication(application.id);
       toast.info(t("started"));
-      // Stay busy until the refreshed page reports the deploy in flight, to prevent
-      // a second deploy.
       refreshThen(() => setDeploying(false));
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
@@ -55,18 +50,14 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
     }
   }
 
-  // "owner/repo" for a known host; the full URL stays in the title and the link.
   const repoUrl = /^https?:\/\//.test(repository ?? "") ? repository : null;
   const repoName = repository ? repository.replace(/^https?:\/\/[^/]+\//, "").replace(/\.git$/, "") : null;
 
   return (
     <Card className={cn("@container/source", className)}>
-      {/* Same shape as the other cards here: title with its badges, the buttons on the
-          right, a line, then the content. Stacks until the CARD is wide enough. */}
       <CardHeader className="flex flex-col gap-3 border-b @2xl/source:flex-row @2xl/source:items-center @2xl/source:justify-between">
         <CardTitle icon={GitBranch} as="h2" className="flex min-w-48 flex-1 flex-wrap items-center gap-2">
           {t("title")}
-          {/* The provider, where known. */}
           {providerTitle ? (
             <Badge variant="outline" className="font-normal">
               {providerTitle}
@@ -91,7 +82,6 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
               {deploying || deployInFlight ? t("deploying") : deployFailed ? t("redeploy") : t("deploy")}
             </Button>
           ) : null}
-          {/* Only for users who can open it. */}
           {canSeeDeployment ? (
             <Button variant="outline" size="sm" asChild>
               <Link href={`/applications/${application.id}/deployment`}>
@@ -103,8 +93,6 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
         </div>
       </CardHeader>
       <CardContent className="@container flex flex-1 flex-col gap-3">
-        {/* Re-reads the page while a deploy runs, so the button comes back and
-            "Last deployed" moves on without a reload. */}
         {deployInFlight ? <AutoRefresh intervalMs={5000} stopAfterMs={900000} /> : null}
         {deployInFlight ? (
           <p role="status" className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
@@ -112,8 +100,6 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
             {t("inFlightNote")}
           </p>
         ) : null}
-        {/* The deploy account was deleted: the site keeps its repo and branch but
-            has no credential, so the next deploy will fail. Offer the repair here. */}
         {application.git_account_missing ? (
           <Caution
             tone="destructive"
@@ -131,8 +117,6 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
           </Caution>
         ) : null}
 
-        {/* One note: a short bold verdict with where it stopped, then one sentence on what
-            that means. The old note said "The last deploy failed…" twice (7 Oct). */}
         {deployFailed ? (
           <Caution size="md">
             <div role="alert" className="space-y-1">
@@ -145,7 +129,6 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
                 ) : null}
               </p>
               {incomplete ? (
-                // The server's sentence names the commit that is live; ours is the fallback.
                 <p className="text-muted-foreground">{application.code_on_disk?.message || t("incomplete")}</p>
               ) : (
                 <p className="text-muted-foreground">{t("failedAt", { step: provisionStepLabel(application.failed_step, td) })}</p>
@@ -160,7 +143,6 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
           </Caution>
         ) : null}
 
-        {/* Label over value, like the details row in the page header. By the card's width. */}
         <div className={FACT_FRAME}>
         <dl className={cn(FACT_GRID, "@xs:grid-cols-2 @2xl:grid-cols-4")}>
           <div className={FACT_CELL}>

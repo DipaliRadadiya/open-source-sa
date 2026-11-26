@@ -2,7 +2,6 @@ import { useTranslations, useFormatter } from "next-intl";
 import { ArrowRight, ArrowUpCircle, CircleCheck, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Shared band for every resting state. The version is 18px so the page heading stays largest.
 const TONES = {
   update: {
     Icon: ArrowUpCircle,
@@ -44,10 +43,7 @@ export function UpdateHeader({ state, divided = false, actions = null }) {
       : t("published", { date: format.dateTime(date, { dateStyle: "medium" }) });
   })();
 
-  // `branch` is null on a tag checkout (detached HEAD), so it drops out.
   const source = [installed.commit_short, installed.branch].filter(Boolean).join(" · ");
-  // When the installed code was written, and how the last real update went: the
-  // up-to-date state had nothing else to say.
   const committed = installed.committed_at ? new Date(installed.committed_at) : null;
   const committedLabel =
     !updateAvailable && committed && !Number.isNaN(committed.getTime())
@@ -63,7 +59,6 @@ export function UpdateHeader({ state, divided = false, actions = null }) {
   const meta = [publishedLabel, source, committedLabel, lastRunLabel].filter(Boolean);
 
   return (
-    // Bottom border only when something follows the band.
     <div
       className={cn(
         "flex flex-wrap items-center gap-x-6 gap-y-4 px-6 py-5",
@@ -75,7 +70,6 @@ export function UpdateHeader({ state, divided = false, actions = null }) {
         <Icon className={cn("size-5", tint)} aria-hidden />
       </span>
 
-      {/* min-w-48 makes the column wrap to its own line rather than squeeze to one word per line. */}
       <div className="min-w-48 flex-1 basis-0 space-y-1.5 sm:flex-none sm:basis-auto">
         <h2 className={cn("text-xs font-semibold", tint)}>
           {tone === "update"
@@ -106,7 +100,6 @@ export function UpdateHeader({ state, divided = false, actions = null }) {
         ) : null}
       </div>
 
-      {/* Spacer for states with no actions, so the band still ends flush. */}
       {actions ?? <span className="flex-1" />}
     </div>
   );

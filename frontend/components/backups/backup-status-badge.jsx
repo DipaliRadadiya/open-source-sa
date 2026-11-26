@@ -3,7 +3,6 @@ import { ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BACKUP_OUTCOME, outcomeOf } from "@/components/backups/status-meta";
 
-// `status_title` comes translated from the API; the local key is the fallback for unknown statuses.
 export function BackupStatusBadge({ backup }) {
   const t = useTranslations("backups.history");
   const meta = outcomeOf(BACKUP_OUTCOME, backup.status);
@@ -18,7 +17,6 @@ export function BackupStatusBadge({ backup }) {
   );
 }
 
-// A safety copy taken before a restore; exempt from retention.
 export function SafetyBadge() {
   const t = useTranslations("backups.history");
 

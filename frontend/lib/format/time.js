@@ -1,6 +1,3 @@
-// Dashboard clock times use the monitored server's timezone (facts.timezone).
-// Validated first: Intl throws a RangeError on an unknown zone.
-
 export function safeTimeZone(timeZone) {
   if (!timeZone || typeof timeZone !== "string") return undefined;
   try {
@@ -11,7 +8,6 @@ export function safeTimeZone(timeZone) {
   }
 }
 
-// Falls back to the app-wide zone when the server did not report a usable one.
 export function clockFormatter(format, timeZone, options = {}) {
   const zone = safeTimeZone(timeZone);
   return (value) => {

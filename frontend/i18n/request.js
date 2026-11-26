@@ -5,8 +5,6 @@ import { getMessageFallback, onError } from "./message-fallback";
 
 const COOKIE = "NEXT_LOCALE";
 
-// Locale from the NEXT_LOCALE cookie (set by lib/i18n/locale-actions.js), then
-// Accept-Language, then the default. No URL prefix, no middleware.
 async function resolveLocale() {
   const cookieStore = await cookies();
   const fromCookie = cookieStore.get(COOKIE)?.value;
@@ -19,8 +17,6 @@ async function resolveLocale() {
   return defaultLocale;
 }
 
-// Deep-merge a partial translation over English so missing keys fall back
-// per-key.
 function deepMerge(base, over) {
   const out = { ...base };
   for (const key of Object.keys(over || {})) {
@@ -48,8 +44,6 @@ export default getRequestConfig(async () => {
     }
   }
 
-  // Explicit timeZone, or SSR (Node's zone) and the browser format differently and
-  // hydration mismatches. The panel monitors one machine, so its zone is correct.
   const timeZone =
     process.env.NEXT_PUBLIC_DISPLAY_TIMEZONE ||
     Intl.DateTimeFormat().resolvedOptions().timeZone ||

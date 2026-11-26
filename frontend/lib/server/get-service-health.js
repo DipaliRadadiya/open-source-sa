@@ -3,22 +3,18 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getServices } from "@/lib/services/get-services";
 
-// Null when services cannot be read, so the caller does not claim "all running".
 export const getServiceHealth = cache(async function getServiceHealth() {
   const permissions = await getPermissions();
   if (!can(permissions, "service", "view")) return null;
 
   const { services, failed } = await getServices();
-  // A failed request is not "everything is fine" — say nothing instead.
   if (failed) return null;
 
   const down = services.filter((service) => service.status !== "active");
 
   return {
     total: services.length,
-    // The count is services, not the software tiles beside it, so the names travel with it.
     names: services.map((service) => service.label),
-    // `failed` (crashed) units lead `inactive` (stopped) ones.
     down: [...down].sort((a, b) =>
       a.status === "failed" ? -1 : b.status === "failed" ? 1 : 0,
     ),

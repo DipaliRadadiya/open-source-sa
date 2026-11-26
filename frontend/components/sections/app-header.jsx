@@ -20,16 +20,10 @@ export function AppHeader({ impersonating = false, breadcrumb = null, operations
   const isAdmin = user?.is_admin;
 
   return (
-    // Stickiness belongs to the layout's wrapping cluster. Small screens get a 44px
-    // touch box without changing the controls' visual size.
     <header className="flex h-16 shrink-0 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 sm:px-6 max-sm:[&_button]:min-h-11 max-sm:[&_button]:min-w-11">
       <SidebarToggle />
-      {/* min-w-0 so a long trail truncates instead of pushing the controls off screen.
-          Hidden on a phone: beside the controls it shrank to "Appli… > Q…"; the page
-          title and the sidebar's way back carry it there. */}
       <div className="min-w-0 flex-1 max-sm:invisible">{breadcrumb}</div>
       <div className="flex shrink-0 items-center gap-2">
-        {/* Only for someone who can see at least one kind of job. */}
         {operations ? <OperationsIndicator canOpenApplications={operations.canOpenApplications} /> : null}
         <LocaleSwitcher />
         <ThemeToggle />

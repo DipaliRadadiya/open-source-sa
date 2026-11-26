@@ -13,7 +13,6 @@ import { measuredSize } from "@/lib/files/folder-sizes";
 import { FileSize } from "@/components/applications/files/file-size";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// `folderSizes` is the table's too, so phones show the same folder sizes.
 export function FilesCards({
   appId,
   data,
@@ -41,7 +40,6 @@ export function FilesCards({
             )}
           >
             <div className="flex min-w-0 items-center gap-2.5">
-              {/* Selection works on phones too; it only feeds the bulk actions, so it goes with them. */}
               {canManage ? (
                 <Checkbox
                   className="shrink-0"
@@ -76,8 +74,6 @@ export function FilesCards({
                       "block truncate font-medium",
                       file.link_broken ? "text-destructive" : "text-muted-foreground",
                     )}
-                    // Inline would push the name out of a narrow row, so the target is in the native
-                    // tooltip.
                   >
                     {file.name}
                     {file.link_target ? (
@@ -85,7 +81,6 @@ export function FilesCards({
                     ) : null}
                   </span></HoverHint>
                 ) : (
-                  // w-full beside `block`: a <button> sizes to its content, so `truncate` would not clip.
                   !canManage || !canOpenFile(file.name) ? (
                     <HoverHint content={file.name}><span className={cn("block w-full font-medium", FILE_NAME)}>
                       {file.name}
@@ -100,15 +95,12 @@ export function FilesCards({
                     </button></HoverHint>
                   )
                 )}
-                {/* Two lines: size and age, then owner and mode, each token unbreakable (one
-                    `·`-joined line split `-rw-r--r--` when wrapping). */}
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   {file.type !== "dir" ? (
                     <FileSize bytes={file.size} className="whitespace-nowrap tabular-nums" />
                   ) : measured ? (
                     <FileSize bytes={measured.size} className="whitespace-nowrap tabular-nums" />
                   ) : folderSizes?.loading ? (
-                    // A span, not <Skeleton> (a div), inside this <p>.
                     <span className="inline-block h-3 w-10 animate-pulse rounded-md bg-muted align-middle" />
                   ) : (
                     <HoverHint content={t("sizes.notMeasured")}><span>—</span></HoverHint>
@@ -120,7 +112,6 @@ export function FilesCards({
                     </>
                   ) : null}
                 </p>
-                {/* Spaced, not `·`-joined, so a wrapped second item has no stray leading dot. */}
                 {file.owner || file.mode ? (
                   <p className="flex flex-wrap gap-x-2 font-mono text-xs leading-relaxed text-muted-foreground">
                     {file.owner ? (

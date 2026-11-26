@@ -28,7 +28,6 @@ export async function generateMetadata({ params }) {
 export default async function ApplicationBotBlockerPage({ params, searchParams }) {
   const { application: id } = await params;
   const { days: rawDays } = await searchParams;
-  // Only offered ranges; the backend would clamp any other value silently.
   const days = TRAFFIC_RANGES.includes(Number(rawDays)) ? Number(rawDays) : DEFAULT_RANGE;
   const [permissions, appPermissions, t, result] = await Promise.all([
     getPermissions(),
@@ -38,7 +37,6 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // Site deleted: land on the list and explain why via ?gone=1.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -49,8 +47,6 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
   const canManage = can(appPermissions, "app_bot_blocker", "manage", "application");
   const settled = isSettled(application);
 
-  // A catalog failure is a load failure, not an empty option set.
-  // Traffic needs the separate `app_log` grant; hidden without it rather than showing "no bots".
   const canSeeTraffic = can(appPermissions, "app_log", "view", "application");
 
   const [{ policies, robotsTxt, failed: policiesFailed, status: policiesStatus, failure: policiesFailure, message: policiesMessage }, traffic] = settled
@@ -81,7 +77,6 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
             currentAllowed={application.bot_allowed ?? []}
             canManage={canManage}
           />
-          {/* Below the choices: often empty, must not push the main control off screen. */}
           {canSeeTraffic ? (
             <BotTrafficCard
               appId={id}

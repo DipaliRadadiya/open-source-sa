@@ -20,7 +20,6 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
   const t = useTranslations("databases.users");
   const restart = useRestartConfirm();
   const { refreshAndWait } = useRefresh();
-  // Set on success: the new credential replaces the form so the password is shown.
   const [created, setCreated] = useState(null);
 
   const defaults = {
@@ -32,7 +31,6 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
 
   const form = useForm({
     resolver: zodResolver(databaseUserFormSchema),
-    // See create-database-dialog: no blur-time errors on a half-filled form.
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: defaults,
@@ -45,7 +43,6 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
       username: submitted.username,
       connection_preference: submitted.connection_preference,
     };
-    // Omitted means the API generates one.
     if (submitted.password) payload.password = submitted.password;
     if (submitted.restart_cluster) payload.restart_cluster = true;
     if (submitted.connection_preference === "remote") {
@@ -54,7 +51,6 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
 
     try {
       const { data } = await createDatabaseUser(database.id, payload);
-      // Refresh first so Done never uncovers a table without the new user.
       await refreshAndWait();
       toast.success(t("added", { username: submitted.username }));
       setCreated({ ...database, users: [data?.user].filter(Boolean) });

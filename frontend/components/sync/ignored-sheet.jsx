@@ -13,7 +13,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-// Ignores are permanent and silent, so this is the only place that state is visible.
 export function IgnoredSheet({ ignores, canManage, pendingKeys = [], onUnignore }) {
   const t = useTranslations("sync");
 
@@ -49,8 +48,6 @@ export function IgnoredSheet({ ignores, canManage, pendingKeys = [], onUnignore 
                   </div>
                   {canManage ? (
                     <Tooltip>
-                      {/* Wrapped: a disabled button stops receiving pointer
-                          events, and it is disabled while pending. */}
                       <TooltipTrigger asChild>
                         <span className="inline-flex shrink-0">
                           <Button
@@ -62,7 +59,6 @@ export function IgnoredSheet({ ignores, canManage, pendingKeys = [], onUnignore 
                             aria-label={t("ignored.restore", { name: ignore.resource_key })}
                             onClick={() => onUnignore(ignore)}
                           >
-                            {/* A spinner, since disabling alone is not feedback. */}
                             {pendingKeys.includes(ignoreKey(ignore)) ? (
                               <Loader2 className="size-4 animate-spin" aria-hidden />
                             ) : (

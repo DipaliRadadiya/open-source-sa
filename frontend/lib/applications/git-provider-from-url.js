@@ -1,6 +1,3 @@
-// Exact hostnames only: self-hosted instances return null and the user picks.
-
-/** Exact hosts, and the `www.` form each one also answers on. */
 const HOSTS = {
   "github.com": "github",
   "www.github.com": "github",
@@ -14,7 +11,7 @@ export function gitProviderFromUrl(raw) {
   const value = typeof raw === "string" ? raw.trim() : "";
   if (value === "") return null;
 
-  // SCP-style SSH (`git@github.com:owner/repo.git`) cannot be parsed by `new URL()`.
+  // new URL() can't parse SCP-style git@host:repo.
   const scp = /^[^\s/@]+@([^\s/:]+):/.exec(value);
   if (scp) return HOSTS[scp[1].toLowerCase()] ?? null;
 

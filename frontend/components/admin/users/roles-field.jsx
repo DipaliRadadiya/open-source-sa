@@ -2,7 +2,6 @@ import { roleName, roleDescription } from "@/lib/roles/role-label";
 import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 
-// `value` is an array of role ids; at least one is required (form schema).
 export function RolesField({ roles, value = [], onChange, failed = false }) {
   const t = useTranslations("users");
   const tr = useTranslations("roles");
@@ -11,7 +10,6 @@ export function RolesField({ roles, value = [], onChange, failed = false }) {
     onChange(checked ? [...value, id] : value.filter((v) => v !== id));
   }
 
-  // A failed load must not read as "no roles exist".
   if (failed) {
     return (
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-center text-sm text-destructive">

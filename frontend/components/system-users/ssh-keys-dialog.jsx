@@ -32,13 +32,9 @@ import {
 import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
 
-// `canManage` false = read-only: the list without Add or Remove (listing only
-// needs view).
 export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
   const t = useTranslations("systemUsers");
-  const [keys, setKeys] = useState(null); // null = loading
-  // Distinct from an empty list: "no keys" and "could not ask" are opposite claims
-  // about who can reach the server.
+  const [keys, setKeys] = useState(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [removing, setRemoving] = useState(null);
   const [pending, setPending] = useState(false);
@@ -59,14 +55,12 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
     onOpenChange?.(next);
   }
 
-  // Deleted elsewhere: nothing can be done to the account here.
   function gone() {
     toast.info(t("toast.alreadyGone", { username: user.username }));
     handleOpenChange(false);
     refresh();
   }
 
-  // True when the list loaded. A 404 means the account itself is gone.
   async function load() {
     try {
       const res = await listSystemUserSshKeys(user.id);
@@ -113,11 +107,8 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
   async function onAdd(values) {
     try {
       const { data } = await addSystemUserSshKey(user.id, values);
-      // The same key again answers 200 with the one already there, unchanged (2083540c).
       if (data?.existing) toast.info(data.message ?? t("toast.keyExists"));
       else toast.success(t("toast.keyAdded"));
-      // Stays open for the next key; the key appearing above and the form emptying
-      // confirm it went through.
       form.reset();
       await load();
       document.querySelector("[data-ssh-key-name]")?.focus();
@@ -127,7 +118,6 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
     }
   }
 
-  // One click, no second confirm step; the row shows the removal while it runs.
   async function onRemove(id) {
     setRemoving(id);
     setPending(true);
@@ -137,8 +127,6 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
       setRemoving(null);
       await load();
     } catch (error) {
-      // Removed elsewhere (the key or the account): the goal is met. The reload tells
-      // which; a deleted account closes the dialog.
       if (error?.response?.status === 404) {
         setRemoving(null);
         if (await load()) toast.success(t("toast.keyRemoved"));
@@ -281,7 +269,6 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
                         <FormControl>
                           <Textarea
                             rows={2}
-                            // Same size as every other field; see the note in create-system-user-dialog.
                             placeholder={t("sshForm.publicKeyPlaceholder")}
                             className="font-mono"
                             {...field}

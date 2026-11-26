@@ -21,11 +21,9 @@ import { activeQueries, isIdle } from "@/lib/databases/health";
 
 const POLL_MS = 5000;
 
-// Ten seconds is worth noticing; a minute is likely the one to kill.
 const SLOW_SECONDS = 10;
 const STUCK_SECONDS = 60;
 
-// Keeps a busy engine from pushing the 24h chart down. Matches `PREVIEW_COUNT` on the dashboard's process card.
 const VISIBLE_COUNT = 3;
 
 function tone(seconds) {
@@ -34,8 +32,6 @@ function tone(seconds) {
   return "neutral";
 }
 
-// The accent bar alone marks the row; no tinted background.
-// A long-running query's card takes the alarm colour on its edge.
 const CARD_EDGE = {
   destructive: "border-destructive/50",
   warning: "border-warning/50",
@@ -48,7 +44,6 @@ const TIME_STYLE = {
   neutral: "bg-muted text-muted-foreground",
 };
 
-/** "2m 8s" rather than "128s". */
 function duration(seconds, t) {
   const total = Math.max(0, Math.round(seconds ?? 0));
   if (total < 60) return t("durationSeconds", { seconds: total });
@@ -57,31 +52,21 @@ function duration(seconds, t) {
   return t("durationHours", { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
 }
 
-// Idle connections are counted, not listed, so a stuck query is not buried.
-// `fill`: the card takes its parent's height and the list scrolls inside it, with no
-// "Show all" cap: beside the chart it matches the chart's height.
 export function ProcessList({ engine, processes: initial = [], canManage, fill = false }) {
   const t = useTranslations("databases.monitor");
   const { refreshAndWait } = useRefresh();
   const [polled, setPolled] = useState(null);
-  // Holds the row, in-flight flag and last failure, so a refused stop is
-  // explained in the dialog.
   const stop = useConfirmAction();
-  // The panel's own admin accounts: on a quiet server its monitoring
-  // connection may be the only row, and stopping it breaks this screen.
+  // The panel's own monitoring connection; stopping it breaks this screen.
   const [expanded, setExpanded] = useState(false);
-  // Queries whose full text is open; ids, so a refresh keeps them open.
   const [openQueries, setOpenQueries] = useState(() => new Set());
   const [query, setQuery] = useState("");
   const [slowOnly, setSlowOnly] = useState(false);
 
   const all = polled ?? initial;
   const idle = all.filter(isIdle);
-  // Longest-running first. Both tests come from lib/databases/health.js, shared
-  // with the stat cards so the headline and the list cannot disagree.
   const running = activeQueries(all);
 
-  // Search covers everything a row displays: statement, database, user, host.
   const term = query.trim().toLowerCase();
   const active = running.filter((p) => {
     if (slowOnly && (p.time ?? 0) < SLOW_SECONDS) return false;
@@ -91,12 +76,9 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
       .some((value) => String(value).toLowerCase().includes(term));
   });
 
-  // Controls only appear once there is a list worth filtering.
   const filterable = running.length > VISIBLE_COUNT;
   const filtered = term !== "" || slowOnly;
 
-  // The cap hides only short queries because the list is sorted longest-first;
-  // anything past the stuck threshold is always shown.
   const shown = expanded || fill
     ? active
     : active.filter((p, i) => i < VISIBLE_COUNT || tone(p.time) === "destructive");
@@ -110,7 +92,7 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
         const parsed = dbProcessesResponseSchema.safeParse(data);
         if (parsed.success) setPolled(parsed.data.processes);
       } catch {
-        // A dropped poll isn't worth reporting; the next one runs in 5s.
+        // retry on the next poll
       }
     }, POLL_MS);
 
@@ -124,8 +106,6 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
     await stop.run(() => killProcess(stop.target.id, engine), {
       fallback: t("killFailed"),
       onDone: async () => {
-        // Wait for the server's list so the toast and close never sit over the
-        // stopped query.
         await refreshAndWait();
         setPolled(null);
         toast.success(t("killed"));
@@ -144,9 +124,6 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
             </h2>
           </div>
 
-          {/* The running count answers "is anything stuck?" in the header; idle
-              connections stay a count. */}
-          {/* Not when it would only say "nothing running": the empty state below says it. */}
           {running.length > 0 || idle.length > 0 ? (
             <span className="min-w-0 text-sm tabular-nums text-muted-foreground">
               {t("runningCount", { count: running.length })}
@@ -156,7 +133,6 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
         </div>
 
         {filterable ? (
-          // Wraps rather than switching on the viewport: the card can sit in a narrow column.
           <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-5 py-3">
             <LocalSearchInput
               value={query}
@@ -179,9 +155,6 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
 
         <CardContent className={cn("px-5 py-0", fill && "flex min-h-0 flex-1 flex-col")}>
           {active.length === 0 ? (
-            // "Nothing running" and "nothing matched your filter" are different
-            // states; only the latter can be cleared.
-            // Centred in the card when it is stretched beside the chart, not stuck at the top.
             <div className={cn("space-y-2 py-5 text-center", fill && "flex flex-1 flex-col justify-center")}>
               <EmptyState
                 compact
@@ -203,13 +176,10 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
               ) : null}
             </div>
           ) : (
-            // One small card per query; expanded scrolls inside a
-            // fixed height so the chart beside it stays put.
             <div
               className={cn(
                 "space-y-3 py-4",
                 expanded && "max-h-[32rem] overflow-y-auto",
-                // Stacked (below xl) it still stops at 32rem; beside the chart, the card's height.
                 fill && "-mx-5 max-h-[32rem] min-h-0 flex-1 overflow-y-auto px-5 xl:max-h-none",
               )}
             >
@@ -231,7 +201,6 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
                         <Activity className="size-3.5 shrink-0" aria-hidden />
                         <span className="truncate">{process.state || process.command || "—"}</span>
                       </span>
-                      {/* The elapsed time, coloured once it is worth worrying about. */}
                       <span
                         className={cn(
                           "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm font-semibold tabular-nums",
@@ -256,7 +225,6 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
                       </dd>
                     </dl>
 
-                    {/* Two lines at rest in a narrow column; the whole query on request. */}
                     {process.query ? (
                       <div className="space-y-1">
                         <pre
@@ -303,16 +271,11 @@ export function ProcessList({ engine, processes: initial = [], canManage, fill =
             </div>
           )}
 
-          {/* Only when the cap is actually hiding something. */}
           {hidden > 0 || expanded ? (
             <div className="-mx-5 border-t px-5 py-2">
-              {/* The ghost variant fills on hover and on aria-expanded; both
-                  fills are neutralised so text colour carries the state. */}
               <Button
                 variant="ghost"
                 size="sm"
-                // aria-expanded beats hover on equal specificity, so the
-                // expanded state needs the compound variant.
                 className="w-full text-muted-foreground hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-muted-foreground aria-expanded:hover:text-foreground dark:hover:bg-transparent"
                 onClick={() => setExpanded((prev) => !prev)}
                 aria-expanded={expanded}

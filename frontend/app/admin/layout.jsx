@@ -21,21 +21,18 @@ import { ErrorCopy } from "@/components/sections/error-copy";
 
 export const dynamic = "force-dynamic";
 
-// Admin Panel shell at /admin, gated on is_admin. This is the UX guard; real
-// enforcement is Laravel Policies/Gates.
+// UI guard only; the real check is in Laravel policies.
 export default async function AdminLayout({ children }) {
   let user;
   try {
     user = await getCurrentUser();
   } catch (error) {
-    // A throw in a layout escapes every error.jsx below it.
     if (isRateLimited(error)) return <RateLimited />;
     if (isPanelUnavailable(error)) return <PanelUnavailable />;
     if (isRequestFailed(error)) return <RequestFailed {...requestFailureProps(error)} />;
     throw error;
   }
   if (!user) redirect(await signedOutPath());
-  // Home, not /dashboard: /dashboard is not open to every role.
   if (!user.is_admin) redirect("/");
 
   return (
@@ -49,7 +46,6 @@ export default async function AdminLayout({ children }) {
           <SidebarAutoCollapse />
           <AdminSidebar />
           <SidebarInset className="min-w-0">
-            {/* One bar with the trail in it, identical to the server panel. */}
             <div className="sticky top-0 z-20">
               <AdminHeader breadcrumb={<AdminBreadcrumb />} />
             </div>

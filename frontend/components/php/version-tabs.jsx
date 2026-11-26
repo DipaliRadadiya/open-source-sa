@@ -7,18 +7,14 @@ import { ScrollFade } from "@/components/ui/scroll-fade";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isInFlight } from "@/lib/runtime/in-flight";
 
-// ionCube is separate from extensions: a vendor `.so`, not an apt package.
-
 const VALUES = ["settings", "extensions", "ioncube", "ini"];
 
-// Uses `isInFlight`, never a hand-written test: the API sends `idle` when untouched.
+// The API sends idle when untouched, so use isInFlight.
 function ionCubeBadge(ioncube, failed, t) {
   if (failed || !ioncube) return null;
-  // An older version installed it on 7.4, so unsupported can still be running.
   if (!ioncube.supported && !ioncube.installed) return { label: t("ioncube.unavailableShort"), variant: "outline" };
   if (ioncube.status === "failed") return { label: t("ioncube.failedShort"), variant: "destructive" };
   if (isInFlight(ioncube.status)) {
-    // Removing is in flight too; label it as such, not "Installing".
     const key = ioncube.status === "removing" ? "removingShort" : "installingShort";
     return { label: t(`ioncube.${key}`), variant: "warning" };
   }
@@ -39,14 +35,11 @@ export function PhpVersionTabs({
 }) {
   const t = useTranslations("php");
   const [tab, setTab] = useState(() => (VALUES.includes(initial) ? initial : "settings"));
-  // php.ini mounts on first open (it costs a read) and then stays, so its edits survive a
-  // look at another tab.
   const [opened, setOpened] = useState(() => new Set([tab]));
 
   const badge = ionCubeBadge(ionCubeState, ionCubeFailed, t);
 
   const sections = [
-    // First: the limits people come here to change, without editing the file.
     { value: "settings", label: t("tabs.settings"), badge: null, node: settings },
     {
       value: "extensions",
@@ -64,8 +57,6 @@ export function PhpVersionTabs({
   function select(next) {
     setTab(next);
     setOpened((current) => (current.has(next) ? current : new Set([...current, next])));
-    // Same as DatabaseTabs: a URL rewrite rather than a route change, so Back
-    // does not step through tabs.
     const url = new URL(window.location.href);
     url.searchParams.set("tab", next);
     window.history.replaceState(null, "", url);
@@ -74,7 +65,6 @@ export function PhpVersionTabs({
   return (
     <div className="space-y-4">
       <Tabs value={tab} onValueChange={select} className="gap-4">
-        {/* Scrolls rather than wraps, matching the other tab strips. */}
         <ScrollFade className="-mx-1 px-1 pb-1">
           <TabsList className="!h-auto w-fit gap-1 p-1">
             {sections.map((section) => (
@@ -97,8 +87,6 @@ export function PhpVersionTabs({
           </TabsList>
         </ScrollFade>
 
-        {/* Inside real tab panels so each tab's aria-controls resolves. Only
-            the active panel mounts. */}
         {sections.map((section) =>
           section.keep && opened.has(section.value) ? (
             <TabsContent

@@ -10,14 +10,13 @@ function href(appId, segments, upTo) {
   return path ? `/applications/${appId}/files?path=${encodeURIComponent(path)}` : `/applications/${appId}/files`;
 }
 
-// In-page path navigator; collapses the middle once a path is deep enough to wrap.
 export function FileBreadcrumb({ appId, path }) {
   const t = useTranslations("applications.files");
   const { root, toServerPath } = useServerPath();
   const segments = path ? path.split("/").filter(Boolean) : [];
   const collapsed = segments.length > 4;
   const visible = collapsed
-    ? [null, ...segments.slice(-2)] // null marks the "…" placeholder
+    ? [null, ...segments.slice(-2)]
     : segments;
   const hiddenCount = collapsed ? segments.length - 2 : 0;
 
@@ -29,14 +28,10 @@ export function FileBreadcrumb({ appId, path }) {
         className="flex min-w-16 items-center gap-1.5 rounded px-1 py-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Folder className="size-3.5 shrink-0" />
-        {/* The real folder on the server; the label only when it is unknown.
-            It is the one part that shrinks, so the folder you are in stays readable on a phone. */}
         {root ? <span className="min-w-0 truncate font-mono text-[13px]">{root}</span> : t("root")}
       </Link>
       {visible.map((seg, i) => {
         const isLast = i === visible.length - 1;
-        // Index into the real segments for the href, offset by the segments skipped when
-        // collapsed.
         const realIndex = collapsed ? segments.length - visible.length + i + 1 : i + 1;
         return (
           <span key={i} className="flex shrink-0 items-center gap-1">
@@ -61,7 +56,6 @@ export function FileBreadcrumb({ appId, path }) {
           </span>
         );
       })}
-      {/* At the root a relative path would be empty, so it is copyable only as a server path. */}
       {path || root ? <CopyButton value={toServerPath(path)} label={t("actions.copyPath")} className="ml-0.5" /> : null}
     </nav>
   );

@@ -71,7 +71,6 @@ export function CloneApplicationPanel({
   const [clone, setClone] = useState(null);
   const [finished, setFinished] = useState(null);
 
-  // A clone this browser started for this site and has not seen finish.
   const remembered = useRememberedClone(application.id);
 
   const blocked = cloneBlockedReason(application, siteType);
@@ -80,35 +79,28 @@ export function CloneApplicationPanel({
 
   const form = useForm({
     resolver: zodResolver(cloneFormSchema),
-    // onTouched, not onSubmit: submit stays disabled until the domain is valid,
-    // so an on-submit message would never appear.
+    // onTouched: submit stays disabled until valid, so an onSubmit message would never show.
     mode: "onTouched",
     reValidateMode: "onChange",
-    // Prefilled with the suggestion: as a grey placeholder it looked filled in while
-    // Create stayed disabled. It is still an ordinary, editable value.
     defaultValues: { name: "", domain: canManage ? suggestion : "" },
   });
 
   const domain = useWatch({ control: form.control, name: "domain" });
   const name = useWatch({ control: form.control, name: "name" });
 
-  // Checked as they type against this server's sites; the API would refuse it anyway.
   const domainTaken =
     domain &&
     takenDomains.some(
       (value) => String(value).toLowerCase() === domain.trim().toLowerCase(),
     );
 
-  // Uses the same rule as the API, so the button is never offered for a 422.
   const domainValid = cloneFormSchema.shape.domain.safeParse(
     domain ?? "",
   ).success;
   const ready = domainValid && !domainTaken;
 
-  // Only a domain that could actually be created is shown as the destination.
   const target = ready ? domain.trim().toLowerCase() : "";
 
-  // Pick a running clone back up after a reload or a navigation away.
   useEffect(() => {
     if (!remembered || clone) return undefined;
 
@@ -116,7 +108,6 @@ export function CloneApplicationPanel({
     fetchClone(remembered)
       .then((response) => {
         const found = response.data?.clone;
-        // A finished clone is shown once, then forgotten so the next visit is a fresh form.
         if (!found || !CLONE_IN_FLIGHT.includes(found.status))
           forgetClone(application.id);
         if (live && found) setClone(found);
@@ -135,8 +126,6 @@ export function CloneApplicationPanel({
       const values = form.getValues();
       const response = await createClone(application.id, {
         domain: values.domain,
-        // Omitted rather than sent empty, so the backend applies its own
-        // "{source} (Clone)" default instead of storing a blank name.
         ...(values.name?.trim() ? { name: values.name.trim() } : null),
       });
       const started = response.data?.clone ?? null;
@@ -161,7 +150,6 @@ export function CloneApplicationPanel({
     form.reset({ name: "", domain: canManage ? suggestion : "" });
   }
 
-  // Keep the failed domain so it can be retried without retyping.
   function retry(failed) {
     setClone(null);
     setFinished(null);
@@ -174,8 +162,7 @@ export function CloneApplicationPanel({
     forgetClone(application.id);
   }
 
-  // Remembered but not yet fetched: never the form, which would invite a
-  // second clone of a site that is already being copied.
+  // Never show the form while a remembered clone is loading; it would invite a duplicate.
   if (remembered && !clone) return <Resuming />;
 
   if (clone) {
@@ -235,13 +222,9 @@ export function CloneApplicationPanel({
   return (
     <DisabledReasonProvider denied={!canManage}>
       <div className="space-y-6">
-        {/* One form card (fields left, what to do first right), then what gets copied in
-            two columns. Two tall side-by-side cards left one half mostly empty (7 Oct). */}
         <div className="space-y-6">
           <div className="min-w-0">
             <PanelCard>
-              {/* Same card shape as the rest of the panel: a title, then a rule.
-                  No icon chips on titles (7 Oct). */}
               <CardHeader className="border-b">
                 <CardTitle icon={Copy} as="h2">{t("create.title")}</CardTitle>
               </CardHeader>
@@ -253,8 +236,6 @@ export function CloneApplicationPanel({
                 >
                   <CardContent className="space-y-5">
                     <div className="@container min-w-0 space-y-5">
-                    {/* Side by side: one under the other left the right half of each field
-                        empty (Krishna, 7 Oct). Equal widths: an uneven split read as a mistake. */}
                     <div className="grid gap-5 @lg:grid-cols-2 @lg:items-start">
                     <FormField
                       control={form.control}
@@ -275,8 +256,6 @@ export function CloneApplicationPanel({
                             />
                           </FormControl>
 
-                          {/* A one-click suggestion, as a line under the field (a chip
-                              repeated the placeholder above it). Skips domains in use. */}
                           {canManage && suggestion && !field.value ? (
                             <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
                               {t("form.suggested")}
@@ -286,8 +265,6 @@ export function CloneApplicationPanel({
                                   form.setValue("domain", suggestion, {
                                     shouldDirty: true,
                                   });
-                                  // The line unmounts once the field has a value,
-                                  // which would drop keyboard focus.
                                   form.setFocus("domain");
                                 }}
                                 className="min-w-0 rounded font-mono font-medium break-all text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -327,13 +304,9 @@ export function CloneApplicationPanel({
                     />
                     </div>
                     </div>
-                    {/* What to do first, full width under the fields: beside them it left empty
-                        space under the fields at 1440 and squeezed them at 1024 (7 Oct). */}
                     <BeforeNotes sourceProtected={application.basic_auth_enabled} />
                   </CardContent>
 
-                  {/* Just the button: a source → copy line beside it cut both domains short,
-                      and the field above and the confirm dialog already show the copy's domain. */}
                   {canManage ? (
                   <CardFooter className="flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
                     <Button
@@ -355,7 +328,6 @@ export function CloneApplicationPanel({
             </PanelCard>
           </div>
 
-          {/* Its own card again: inside the form card it made one crowded block. */}
           <ImpactCard
             siteType={siteType}
             application={application}
@@ -366,7 +338,6 @@ export function CloneApplicationPanel({
 
         {copies.length ? <ExistingCopies copies={copies} /> : null}
 
-        {/* Confirms the source, the copy's domain, and that the original is untouched. */}
         <ConfirmDialog
           open={confirming}
           onOpenChange={setConfirming}
@@ -389,7 +360,6 @@ export function CloneApplicationPanel({
             </div>
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-muted-foreground">{t("confirm.domain")}</dt>
-              {/* Wraps: the one value being confirmed must never be cut off. */}
               <dd className="min-w-0 font-mono font-medium break-all">
                 {target}
               </dd>
@@ -407,7 +377,6 @@ export function CloneApplicationPanel({
   );
 }
 
-/** Shared card shell for every card on this page, so they cannot drift apart. */
 function PanelCard({ className, children }) {
   return (
     <Card
@@ -418,7 +387,6 @@ function PanelCard({ className, children }) {
   );
 }
 
-// The empty form here would invite a second clone of a site already being copied.
 function Resuming() {
   const t = useTranslations("applications.clone.progress");
 
@@ -435,7 +403,6 @@ function Resuming() {
   );
 }
 
-// No `truncate` (it cut labels mid-word). Not-copied items use foreground text so they don't read as disabled.
 function ImpactCard({ siteType, application, sourceProtected }) {
   const t = useTranslations("applications.clone.what");
 
@@ -444,8 +411,6 @@ function ImpactCard({ siteType, application, sourceProtected }) {
       <CardHeader className="border-b">
         <CardTitle icon={ListChecks} as="h2">{t("title")}</CardTitle>
       </CardHeader>
-      {/* Two lines, label then the items running across: as two columns of lists the
-          card was mostly empty space (7 Oct). */}
       <CardContent className="@container space-y-3">
         <ImpactList
           ok
@@ -461,7 +426,6 @@ function ImpactCard({ siteType, application, sourceProtected }) {
             key,
             label: t(`dropsItems.${key}`),
           }))}
-          // Warn only when the source actually has protection on.
           warn={sourceProtected ? "passwordProtection" : null}
         />
       </CardContent>
@@ -515,7 +479,6 @@ function BeforeNotes({ sourceProtected }) {
   return (
     <div className="h-fit rounded-xl border bg-muted/30 p-4">
       <p className="text-sm font-semibold">{t("before.title")}</p>
-      {/* One per line: as columns each sentence wrapped three times. */}
       <ul className="mt-3 space-y-3">
         {items.map(({ key, icon: Icon, tone }) => (
           <li key={key} className="flex items-start gap-2.5 text-sm">
@@ -535,7 +498,6 @@ function BeforeNotes({ sourceProtected }) {
   );
 }
 
-/** Why the site can't be cloned; replaces the form rather than disabling submit. */
 function Blocked({ reason, siteType }) {
   const t = useTranslations("applications.clone");
 
@@ -558,7 +520,6 @@ function Blocked({ reason, siteType }) {
   );
 }
 
-/** Shown to an administrator on a site type that has no clone feature. */
 export function CloneTypeNotSupported({ typeTitle }) {
   const t = useTranslations("applications.clone.blocked.typeNotSupported");
 
@@ -577,7 +538,6 @@ export function CloneTypeNotSupported({ typeTitle }) {
   );
 }
 
-// From each application's `cloned_from_application_id`. Dated because names are not unique.
 function ExistingCopies({ copies }) {
   const t = useTranslations("applications.clone.copies");
 

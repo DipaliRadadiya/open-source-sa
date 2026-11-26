@@ -9,8 +9,7 @@ function Input({
   ...props
 }) {
   const inheritedReason = useDisabledReason();
-  // 16px on iOS only (`ios:`) to avoid Safari's focus zoom, which keys off the input's
-  // font-size, not ::placeholder; placeholder:text-sm keeps placeholders at 14px.
+  // 16px on iOS only: Safari zooms on focus below that.
   const control = (
     <input
       type={type}
@@ -24,7 +23,6 @@ function Input({
     />
   );
 
-  // A parent already showing a tooltip here wins, to avoid two bubbles.
   if (disabled && inheritedReason?.handled && !disabledReason) return control;
 
   return (

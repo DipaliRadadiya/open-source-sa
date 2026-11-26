@@ -28,29 +28,24 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/** A pasted URL is never a token; caught before a round-trip. */
 const LOOKS_LIKE_URL = /^https?:\/\//i;
 
 function isSecret(field) {
   return field.type === "password" || field.name === "token";
 }
 
-// Credential last: its "Create a token" link is built from fields like `host`.
 function credentialLast(fields) {
   return [...fields].sort((a, b) => Number(isSecret(a)) - Number(isSecret(b)));
 }
 
-// Fields with a local placeholder (the API sends none); others get no placeholder.
 const PLACEHOLDER_FIELDS = new Set(["host", "workspace"]);
 
-// Local help for fields the API sends without `help`.
 function fieldHelp(t, providerName, fieldName) {
   const key = `fieldHelp.${providerName}_${fieldName}`;
   return t.has(key) ? t(key) : undefined;
 }
 const TOKEN_PROVIDERS = new Set(["github", "gitlab", "bitbucket"]);
 
-// Falls back to the backend's sentence for providers without local copy.
 function ScopeHint({ provider, fallback }) {
   const t = useTranslations("git.connect");
   const key = `scopeHint_${provider.name}`;
@@ -59,7 +54,6 @@ function ScopeHint({ provider, fallback }) {
     return fallback ? <FormDescription>{fallback}</FormDescription> : null;
   }
 
-  // Explains scopes broader than they sound (GitLab's `api` is full access).
   const noteKey = `scopeNote_${provider.name}`;
 
   return (
@@ -72,7 +66,6 @@ function ScopeHint({ provider, fallback }) {
         option: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
       })}
     </FormDescription>
-    {/* The panel's standard warning box, a little apart from the hint above it. */}
     {t.has(noteKey) ? (
       <Caution size="md" className="mt-3">
         <p className="leading-relaxed">
@@ -98,8 +91,6 @@ function fieldPlaceholder(t, providerName, fieldName) {
   return PLACEHOLDER_FIELDS.has(fieldName) ? t(`placeholders.${fieldName}`) : undefined;
 }
 
-// Keyed per provider by the caller, so the generated Zod schema is fixed for the form's life.
-
 export function ConnectForm({
   provider,
   open,
@@ -111,7 +102,6 @@ export function ConnectForm({
   const t = useTranslations("git.connect");
   const { name: brand } = useBranding();
   const { refreshAndWait } = useRefresh();
-  // Submission-level API errors (usually a rejected token), shown in the form.
   const [failure, setFailure] = useState(null);
 
   const defaults = { label: "" };
@@ -134,14 +124,10 @@ export function ConnectForm({
 
     try {
       const { data } = await connectAccount(payload);
-      // Refresh before the toast so the account is already listed.
       await refreshAndWait();
-      // The same token answers 200 with the account that already holds it, under its own label (2220e0f4).
       const label = data?.git_account?.label ?? values.label;
       if (data?.existing) toast.info(data.message ?? t("alreadyConnected", { label }));
       else toast.success(t("connected", { label: values.label }));
-      // Reported for every connect; the list's next-step prompt names the
-      // account and links with its id (from the response).
       onAccountConnected?.({
         id: data?.git_account?.id ?? null,
         label,
@@ -154,8 +140,6 @@ export function ConnectForm({
         return;
       }
       const rejected = t("rejected", { provider: provider.title });
-      // A 422 here is a refused token, and the API names the provider by its
-      // lowercase id ("github"). Anything else is not the token's fault.
       setFailure(
         error.response?.status === 422 ? rejected : apiMessage(error, t("failed")),
       );
@@ -164,10 +148,8 @@ export function ConnectForm({
 
   const submitting = form.formState.isSubmitting;
   const busy = submitting;
-  // useWatch, not form.watch(), which opts the component out of the React compiler.
   const host = useWatch({ control: form.control, name: "host" });
   const tokenUrl = createTokenUrl(provider.name, host, brand);
-  // The header shows the task; the band below shows the provider.
   const HeaderIcon = KeyRound;
 
   return (
@@ -182,9 +164,7 @@ export function ConnectForm({
         description={t("subtitle", { brand })}
         onCloseAutoFocus={onCloseAutoFocus}
         footer={
-          /* One action; "Change" in the band replaces a Back button. */
           <div className="flex w-full justify-end">
-            {/* Labelled while busy: the API verifies the token with the provider. */}
             <Button type="submit" disabled={busy}>
               {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
               {submitting
@@ -194,7 +174,6 @@ export function ConnectForm({
           </div>
         }
       >
-        {/* The provider being connected, with "Change". */}
         <div className="flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/[0.06] p-3 shadow-e1 ring-1 ring-inset ring-background/60">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-card shadow-e1">
             <ProviderLogo provider={provider.name} className="size-6" />
@@ -218,7 +197,6 @@ export function ConnectForm({
           </Caution>
         ) : null}
 
-        {/* Local field: the label identifies the account across the panel. */}
         <FormField
           control={form.control}
           name="label"
@@ -246,7 +224,6 @@ export function ConnectForm({
             name={spec.name}
             render={({ field }) => (
               <FormItem>
-                {/* The "Create a token" link sits on the label row. */}
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                   <FormLabel required={spec.required}>
                     {spec.label}
@@ -275,7 +252,6 @@ export function ConnectForm({
                       spellCheck={false}
                       placeholder={fieldPlaceholder(t, provider.name, spec.name)}
                       {...field}
-                      // Trims pasted whitespace, which the provider would reject.
                       onChange={(event) => field.onChange(event.target.value.trim())}
                     />
                   ) : (
@@ -294,7 +270,6 @@ export function ConnectForm({
                     provider={provider}
                   />
                 ) : spec.help ?? fieldHelp(t, provider.name, spec.name) ? (
-                  /* The API sends `help` for tokens only; local help covers the rest. */
                   <FormDescription>
                     {spec.help ?? fieldHelp(t, provider.name, spec.name)}
                   </FormDescription>
@@ -310,7 +285,6 @@ export function ConnectForm({
   );
 }
 
-// Scope names are spelled out: Bitbucket's and GitLab's token pages do not preselect them.
 function TokenHelp({ fallback, value, provider }) {
   const t = useTranslations("git.connect");
   const pastedUrl = LOOKS_LIKE_URL.test(value ?? "");

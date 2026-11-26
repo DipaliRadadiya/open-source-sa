@@ -69,12 +69,10 @@ import {
 } from "@/components/ui/form";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-/** Common values, so most edits are a pick rather than typing. */
 const UPLOAD_SIZES = ["8M", "32M", "64M", "128M", "256M", "512M"];
 const MEMORY_SIZES = ["128M", "256M", "512M", "1G"];
 const EXECUTION_TIMES = [30, 60, 120, 300];
 const INPUT_VARS = [1000, 3000, 5000, 10000];
-// 10 is the default pool size; without it unconfigured sites open in Custom.
 const WORKERS = [2, 4, 6, 8, 10, 12];
 
 const TABS = [
@@ -83,7 +81,6 @@ const TABS = [
   { key: "advanced", icon: Settings2 },
 ];
 
-// Marks a change behind a hidden tab. Presets and the upload limit also write Advanced fields.
 const TAB_FIELDS = {
   basic: [
     "php_version",
@@ -122,7 +119,6 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
 
-
   async function isolate() {
     setBusy(true);
     try {
@@ -147,7 +143,6 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
             <span>{t("unmanaged")}</span>
           </p>
         ) : php.isolated && php.managed === null ? (
-          // Unknown is neither answer, so no warning about hand edits.
           <p className="flex items-start gap-2.5 rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
             <Info className="mt-0.5 size-4 shrink-0" />
             <span>{t("managedUnknown")}</span>
@@ -183,8 +178,6 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
   );
 }
 
-// ─── Shared PHP mode ────────────────────────────────────────────────────────
-
 function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, canManageCron, busy, onIsolate }) {
   const t = useTranslations("applications.php");
   const tShared = useTranslations("applications.php.shared");
@@ -193,7 +186,6 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, c
   const cronReview = useCronPhpReview({ appId: php.application_id, canManageCron });
   const settings = php.settings;
 
-  // `picked` only overrides the server value until they match, so an external change is not a stale edit.
   const [picked, setPicked] = useState(null);
   const serverVersion = php.php_version ?? "";
   const version = picked !== null && picked !== serverVersion ? picked : serverVersion;
@@ -201,14 +193,12 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, c
   const [savingVersion, setSavingVersion] = useState(false);
   const versions = php.available_versions ?? [];
   const versionChanged = version !== serverVersion;
-  // Whether the selected version is one this application supports.
   const unsupportedVersion =
     Boolean(phpRange) && Boolean(version) && !versionWithin(version, phpRange);
 
   async function saveVersion() {
     setSavingVersion(true);
     try {
-      // Only the version: settings need a pool file, so sending them 422s.
       const saved = version;
       const { data } = await updateApplicationPhp(php.application_id, { php_version: saved });
       await refreshAndWait();
@@ -235,12 +225,10 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, c
           </p>
         ) : null}
 
-        {/* Border only when the preview block follows; otherwise it leaves an empty band. */}
         <div className={cn("bg-muted/20 px-5 py-4", php.isolation_supported && "border-b")}>
           <p className="mb-3 text-sm font-medium text-muted-foreground">
             {tShared("currentLabel")}
           </p>
-          {/* Same status line as the dedicated panel. */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
             <Stat
               icon={MemoryStick}
@@ -261,7 +249,6 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, c
           </div>
         </div>
 
-        {/* Separate from the read-only strip: the version is editable without a pool. */}
         <div className="flex flex-wrap items-end justify-between gap-3 border-t px-5 py-4">
           <div className="min-w-0 space-y-1.5">
             <p className="text-sm font-medium">{t("fields.version")}</p>
@@ -282,8 +269,7 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, c
               </SelectContent>
             </Select>
             {unsupportedVersion ? (
-              /* The API only checks the version is installed, so an
-                 unsupported one saves and breaks the site. */
+              // The API only checks the version is installed, so an unsupported one saves and breaks the site.
               <p className="flex items-start gap-1.5 text-xs text-warning">
                 <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
                 {t("versionUnsupported", {
@@ -303,7 +289,6 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, c
           ) : null}
         </div>
 
-        {/* Hidden where the web server has no per-site pools: it can never be unlocked. */}
         {php.isolation_supported ? (
           <div className="border-t px-5 py-4">
             <p className="mb-3 text-xs font-semibold text-muted-foreground">
@@ -341,8 +326,6 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, c
   );
 }
 
-// ─── Dedicated PHP mode ──────────────────────────────────────────────────────
-
 function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", applicationPath = "", timezones, canManage, canManageCron, saving, setSaving }) {
   const t = useTranslations("applications.php");
   const tCommon = useTranslations("common");
@@ -350,14 +333,9 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
   const { refreshAndWait } = useRefresh();
   const cronReview = useCronPhpReview({ appId, canManageCron });
   const [tab, setTab] = useState("basic");
-  // The server's message when it refuses the whole save (`errors.settings`):
-  // PHP-FPM rejected the config, or the pool has gone.
   const [rejected, setRejected] = useState(null);
   const settings = php.settings;
-  // Lock every control for read-only roles, not just Save.
   const locked = !canManage || saving;
-  // Bumped on Discard and after a save: remounts the tabs so per-control UI
-  // state (an open "Custom" box, a half-typed function name) resets with the form.
   const [resetKey, setResetKey] = useState(0);
 
   const defaults = {
@@ -372,7 +350,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     pm_type: settings.pm_type,
     pm_max_children: settings.pm_max_children,
     pm_max_requests: settings.pm_max_requests,
-    // Empty = automatic; the placeholder shows what that works out to.
     pm_start_servers: settings.pm_start_servers ?? "",
     pm_min_spare_servers: settings.pm_min_spare_servers ?? "",
     pm_max_spare_servers: settings.pm_max_spare_servers ?? "",
@@ -425,7 +402,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     TAB_FIELDS[key].some((field) => errors[field]),
   );
 
-  // An error on a hidden tab is invisible, so switch to the first tab with one.
   function showErrors(fields) {
     const withErrors = TABS.map(({ key }) => key).filter((key) =>
       TAB_FIELDS[key].some((field) => fields[field]),
@@ -452,8 +428,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     setSaving(true);
     setRejected(null);
     try {
-      // Only changed fields: sending the whole form would turn every inherited default into an override.
-      // The version is always sent; the API validates it on every save.
       const payload = Object.fromEntries(
         Object.entries(values).filter(([key]) => key === "php_version" || dirtyFields[key]),
       );
@@ -463,11 +437,9 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
       setResetKey((key) => key + 1);
       await refreshAndWait();
       toast.success(t("saved"));
-      // Only a version change: a limits-only save would re-offer jobs the user already left.
       if (values.php_version && values.php_version !== before) cronReview.offer(data, values.php_version);
     } catch (error) {
       const refused = error.response?.data?.errors;
-      // `settings` is the server refusing the whole save (usually PHP-FPM rejecting the config).
       if (refused?.settings) {
         setRejected(refused.settings[0]);
         toast.error(refused.settings[0]);
@@ -483,7 +455,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     }
   }
 
-  // Only the cleared fields are written, so other in-progress edits stay dirty.
   function onReset(fields, next) {
     const settings = next?.settings;
     if (settings) {
@@ -491,7 +462,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
         form.setValue(field, settings[field] ?? "", { shouldDirty: false });
       }
     }
-    // `overridden` comes from the server-rendered prop.
     router.refresh();
   }
 
@@ -506,7 +476,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
         onSubmit={form.handleSubmit(save, (invalid) => showErrors(invalid))}
         className="space-y-3"
       >
-        {/* Tracks the fields, so an unsaved change shows as the value it would become. */}
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border bg-muted/30 px-4 py-2.5 text-xs">
           <Stat icon={Cpu} label={t("summary.version")} value={version || "—"} saved={defaults.php_version || "—"} unsavedLabel={tCommon("saveFooter.unsaved")} />
           <Stat icon={MemoryStick} label={t("summary.memory")} value={memoryLimit} saved={defaults.memory_limit} unsavedLabel={tCommon("saveFooter.unsaved")} />
@@ -522,17 +491,14 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
         </div>
 
         <Card className="gap-0 overflow-hidden py-0">
-          {/* All tab panels stay mounted (forceMount): unmounting would discard half-typed values. */}
           <Tabs key={resetKey} value={tab} onValueChange={setTab} className="gap-0">
             <div className="border-b px-5 py-3">
-              {/* Scrolls rather than wraps, like the Settings tab bar; ScrollFade signals overflow. */}
               <ScrollFade className="-mx-1 px-1 pb-1">
                 <TabsList className="!h-auto w-fit gap-1 p-1">
                   {TABS.map(({ key, icon: Icon }) => (
                     <TabsTrigger key={key} value={key} className="gap-2 px-3 py-1.5">
                       <Icon className="size-4" />
                       {t(`tabs.${key}`)}
-                      {/* Marks errors or unsaved changes behind a hidden tab. */}
                       {errorTabs.includes(key) ? (
                         <span
                           className="size-1.5 rounded-full bg-destructive"
@@ -564,7 +530,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                   label={t("fields.version")}
                   name="php_version"
                   directive="php_version"
-                  // The API only checks the version is installed, so warn here.
                   warning={
                     unsupportedVersion
                       ? t("versionUnsupported", {
@@ -628,7 +593,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                         </Button>
                       ))}
                     </div>
-                    {/* Shown as text, not a `title`, so it is readable on touch. */}
                     <p className="mt-1.5 min-h-4 text-xs text-muted-foreground">
                       {activePreset?.description ?? null}
                     </p>
@@ -648,7 +612,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                   name="upload_max_filesize"
                   directive="upload_max_filesize + post_max_size"
                   error={postTooSmall ? t("hints.postTooSmall") : null}
-                  /* Saving also rewrites the vhost (nginx returns 413 before PHP sees a large upload). */
                   explain={t("hints.upload")}
                 >
                   <ValueSelect
@@ -695,7 +658,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
               hidden={tab !== "security"}
               className="space-y-5 px-5 py-5"
             >
-              {/* Not a plain toggle: it has paths, a live value that may differ, and an unknown state. */}
               <OpenBasedir form={form} php={php} disabled={locked} />
 
               <ToggleRow
@@ -756,8 +718,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                   max={100000}
                 />
 
-                {/* Only the numbers the chosen mode reads. Shown on an error too, so a
-                    lowered worker count that breaks saved numbers is visible. */}
                 {pmType === "dynamic" || errors.pm_start_servers ? (
                   <>
                     <NumberField
@@ -793,7 +753,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                       min={1}
                       max={MAX_CHILDREN}
                     />
-                    {/* php-fpm before 8.1 refuses the key, so the backend leaves it out there. */}
                     {version && compareVersions(version, "8.1") >= 0 ? (
                       <NumberField
                         form={form}
@@ -858,7 +817,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                       />
                       <FormControl>
                         <Combobox
-                          // `timezones` is grouped by region, not a flat list of strings.
                           options={phpTimezoneOptionsWith(timezones, field.value)}
                           value={field.value}
                           onChange={field.onChange}
@@ -882,8 +840,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                   mono
                 />
 
-                {/* Kept though the upload control writes it: a hand-tuned value
-                    may not fit the picker, and hiding it would overwrite it. */}
                 <TextField
                   form={form}
                   name="post_max_size"
@@ -904,7 +860,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                     <Label
                       label={t("fields.directives")}
                       name="additional_directives"
-                      // Per-site FPM pools also take pool lines (env[], timeouts); OpenLiteSpeed has none.
                       explain={t(php.isolation_supported ? "hints.directivesPool" : "hints.directives")}
                     />
                     <FormControl>
@@ -958,8 +913,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
   );
 }
 
-// ─── Reusable primitives ─────────────────────────────────────────────────────
-
 const CUSTOM = "__custom";
 
 function ValueSelect({
@@ -971,14 +924,11 @@ function ValueSelect({
   numeric = false,
   onPick,
   customLabel,
-  // Example for the Custom box: formats differ ("256M" vs plain seconds).
   placeholder,
 }) {
   const tValidation = useTranslations("validation");
   const tCommon = useTranslations("common");
   const value = useWatch({ control: form.control, name });
-  // The application's saved value is always a choice of its own: a default of 20 workers
-  // showed as "Custom" with a box, as if someone had typed it.
   const saved = form.formState.defaultValues?.[name];
   const sizeOf = (option) => (numeric ? Number(option) : phpSizeToBytes(String(option)));
   const choices =
@@ -986,13 +936,11 @@ function ValueSelect({
       ? options
       : [...options, saved].sort((a, b) => sizeOf(a) - sizeOf(b));
   const inList = choices.some((option) => String(option) === String(value));
-  // Reset by the panel's remount on Discard and after a save.
   const [customPicked, setCustomPicked] = useState(false);
   const custom = !inList || customPicked;
 
-  // Not <FormMessage>: the dropdown branch is outside a <FormField>. Zod emits keys, the API sends sentences.
+  // Not FormMessage: this branch is outside a FormField.
   const raw = form.formState.errors?.[name]?.message;
-  // `requiredField` lives in `common`, not `validation`.
   const error = raw
     ? raw === "requiredField"
       ? tCommon("requiredField")
@@ -1040,7 +988,6 @@ function ValueSelect({
             <FormControl>
               <Input
                 {...field}
-                // Typed sizes go through onPick too, so post_max_size follows.
                 onChange={onPick && !numeric ? (event) => onPick(event.target.value) : field.onChange}
                 type={numeric ? "number" : "text"}
                 inputMode={numeric ? "numeric" : undefined}
@@ -1062,7 +1009,6 @@ function ValueSelect({
   );
 }
 
-// A changed field shows "saved → new" so an unsaved value is not mistaken for one in effect.
 function Stat({ icon: Icon, label, value, saved = value, unsavedLabel }) {
   const pending = saved !== value;
   return (
@@ -1083,11 +1029,9 @@ function Stat({ icon: Icon, label, value, saved = value, unsavedLabel }) {
   );
 }
 
-// One-way: the API refuses going back to shared (405), since the shared pool lets one site read every other site's files.
 function IsolationCard({ php, canManage, busy, onIsolate }) {
   const t = useTranslations("applications.php.isolation");
 
-  // Nothing to offer; SharedPhpState explains why inside its card.
   if (!php.isolation_supported) return null;
 
   if (php.isolated) return null;
@@ -1096,7 +1040,6 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
     <Card className="gap-0 overflow-hidden border-blue-200 bg-blue-50/60 py-0 dark:border-blue-800 dark:bg-blue-950/20">
       <CardContent className="grid gap-4 px-5 py-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <div className="flex min-w-0 items-start gap-3">
-          {/* Hidden on the narrowest screens, where it costs a quarter of the column. */}
           <div className="hidden size-9 shrink-0 items-center justify-center rounded-full bg-blue-100 sm:flex dark:bg-blue-900">
             <Lock className="size-4 text-blue-600 dark:text-blue-400" />
           </div>
@@ -1105,8 +1048,6 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
               {t("offTitle")}
               <Badge
                 variant="outline"
-                // whitespace-normal: Badge is nowrap by default and this text
-                // is long enough to overflow a narrow card.
                 className="h-auto border-blue-300 bg-blue-100/60 py-0.5 text-xs font-normal whitespace-normal text-blue-700 dark:border-blue-700 dark:bg-blue-900/60 dark:text-blue-300"
               >
                 {t("sharedBadge", { user: php.runs_as ?? "www-data" })}
@@ -1124,7 +1065,6 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
             type="button"
             onClick={onIsolate}
             disabled={busy}
-            // Wraps: a nowrap button grid item would set the card's minimum width.
             className="h-auto max-w-full justify-self-start py-2 text-center whitespace-normal sm:justify-self-end"
           >
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -1136,15 +1076,11 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
   );
 }
 
-/** Memory limit × workers against the server's memory, with an over-commit warning. */
 function MemoryBudget({ budget, workers, limit }) {
   const t = useTranslations("applications.php.budget");
 
   if (!budget.total) return null;
 
-  // Red only when this application alone could outgrow the server. All applications at their
-  // limits together is a worst case that rarely happens, and a new app's defaults already met
-  // it, so that is an amber heads-up.
   const overSelf = budget.thisSite > budget.total;
   const tone = overSelf ? "destructive" : budget.overCommitted ? "warning" : null;
   const pct = (bytes) => Math.min(100, Math.round((bytes / budget.total) * 100));
@@ -1162,7 +1098,6 @@ function MemoryBudget({ budget, workers, limit }) {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm font-medium tabular-nums">
           {t("equation", {
-            // Half-typed or invalid ("abc") reads as unknown, like an empty field.
             limit: /^\d+\s*[KMG]?$/i.test(String(limit ?? "").trim()) ? limit : "—",
             workers: Number(workers) || 0,
             total: formatBytes(budget.thisSite),
@@ -1220,7 +1155,6 @@ function Stack({ label, name, directive, error, warning, explain, children }) {
     <FormItem>
       <Label label={label} name={name} directive={directive} explain={explain} />
       {children}
-      {/* Only value-driven messages here; the field's meaning lives behind the ⓘ. */}
       {error ? (
         <p className="text-sm text-destructive">{error}</p>
       ) : warning ? (
@@ -1233,17 +1167,13 @@ function Stack({ label, name, directive, error, warning, explain, children }) {
   );
 }
 
-/** What the per-field Reset needs, without threading props through each field. */
 const OverrideContext = createContext(null);
 
-// `explain` is the only place a field is explained; the hint never restates the directive.
 function Label({ label, name, directive, explain }) {
   return (
     <div className="flex min-h-5 items-center justify-between gap-2">
       <FormLabel className="min-w-0 flex-wrap gap-1" hint={directive ? undefined : explain}>
         <span>{label}</span>
-        {/* ⓘ grouped with the directive so it never wraps alone; break-all
-            lets long directives wrap on narrow columns. */}
         {directive ? (
           <span className="inline-flex min-w-0 items-center gap-1">
             <span className="font-mono text-xs font-normal break-all text-muted-foreground">
@@ -1258,14 +1188,12 @@ function Label({ label, name, directive, explain }) {
   );
 }
 
-// Saves immediately: the API returns effective values only, so the inherited value comes from the reset response.
 function ResetOverride({ name }) {
   const context = useContext(OverrideContext);
   const t = useTranslations("applications.php");
   const [busy, setBusy] = useState(false);
 
   if (!context || !name || !RESETTABLE.has(name)) return null;
-  // Usually just itself; see RESET_FIELDS for controls owning two directives.
   const fields = (RESET_FIELDS[name] ?? [name]).filter((field) => RESETTABLE.has(field));
   if (!fields.some((field) => context.overridden[field])) return null;
 
@@ -1298,12 +1226,11 @@ function ResetOverride({ name }) {
   );
 }
 
-// The upload control writes both sizes, so its Reset must clear both or a stale `post_max_size` breaks uploads.
+// The upload field writes both sizes, so Reset must clear both.
 const RESET_FIELDS = {
   upload_max_filesize: ["upload_max_filesize", "post_max_size"],
 };
 
-// `SavePhpSettingsRequest` `nullable` directives (null clears the override). Keep in step with the backend; anything else 422s.
 const RESETTABLE = new Set([
   "memory_limit",
   "upload_max_filesize",
@@ -1389,7 +1316,6 @@ function ToggleRow({ form, name, label, directive, explain, disabled }) {
       name={name}
       render={({ field }) => (
         <FormItem className="flex items-start justify-between gap-4 rounded-lg border px-3 py-2.5">
-          {/* flex-1 so the Label's justify-between pushes Reset right, beside the switch. */}
           <div className="min-w-0 flex-1 space-y-1">
             <Label label={label} name={name} directive={directive} explain={explain} />
           </div>
@@ -1401,7 +1327,6 @@ function ToggleRow({ form, name, label, directive, explain, disabled }) {
               disabled={disabled}
             />
           </FormControl>
-          {/* basis-full so it wraps below rather than squeezing the switch. */}
           <FormMessage className="basis-full" />
         </FormItem>
       )}
@@ -1409,7 +1334,6 @@ function ToggleRow({ form, name, label, directive, explain, disabled }) {
   );
 }
 
-// The API joins with `:`, the textarea gives newlines; a paste may use either.
 function splitPaths(value) {
   return (value ?? "")
     .split(/[:\n,]+/)
@@ -1417,7 +1341,6 @@ function splitPaths(value) {
     .filter(Boolean);
 }
 
-// Paths the backend always prepends are fixed chips: deleting one from the textarea would return on save.
 function OpenBasedir({ form, php, disabled }) {
   const t = useTranslations("applications.php");
   const tb = useTranslations("applications.php.basedir");
@@ -1428,17 +1351,14 @@ function OpenBasedir({ form, php, disabled }) {
   const effective = php.open_basedir_effective ?? null;
   const recommended = splitPaths(php.open_basedir_recommended);
 
-  // Null means the live value could not be read; never show it as "off".
   const unknown = enabled && live === null;
 
-  // Compared as sets: path order in the pool file does not matter.
   const sameAsSaved = (() => {
     if (live === null || effective === null) return false;
     const [a, b] = [splitPaths(live), splitPaths(effective)];
     return a.length === b.length && [...a].sort().join(":") === [...b].sort().join(":");
   })();
 
-  // Strictly "live differs from saved", deliberately not tied to `php.managed`. Never while `live` is unknown.
   const disagrees = enabled && !unknown && !sameAsSaved;
 
   return (
@@ -1517,7 +1437,6 @@ function OpenBasedir({ form, php, disabled }) {
           />
         </div>
       ) : (
-        // Preview of the paths that would be allowed before switching it on.
         <Collapsible>
           <CollapsibleTrigger className="text-xs text-muted-foreground underline-offset-2 hover:underline">
             {tb("previewTrigger")}
@@ -1551,12 +1470,10 @@ function PathList({ paths, label, hint }) {
   );
 }
 
-// The form value stays the comma-joined string the API takes.
 function BlockedFunctions({ form, php, disabled }) {
   const t = useTranslations("applications.php");
   const tb = useTranslations("applications.php.blocked");
   const [draft, setDraft] = useState("");
-  // Invalid names from the last Add, reported instead of added.
   const [refused, setRefused] = useState([]);
 
   const value = useWatch({ control: form.control, name: "disable_functions" }) ?? "";
@@ -1571,8 +1488,6 @@ function BlockedFunctions({ form, php, disabled }) {
       shouldValidate: true,
     });
 
-  // Presets come from the API, safest first, localised. Older backends send
-  // only the flat suggested string, treated as a one-entry list.
   const presets = php.disable_functions_presets?.length
     ? php.disable_functions_presets
     : php.suggested_disable_functions
@@ -1585,7 +1500,6 @@ function BlockedFunctions({ form, php, disabled }) {
           },
         ]
       : [];
-  // Order and whitespace are ignored when matching a preset.
   const asSet = (list) =>
     (list ?? "")
       .split(",")
@@ -1598,7 +1512,6 @@ function BlockedFunctions({ form, php, disabled }) {
   );
 
   function add() {
-    // Accepts a pasted list; the Set drops duplicates within the paste.
     const typed = [...new Set(draft.split(/[,\s]+/).map((name) => name.trim()).filter(Boolean))];
     const valid = typed.filter((name) => /^[A-Za-z0-9_]+$/.test(name));
     const added = valid.filter((name) => !names.includes(name));
@@ -1684,7 +1597,6 @@ function BlockedFunctions({ form, php, disabled }) {
             </p>
           ) : null}
 
-          {/* Same pattern as the FPM presets: description shown as text, not a `title`. */}
           {presets.length ? (
             <div className="self-start">
               <Label label={tb("presetsLabel")} />

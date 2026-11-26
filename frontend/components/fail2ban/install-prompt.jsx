@@ -11,26 +11,22 @@ import { parseApiDate } from "@/lib/format/api-date";
 import { Button } from "@/components/ui/button";
 import { apiMessage } from "@/lib/api/error-message";
 
-// apt gets ten minutes server-side; past that the copy stops implying it is on track.
 const SLOW_AFTER_MS = 10 * 60 * 1000;
 
-// State comes from the API's `install` object, so progress and failures survive a reload.
 export function InstallPrompt({ canManage, install = null }) {
   const t = useTranslations("fail2ban");
   const router = useRouter();
-  // Covers only the gap until the next server read.
   const [starting, setStarting] = useState(false);
 
   const installing = install?.status === "installing" || starting;
   const failed = install?.status === "failed" && !starting;
 
-  // Elapsed time is a clock read, so it is computed in an effect, not render.
   const [slow, setSlow] = useState(false);
   const startedAtRaw = install?.started_at;
 
   useEffect(() => {
     const startedAt = parseApiDate(startedAtRaw);
-    // One callback for every case: a bare setState in the effect body cascades.
+    // One callback: a bare setState in the effect cascades.
     const tick = () =>
       setSlow(
         Boolean(installing && startedAt && Date.now() - startedAt.getTime() > SLOW_AFTER_MS),
@@ -63,7 +59,6 @@ export function InstallPrompt({ canManage, install = null }) {
       ? t("install.failedTitle")
       : t("install.title");
 
-  // The API localizes the reason; ours is only the fallback.
   const body = installing
     ? t("install.installing")
     : failed
@@ -97,7 +92,6 @@ export function InstallPrompt({ canManage, install = null }) {
               {t("install.stalled")}
             </p>
           ) : null}
-          {/* Small and last: mainly for support. */}
           {failed && install?.reference ? (
             <p className="pt-1 font-mono text-xs text-muted-foreground">{install.reference}</p>
           ) : null}

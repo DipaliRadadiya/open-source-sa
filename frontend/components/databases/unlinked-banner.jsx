@@ -3,8 +3,6 @@ import { getTranslations } from "next-intl/server";
 import { DatabaseZap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Databases in no site, and so in no backup. Filters rather than attaches:
-// only the reader knows which site each belongs to.
 export async function UnlinkedBanner({ count = 0, filtered = false }) {
   const t = await getTranslations("databases.unlinked");
 
@@ -16,7 +14,6 @@ export async function UnlinkedBanner({ count = 0, filtered = false }) {
         <DatabaseZap className="mt-0.5 size-4 shrink-0 text-warning" />
         <div className="space-y-0.5">
           <p className="text-sm font-medium">{t("title", { count })}</p>
-          {/* States the consequence, not just "not linked". */}
           <p className="text-xs text-muted-foreground">{t("description")}</p>
         </div>
       </div>

@@ -8,14 +8,12 @@ import { Tile } from "@/components/applications/app-status-tiles";
 import { reclaimableFor } from "@/lib/disk-cleaner/keep-days";
 import { useKeepChoice } from "@/components/disk-cleaner/keep-context";
 
-// Client-side because the icon component cannot cross the server boundary as a prop.
-// Compact tiles, as on Services: the stacked cards left most of their width empty.
+// Client side: icon components can't be passed from the server.
 const TONE = { normal: "info", watch: "warning", high: "destructive" };
 
 export function DiskSummary({ disk, categories }) {
   const t = useTranslations("diskCleaner");
   const format = useFormatter();
-  // Priced for the Clean panel's current choice, so the tile and the list never disagree.
   const [keep] = useKeepChoice();
   const { bytes, count: reclaimableCount } = reclaimableFor(categories, keep);
   const reclaimableHuman = formatBytes(bytes || 0, format);

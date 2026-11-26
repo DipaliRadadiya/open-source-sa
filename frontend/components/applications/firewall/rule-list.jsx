@@ -6,18 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
 
-// The API bounds both lists at 50 entries of 1–255 characters; mirrored here.
 const MAX_ITEMS = 50;
 const MAX_LENGTH = 255;
 
-// A term this short matches inside ordinary words (".conf" blocks confirm.min.js).
-// Warned, not blocked. Must cover "conf", the example the warning cites.
+// Short terms match inside normal words (.conf blocks confirm.min.js).
 const SHORT_TERM_LENGTH = 6;
 
-// Rows shown before the list becomes its own scroll region.
 const VISIBLE_ROWS = 8;
 
-// The API does a plain substring match, so nothing here is a regex.
 export function RuleList({ items, onChange, disabled, placeholder, emptyText, warnShort = false, minLength = 1 }) {
   const t = useTranslations("applications.firewall");
   const [draft, setDraft] = useState("");
@@ -38,7 +34,6 @@ export function RuleList({ items, onChange, disabled, placeholder, emptyText, wa
       return;
     }
     setError(null);
-    // A duplicate just clears the box; the entry is already there.
     if (!items.includes(value)) onChange([...items, value]);
     setDraft("");
   }
@@ -46,7 +41,6 @@ export function RuleList({ items, onChange, disabled, placeholder, emptyText, wa
   return (
     <div className="space-y-2">
       {items.length > 0 ? (
-        // Scrolls in place past a screenful so the controls stay reachable.
         <ul
           className={cn(
             "space-y-1.5",
@@ -86,7 +80,6 @@ export function RuleList({ items, onChange, disabled, placeholder, emptyText, wa
             setDraft(event.target.value);
             if (error) setError(null);
           }}
-          // Enter adds the entry (not inside a <form>, so nothing else submits).
           onKeyDown={(event) => {
             if (event.key !== "Enter") return;
             event.preventDefault();
@@ -95,8 +88,6 @@ export function RuleList({ items, onChange, disabled, placeholder, emptyText, wa
           placeholder={placeholder}
           spellCheck={false}
           autoComplete="off"
-          // Deliberately no `maxLength`: it would silently truncate a paste and
-          // make the length check above unreachable.
           disabled={disabled || full}
           aria-label={placeholder}
         />

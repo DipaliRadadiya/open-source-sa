@@ -33,32 +33,23 @@ import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// Key names only. Values load on demand from backup files for `manage` users,
-// never from the activity log. Restore returns the file to its state before the change.
 export function EnvironmentHistoryCard({
   appId,
   entries,
   meta = null,
   failed = false,
   canManage = false,
-  // The process holds its environment in memory, so a restore needs a
-  // restart to take effect; offers the same checkbox as the editor's dialog.
   requiresRestart = false,
 }) {
   const t = useTranslations("applications.environment.history");
-  // Restart strings are shared with the editor's restore dialog.
   const tEnv = useTranslations("applications.environment");
   const { pending: refreshing, refreshThen } = useRefresh();
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
-  // Off by default, matching the editor's dialog.
   const [restart, setRestart] = useState(false);
-  // On by default and on again every time the confirmation closes.
   const [safetyCopy, setSafetyCopy] = useState(true);
   const tc = useTranslations("common");
 
-  // Pages after the first, fetched on request. Dropped when the first page
-  // changes, since every row shifts and one would otherwise be hidden.
   const [older, setOlder] = useState({ from: entries, rows: [], page: 1, last: meta?.last_page ?? 1 });
   const [loadingOlder, setLoadingOlder] = useState(false);
   if (older.from !== entries) {
@@ -87,7 +78,6 @@ export function EnvironmentHistoryCard({
     setBusy(true);
     try {
       await restoreEnvironment(appId, { backup: pending.backup, restart, safetyCopy });
-      // Refresh so the editor shows the restored file; close only once it lands.
       refreshThen(() => {
         toast.success(t("restored"));
         setPending(null);
@@ -109,7 +99,6 @@ export function EnvironmentHistoryCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* A failed read must not render as "no changes yet". */}
         {failed ? (
           <p className="text-sm text-muted-foreground">{t("loadFailed")}</p>
         ) : !entries?.length ? (
@@ -140,7 +129,6 @@ export function EnvironmentHistoryCard({
         onOpenChange={(next) => {
           if (next) return;
           setPending(null);
-          // Cleared so an abandoned tick does not apply to the next restore.
           setRestart(false);
           setSafetyCopy(true);
         }}
@@ -164,7 +152,6 @@ export function EnvironmentHistoryCard({
             <p>{tc("keepFileCopyOff")}</p>
           </Caution>
         ) : null}
-        {/* Same control and strings as the editor's restore dialog. */}
         {requiresRestart ? (
           <div className="flex items-start gap-2.5 rounded-lg border p-3">
             <Checkbox
@@ -187,14 +174,12 @@ export function EnvironmentHistoryCard({
   );
 }
 
-/* One change as a timeline entry: who, what, when, and its actions. */
 function HistoryRow({ appId, entry, canManage, onRestore }) {
   const t = useTranslations("applications.environment.history");
   const actor = actorOf(entry);
   const keys = changedKeys(entry);
   const blocked = unrestorableReason(entry);
   const restored = entry.action === "environment_restored";
-  // A save that touched no variable has no values to show.
   const noKeys = !restored && keys.length === 0;
   const diff = useEnvironmentDiff(appId, entry);
   const canShowValues = canManage && blocked !== "pruned" && !noKeys;
@@ -202,7 +187,6 @@ function HistoryRow({ appId, entry, canManage, onRestore }) {
 
   return (
     <li className="group/row relative flex gap-3 pb-5 last:pb-0">
-      {/* The rail joining one change to the next. */}
       <span aria-hidden className="absolute top-9 bottom-1 left-4 w-px bg-border group-last/row:hidden" />
       <span
         className={cn(
@@ -236,11 +220,9 @@ function HistoryRow({ appId, entry, canManage, onRestore }) {
                     : t("actionChanged", { count: keys.length })}
               </span>
             </p>
-            {/* The exact time on hover; the readable one on screen. */}
             <HoverHint content={entry.created_at ?? undefined}><p className="text-xs text-muted-foreground">
               {entry.created_at_human}
             </p></HoverHint>
-            {/* Inside this column so on a phone the keys stay with the sentence, above the wrapped buttons. */}
             {keys.length ? (
               <div className="flex flex-wrap gap-1.5 pt-1.5">
                 {keys.map((key) => (
@@ -254,7 +236,6 @@ function HistoryRow({ appId, entry, canManage, onRestore }) {
             ) : null}
           </div>
 
-          {/* Shrinkable, so on a phone the second button wraps instead of overflowing. */}
           <div className="flex min-w-0 flex-wrap gap-2">
             {canShowValues ? (
               <Button
@@ -294,8 +275,6 @@ function HistoryRow({ appId, entry, canManage, onRestore }) {
           </div>
         </div>
 
-        {/* Values only for `manage` users (who could read them by restoring
-            anyway); unavailable once the backup is pruned. */}
         {canShowValues && diff.open ? <EnvironmentDiff state={diff} /> : null}
       </div>
     </li>

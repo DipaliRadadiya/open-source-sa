@@ -27,25 +27,21 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// The token lives 60s and is single-use, so the browser goes straight there, never a link.
-// Hidden by DRIVER, matching the endpoint's guard, so new engines need no change.
+// The token lasts 60s and works once, so navigate straight there.
 export function PhpmyadminButton({
   database,
   canManage,
   compact = false,
-  // Cards use the same action inside their overflow menu; table/header buttons stay unchanged.
   menuItem = false,
-  // The page header passes the filled, full-size look; rows keep the small outline.
   variant = "outline",
   size = "sm",
-  // Null when the lookup failed (NOT "none"); must not change what the button offers.
+  // null means the lookup failed, not none.
   sites = null,
 }) {
   const t = useTranslations("databases.phpmyadmin");
   const [opening, setOpening] = useState(false);
   const installed = sites === null ? null : sites.length > 0;
 
-  // Refusals knowable in advance (no site, no user); others surface as the toast.
   const state = phpmyadminState({
     engine: database.engine,
     driver: database.driver,
@@ -53,15 +49,11 @@ export function PhpmyadminButton({
     users: userCount(database),
   });
 
-  // Signing in writes as the database's own user, so the API requires
-  // `database` manage. A view-only role gets no button.
   if (state === "hidden" || !canManage) return null;
 
   const Action = menuItem ? DropdownMenuItem : Button;
   const actionProps = menuItem ? {} : { variant, size };
 
-  // Nothing to open: link to the create-application flow with the type chosen,
-  // so the domain and confirmation stay the user's.
   if (state === "install") {
     return (
       <Action asChild {...actionProps}>
@@ -73,7 +65,6 @@ export function PhpmyadminButton({
     );
   }
 
-  // phpMyAdmin authenticates as a database user; without one there is no login.
   if (state === "needs-user") {
     if (menuItem) {
       return (
@@ -96,7 +87,6 @@ export function PhpmyadminButton({
   }
 
   async function open(applicationId) {
-    // No tab until the login URL exists. No fallback toast: see lib/browser/new-tab.js.
     setOpening(true);
     try {
       const { data } = await phpmyadminSso(database.id, undefined, applicationId);
@@ -105,8 +95,6 @@ export function PhpmyadminButton({
 
       openUrlInNewTab(url);
     } catch (error) {
-      // The API's message names the reason: no phpMyAdmin site, or an
-      // unsupported engine.
       toast.error(apiMessage(error, t("failed")));
     } finally {
       setOpening(false);
@@ -119,17 +107,13 @@ export function PhpmyadminButton({
     <TableProperties className="size-4" />
   );
 
-  // Labelled everywhere: a bare external-link icon reads as a link to the
-  // database page, and a tooltip needs hover.
   const label = opening ? t("signingShort") : compact && !menuItem ? "phpMyAdmin" : t("open");
 
-  // Keep the item mounted while signing in, so pending state prevents duplicate requests.
   const select = (event, siteId) => {
     event.preventDefault();
     open(siteId);
   };
 
-  // Several installations: ask which. `onSelect` is the click the new tab rides on.
   if (sites !== null && sites.length > 1) {
     if (menuItem) {
       return (
@@ -177,7 +161,6 @@ export function PhpmyadminButton({
               <DropdownMenuItem
                 key={site.id}
                 onSelect={() => open(site.id)}
-                // The domain is what tells two installations apart.
                 className="font-mono text-xs wrap-anywhere"
               >
                 {site.domain}
@@ -200,8 +183,6 @@ export function PhpmyadminButton({
 
   return (
     <DisabledReasonProvider denied={!canManage}>
-      {/* Arrow function, not a bare reference: `onClick={open}` hands the
-          click event straight to the site-id parameter. */}
       <Button
         type="button"
         variant={variant}

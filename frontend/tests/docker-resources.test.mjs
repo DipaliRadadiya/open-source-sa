@@ -554,7 +554,6 @@ test("a field can depend on another field's value", () => {
   // A general extension of the existing named `depends_on` conditions, not a
   // Docker special case — and watched rather than read once, so the form reacts as
   // soon as the mode changes.
-  assert.match(createForm, /depends_on: "<field>:<value>"/);
   assert.match(createForm, /dependsOnSatisfied/);
   assert.match(createForm, /useWatch\(\{ control: form\.control \}\)/);
 });

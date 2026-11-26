@@ -26,8 +26,6 @@ export function NewFolderDialog({ appId, path, existingNames = [], open, onOpenC
   });
 
   async function onSubmit(values) {
-    // Checked against the visible list first so the answer is instant; the API
-    // refuses it too (path_exists) for a name the list has not loaded.
     if (existingNames.includes(values.name.trim())) {
       form.setError("name", { message: t("newFolder.taken", { name: values.name.trim() }) });
       return;
@@ -42,13 +40,10 @@ export function NewFolderDialog({ appId, path, existingNames = [], open, onOpenC
         form.reset({ name: "" });
       });
     } catch (error) {
-      // The API validates "path" (name joined onto the current directory); this form
-      // only has "name", so the error is remapped onto it.
       const pathError = error.response?.data?.errors?.path?.[0];
       if (pathError) {
         form.setError("name", { message: pathError });
       } else if ([404, 409, 422].includes(error.response?.status)) {
-        // A refusal with no field key (a taken name) still belongs on the field.
         form.setError("name", { message: apiMessage(error, t("newFolder.failed")) });
       } else {
         toast.error(apiMessage(error, t("newFolder.failed")));

@@ -16,8 +16,6 @@ const ACTION_META = {
   stop: { icon: Square, tone: "text-destructive hover:bg-destructive/10 hover:text-destructive" },
 };
 
-// Fixed slots so the same action sits at the same x on every row. start and
-// restart never co-occur — start only appears when nothing is running.
 const SLOTS = [["start", "restart"], ["stop"]];
 
 const BY_STATE = {
@@ -26,7 +24,6 @@ const BY_STATE = {
   stopped: ["start"],
 };
 
-/** Per-row start/stop/restart. Edit/Delete live in the row ⋯ menu. */
 export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdated, reserveSlots = true }) {
   const t = useTranslations("applications.workers");
   const [pending, setPending] = useState(null);
@@ -40,10 +37,9 @@ export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdate
   const actions = BY_STATE[worker.state] ?? ["start"];
   const busy = pending !== null;
 
-  // A "successful" start can still come back stopped (e.g. a mistyped command), which must read as a problem.
+  // A start can still come back stopped (e.g. a typo in the command).
   function reportOutcome(id, action, next) {
     const name = worker.name;
-    // No readable state: only report that the request was accepted.
     if (!next?.state) {
       toast.info(t(`toast.${action}`, { name }), { id });
       return;
@@ -67,16 +63,12 @@ export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdate
 
   async function run(action) {
     setBusyAction(action);
-    // One toast, replaced in place by the outcome.
     const id = toast.loading(t(`toast.${action}`, { name: worker.name }));
     try {
       const { data } = await runWorkerAction(appId, worker.id, action);
       const next = data?.worker;
-      // Applied before the busy flag clears so the old state never flashes back.
       if (next?.id === worker.id) onUpdated?.(next);
       reportOutcome(id, action, next);
-      // Deliberately NOT router.refresh(): a second supervisord read can land
-      // later and overwrite the row. The panel already polls.
     } catch (error) {
       toast.error(apiMessage(error, t(`error.${action}`, { name: worker.name })), { id });
     } finally {

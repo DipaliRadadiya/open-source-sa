@@ -8,12 +8,9 @@ import { FailurePanel } from "@/components/ui/failure-panel";
 import { Button } from "@/components/ui/button";
 import "./globals.css";
 
-// Same fonts as the root layout, which this replaces.
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-// Root-layout errors (e.g. a refresh cut off mid-stream). No translation
-// provider here, so the `errors` keys are loaded for the reader's locale.
 function readerLocale() {
   const cookie = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/)?.[1];
   if (locales.includes(cookie)) return cookie;
@@ -49,8 +46,6 @@ export default function GlobalError({ error }) {
     };
   }, []);
 
-  // A reload, not `reset()`: re-rendering the root from the same half-received
-  // payload fails the same way.
   const reload = (
     <Button variant="outline" onClick={() => window.location.reload()} aria-label={copy?.retry}>
       <RotateCw className="size-4" />

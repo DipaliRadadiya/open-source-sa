@@ -12,7 +12,6 @@ function num(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
-// Inline usage bar so a busy process is visible without reading every number.
 function UsageCell({ value, tone, label, format }) {
   const n = num(value);
   const text = format.number(n / 100, {
@@ -39,9 +38,6 @@ function UsageCell({ value, tone, label, format }) {
     </div>
   );
 }
-
-// Cells are module-level: an inline cell is a new component type each render, and this table
-// re-renders on every search keystroke.
 
 function PidCell({ row }) {
   return <span className="tabular-nums text-muted-foreground">{row.original.pid}</span>;
@@ -92,7 +88,6 @@ function CommandCell({ row }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {/* Foreground, not muted: the command is the row's identity. */}
         <span
           tabIndex={0}
           className="block w-full truncate font-mono text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -107,12 +102,10 @@ function CommandCell({ row }) {
   );
 }
 
-// `limit` is the collapsed dashboard card; the stop button stays in the preview.
 export function ProcessTable({
   data,
   query = "",
   failed = false,
-  // How many processes the box is running; the rows are only the heaviest `limit`.
   total = null,
   canManage = false,
   limit = null,
@@ -138,15 +131,11 @@ export function ProcessTable({
       accessorKey: "command",
       header: t("processes.command"),
       enableSorting: false,
-      // The command takes the remaining width; max-w-0 lets its child ellipsize. With every
-      // column showing, each gets a share instead, or PID, User, CPU and Memory were pushed
-      // together at the right with the middle empty.
       meta: { className: "w-full min-w-36 max-w-0 @xl/procs:min-w-64 @5xl/procs:w-[32%]" },
       cell: CommandCell,
     },
     {
       id: "pid",
-      // pid arrives as number or string; sort it numerically either way.
       accessorFn: (row) => num(row.pid),
       sortingFn: "basic",
       header: t("processes.pid"),
@@ -179,14 +168,11 @@ export function ProcessTable({
       id: "actions",
       header: () => <span className="sr-only">{t("processes.actions")}</span>,
       enableSorting: false,
-      // 64px = the 32px button plus the cell's own px-4 either side.
       meta: { className: "w-16 text-right" },
       cell: ActionsCell,
     },
   ];
 
-  // `failed` is the request (non-2xx or a schema rejection); an empty `data`
-  // is a 200 with nothing in it. Each state describes only itself.
   if (failed) {
     return (
       <EmptyState
@@ -199,7 +185,6 @@ export function ProcessTable({
   }
 
   if (rows.length === 0) {
-    // The endpoint returns only the top processes, so empty means the server reported none.
     return query ? (
       <EmptyState compact icon={SearchX} title={t("processes.noMatch")} />
     ) : (
@@ -213,14 +198,10 @@ export function ProcessTable({
   }
 
   return (
-    // Narrow cards drop PID, user and memory rather than scroll the Stop button off screen.
     <div className="space-y-3 @container/procs">
-      {/* Fixed-height scroll area keeps the page short no matter how many
-          processes the server reports. */}
       <div
         className={cn(
           "overflow-auto rounded-xl border [scrollbar-gutter:stable] @3xl/procs:[&_table]:min-w-[48rem] [&>div]:rounded-none [&>div]:border-0",
-          // Only the full table needs capping; three rows never reach it.
           !limit && "max-h-[26rem]",
         )}
       >
@@ -235,14 +216,12 @@ export function ProcessTable({
       </div>
       {limit ? null : (
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* The API sends only the heaviest processes, so the count describes the list, not the machine. */}
         <p className="text-sm text-muted-foreground">
           {query.trim()
             ? t("processes.showing", { shown: filtered.length, total: data.length })
             : null}
         </p>
         <p className="text-sm tabular-nums text-muted-foreground">
-          {/* "Top 25 of 160" once the server reports the total. */}
           {t(total != null && total > data.length ? "processes.summaryOfTotal" : "processes.summary", {
             count: data.length,
             total,

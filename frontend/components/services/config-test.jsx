@@ -15,15 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { apiMessage } from "@/lib/api/error-message";
 
-// Read-only: it never reloads. A `<Dialog>` inside `DropdownMenuContent` unmounts with the menu,
-// so the dialog is rendered as the menu's sibling. It opens on click and shows the wait itself,
-// because the menu closes on select and nothing else on screen would change.
+// A Dialog inside DropdownMenuContent unmounts with the menu, so it's rendered as a sibling.
 export function useConfigTest(service) {
   const t = useTranslations("services");
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState(null);
-  // A test closed before it answers must not reopen the dialog, nor overwrite a newer run.
+  // A test closed early must not reopen the dialog or overwrite a newer run.
   const runId = useRef(0);
 
   async function run() {
@@ -63,7 +61,6 @@ export function ConfigTestDialog({ service, open, pending, result, onDismiss }) 
       <Dialog open={open} onOpenChange={(next) => !next && onDismiss()}>
         <DialogContent className="sm:max-w-2xl" aria-busy={pending}>
           <DialogHeader>
-            {/* Icon beside the title, matching ConfirmDialog's header. */}
             <div className="flex min-w-0 items-center gap-3">
               <span
                 className={cn(
@@ -100,10 +97,8 @@ export function ConfigTestDialog({ service, open, pending, result, onDismiss }) 
             </DialogDescription>
           </DialogHeader>
 
-          {/* The tool's output verbatim (it names the file and line). */}
           {!pending && result?.output ? (
             <div className="overflow-hidden rounded-lg border border-console-border bg-console">
-              {/* Its own strip, so the copy button does not cover the first line. */}
               <div className="flex items-center justify-between border-b border-console-border px-3 py-1.5">
                 <span className="font-mono text-xs uppercase tracking-wide text-console-muted">
                   {service.unit}

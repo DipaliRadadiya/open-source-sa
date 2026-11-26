@@ -18,7 +18,6 @@ import {
   FormField,
 } from "@/components/ui/form";
 
-// Saved here, applied by the next deploy: the deployer rewrites the systemd unit.
 export function RuntimeCard({ application, canManage }) {
   const t = useTranslations("applications.deployment.runtime");
   const { refreshAndWait } = useRefresh();
@@ -26,7 +25,6 @@ export function RuntimeCard({ application, canManage }) {
 
   const defaults = {
     start_command: application.start_command ?? "",
-    // Empty rather than 0: the API reads a blank port as "pick a free one".
     app_port: application.app_port ? String(application.app_port) : "",
   };
 
@@ -60,8 +58,6 @@ export function RuntimeCard({ application, canManage }) {
     <DisabledReasonProvider denied={!canManage}>
       <Form {...form}>
         <form noValidate onSubmit={form.handleSubmit(save)}>
-          {/* Same Section/Row layout as the card above. A value that fits the 224px control
-              column gets a row; a shell command or script goes full width. */}
           <Section
             icon={Play}
             title={t("title")}

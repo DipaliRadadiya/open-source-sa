@@ -1,25 +1,20 @@
 import { noAnswerMessage, rateLimitedMessage, serverRestartingMessage } from "./generic-error.js";
 import { isRestartBlip } from "./restart-blip.js";
 
-// Laravel's untranslated text for a throttled or crashed request; the fallback says more.
 const FRAMEWORK_RATE_LIMIT = /^too many (attempts|requests)\.?$/i;
 const FRAMEWORK_SERVER_ERROR = /^server error\.?$/i;
 
-// Reads are left to their own fallback: "could not be read" is true when nothing came back.
 export function isUnansweredWrite(error) {
   if (!error?.isAxiosError || error.response || error.code === "ERR_CANCELED") return false;
   const method = String(error.config?.method ?? "get").toLowerCase();
   return !["get", "head", "options"].includes(method);
 }
 
-// A long synchronous write the web server gave up waiting for (504), or whose answer
-// never arrived: the server-side work usually carries on, so this is not a failure.
+// 504 or no answer: the server usually finishes the work anyway.
 export function mayStillBeRunning(error) {
   return error?.response?.status === 504 || isUnansweredWrite(error);
 }
 
-// Ignores key-shaped strings (`errors/php.operation_failed`) in favour of `fallback`.
-// Appends ` · ref`; pass `{ reference: false }` where the caller renders it separately.
 export function apiMessage(error, fallback, { reference: withReference = true } = {}) {
   if (isUnansweredWrite(error)) return noAnswerMessage();
   if (isRestartBlip(error)) return serverRestartingMessage();
@@ -35,11 +30,9 @@ export function apiMessage(error, fallback, { reference: withReference = true } 
     withReference && typeof data?.reference === "string" ? data.reference.trim() : "";
 
   const usable = FRAMEWORK_SERVER_ERROR.test(trimmed) ? "" : trimmed;
-  // Key-shaped, empty or missing: use the fallback.
   const sentence = !usable || (!/\s/.test(usable) && /[/.]/.test(usable)) ? fallback : usable;
 
   if (!reference) return sentence;
-  // Some endpoints already interpolate the reference into their message.
   if (typeof sentence === "string" && sentence.includes(reference)) return sentence;
   if (!sentence) return reference;
 

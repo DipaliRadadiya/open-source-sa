@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkHeader, SkSummary } from "@/components/ui/skeleton-kit";
 
-
-// Error log: the summary, the search row, then one card per kind of error.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

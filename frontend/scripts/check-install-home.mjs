@@ -1,7 +1,4 @@
-/**
- * Every label in the install-home map resolves in every locale. The Services page builds these
- * keys with template literals, so check-i18n can't see them.
- */
+// Every label in the install-home map resolves in every locale (template-literal keys check-i18n can't see).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,11 +28,6 @@ for (const locale of locales) {
   }
 }
 
-// A home pointing at a route that does not exist is the bug this whole module
-// was written to fix, so it is worth asserting too.
-// Route groups are parenthesised directory names that do not appear in the URL,
-// so a segment can sit under any of them — /setup lives in (setup), the rest in
-// (app). Look through every group rather than assuming one.
 const groups = fs
   .readdirSync(path.join(root, "app"), { withFileTypes: true })
   .filter((entry) => entry.isDirectory() && entry.name.startsWith("("))

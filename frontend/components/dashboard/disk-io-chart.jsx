@@ -10,8 +10,6 @@ import {
   timeSeriesOption,
 } from "@/lib/charts/time-series-option";
 
-// Op counts (IOPS) sit in the header rather than on a second axis.
-/** Resolved from globals.css at runtime; never restated as literals here. */
 const TOKENS = [
   "chart-1",
   "chart-2",
@@ -32,14 +30,12 @@ export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
   const ops = (value) => format.number(Number(value ?? 0));
   const tokens = useChartTokens(TOKENS);
 
-  // Same colours as the network card: down is chart-2, up is chart-1.
   const series = [
     { key: "disk_read", label: t("charts.disk.read"), token: "chart-3", kind: "area" },
     { key: "disk_write", label: t("charts.disk.write"), token: "chart-5", kind: "area" },
   ];
 
   const option = timeSeriesOption({
-    // The header chips name each line.
     legend: false,
     data: chartSeries,
     series,
@@ -72,7 +68,6 @@ export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
       stale={stale}
       badges={
         <>
-          {/* The op count rides along as the pill's `note`. */}
           <ChartPill
             dotClassName="bg-chart-3"
             label={t("charts.disk.read")}

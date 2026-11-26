@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { FailurePanel } from "@/components/ui/failure-panel";
 import { RetryButton } from "@/components/ui/retry-button";
 
-// Sized to the card slot so branding and the locale switcher stay visible.
 export default function AuthError({ error, reset }) {
   const t = useTranslations("errors");
 

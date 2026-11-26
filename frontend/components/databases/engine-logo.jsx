@@ -3,7 +3,6 @@ import { Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { engineLogo } from "@/lib/databases/engine-logo";
 
-// Both images render and CSS shows one: choosing in JS would flash on dark-mode loads.
 export function EngineLogo({ engine, className, size = "h-5 w-auto max-w-20" }) {
   const logo = engineLogo(engine);
 

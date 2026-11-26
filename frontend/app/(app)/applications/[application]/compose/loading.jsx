@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkHeader } from "@/components/ui/skeleton-kit";
 
-// Compose file: the file card — name and Copy, the three rules, the editor with its
-// line numbers, and Save in the footer.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

@@ -42,15 +42,10 @@ export default async function PhpPage({ searchParams }) {
   const [permissions, t, { data, failed, status, failure, message }] =
     await Promise.all([getPermissions(), getTranslations("php"), getPhp()]);
 
-  // Runtimes are gated by the same permission as the rest of the server config.
   if (!can(permissions, "php", "view"))
     return <PermissionDenied title={t("title")} feature="php" />;
   const canManage = can(permissions, "php", "manage");
 
-  // A 409 is not a failure to report — it is the honest answer on a Docker box,
-  // whose stack serves no PHP sites. The sidebar already stops offering this
-  // screen there, so this is reached by a bookmark or a tab left open across a
-  // stack change, and both deserve a sentence rather than a red error card.
   if (failed && status === 409) {
     return (
       <div className="space-y-6">
@@ -78,7 +73,6 @@ export default async function PhpPage({ searchParams }) {
   const versions = php?.versions ?? [];
   const lifecycleAvailable = Boolean(php?.lifecycle_available);
 
-  // The URL's version wins so a reload keeps your place; otherwise the default.
   const selected =
     versions.find((version) => version.version === sp?.version)?.version ??
     php?.default ??
@@ -91,7 +85,6 @@ export default async function PhpPage({ searchParams }) {
   const installState = versionState(current);
   const ordered = [...versions].sort((a, b) => compareVersions(b.version, a.version));
 
-  // Install sits in the table's header, or in the empty state when there is no table.
   const install = (
     <InstallVersionButton
       runtime="php"
@@ -101,14 +94,10 @@ export default async function PhpPage({ searchParams }) {
       lifecycleAvailable={lifecycleAvailable}
     />
   );
-  // Both endpoints 404 for a version that is not installed (installing, failed,
-  // removing), so skip them then. Fetched in parallel.
   const [{ data: extensions }, { data: ioncube, failed: ionCubeFailed }] = installState
     ? [{ data: null }, { data: null, failed: false }]
     : await Promise.all([getPhpExtensions(selected), getIonCube(selected)]);
 
-  // Installs and purges finish without notification, so poll only while
-  // something (version, extension or ionCube) is in flight.
   const inFlight =
     anyInFlight(versions) ||
     anyInFlight(extensions?.extensions ?? []) ||
@@ -125,13 +114,11 @@ export default async function PhpPage({ searchParams }) {
 
       <PageHeader title={t("title")} />
 
-      {/* No PHP installed is a normal state, not an error. */}
       {versions.length === 0 ? (
         <EmptyState
           icon={FileCode2}
           title={t("empty.title")}
           description={t("empty.description")}
-          // With no versions there is no table, so the empty state carries Install.
           action={install}
         />
       ) : (
@@ -147,9 +134,7 @@ export default async function PhpPage({ searchParams }) {
             ]}
             action={install}
           >
-            {/* Newest first: the API lists in-flight installs ahead of installed versions. */}
             {ordered.map((version) => (
-              /* Keyed on version: each row holds its own confirm and running state. */
               <VersionSummary
                 key={version.version}
                 version={version}
@@ -166,7 +151,6 @@ export default async function PhpPage({ searchParams }) {
               <RevealSettings version={selected} targetId="php-settings-title" />
               <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
                 <div className="min-w-0 space-y-1">
-                  {/* Clears the sticky top bar when scrolled to. */}
                   <h2 id="php-settings-title" className="scroll-mt-[calc(var(--app-chrome,4rem)+1rem)] text-[15px] font-semibold tracking-tight">
                     {t("settings.title", { version: selected })}
                   </h2>
@@ -177,20 +161,16 @@ export default async function PhpPage({ searchParams }) {
                 {versions.length > 1 ? <SettingsVersionPicker versions={ordered} selected={selected} /> : null}
               </div>
 
-              {/* In place of the settings, explain why they are unavailable. */}
               {installState ? (
-                // Shared with the Node page so the two cannot drift.
                 <RuntimeStatusNotice version={current} versionLabel={selected} namespace="php" />
               ) : (
                 <PhpVersionTabs
                   initial={sp?.tab}
                   settings={<PhpCommonSettings key={selected} version={selected} canManage={canManage} />}
-                  // Excludes built-ins, matching the card's own count.
                   extensionCount={extensions?.extensions?.filter((e) => !e.builtin).length}
                   ionCubeState={ioncube}
                   ionCubeFailed={ionCubeFailed}
                   extensions={
-                    /* A failed fetch renders nothing, never an empty list. */
                     extensions ? (
                       <ExtensionsCard
                         version={selected}
@@ -202,7 +182,6 @@ export default async function PhpPage({ searchParams }) {
                     ) : null
                   }
                   ioncube={
-                    /* Rendered even when its fetch failed; the card reports it. */
                     <IonCubeCard
                       version={selected}
                       ioncube={ioncube}
@@ -210,7 +189,6 @@ export default async function PhpPage({ searchParams }) {
                       canManage={canManage}
                     />
                   }
-                  // Keyed on version: its buffer belongs to one version's file.
                   ini={<IniEditor key={selected} version={selected} canManage={canManage} />}
                 />
               )}

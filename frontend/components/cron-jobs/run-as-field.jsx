@@ -18,11 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Shared so the create and edit forms cannot drift apart.
 export function RunAsField({ form, systemUsers = [], systemUsersFailed = false }) {
   const t = useTranslations("cronJobs");
-  // useWatch, not form.watch: the latter returns a fresh function each render,
-  // which the React Compiler can't memoize (it skips the whole component).
+  // useWatch, not form.watch: the React Compiler can't memoize form.watch and skips the component.
   const runAs = useWatch({ control: form.control, name: "run_as" });
 
   return (
@@ -48,8 +46,6 @@ export function RunAsField({ form, systemUsers = [], systemUsersFailed = false }
                 <SelectItem value={OTHER_USER}>{t("form.otherUser")}</SelectItem>
               </SelectContent>
             </Select>
-            {/* The list needs the separate `system_user` permission, so a 403 is
-                ordinary; say so instead of implying the server has no accounts. */}
             {systemUsersFailed ? (
               <FormDescription>{t("form.runAsUnavailable")}</FormDescription>
             ) : null}

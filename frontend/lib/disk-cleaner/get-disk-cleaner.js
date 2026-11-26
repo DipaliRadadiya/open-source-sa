@@ -7,13 +7,9 @@ import {
   cleanerRunsSchema,
 } from "@/lib/schemas/disk-cleaner";
 
-// Schemas are imported, never restated here: a local copy drifts when the API changes.
-
-/** Live disk usage + what each category could reclaim. Read fresh every time. */
 export const getDiskCleaner = cache(async function getDiskCleaner() {
   const result = await read("/disk-cleaner", cleanerPreviewSchema);
 
-  // Pass through every field `read()` knows so the failure box can tell a 403 from a 500.
   return {
     data: result.failed ? null : (result.data ?? null),
     failed: result.failed,
@@ -24,7 +20,6 @@ export const getDiskCleaner = cache(async function getDiskCleaner() {
   };
 });
 
-// A missing schedule is not a failure (the API returns defaults), so this degrades to `null`.
 export const getCleanerSchedule = cache(async function getCleanerSchedule() {
   try {
     const res = await serverFetch("/disk-cleaner/schedule");
@@ -38,7 +33,6 @@ export const getCleanerSchedule = cache(async function getCleanerSchedule() {
   }
 });
 
-/** Recent runs, manual and scheduled, a page at a time. Empty is the normal first-run state. */
 export const getCleanerRuns = cache(async function getCleanerRuns(page = 1, perPage = 10) {
   try {
     const res = await serverFetch("/disk-cleaner/runs", { searchParams: { page, per_page: perPage } });

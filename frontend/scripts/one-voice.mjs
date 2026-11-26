@@ -1,14 +1,6 @@
-/**
- * If English uses one string at several keys, each locale must translate it one way too
- * (parallel translation produced "Saving…" two ways, and RAM and disk as one word). Checked
- * per locale. Exceptions below need a reason.
- */
+// An English string used at several keys must be translated one way in each locale. Exceptions below need a reason.
 
-/**
- * English string → why one translation can't serve every place it is used.
- * `locales` omitted: the English itself has several meanings. Listed: only these languages
- * must inflect it (Spanish "Creada"/"Creado"). Keep the lists short and the reasons specific.
- */
+// English string → why it may be translated differently. locales omitted: the English has several meanings. Listed: only those languages need to inflect it.
 export const MANY_MEANINGS = {
   "Last run": {
     locales: ["es"],
@@ -38,7 +30,6 @@ export const MANY_MEANINGS = {
       "A schedule's run time and a recipe's list of services it executes. Russian names the time in one and the execution verb in the other; these locales likewise need distinct labels.",
   },
   Stopped: {
-    // Scoped: only these inflect the adjective; everywhere else one word must serve.
     locales: ["es", "fr", "pt"],
     reason:
       "A state agreeing with its noun: a service (masculine) and an application (feminine: aplicación, application, aplicação).",
@@ -48,8 +39,6 @@ export const MANY_MEANINGS = {
       "An adjective. German, French, Portuguese and Russian must agree it with the noun it qualifies.",
   },
   System: {
-    // Scoped to ru: every other locale uses one word for both and must keep
-    // doing so, so leaving this unscoped would hide a real split there.
     locales: ["ru"],
     reason:
       "The noun for a system-owned record, and an adjective on the theme menu qualifying тема. Russian inflects the second (Системная) and not the first.",
@@ -77,10 +66,6 @@ export const MANY_MEANINGS = {
       "One sits in the applications table's Size column, which is a percentage width with nowrap text: at 1024px it has 66px and German's consistent form needs 108px. The dashboard's copy has room.",
   },
 
-  // Adjectives and participles. Spanish agrees them with the noun, and Hindi
-  // agrees them with the subject's gender, so the rendering changes with what
-  // is being described — a database (feminine) against a system user
-  // (masculine), one cron job against a filter over many.
   Created: {
     reason:
       "A participle agreeing with what was created: a database is feminine, a system user masculine.",
@@ -168,25 +153,6 @@ export const MANY_MEANINGS = {
   },
 };
 
-/*
- * There was a KNOWN_SPLITS pin here. Spanish and Hindi were translated the same
- * way German was — in parallel, with no shared glossary — and shipped before
- * anything could see it, so the check was written against 60 and 108 existing
- * splits and held them from growing while they waited to be fixed.
- *
- * They are fixed. Every locale is now held at zero, which is the only state
- * that stays true on its own: a pin has to be lowered by hand, and one nobody
- * lowers reads as a clean bill of health.
- */
-
-/**
- * Problems for one locale, or [].
- *
- * `english` and `translated` are flat maps of dotted key → string. `locale`
- * decides whether a scoped exemption applies; a caller that does not say which
- * language it is holding gets only the unscoped ones, because a pass granted to
- * Spanish is not a pass for whoever is asking.
- */
 export function oneVoiceProblems(english, translated, locale) {
   const keysByEnglish = new Map();
   for (const [key, source] of Object.entries(english)) {

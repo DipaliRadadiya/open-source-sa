@@ -1,6 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Mirrors `Section` so the real card swaps in place.
 export function SettingsCardSkeleton({ rows = 3, action = true }) {
   return (
     <div className="@container/section overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1">

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// `.catch(null)` per field so one bad value does not discard the rest; gaps are filled in get-branding.js.
+// catch(null) per field so one bad value doesn't drop the rest.
 const brandingField = z.string().nullish().catch(null);
 
 export const brandingSchema = z

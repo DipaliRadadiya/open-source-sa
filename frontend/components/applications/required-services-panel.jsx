@@ -16,13 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-// Installs what the site type needs while the form is filled in; Create unlocks when the last lands.
-
-// Rows never re-order: sorting by state made rows jump under the cursor.
-
 const ICONS = { node: Hexagon, php: FileCode2, database: Database };
 
-// A square glyph per kind, not the vendor's wide lockup, so every row has the same shape.
 function ServiceMark({ service }) {
   const Icon = ICONS[service.kind] ?? Database;
   return <Icon className="size-5" aria-hidden />;
@@ -43,8 +38,6 @@ function StateBadge({ service }) {
       return (
         <Badge variant="warning" className="font-normal">
           <Loader2 className="size-3 animate-spin" />
-          {/* The phase apt reported, never a percentage (the total is unknown), as on
-              the PHP and Node pages. */}
           {service.step ? t(`step.${service.step}`) : t("state.installing")}
         </Badge>
       );
@@ -70,9 +63,7 @@ function StateBadge({ service }) {
           </Badge>
         </ReasonTooltip>
       );
-    // Nothing installable satisfies the app (e.g. PrestaShop needs PHP 7.2–8.1). No Install button.
     case "impossible":
-      // The badge tells "no version fits" (a range) apart from an engine with no published versions.
       return (
         <ReasonTooltip reason={service.reason ?? t("state.impossibleReason")}>
           <Badge variant="destructive" className="font-normal">
@@ -109,14 +100,11 @@ export function RequiredServicesPanel({
   );
   const settled = services.every((service) => service.state === "installed");
 
-  // Failed services count as outstanding, so the button works for a retry.
   const outstanding = services.filter(
     (service) => service.state === "missing" || service.state === "failed",
   );
 
   const remaining = services.filter((service) => service.state !== "installed");
-  // Nothing on this screen can help: no permission, or no installable version.
-  // Either way, the footer must not promise an install.
   const stuck = services.filter((service) => service.state === "impossible");
   const blocked = outstanding.length === 0 && (denied.length > 0 || stuck.length > 0);
 
@@ -142,7 +130,7 @@ export function RequiredServicesPanel({
           <p className="text-sm font-medium">
             {settled
               ? t("headingReady", { app: typeTitle })
-              : // Counts what remains, so the header agrees with finished rows.
+              :
                 t("heading", { app: typeTitle, count: remaining.length })}
           </p>
           <p className="text-sm text-muted-foreground">
@@ -157,7 +145,6 @@ export function RequiredServicesPanel({
         </div>
       </div>
 
-      {/* One row per service: each has its own state and failure. */}
       <ul className="divide-y">
         {services.map((service) => (
           <li key={service.key} className="px-4 py-3">
@@ -167,15 +154,12 @@ export function RequiredServicesPanel({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{service.name}</span>
-                {/* Wraps, not truncates: the end of the end-of-life sentence is the part
-                    that matters. */}
                 <span className="block text-xs text-pretty text-muted-foreground">
                   {service.state === "failed" && service.error
                     ? service.error
-                    : // The title is the exact build to install, not what the app demands.
+                    :
                       service.requirement
                       ? t(
-                          // Separate sentence when only end-of-life versions fit, so that is never left unsaid.
                           service.eol ? `needsEol.${service.kind}` : `needs.${service.kind}`,
                           { app: typeTitle, requirement: service.requirement },
                         )
@@ -192,8 +176,6 @@ export function RequiredServicesPanel({
               </span>
             </div>
 
-            {/* The reason in full, in the row: tooltips do not open on touch. Only for
-                this state; a missing row has a button instead. */}
             {service.reason ? (
               <p className="mt-2 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2.5 text-xs leading-relaxed text-destructive">
                 <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
@@ -216,10 +198,9 @@ export function RequiredServicesPanel({
                   : t("footerImpossible")
                 : failed.length
                   ? t("footerFailed", { count: failed.length })
-                  : // Singular copy when only one service is outstanding.
+                  :
                     t(outstanding.length > 1 ? "footerIdle" : "footerIdleOne")}
         </p>
-        {/* No button when this reader cannot install anything; the footer explains. */}
         {settled || outstanding.length === 0 ? null : (
           <Button size="sm" onClick={onInstall} disabled={busy || working}>
             {working ? (

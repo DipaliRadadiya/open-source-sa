@@ -10,7 +10,6 @@ export function useCreateUser() {
   return useContext(CreateUserContext);
 }
 
-// Hosts the create-user dialog so both the toolbar and the empty state can open it.
 export function UsersView({ roles, rolesFailed = false, children }) {
   const [createOpen, setCreateOpen] = useState(false);
 

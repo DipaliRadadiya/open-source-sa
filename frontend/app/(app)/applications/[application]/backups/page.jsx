@@ -36,42 +36,32 @@ export default async function ApplicationBackupsPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone: back to the list, which explains the redirect.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
     return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
-  // Granted per site type, like the other application screens.
   if (!can(appPermissions, "app_backup", "view", "application")) {
     return <PermissionDenied title={t("pageTitle")} />;
   }
 
   const application = result.application;
   const canManage = can(appPermissions, "app_backup", "manage", "application");
-  // Restoring needs server-level `backup` manage, not this site's `app_backup`.
   const canRestore = can(permissions, "backup", "manage");
-  // Attaching is a server-level database grant, not this site's backup grant.
   const canManageDatabases = can(permissions, "database", "manage");
   const settled = isSettled(application);
 
-  // A provisioning site has nothing to back up. `meta.total` is the whole history; the list is capped at five.
-  // `backupsFailed` keeps "could not ask" distinct from "nothing has run".
   const [{ target, hasVolumes }, { destinations }, { backups, meta, failed: backupsFailed, status: backupsStatus }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes, { options: backupOptions }] = await Promise.all([
     settled ? getBackupTarget(id) : Promise.resolve({ target: null, hasVolumes: null }),
     getStorageDestinations(),
     settled
       ? getApplicationBackups(id, { per_page: 5 })
       : Promise.resolve({ backups: [], meta: { total: 0 } }),
-    // Seeded from the server so a reload still shows a running restore.
     settled && canRestore
       ? getActiveRestore(id, {
           dismissed: parseDismissedRestores((await cookies()).get(DISMISSED_RESTORES_COOKIE)?.value),
         })
       : Promise.resolve(null),
-    // Whether a database backup would hold anything; a failure leaves it unknown.
     settled ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),
-    // For the "no database" notice and Attach action; `failed` is passed on so
-    // a failed read never claims the site has no database.
     settled && canManageDatabases
       ? getApplicationDatabases(id)
       : Promise.resolve({ databases: [], failed: false }),
@@ -80,25 +70,20 @@ export default async function ApplicationBackupsPage({ params }) {
     settled && canManageDatabases
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
-    // Form choices, including which picker each frequency uses.
     settled ? getBackupTargetOptions() : Promise.resolve({ options: null }),
   ]);
 
-  // The list above is only the newest five. Turn off names every storage holding an
-  // archive, and lowering "keep" must say how many it really deletes.
   const everyBackup =
     (canRestore || canManage) && !backupsFailed && meta.total > backups.length
       ? (await getApplicationBackups(id, { per_page: 100 })).backups
       : backups;
   const archiveDestinations =
     canRestore && meta.total > backups.length ? everyBackup.map((backup) => backup.storage_destination_name) : [];
-  // What retention counts (RetentionEnforcer): complete, non-safety copies. Null when unseen.
   const keptCount =
     backupsFailed || meta.total > everyBackup.length
       ? null
       : everyBackup.filter((backup) => backup.status === "verified" && !backup.is_safety).length;
 
-  // Only site types that declare `needs_database` get the warning.
   const needsDatabase = siteNeedsDatabase(siteTypes.siteTypes, application.site_type);
 
   return (

@@ -6,8 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
-// Deliberately no "allow requests like this": an exception skips all six checks for any URL, query
-// or user agent containing it, so one click could silently disable the firewall.
+// No "allow requests like this": one exception would skip all six checks for any matching URL.
 export async function DetectLogCard({ rows = [], failed = false }) {
   const t = await getTranslations("applications.firewall.detect");
   const format = await getFormatter();
@@ -33,7 +32,6 @@ export async function DetectLogCard({ rows = [], failed = false }) {
       </div>
 
       <CardContent className="p-3 sm:p-5">
-        {/* Both are ordinary states; an empty log is normal (it is created by the first match). */}
         {failed || rows.length === 0 ? (
           <EmptyState compact icon={failed ? FileQuestion : ShieldCheck} badge={null} title={failed ? t("unreadable") : t("empty")} />
         ) : (
@@ -44,7 +42,6 @@ export async function DetectLogCard({ rows = [], failed = false }) {
                   <Badge variant="outline" className="shrink-0 font-mono text-xs font-normal">
                     {row.method}
                   </Badge>
-                  {/* break-all, not truncate: the tail of an injection attempt shows why it matched. */}
                   <span className="min-w-48 flex-1 break-all font-mono text-xs">{row.target}</span>
                 </div>
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">

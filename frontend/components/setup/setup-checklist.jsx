@@ -15,30 +15,19 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 const POLL_MS = 3000;
-// Only Ubuntu's own updates to watch: slower, just so the note goes away by itself.
 const UPDATES_POLL_MS = 15000;
-// Past this, stop implying steady progress (apt on a small box is slow).
 const SLOW_AFTER_MS = 3 * 60 * 1000;
-// Past this, stop claiming an install without the server agreeing (a stuck
-// queue worker is likelier than apt) and show the server's answer.
 const GIVE_UP_MS = 10 * 60 * 1000;
 
 export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, fail2banProtection = "unknown" }) {
   const t = useTranslations("setup");
   const router = useRouter();
   const [setup, setSetup] = useState(initialSetup);
-  // Keys with a POST in flight, until "installing" or the poll takes over.
   const [busy, setBusy] = useState({});
-  // The backend tracks progress only for database, php and node (SetupCatalog::progressFor);
-  // without this the poll would revert e.g. fail2ban to an Install button.
   const [started, setStarted] = useState({});
   const [slow, setSlow] = useState(false);
   const [finishing, startTransition] = useTransition();
 
-  // Server state with installs started here overlaid; derived, so an override
-  // stops applying once the server resolves that component.
-  // The installer puts Docker on a Docker-stack server and the API does not list
-  // it (RC-34); shown so the setup page matches what the server runs.
   const listed = setup.stack === "docker" && !setup.components.some((c) => c.key === "docker")
     ? [...setup.components, { key: "docker", title: "Docker", detail: t("dockerDetail"), state: "installed", recommended: false, action: null, options: [] }]
     : setup.components;
@@ -51,7 +40,6 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
   const anyInstalling =
     components.some((c) => c.state === "installing") || Object.keys(busy).length > 0;
 
-  // One timer for the set, restarted on each new install.
   useEffect(() => {
     if (!Object.keys(started).length) return undefined;
     const id = setTimeout(() => setStarted({}), GIVE_UP_MS);
@@ -61,7 +49,6 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
   const updatesRunning = Boolean(setup.system_updates_running);
   const pollMs = anyInstalling ? POLL_MS : updatesRunning ? UPDATES_POLL_MS : null;
 
-  // Poll while something is in flight or Ubuntu is updating; pause when the tab is hidden.
   useEffect(() => {
     if (!pollMs) return undefined;
     let active = true;
@@ -73,13 +60,12 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
         const next = await fetchSetup();
         if (active && next) setSetup(next);
       } catch {
-        // Keep polling — a blip mid-install is not a failed install.
+        // retry on the next poll
       }
     }, pollMs);
     return () => {
       active = false;
       clearInterval(id);
-      // Installing stopped — clear the "taking longer" note for next time.
       setSlow(false);
     };
   }, [pollMs]);
@@ -89,7 +75,7 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
     setBusy((b) => ({ ...b, [component.key]: true }));
     try {
       await runSetupAction(action, body);
-      // Kept outside `setup`, which the poll replaces wholesale.
+      // Kept outside setup, which the poll replaces.
       setStarted((s) => ({ ...s, [component.key]: true }));
     } catch (error) {
       toast.error(apiMessage(error, t("installFailed")));
@@ -103,14 +89,11 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
   }
 
   function finish() {
-    // The navigation re-runs the Server Component; an extra refresh would compete.
     startTransition(() => router.push("/dashboard"));
   }
 
   const recommended = components.filter((c) => c.recommended);
   const recommendedLeft = recommended.filter((c) => c.state !== "installed").length;
-  // Progress measures the recommended set only, the same set "You're all set" and
-  // `complete` use: an optional extra (WP-CLI) left out read "83% complete · all set".
   const recommendedInstalled = recommended.length - recommendedLeft;
   const optionalLeft = components.filter((c) => !c.recommended && c.state !== "installed").length;
   const failedCount = components.filter((c) => c.state === "failed").length;
@@ -118,7 +101,6 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
     ? Math.round((recommendedInstalled / recommended.length) * 100)
     : 100;
 
-  // Needs-attention first, already-done last.
   const rank = (c) =>
     c.state === "failed" ? 0 : c.state === "installing" ? 1 : c.state === "installed" ? 4 : c.recommended ? 2 : 3;
   const ordered = components
@@ -128,12 +110,10 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
   const pending = ordered.filter((c) => c.state !== "installed");
   const done = ordered.filter((c) => c.state === "installed");
 
-  // Attention is failed only; installing stays in its own group.
   const attention = pending.filter((c) => c.state === "failed");
   const advised = pending.filter((c) => !attention.includes(c) && c.recommended);
   const optional = pending.filter((c) => !attention.includes(c) && !c.recommended);
 
-  // The backend labels only the three components it tracks; name the others here.
   const running = components.find((c) => c.state === "installing");
   const runningLabel = setup.label ?? (running ? t("installingNamed", { name: running.title }) : null);
 
@@ -144,7 +124,6 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
       tier={tier}
       versions={versions[component.key] ?? []}
       busy={Boolean(busy[component.key])}
-      // apt runs one install at a time, so others are held to avoid an apt lock.
       locked={anyInstalling && component.state !== "installing" && !busy[component.key]}
       denied={canInstall[component.key] === false}
       onInstall={install}
@@ -171,8 +150,6 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
     <div className="space-y-8">
       <SystemUpdatesNote running={updatesRunning} />
 
-      {/* Overview: one count and one bar while work is left; once done, the bar would only
-          repeat "all set", so the card says that instead. */}
       <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-e1">
         {setup.complete ? (
           <div className={cn("flex gap-3", optionalLeft ? "items-start" : "items-center")}>
@@ -181,7 +158,6 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
             </span>
             <div className="min-w-48 flex-1 space-y-0.5">
               <p className="font-semibold tracking-tight">{t("allSetTitle")}</p>
-              {/* It invites the optional extras, so only while there are some. */}
               {optionalLeft ? <p className="text-sm text-muted-foreground">{t("allSetBody")}</p> : null}
             </div>
           </div>
@@ -198,7 +174,6 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
                       {t("progressFailed", { count: failedCount })}
                     </span>
                   ) : null}
-                  {/* Named, so a full bar does not read as "nothing else here". */}
                   {optionalLeft ? (
                     <span className="text-muted-foreground">{t("optionalLeft", { count: optionalLeft })}</span>
                   ) : null}
@@ -217,7 +192,6 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
           </div>
         )}
 
-        {/* While installing: what is running, one at a time, and a slow note later. */}
         {anyInstalling ? (
           <p className="mt-4 flex items-start gap-2 border-t pt-3 text-xs text-muted-foreground">
             <Loader2 className="mt-0.5 size-3 shrink-0 animate-spin" />
@@ -239,8 +213,6 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
         render={(c) => renderComponent(c, "compact")}
       />
 
-      {/* "Skip for now" only while something is outstanding; otherwise the button
-          names its destination. */}
       <div className="flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
         {setup.complete ? <span className="hidden sm:block" /> : (
           <p className="text-sm text-muted-foreground">{anyInstalling ? t("skipWhileInstalling") : t("skipHint")}</p>

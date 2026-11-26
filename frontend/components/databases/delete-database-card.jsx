@@ -8,8 +8,6 @@ import { Card } from "@/components/ui/card";
 import { CardIcon } from "@/components/ui/card-icon";
 import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dialog";
 
-// Its own card at the bottom: destructive actions live at the end of a page. Not shown
-// to a role that cannot delete.
 export function DeleteDatabaseCard({ database, application = null, canManage }) {
   const t = useTranslations("databases.delete");
   const [open, setOpen] = useState(false);

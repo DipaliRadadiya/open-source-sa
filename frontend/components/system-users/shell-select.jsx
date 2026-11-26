@@ -16,20 +16,15 @@ import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
 import { offeredShells } from "@/lib/system-users/offered-shells";
 
-// A login-refusing shell cannot be set while SSH access is on (the server
-// rejects the pair), so that option is disabled with the reason.
 export function ShellSelect({ user, shells = [], canManage = true, className }) {
   const t = useTranslations("systemUsers");
   const { refresh, refreshThen } = useRefresh();
   const [busy, setBusy] = useState(false);
-  // The requested shell until router.refresh() lands, or the trigger snaps back
-  // during the usermod round trip.
+  // Keep the requested shell until router.refresh() lands, or the trigger snaps back.
   const [asked, setAsked] = useState(null);
 
   const shown = asked !== null && asked !== user.shell ? asked : user.shell;
 
-  // `shell_allows_login: null` is an unrecognised shell ("unknown", not "denies
-  // login"); the raw path is shown.
   const current = shells.find((entry) => entry.value === shown);
   const label =
     (shown === user.shell ? user.shell_title : null) ?? current?.title ?? shown;
@@ -48,7 +43,6 @@ export function ShellSelect({ user, shells = [], canManage = true, className }) 
         setBusy(false);
       });
     } catch (error) {
-      // Revert: the shell did not change.
       setAsked(null);
       setBusy(false);
       if (error?.response?.status === 404) {
@@ -62,18 +56,14 @@ export function ShellSelect({ user, shells = [], canManage = true, className }) 
 
   const options = shells.length
     ? offeredShells(shells, user.shell)
-    : // No catalog (the request failed): keep the current value visible so a
-      // lost list never reads as a lost setting.
+    :
       [{ value: user.shell, title: label, description: "", allows_login: null }];
 
   return (
     <Select value={shown} disabled={busy} onValueChange={onChange}>
-      {/* Sized to the title, not a fixed width, which cut long translations mid-word. */}
       <SelectTrigger aria-label={t("access.shell")} className={cn("h-8 w-auto max-w-72 text-xs", className)}>
-        {/* Title only: Radix copies the selected item's children into the trigger, so the
-            path and description would add a second line. */}
+        {/* Radix copies the item's children into the trigger, which would add a second line. */}
         <SelectValue>{label}</SelectValue>
-        {/* A spinner so the greyed control reads as busy, like PendingSwitch. */}
         {busy ? <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden /> : null}
       </SelectTrigger>
       <SelectContent>

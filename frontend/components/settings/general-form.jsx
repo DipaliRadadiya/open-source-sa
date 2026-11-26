@@ -120,8 +120,6 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
               render={({ field }) => (
                 <Row
                   toggle
-                  // Full width under name and timezone: in one column it left an empty
-                  // quarter beside it.
                   wide
                   label={t("ntp")}
                   hint={

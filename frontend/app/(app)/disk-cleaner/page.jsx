@@ -33,9 +33,6 @@ export default async function DiskCleanerPage({ searchParams }) {
   if (!can(permissions, "disk_cleaner", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "disk_cleaner", "manage");
 
-  // Schedule and history are secondary: on failure they degrade to null/empty
-  // rather than taking the page down.
-  // History pages through the URL like every other list; the backend allows 10/20/50/100.
   const query = await searchParams;
   const runsPage = Math.max(1, Number.parseInt(query?.page, 10) || 1);
   const perPage = await perPageFrom(query?.per_page);
@@ -49,18 +46,13 @@ export default async function DiskCleanerPage({ searchParams }) {
   if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   const categories = data.categories ?? [];
-  // The list opens on the recommended keep; the "Can be freed" tile follows whatever is chosen.
   const { recommended } = keepOptions(data.keep_days);
-  // An older API has no choice: null keeps every size, request and label as before.
   const keepSupported = hasKeepChoice(data.keep_days);
 
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} />
 
-      {/* Three compact tiles across the top (one per row until the page is wide enough);
-          the schedule tile gets the most room, "Can be freed" the least (a short number).
-          The list gets full width below. */}
       <KeepProvider initial={keepSupported ? recommended : null}>
         <div className="space-y-4">
           <div className="@container/tiles">

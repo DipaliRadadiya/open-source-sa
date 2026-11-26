@@ -16,7 +16,6 @@ import { applicationIconDataUri } from "@/lib/applications/application-icon";
 import { HoverHint } from "@/components/ui/hover-hint";
 import { shownSizeBytes } from "@/lib/applications/size-measurement";
 
-// Narrow-screen sites list; the badge shares the facts line so the name fits at 320px.
 export function ApplicationsCards({
   applications = [],
   canManage = false,
@@ -48,7 +47,6 @@ export function ApplicationsCards({
                   <Link
                     href={`/applications/${application.id}`}
                     prefetch={false}
-                    // White like the desktop list: green means "OK".
                     className="inline-flex min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
                   >
                     <HoverHint content={application.name}><span className="truncate">{application.name}</span></HoverHint>
@@ -57,15 +55,12 @@ export function ApplicationsCards({
                 ) : (
                   <HoverHint content={application.name}><span className="min-w-0 truncate font-medium text-foreground">{application.name}</span></HoverHint>
                 )}
-                {/* A copy and its source have near-identical names. */}
                 {application.is_staging ? (
                   <Badge variant="warning" className="shrink-0 font-normal">
                     {t("stagingBadge")}
                   </Badge>
                 ) : null}
               </div>
-              {/* The type is printed as text below, so the logo stays unlabelled; see
-                  SiteTypeLogo. */}
               <div className="flex min-w-0 items-center gap-1">
                 <TlsMark
                   application={application}
@@ -77,31 +72,23 @@ export function ApplicationsCards({
                 />
               </div>
             </div>
-            {/* shrink-0 keeps the menu in place however long the name is. */}
             <div className="-me-2 -mt-1 shrink-0">
               <ApplicationRowActions application={application} canManage={canManage} canOpen={canOpen} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} canManageDocker={canManageDocker} />
             </div>
           </div>
 
-          {/* Gaps, not middots: a separator stranded at a wrap reads as a missing value. */}
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
             <ApplicationStatusBadge application={application} />
             <ApplicationOriginBadge origin={application.origin} />
             <span className="truncate text-foreground">
               {application.site_type_title ?? application.site_type}
             </span>
-            {/* Omitted, not dashed, when the API has no version: in a wrapped list a dash
-                reads as a value. Node and static sites have none. */}
-            {/* What it runs on, as in the table's Runs on column. Only PHP and Node: for
-                static and Docker the type beside it already says it ("Static site · Static files"). */}
             {["php", "node"].includes(runtimeOf(application)?.kind) ? (
               <span className="whitespace-nowrap tabular-nums">
                 {runtimeLabel(runtimeOf(application), t, tDocker)}
               </span>
             ) : null}
             <span className="truncate font-mono">{application.system_user?.username ?? "—"}</span>
-            {/* Same as the table's Size column; an unmeasured site is left out rather than
-                shown as a dash that reads like zero bytes. */}
             {formatBytes(shownSizeBytes(application), format) ? (
               <span className="whitespace-nowrap tabular-nums">
                 {formatBytes(shownSizeBytes(application), format)}

@@ -11,7 +11,6 @@ import { useLiveMetrics } from "@/components/dashboard/use-live-metrics";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { ChartCardSkeleton, LiveChartCardSkeleton } from "@/components/dashboard/chart-card-skeleton";
 
-// Recharts is ~400 KB on the login landing screen. `ssr: false`: nothing real renders on the server.
 const chart = (load, loading = ChartCardSkeleton) => dynamic(load, { ssr: false, loading });
 
 const ServerLoadChart = chart(() =>
@@ -29,7 +28,6 @@ const DiskIoChart = chart(
   LiveChartCardSkeleton,
 );
 
-/** Announce only meaningful connection transitions, never every metric poll. */
 function ConnectionAnnouncement({ failed }) {
   const t = useTranslations("serverDashboard");
   const previous = useRef(failed);
@@ -51,7 +49,6 @@ function ConnectionAnnouncement({ failed }) {
 function LiveStatus({ failed, reason, updatedAt, timeZone }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
-  // timeZoneName only here: the "Updated" label must say which clock it means.
   const clock = clockFormatter(format, timeZone, {
     second: "2-digit",
     timeZoneName: "short",
@@ -61,7 +58,6 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
       <span
         className={cn(
-          // A solid soft pill.
           "inline-flex h-[1.375rem] items-center gap-1.5 rounded-[2px] border px-2 font-mono text-xs font-medium tracking-[0.08em] uppercase",
           failed
             ? "border-destructive/45 bg-destructive/10 text-destructive"
@@ -78,7 +74,6 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
         )}
         {failed ? t("offline") : t("live")}
       </span>
-      {/* Kept visible while failing — "how old is this?" matters most then. */}
       {updatedAt ? (
         <span className="font-mono text-xs tracking-[0.08em] tabular-nums text-muted-foreground uppercase">
           {t("updated", { time: clock(updatedAt) })}
@@ -87,7 +82,6 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
       {failed && updatedAt ? (
         <span className="text-xs text-muted-foreground">{t("staleHint")}</span>
       ) : null}
-      {/* The server's own reason, inline rather than behind a hover. */}
       {failed && reason ? (
         <span className="text-xs text-destructive">{reason}</span>
       ) : null}
@@ -95,7 +89,6 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
   );
 }
 
-// h2 under the page h1, so the cards inside use h3.
 function SectionHeading({ title, children }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
@@ -107,23 +100,16 @@ function SectionHeading({ title, children }) {
   );
 }
 
-// `between` renders after the live readings and before the charts; it shares this
-// component's single poll instead of starting a second one.
 export function LiveMetricsSection({ timeZone, history = [], between = null }) {
   const t = useTranslations("serverDashboard");
   const { metrics, series, failed, reason, updatedAt, ratesReady } = useLiveMetrics();
-  // Everything on screen is last-known, not current; the charts must show it too.
   const stale = failed && Boolean(metrics);
 
   return (
     <div className="space-y-6">
-      {/* Grouped by clock: the 3s live poll vs the five-minute 24h collector. */}
       <ConnectionAnnouncement failed={failed} />
 
-      {/* The Live pill is this section's status, so it sits in the heading row. */}
-      {/* Header over a hairline, then the cells flush to the card's edges. */}
       <Card className="gap-0 pb-0 [--card-spacing:--spacing(4)]">
-        {/* Stacked on a phone: beside the title the pill squeezed it onto two lines. */}
         <CardHeader className="border-b max-sm:grid-cols-1">
           <CardTitle icon={Activity} as="h2">
             {t("liveLabel")}

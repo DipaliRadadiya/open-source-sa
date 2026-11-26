@@ -7,9 +7,6 @@ async function requestSizes(appId, path, refresh, signal) {
   return folderSizesResponseSchema.parse(data);
 }
 
-// Fetched after the listing, never blocking it. `listing` is the server's array: a new
-// one (the refresh after an upload, delete, rename…) asks again, and the backend has
-// already forgotten its cached answer for those changes.
 export function useFolderSizes(appId, path, listing, hasFolders) {
   const [state, setState] = useState({ path: null, listing: null, data: null, error: null, refreshing: false });
   const controller = useRef(null);
@@ -23,7 +20,6 @@ export function useFolderSizes(appId, path, listing, hasFolders) {
       (data) => setState({ path, listing, data, error: null, refreshing: false }),
       (error) => {
         if (ctrl.signal.aborted || error?.code === "ERR_CANCELED") return;
-        // Sizes already shown for this folder stay; they carry their own age.
         setState((s) => ({ path, listing, data: s.path === path ? s.data : null, error, refreshing: false }));
       },
     );

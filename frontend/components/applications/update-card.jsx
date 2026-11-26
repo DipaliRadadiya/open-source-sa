@@ -32,7 +32,6 @@ import {
 import { FACT_LABEL } from "@/lib/theme/facts";
 
 const POLL_MS = 5000;
-// The backend releases a pending run after 60 minutes; stop asking a little later.
 const POLL_GIVE_UP_MS = 65 * 60 * 1000;
 
 const BADGE = {
@@ -45,7 +44,6 @@ const BADGE = {
   not_active: { variant: "muted", icon: CircleAlert },
 };
 
-// Only for the six types the backend can update; `supported: false` renders nothing upstream.
 export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref }) {
   const t = useTranslations("applications.update");
   const format = useFormatter();
@@ -55,8 +53,6 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
   const [historyOpen, setHistoryOpen] = useState(false);
   const [starting, setStarting] = useState(false);
   const [checking, setChecking] = useState(false);
-  // A newer server render (router.refresh) replaces the local copy; adjusted during
-  // render rather than in an effect, as React recommends for props-derived state.
   const [seenInitial, setSeenInitial] = useState(initial);
   if (initial !== seenInitial) {
     setSeenInitial(initial);
@@ -71,7 +67,6 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
   const badge = BADGE[state] ?? BADGE.up_to_date;
   const BadgeIcon = badge.icon;
 
-  // Polls only this endpoint while a run is in flight, then refreshes the page once.
   const watchedRun = useRef(null);
   useEffect(() => {
     if (!running) return undefined;
@@ -91,7 +86,6 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
         const run = next.history[0];
         if (run && !UPDATE_IN_FLIGHT.includes(run.status) && next.update.blocked_reason !== "running") {
           clearInterval(id);
-          // Only announce runs this tab watched finish, not ones that ended before it opened.
           if (watchedRun.current === run.id) {
             if (run.status === "completed") {
               toast.success(t("toast.completed", { app: appTitle, version: run.to_version ?? "" }));
@@ -103,7 +97,7 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
           await refreshAndWait();
         }
       } catch {
-        // A missed poll is retried on the next tick; the card keeps its last answer.
+        // retry on the next poll
       }
     }, POLL_MS);
     return () => {
@@ -130,7 +124,6 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
       const refused = error.response?.data?.errors?.update?.[0];
       setConfirmOpen(false);
       toast.error(status === 409 ? t("blocked.running") : refused ?? apiMessage(error, t("toast.startFailed")));
-      // The state changed under us (409/422): show what the server says now.
       await checkAgain();
     } finally {
       setStarting(false);
@@ -153,7 +146,6 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
     return date ? format.relativeTime(date, new Date()) : null;
   };
 
-  // The last FINISHED run: the one in flight is already said by the badge and the note.
   const finished = history.find((run) => !UPDATE_IN_FLIGHT.includes(run.status)) ?? null;
   const lastLine = finished
     ? t(finished.status === "completed" ? "last.completed" : "last.failed", {
@@ -205,16 +197,12 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
               {t("history.open")}
             </Button>
           ) : null}
-          {/* Hidden when there is nothing to do; shown greyed with the reason otherwise. */}
           {state === "up_to_date" || state === "not_active" || running ? null : updateButton}
         </CardAction>
       </CardHeader>
 
       <CardContent className="p-0">
-        {/* Three facts side by side on a wide card, stacked on a phone. */}
         <dl className="-mt-(--card-spacing) grid divide-y text-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {/* Mid-run the files already hold the new release, so the API reads it as installed
-              before the restart has finished; until the run ends, the version it started from. */}
           <Fact label={t("installed")} mono>
             {((running && last?.from_version) || update.installed_version) ?? t("unknown")}
           </Fact>
@@ -232,7 +220,6 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
           <p role="status" className="mx-(--card-spacing) mb-(--card-spacing) flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
             <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
             <span>
-              {/* The phase it is in now; the backend writes it as each one starts. */}
               {last?.status === "running" && last.step_title ? (
                 <span className="block font-medium text-foreground">{last.step_title}</span>
               ) : null}
@@ -283,7 +270,6 @@ export function UpdateCard({ appId, appTitle, initial, canManage, backupsHref })
         pending={starting}
         onConfirm={start}
       >
-        {/* The panel does not back up first, so the dialog says when the last one was. */}
         {freshBackup ? (
           <p className="flex items-start gap-2 rounded-lg border border-success/25 bg-success/5 px-3 py-2.5 text-sm">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />

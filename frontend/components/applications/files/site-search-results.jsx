@@ -13,17 +13,13 @@ import { canOpenFile } from "@/lib/files/openable";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// The name's ::after spans the <li>; its `truncate` does not clip it, as the containing block is outside.
 const STRETCH = "after:absolute after:inset-0 after:rounded-xl";
 
-// Row target is an overlay on the name, not a wrapping link: the row also holds the folder link (no <a> in <a>).
 export function SiteSearchResults({ appId, query, onAction, canManage = true }) {
   const t = useTranslations("applications.files");
   const [remote, setRemote] = useState({ status: "loading", files: [], message: null });
 
   useEffect(() => {
-    // Mounted fresh per search (see files-panel.jsx), so `remote` starts in the
-    // correct "loading" state.
     let active = true;
     const controller = new AbortController();
     searchFiles(appId, query, { signal: controller.signal })
@@ -57,7 +53,6 @@ export function SiteSearchResults({ appId, query, onAction, canManage = true }) 
   }
 
   if (status === "error") {
-    // No server reason means the fallback, which is already the title.
     return (
       <EmptyState
         icon={SearchX}
@@ -87,10 +82,8 @@ export function SiteSearchResults({ appId, query, onAction, canManage = true }) 
         const folder = dirname(file.path);
         const folderHref = `/applications/${appId}/files?path=${encodeURIComponent(folder)}`;
         const folderLabel = folder ? t("siteSearch.inFolder", { folder }) : t("root");
-        // Into the folder itself; `folderHref` is its PARENT.
         const openDirHref = `/applications/${appId}/files?path=${encodeURIComponent(file.path)}`;
         const openable = canManage && !symlink && !isDir && canOpenFile(file.name);
-        // Only rows that lead somewhere get the row-wide hover affordance.
         const interactive = isDir || openable;
 
         return (
@@ -119,7 +112,6 @@ export function SiteSearchResults({ appId, query, onAction, canManage = true }) 
                     <TooltipContent className="max-w-60">{t("symlinkHint")}</TooltipContent>
                   </Tooltip>
                 ) : (
-                  // Nothing to open: see the note in files-table.
                   !openable ? (
                     <HoverHint content={file.name}><span className="block w-full truncate font-medium">
                       {file.name}
@@ -138,7 +130,6 @@ export function SiteSearchResults({ appId, query, onAction, canManage = true }) 
                   {isDir ? (
                     folderLabel
                   ) : (
-                    // Above the row overlay so the folder link stays clickable.
                     <Link href={folderHref} className="relative z-10 hover:text-foreground hover:underline">
                       {folderLabel}
                     </Link>

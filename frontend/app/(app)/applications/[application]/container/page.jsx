@@ -27,7 +27,6 @@ export async function generateMetadata({ params }) {
   return { title: `${t("title")} — ${result.application?.name ?? ""}` };
 }
 
-// What a container site runs as: structured settings here, the raw compose file next door.
 export default async function ApplicationContainerPage({ params }) {
   const { application: id } = await params;
 
@@ -41,8 +40,6 @@ export default async function ApplicationContainerPage({ params }) {
   if (!can(permissions, "application", "view"))
     return <PermissionDenied title={t("title")} />;
 
-  // The site is gone. Land on the list — the only place left to go — and say why on
-  // arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
 
   if (result.failed || !result.application) {
@@ -56,8 +53,6 @@ export default async function ApplicationContainerPage({ params }) {
     );
   }
 
-  // Granted only for container site types, so a missing grant means this screen
-  // should not exist for this site rather than that the user lacks a right.
   if (!can(appPermissions, "app_container", "view", "application")) {
     return <PermissionDenied title={t("title")} typeFeature />;
   }
@@ -70,24 +65,16 @@ export default async function ApplicationContainerPage({ params }) {
     "application",
   );
 
-  // Only once it is serving. The Docker endpoints are gated on the same profile,
-  // and asking a pending site's box for networks is a request that builds choosers
-  // for controls that cannot be applied yet.
   const [networks, volumes, registries, limits] =
     application.status === "active"
       ? await Promise.all([
           getDockerNetworks(),
           getDockerVolumes(),
           getRegistries(),
-          // So the CPU field can name this server's core count instead of
-          // describing the rule, and the memory field can show the default it
-          // falls back to. Both degrade to null rather than to a guess.
           getDockerLimits(),
         ])
       : [[], [], [], {}];
 
-  // Whether the user owns the compose file. A failed read keeps the fields, as
-  // before; only a definite "not generated" hides them.
   const compose = can(appPermissions, "app_compose", "view", "application")
     ? await getApplicationCompose(id)
     : null;

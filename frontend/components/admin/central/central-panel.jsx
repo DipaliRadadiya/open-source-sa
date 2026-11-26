@@ -21,9 +21,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 
-// What Central's "Connect a panel" asks for next to the key: this panel's API address, the
-// address the panel itself calls (scheme + host, as Central stores it). It was shown nowhere,
-// so it had to be guessed.
 function panelApiAddress() {
   try {
     return new URL(process.env.NEXT_PUBLIC_API_URL).origin;
@@ -32,8 +29,7 @@ function panelApiAddress() {
   }
 }
 
-// Connect and regenerate share one endpoint; pressing it while connected
-// rotates the token and breaks the old one, so only that press is confirmed.
+// Pressing it again while connected rotates the token and breaks the old one.
 export function CentralPanel({ status }) {
   const t = useTranslations("central");
   const { name: brand } = useBranding();
@@ -48,12 +44,10 @@ export function CentralPanel({ status }) {
   const format = useFormatter();
   const now = useNow({ updateInterval: 30000 });
 
-  // A key existing is not Central having it: until Central first uses the key the
-  // screen waits rather than claiming a connection.
   const connected = Boolean(status?.enabled);
   const linked = connected && Boolean(status?.connected);
   const lastUsed = linked && status?.last_used_at ? new Date(status.last_used_at) : null;
-  // Clock skew must not read as "in 5 seconds".
+  // Clamp for clock skew, or it reads "in 5 seconds".
   const lastUsedAgo =
     lastUsed && !Number.isNaN(lastUsed.getTime())
       ? format.relativeTime(Math.min(lastUsed.getTime(), now.getTime()), now)
@@ -66,8 +60,7 @@ export function CentralPanel({ status }) {
       const parsed = centralEnableResponseSchema.safeParse(data);
       if (!parsed.success) throw new Error("shape");
 
-      // Held only in state: never in a URL, storage or logs. It is gone once
-      // this component unmounts, as the backend promises.
+      // Kept only in state: never in a URL, storage or logs.
       setToken(parsed.data.central_token);
       setAcknowledged(false);
       setConfirming(null);
@@ -94,7 +87,6 @@ export function CentralPanel({ status }) {
     }
   }
 
-  // Where the connection has got to: key made, Central has used it.
   const steps = [
     { key: "generate", done: connected, current: !connected, text: t("steps.generateText") },
     {
@@ -115,7 +107,6 @@ export function CentralPanel({ status }) {
 
   return (
     <>
-      {/* Picks up Central's first use without a reload. */}
       {connected && !linked ? <AutoRefresh intervalMs={15000} stopAfterMs={900000} /> : null}
       <Section
         icon={PlugZap}
@@ -129,7 +120,6 @@ export function CentralPanel({ status }) {
             <Badge variant="muted" className="font-normal">{t("state.off")}</Badge>
           )
         }
-        // The shown-once rule sits beside the button that creates the key.
         changedBy={!connected && !token ? t("actions.generateHint") : null}
         actions={
           token ? null : connected ? (
@@ -151,8 +141,6 @@ export function CentralPanel({ status }) {
           )
         }
       >
-        {/* Once Central uses the key the three setup steps are history: one line says so
-            instead of three ticked cards taking a row (22 Nov). */}
         {linked ? (
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 text-sm">
             <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-success text-white" aria-hidden>
@@ -187,7 +175,6 @@ export function CentralPanel({ status }) {
                   {t(`steps.${step.key}`, { brand })}
                   <span className="sr-only"> — {step.done ? t("steps.srDone") : step.current ? t("steps.srCurrent") : t("steps.srNext")}</span>
                 </p>
-                {/* Server and browser read the clock a moment apart. */}
                 <p className="text-xs text-muted-foreground" suppressHydrationWarning>{step.text}</p>
               </div>
             </li>
@@ -214,8 +201,6 @@ export function CentralPanel({ status }) {
           </InfoRow>
         ) : null}
 
-        {/* The token is not scoped: CentralUser is created with is_admin and the
-            Administrator role. Stated calmly, not as an error: it is a fact to know. */}
         <Note icon={ShieldAlert} title={t("power.title")}>
           <p>{t("power.body")}</p>
           <p className="mt-1">{t("power.attribution")}</p>
@@ -255,8 +240,6 @@ export function CentralPanel({ status }) {
         </div>
       </ConfirmDialog>
 
-      {/* Regenerating breaks Central immediately: the old token dies on the
-          next request until the new key is pasted there. */}
       <ConfirmDialog
         open={confirming === "regenerate"}
         onOpenChange={(next) => !next && pending === null && setConfirming(null)}

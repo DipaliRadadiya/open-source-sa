@@ -1,10 +1,5 @@
-// Bitbucket's Clone URL includes a username, which the API refuses; for a
-// public repository it is meaningless, so it is stripped.
-
-/** A URL's `user[:pass]@` prefix, if it has one. */
 const CREDENTIALS = /^([a-zA-Z][a-zA-Z0-9+.-]*:\/\/)([^/@]+)@/;
 
-// `strippedCredentials` is true when a username was removed, so the UI can say so.
 export function normalizeRepositoryUrl(raw) {
   const trimmed = typeof raw === "string" ? raw.trim() : "";
   if (trimmed === "") return { url: "", strippedCredentials: false };
@@ -18,13 +13,10 @@ export function normalizeRepositoryUrl(raw) {
   };
 }
 
-// Catches some cases early only. Deliberately NOT a host allowlist: the server
-// does the SSRF checks.
 export function repositoryUrlProblem(raw) {
   const { url } = normalizeRepositoryUrl(raw);
   if (url === "") return null;
 
-  // SSH clone URLs (SCP-style or ssh://) get "use HTTPS" rather than "malformed".
   if (/^[^\s/]+@[^\s/]+:/.test(url) || url.startsWith("ssh://")) return "notHttps";
 
   let parsed;

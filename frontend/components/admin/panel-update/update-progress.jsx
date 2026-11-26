@@ -19,7 +19,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// `reconnecting` (503 / refused while the panel restarts) is normal progress, not an error.
 function UpdateOutput({ run, defaultOpen = false }) {
   const t = useTranslations("panelUpdate");
 
@@ -134,7 +133,6 @@ export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun
         {run.reason_title ? (
           <p className="text-sm text-muted-foreground">{run.reason_title}</p>
         ) : null}
-        {/* The key question on this screen, so it is not muted. */}
         <p className="text-sm">
           {run.reason === "target_not_newer"
             ? t("notChanged")

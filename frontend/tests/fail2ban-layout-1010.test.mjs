@@ -387,7 +387,7 @@ test("desktop list scrolls within the remaining height but never grows to fill i
   assert.doesNotMatch(list, /flex-1/);
   assert.doesNotMatch(list, /CardSaveFooter|caution|f2b-ignore-(address|hint|examples|error)|slice\(/);
   assert.doesNotMatch(source, /max-h-\[(?:\d+px|\d+rem)\]|ResizeObserver|useEffect/);
-  const provider = section(read("components/ui/reason-tooltip.jsx"), "export function DisabledReasonProvider", "// The span");
+  const provider = section(read("components/ui/reason-tooltip.jsx"), "export function DisabledReasonProvider", "export function ReasonTooltip");
   assert.doesNotMatch(provider, /<div|<span/);
 });
 

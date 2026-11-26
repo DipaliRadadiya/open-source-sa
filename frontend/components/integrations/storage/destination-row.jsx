@@ -27,7 +27,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Unknown categories fall back to the generic failure: a newer one is not necessarily a network fault.
 const FAILURE_KEYS = {
   invalid_credentials: "failedCredentials",
   drive_personal: "failedDrivePersonal",
@@ -64,16 +63,13 @@ export function DestinationRow({
 }) {
   const t = useTranslations("storage");
   const format = useFormatter();
-  // Per-provider: "bucket/prefix" is meaningless for an FTP host.
   const { location, address } = describeDestination(destination);
   const isS3 = destination.provider === "s3";
   const service = s3ServiceFor(destination);
   const secrets = hasCredentials(destination.provider);
-  // "This server": its disk, as measured when the list was read.
   const free = destination.provider === "local" ? formatBytes(destination.config?.free_bytes, format) : null;
   const total = destination.provider === "local" ? formatBytes(destination.config?.total_bytes, format) : null;
 
-  // Read `config.connected`, not the failed-test category, which the backend reports incorrectly here.
   const needsConnect =
     destination.provider === "google_drive_oauth" && destination.config?.connected === false;
 
@@ -83,7 +79,6 @@ export function DestinationRow({
       {t("row.testing")}
     </p>
   ) : needsConnect ? (
-    /* Shown instead of the failed-test line: same fact, and this one has the button. */
     <div className="space-y-1.5">
       <p className="flex items-start gap-1.5 text-xs text-warning">
         <TriangleAlert className="mt-0.5 size-3 shrink-0" />
@@ -102,10 +97,8 @@ export function DestinationRow({
       }
     >
       {result.ok ? <CheckCircle2 className="mt-0.5 size-3 shrink-0" /> : <TriangleAlert className="mt-0.5 size-3 shrink-0" />}
-      {/* The probe's round-trip time, evidence the check reached the provider. */}
       <span>
         {result.ok ? (result.latency ? t("row.testPassedIn", { ms: result.latency }) : t("row.testPassed")) : result.message}
-        {/* Wrong keys are the common cause, so the fix is a link at the end of the line. */}
         {!result.ok && !result.notRun && canManage && secrets ? <ReplaceLink onClick={onReplace} /> : null}
       </span>
     </p>
@@ -115,8 +108,6 @@ export function DestinationRow({
 
   return (
     <DisabledReasonProvider denied={!canManage}>
-      {/* Wide: what and where · what backs up here · its last test · actions. Below lg the
-          two middle columns stack under the name, indented to its text. */}
       <div className="flex flex-wrap items-start gap-x-3 gap-y-2 py-3.5 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,3fr)_minmax(0,3fr)_auto] lg:gap-6">
         <div className="flex w-full min-w-0 gap-3 lg:w-auto">
           <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
@@ -125,20 +116,16 @@ export function DestinationRow({
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="min-w-0 font-medium break-all">{destination.name}</span>
-              {/* The API's provider name, except an S3 service the endpoint identifies. */}
               {service || destination.provider_title ? (
                 <Badge variant="outline" className="font-normal">
                   {service ? t(`form.providers.${service}`) : destination.provider_title}
                 </Badge>
               ) : null}
-              {/* Not "verified" — only that both secret columns are populated.
-                  Whether they WORK is what Test answers. */}
               {!secrets ? null : destination.has_credentials ? (
                 <Badge variant="muted">{t("row.credentialsSet")}</Badge>
               ) : (
                 <>
                   <Badge variant="warning">{t("row.credentialsMissing")}</Badge>
-                  {/* Without keys nothing works, so the fix is offered inline. */}
                   {canManage ? (
                     <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onReplace}>
                       {t("row.addCredentials")}
@@ -184,9 +171,7 @@ export function DestinationRow({
           ) : null}
         </div>
 
-        {/* `ml-auto` drops these to their own right-aligned line on a phone. */}
         <div className="ml-auto flex shrink-0 items-center gap-1">
-          {/* Nothing to test without keys: disabled with the reason. */}
           <ReasonTooltip
             reason={
               !canManage
@@ -236,7 +221,6 @@ export function DestinationRow({
   );
 }
 
-// Shown only when there is no fresh probe result.
 function StoredVerdict({ destination, canManage, onReplace }) {
   const t = useTranslations("storage");
   const { status, last_test_success: success, last_tested_at_human: when } = destination;
@@ -245,7 +229,6 @@ function StoredVerdict({ destination, canManage, onReplace }) {
     return (
       <p className="flex items-center gap-1.5 pt-0.5 text-xs text-muted-foreground">
         <CircleHelp className="size-3 shrink-0" />
-        {/* "This server" has no credentials to check, only a folder to write to. */}
         {t(hasCredentials(destination.provider) ? "row.neverTested" : "row.neverTestedFolder")}
       </p>
     );
@@ -263,7 +246,6 @@ function StoredVerdict({ destination, canManage, onReplace }) {
   return (
     <p className="flex items-start gap-1.5 pt-0.5 text-xs text-destructive">
       <TriangleAlert className="mt-0.5 size-3 shrink-0" />
-      {/* Branches on the stable category, never on a message (provider text is not translatable). */}
       <span>
         {t(`row.${FAILURE_KEYS[destination.last_test_error] ?? "failed"}`, { when: when ?? "" })}
         {destination.last_test_error === "invalid_credentials" && canManage ? (
@@ -274,7 +256,6 @@ function StoredVerdict({ destination, canManage, onReplace }) {
   );
 }
 
-// The newest backup to this destination: a failed one is the line that matters most here.
 function LastBackupLine({ backup }) {
   const t = useTranslations("storage");
   if (!backup) return null;
@@ -298,7 +279,6 @@ function LastBackupLine({ backup }) {
   return <p className="text-muted-foreground">{t("row.lastBackup", { when: backup.created_at_human })}</p>;
 }
 
-// Inline after the failure text, so the fix reads as part of the sentence.
 function ReplaceLink({ onClick }) {
   const t = useTranslations("storage");
   return (

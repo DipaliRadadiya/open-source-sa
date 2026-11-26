@@ -8,13 +8,8 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 
-// Fields sit in a two-column grid with the label above the control, as on the PHP
-// and Create pages. Label left / control right across a full-width card left a
-// gap of several hundred pixels between a question and its answer.
 const ROW = "py-0";
 
-// A switch is a yes/no answer to its own sentence, so it keeps the sentence
-// beside it, in a tile that holds the pair together.
 const TOGGLE =
   "flex items-start justify-between gap-4 rounded-xl border bg-muted/20 p-4 dark:bg-input/20";
 
@@ -31,7 +26,6 @@ function RowLabel({ as: As, label, hint, required }) {
   );
 }
 
-// `data-setting-row` marks grid cells; anything else in a Section spans the full width.
 export function Row({ label, hint, error, children, className, wide = false, toggle = false, required = false }) {
   if (toggle) {
     return (
@@ -55,7 +49,6 @@ export function Row({ label, hint, error, children, className, wide = false, tog
   );
 }
 
-/** A row that reports rather than edits, so it must not claim a form label. */
 export function InfoRow({ label, hint, children, className }) {
   return (
     <div data-setting-row="" className={cn("grid content-start gap-2", className)}>
@@ -65,7 +58,6 @@ export function InfoRow({ label, hint, children, className }) {
   );
 }
 
-// Each group saves on its own, so the card boundary shows what a Save covers.
 export function Section({
   icon: Icon,
   title,
@@ -74,23 +66,17 @@ export function Section({
   badge,
   readOnly,
   actions,
-  // One button beside the title (Add …), for a card whose body is a list.
   headerAction,
   changedBy,
-  // Overrides the two-column field grid when a card's fields want another split.
   gridClassName,
   children,
 }) {
   const destructive = tone === "destructive";
-  // A role that cannot change the card gets no Save band and no "read-only" note.
   const showActions = Boolean(actions) && !readOnly && !(actions.type === SectionActions && actions.props.canManage === false);
 
   return (
     <Card className="@container/section gap-0 overflow-hidden py-0">
-      {/* The same head as the cards on an application's page. Colour sits in the icon
-          chip, never the title: a red title read as an error (Krishna, 12 Oct). */}
       {title ? (
-        // A title alone centres on the icon; with a description both lines start at its top.
         <div className={cn("flex min-w-0 gap-3 border-b bg-[var(--card-head)] px-5 py-4", description ? "items-start" : "items-center")}>
           <HeadIcon icon={Icon} tone={destructive ? "destructive" : "default"} />
           <div className="min-w-0 flex-1">
@@ -115,11 +101,8 @@ export function Section({
         {children}
       </CardContent>
 
-      {/* Its own band, so the button that saves these rows sits inside the same
-          box as the rows it saves. */}
       {showActions ? (
         <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-muted/30 px-5 py-3">
-          {/* Opposite Save: who changed this last, on a shared server. */}
           {changedBy ? (
             <p className="mr-auto text-xs text-muted-foreground">{changedBy}</p>
           ) : null}
@@ -130,22 +113,17 @@ export function Section({
   );
 }
 
-/** A section's action area: Discard only when there is something to lose. */
 export function SectionActions({
   label,
   isDirty,
   pending,
   onDiscard,
   canManage,
-  // Something else holds the card for now (e.g. a job running on this item).
   blockedReason = null,
 }) {
   const t = useTranslations("settings.common");
-  // Named by its own Save label — unique per card, and already translated.
   useWatchUnsaved(label, isDirty);
 
-  // Whatever is standing in the way, or null once the button is live. Ordered
-  // by which one the user can do something about.
   const reason = blockedReason ?? (!isDirty ? t("nothingToSave") : null);
 
   if (!canManage) return null;
@@ -163,7 +141,6 @@ export function SectionActions({
         </Button>
       ) : null}
 
-      {/* Disabled and explained, rather than restyled. */}
       <ReasonTooltip reason={reason}>
         <Button type="submit" disabled={Boolean(reason) || pending}>
           {pending && <Loader2 className="size-4 animate-spin" />}

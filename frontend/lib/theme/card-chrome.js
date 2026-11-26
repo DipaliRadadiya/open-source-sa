@@ -1,3 +1,2 @@
-// The `!` is required: `Card` hardcodes `shadow-sm` and tailwind-merge does not
-// see the conflict. Verify by computed style, not class names.
+// The ! is needed: Card hardcodes shadow-sm and tailwind-merge misses the conflict.
 export const PANEL_CARD = "shadow-e1! ring-foreground/[0.07]";

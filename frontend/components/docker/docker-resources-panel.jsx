@@ -50,8 +50,6 @@ import {
 import { HoverHint } from "@/components/ui/hover-hint";
 import { formatDockerSize } from "@/lib/format/bytes";
 
-// Networks and volumes on this server, as two standard lists. Every destructive action is
-// confirmed or absent, and the API refuses the same cases.
 export function DockerResourcesPanel({
   initialNetworks,
   initialVolumes,
@@ -69,15 +67,11 @@ export function DockerResourcesPanel({
   const [attaching, setAttaching] = useState(null);
   const [creating, setCreating] = useState(null);
 
-  // Docker's own networks (bridge, host, none) can never be removed or joined, so
-  // they fold into one locked line instead of three rows of "Docker's own".
   const builtIn = initialNetworks.filter((network) => network.built_in);
   const networks = initialNetworks.filter((network) => !network.built_in);
 
   const appName = (id) => applicationNames[id] ?? t("ownedByApp", { id });
 
-  // Why a row's Remove cannot run, or null. The endpoint refuses a network a
-  // stopped application names as well as one with containers on it.
   const networkRemoveReason = (network) =>
     !canManage
       ? DENIED
@@ -94,7 +88,6 @@ export function DockerResourcesPanel({
         : volume.sites.length > 0
           ? t("volumes.removeUsedBySites", { sites: volume.sites.map((site) => site.name).join(", ") })
           : null;
-  // Another application's own network or volume is its private one.
   const attachReason = (resource) =>
     resource.application_id ? t("attach.ownedReason") : !canManageSites ? DENIED : null;
 
@@ -107,7 +100,6 @@ export function DockerResourcesPanel({
       toast.success(t(`${confirm.kind}s.removed`, { name: confirm.name }));
       setConfirm(null);
     } catch (error) {
-      // The API names the containers on a busy network; say what it said.
       toast.error(apiMessage(error, t("failed")));
     } finally {
       setRemoving(false);
@@ -144,7 +136,6 @@ export function DockerResourcesPanel({
     {
       id: "name",
       header: t("columns.name"),
-      // The same share in both tables, so the second column starts at one line.
       meta: { className: "w-[40%]" },
       cell: ({ row }) => <NetworkName network={row.original} appName={appName} />,
     },
@@ -196,7 +187,6 @@ export function DockerResourcesPanel({
         description={t("networks.hint")}
         action={networks.length > 0 ? createButton("network") : null}
         footer={
-          // A label, not disabled rows: Docker recreates these on restart.
           builtIn.length > 0 ? (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Lock className="size-3 shrink-0" />
@@ -271,7 +261,6 @@ export function DockerResourcesPanel({
         icon={Trash2}
         tone="destructive"
         title={confirm ? t(`${confirm.kind}s.removeTitle`, { name: confirm.name }) : ""}
-        // A volume holds data, so the dialog answers "does this delete my database".
         description={
           confirm
             ? confirm.busy
@@ -283,7 +272,6 @@ export function DockerResourcesPanel({
         }
         confirmLabel={t("remove")}
         confirmVariant="destructive"
-        // The menu already refuses these; this covers a row that went stale.
         confirmDisabled={confirm?.busy === true || (confirm?.sites?.length ?? 0) > 0}
         pending={removing}
         onConfirm={remove}
@@ -313,7 +301,6 @@ export function DockerResourcesPanel({
   );
 }
 
-/** The card head every list in the panel has: title, count and line; action right. */
 function ListSection({ title, icon = null, count, description, action, footer, children }) {
   return (
     <Card className="gap-0 overflow-hidden py-0">
@@ -377,8 +364,6 @@ function NetworkName({ network, appName }) {
   return (
     <div className="min-w-0">
       <p className="font-mono text-[13px] font-medium break-all">{network.name}</p>
-      {/* An application's own network says whose; a shared one says who joined it.
-          The delete refuses on those too, so the reason is visible before the click. */}
       <p className="mt-0.5 text-xs text-muted-foreground">
         {network.application_id
           ? t("networks.ownedBy", { app: appName(network.application_id) })
@@ -398,8 +383,6 @@ function Containers({ network }) {
       {network.containers.map((container) => (
         <li key={container.name} className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="font-mono text-xs">{container.name}</span>
-          {/* Published (reachable from the host) and exposed (this network only)
-              look identical unless someone says so. */}
           {container.ports.length === 0 ? (
             <span className="text-xs text-muted-foreground">{t("networks.noPorts")}</span>
           ) : (
@@ -428,8 +411,6 @@ function VolumeName({ volume, appName }) {
           <span className="text-xs text-muted-foreground">{t("volumes.ownedBy", { app: appName(volume.application_id) })}</span>
         ) : null}
       </p>
-      {/* Where it is on the host, for rsync and support answers. Long and uniform, so
-          it truncates from the left; <bdi> keeps the leading "/" where it belongs. */}
       {volume.mountpoint ? (
         <span className="mt-0.5 flex min-w-0 items-center gap-1">
           <HoverHint content={volume.mountpoint}><code className="min-w-0 truncate font-mono text-xs text-muted-foreground" dir="rtl">
@@ -446,8 +427,6 @@ function VolumeUsage({ volume }) {
   const t = useTranslations("docker");
   return (
     <div className="space-y-0.5 text-sm">
-      {/* Which application mounts it and where says what the volume IS; a stopped
-          application still owns its data, so it is listed regardless. */}
       {volume.sites.length > 0 ? (
         <ul className="space-y-0.5">
           {volume.sites.map((site) => (
@@ -458,7 +437,6 @@ function VolumeUsage({ volume }) {
           ))}
         </ul>
       ) : null}
-      {/* Not in use, in use and named, in use but unnameable: three different facts. */}
       {!volume.in_use ? (
         volume.sites.length === 0 ? <span className="text-muted-foreground">{t("volumes.unused")}</span> : null
       ) : volume.container_names.length > 0 ? (

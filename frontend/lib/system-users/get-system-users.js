@@ -4,8 +4,6 @@ import { systemUsersResponseSchema } from "@/lib/schemas/application";
 import { rememberedPerPage } from "@/lib/tables/remembered-per-page";
 import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 
-// Requests the API maximum, since `/system-users` pages at ten. Past 100 accounts the
-// picker needs search, not a larger number.
 export async function getSystemUserOptions() {
   try {
     const res = await serverFetch("/system-users", { searchParams: { per_page: 100 } });
@@ -19,7 +17,6 @@ export async function getSystemUserOptions() {
   }
 }
 
-/** A picker needs every account; a table needs one page. */
 export async function getSystemUsersPage(query = "") {
   const result = await read("/system-users", systemUsersResponseSchema, {
     searchParams: listQuery(query, { defaultPerPage: await rememberedPerPage() }),

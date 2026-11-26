@@ -9,7 +9,6 @@ import { RuntimeStatusBadge, removeFailed, versionState } from "@/components/run
 import { SupportCell, UsedByCell, VersionCell } from "@/components/runtime/versions-table";
 import { SUBGRID } from "@/lib/runtime/version-rows";
 
-// Long states ("Installation fehlgeschlagen") wrap inside the column instead of spilling.
 const WRAP = "h-auto text-left whitespace-normal";
 import { cn } from "@/lib/utils";
 import {
@@ -26,38 +25,27 @@ import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { InstallOutput } from "@/components/runtime/install-output";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-// One row of the Installed versions table: PHP's row minus the panel-version rule, plus npm.
 export function VersionSummary({ version, canManage, lifecycleAvailable = false }) {
   const t = useTranslations("node");
   const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(false);
-  // All buttons disable together (one version, no racing); only the pressed one spins.
   const [running, setRunning] = useState(null);
   const pending = running !== null;
-  // Read from props: the card re-reads after an update, and a local copy would go
-  // stale.
   const npm = version.npm_version ?? null;
-  // `npm_latest` is per Node version, compared by the API (strings misorder versions).
-  // `npm_update_available` is also false with an empty catalog, so "current" needs a known latest.
   const npmLatest = version.npm_latest ?? null;
   const npmKnown = Boolean(npm && npmLatest);
   const npmBehind = !npmKnown
     ? false
     : typeof version.npm_update_available === "boolean"
       ? version.npm_update_available
-      : // An API that predates the flag. Inequality is weaker than semver but
-        // it cannot invent an update that is not there.
+      :
         npm !== npmLatest;
   const npmCurrent = npmKnown && !npmBehind;
 
   const usedBy = version.in_use_by ?? 0;
 
-  // Shares the install-state helper with PHP, so a version mid-install does not
-  // render like a healthy one.
   const installState = versionState(version);
 
-  // Nothing is on disk while it installs or purges, so every action fails; Remove
-  // included (a second request would 404 once the first finished).
   const notReadyReason =
     installState === "installing"
       ? t("versions.stillInstalling")
@@ -67,8 +55,6 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
           ? t("versions.installFailedShort")
           : null;
 
-  // Same as PHP: a failed install left nothing on disk, and the remove endpoint
-  // refuses a version that is not installed.
   const nothingToRemove = failedWithNothingInstalled(version);
 
   const removeReason = !canManage
@@ -81,7 +67,6 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
           ? t("versions.usedBy", { count: usedBy })
           : null;
 
-  // A failed install with nothing on disk: DELETE clears the entry (204) instead of 404ing.
   async function dismiss() {
     setRunning("dismiss");
     try {
@@ -129,7 +114,6 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
       toast.success(t("versions.removed", { version: version.version }));
       setConfirming(false);
     } catch (error) {
-      // The API names every site pinning it.
       toast.error(apiMessage(error, t("versions.removeFailed")));
     } finally {
       setRunning(null);
@@ -142,9 +126,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
       const before = npm;
       const { data } = await updateNodeNpm(version.version);
       const after = data?.npm_version ?? null;
-      // Re-read: "update still available" is the server's semver answer.
       await refreshAndWait();
-      // The API reports the version after the attempt; unchanged means it was already current.
       toast.success(
         after && before && after === before
           ? t("npm.alreadyLatest", { version: after })
@@ -180,8 +162,6 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
           />
         ) : null}
 
-        {/* npm ships inside Node and updates separately. Null means unreadable: say so
-            rather than show a wrong number. */}
         <VersionCell label={t("table.colNpm")}>
           {npm ? (
             <span className="flex min-w-0 flex-wrap items-center gap-2">
@@ -190,7 +170,6 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
                   ? t("npm.upgrade", { current: npm, latest: npmLatest })
                   : t("npm.installed", { version: npm })}
               </span>
-              {/* Up to date: said, not offered as a button that cannot do anything. */}
               {npmCurrent ? (
                 <span className="text-xs text-muted-foreground">{t("table.npmCurrent")}</span>
               ) : (
@@ -204,7 +183,6 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
                     onClick={upgradeNpm}
                   >
                     {running === "npm" ? <Loader2 className="size-4 animate-spin" /> : null}
-                    {/* Short: the column already says npm. The full name is still read out. */}
                     <span aria-hidden>{t("table.npmUpdate")}</span>
                     <span className="sr-only">{t("npm.action")}</span>
                   </Button>
@@ -269,7 +247,6 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
         </div>
       </div>
 
-      {/* Why it stopped, and how long it has been going, as visible text. */}
       {removeFailed(version) || (installState && (version.started_at_human || version.output)) ? (
         <div className="mt-2 space-y-1 text-xs @3xl/versions:col-span-full">
           {removeFailed(version) ? (
@@ -289,7 +266,6 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
               })}
             </p>
           ) : null}
-          {/* The installer's own output, as on the PHP row. */}
           {installState && version.output ? (
             <InstallOutput text={version.output.trimEnd()} />
           ) : null}

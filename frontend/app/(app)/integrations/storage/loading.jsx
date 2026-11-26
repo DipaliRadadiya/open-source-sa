@@ -1,7 +1,5 @@
 import { SkCard, SkHeader, SkRows } from "@/components/ui/skeleton-kit";
 
-
-// Storage: the destinations card.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

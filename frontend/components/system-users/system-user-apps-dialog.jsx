@@ -12,19 +12,16 @@ import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// A search box only for a long list: below this the rows fit without scrolling much.
 const SEARCH_FROM = 9;
 
 export function SystemUserAppsDialog({ user, open, onOpenChange }) {
   const t = useTranslations("systemUsers");
   const ta = useTranslations("common.applicationContext");
   const [query, setQuery] = useState("");
-  const minimal = user?.applications ?? []; // list gives id + name only
-  const [apps, setApps] = useState(null); // null = loading
+  const minimal = user?.applications ?? [];
+  const [apps, setApps] = useState(null);
   const [detailFailed, setDetailFailed] = useState(false);
 
-  // Fetch full detail on open (domain/status live on the detail endpoint). Falls
-  // back to the minimal list data if the fetch fails.
   useEffect(() => {
     if (!open || !user) return;
     let active = true;
@@ -56,8 +53,6 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
   }
 
   const skeletonCount = Math.max(minimal.length, 2);
-  // Names come from the list row and show at once; only domain and status wait for
-  // the detail request.
   const loading = apps === null;
   const shown = apps ?? minimal;
   const term = query.trim().toLowerCase();
@@ -106,7 +101,6 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
             <EmptyState compact icon={AppWindow} badge={null} title={t("detail.noApplications")} />
           ) : (
             <div className="space-y-3">
-              {/* Without the detail read the rows are names only; say so rather than look complete. */}
               {detailFailed ? <p role="status" className="text-xs text-muted-foreground">{t("appsDetailFailed")}</p> : null}
               {shown.length >= SEARCH_FROM ? (
                 <LocalSearchInput value={query} onChange={setQuery} placeholder={ta("searchPlaceholder")} className="sm:max-w-none" />
@@ -114,8 +108,6 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
               {matches.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">{ta("noMatch", { query: query.trim() })}</p>
               ) : (
-                // One column, as in the application switcher: two columns cut every domain to
-                // "phpsite.23-172…" and broke a long name into six lines.
                 <ul className="divide-y overflow-hidden rounded-lg border">
                   {matches.map((app) => (
                     <li key={app.id}>
@@ -129,17 +121,12 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
                           {app.site_type ? <SiteTypeLogo name={app.site_type} size="h-4 w-4" /> : <Globe className="size-4 text-muted-foreground" />}
                         </span>
                         <span className="min-w-0 flex-1">
-                          {/* The status sits on the name line, so the domain below has the whole row:
-                              beside it, every domain was cut on a phone. */}
                           <span className="flex min-w-0 items-start justify-between gap-3">
-                            {/* Two lines at most: truncated to one, "QA Blog" and "QA Blog (Staging)" read the same on a phone. */}
                             <HoverHint content={app.name}>
                               <span className="line-clamp-2 text-sm font-medium [overflow-wrap:anywhere]">{app.name}</span>
                             </HoverHint>
-                            {/* The same words as the Applications page, as a dot: a badge on every row took half the width. */}
                             {app.status ? <ApplicationStatusDot application={app} className="mt-0.5 shrink-0" /> : null}
                           </span>
-                          {/* A long domain wraps to a second line rather than being cut: a tooltip never opens on a phone. */}
                           {app.domain ? (
                             <span className="block break-all font-mono text-xs text-muted-foreground">{app.domain}</span>
                           ) : loading ? (

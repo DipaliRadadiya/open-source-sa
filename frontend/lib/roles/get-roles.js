@@ -4,8 +4,6 @@ import { rolesResponseSchema } from "@/lib/schemas/role";
 import { rememberedPerPage } from "@/lib/tables/remembered-per-page";
 import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 
-// Asks for the API's maximum page size, or only the first page is offered.
-// Reports `failed`, not an empty list, so callers never claim "no roles exist".
 export async function getRoles() {
   const failure = { roles: [], failed: true };
 

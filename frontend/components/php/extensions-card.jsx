@@ -25,7 +25,6 @@ import { apiMessage } from "@/lib/api/error-message";
 import { cn } from "@/lib/utils";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// `sapis` only drifts after a manual `phpenmod`/`phpdismod`. Returns a translation key or null.
 function driftOf(extension) {
   const sapis = Object.entries(extension.sapis ?? {});
   if (sapis.length < 2) return null;
@@ -37,24 +36,19 @@ function driftOf(extension) {
   return "driftPartial";
 }
 
-// A row is a PACKAGE, not a module (`php8.4-mysql` provides mysqli, mysqlnd, pdo_mysql).
 export function ExtensionsCard({ version, extensions, panelRequired = [], toggleSupported = true, canManage }) {
   const t = useTranslations("php");
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
-  // Lets the row say "Enabling…" or "Disabling…".
   const [pending, setPending] = useState(null);
 
-  // Built-ins can never be switched and have no description.
   const builtins = extensions.filter((extension) => extension.builtin);
   const changeable = extensions.filter((extension) => !extension.builtin);
 
-  // Counted over what can actually change (excludes built-ins).
   const onCount = changeable.filter((extension) => extension.enabled).length;
 
-  // Our translated line when there is one, else apt's own (English) description.
   const describe = (extension) =>
     t.has(`extensionInfo.${extension.name}`) ? t(`extensionInfo.${extension.name}`) : (extension.summary ?? null);
 
@@ -67,14 +61,11 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
       if (!term) return true;
       if (extension.name.toLowerCase().includes(term)) return true;
       if (extension.modules.some((module) => module.toLowerCase().includes(term))) return true;
-      // Descriptions are searched too: users know the purpose, not the package name.
       return Boolean(describe(extension)?.toLowerCase().includes(term));
     });
 
-  // No pager: the list scrolls in a fixed height, and search and filter narrow it.
   const shown = matched;
 
-  // Did the search only miss because the answer is compiled into PHP?
   const builtinMatch = term
     ? builtins.find((extension) => extension.name.toLowerCase().includes(term))
     : null;
@@ -86,7 +77,6 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
     try {
       const response = await setPhpExtension(version, extension.name, next);
       await refreshAndWait();
-      // 202 means apt is queued (minutes), so the message says so.
       toast.success(
         response.status === 202
           ? t("extensions.installing", { name: extension.name })
@@ -95,9 +85,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
             : t("extensions.disabled", { name: extension.name }),
       );
     } catch (error) {
-      // apiMessage keeps the reference, which support may ask for.
       toast.error(apiMessage(error, t("extensions.failed")));
-      // A 500 can mean "changed, but PHP was not reloaded", so re-read what is on disk.
       router.refresh();
     } finally {
       setPending(null);
@@ -111,7 +99,6 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
         <CardDescription>
           {t("extensions.summary", { on: onCount, total: changeable.length })}
         </CardDescription>
-        {/* Said once for the list: on OpenLiteSpeed the rows have no switch. */}
         {!toggleSupported ? (
           <p className="flex items-start gap-2 pt-1 text-xs text-muted-foreground">
             <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
@@ -122,7 +109,6 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
 
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          {/* The shared search box, with icon and clear button. */}
           <LocalSearchInput
             value={query}
             onChange={setQuery}
@@ -136,7 +122,6 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
               if (!next) return;
               setFilter(next);
             }}
-            // Wraps rather than overflows in longer locales.
             className="flex-wrap gap-1"
           >
             <ToggleGroupItem value="all" className={FILTER_TOGGLE_ITEM}>
@@ -156,7 +141,6 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
             compact
             icon={SearchX}
             subject={Puzzle}
-            // A search that only matches a built-in names it.
             title={
               builtinMatch
                 ? t("extensions.noMatchesBuiltin", { name: builtinMatch.name })
@@ -164,18 +148,13 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
             }
           />
         ) : (
-          // Edge to edge, as every table inside a card.
           <div className="relative -mx-(--card-spacing)">
             <div className="max-h-[32rem] overflow-y-auto border-y">
-            {/* Columns, not one stretched row: on a wide card a single row left the switch far
-                from the name it belongs to (Krishna, 12 Oct). Each switch carries its own label. */}
             <ul aria-label={t("extensions.title")} className="-mr-px -mb-px grid grid-cols-1 @xl/ext:grid-cols-2 @6xl/ext:grid-cols-3">
                 {shown.map((extension) => {
                   const required = panelRequired.includes(extension.name);
-                  // Its own install still running: switching off now would be undone by the
-                  // install's last step.
                   const installing = extension.status === "installing";
-                  // One at a time: each switch runs apt, and a second run would fail on the lock.
+                  // One at a time: each switch runs apt, and a second run fails on the lock.
                   const reason = !canManage
                     ? DENIED
                     : required
@@ -188,26 +167,22 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
 
                   return (
                     <li key={extension.name} className="flex items-center justify-between gap-4 border-r border-b px-4 py-2.5">
-                      {/* min-h keeps every row the same height. */}
                       <div className="min-w-0 flex-1">
                         <span className="flex min-h-9 flex-col justify-center">
                         <span className="font-mono text-sm font-medium">{extension.name}</span>
 
-                        {/* Wraps instead of truncating; max-w-0 keeps the column from widening the table. */}
                         {describe(extension) ? (
                           <span className="block text-xs whitespace-normal text-muted-foreground">
                             {describe(extension)}
                           </span>
                         ) : null}
 
-                        {/* apt's output, since different failures need different fixes. */}
                         {extension.status === "installing" || extension.status === "failed" ? (
                           <span className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                             {extension.status === "installing" ? (
                               <Loader2 className="size-3 shrink-0 animate-spin" />
                             ) : null}
                             {extension.status === "failed" && extension.message ? (
-                              // The server's sentence, not apt's last line: after `reload_failed` apt's tail looks fine.
                               <span className="text-destructive">
                                 {extension.message}
                                 {extension.reference ? (
@@ -232,12 +207,9 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                       </div>
 
                       <div className="shrink-0 text-right">
-                        {/* Locked rows are disabled with the reason on hover. */}
                         {!toggleSupported && extension.installed ? (
-                          // OpenLiteSpeed: installed means on, and it cannot be switched off.
                           <span className="text-xs text-muted-foreground">{t("extensions.alwaysOn")}</span>
                         ) : !toggleSupported ? (
-                          // A switch would promise an off that does not exist.
                           <ReasonTooltip reason={reason}>
                             <Button
                               type="button"
@@ -260,21 +232,18 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                           {pending?.name === extension.name ? (
                             <span className="flex min-w-0 items-center gap-1.5 text-xs text-foreground">
                               <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-                              {/* The spinner alone reads as part of the switch. Hidden on a phone. */}
                               <span className="hidden truncate sm:inline">
                                 {pending.on ? t("extensions.enabling") : t("extensions.disabling")}
                               </span>
                             </span>
                           ) : null}
                           {required ? (
-                            // Said, not hidden behind a hover: a faded switch read as broken.
                             <HoverHint content={t("extensions.panelNeeds")}><span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Lock className="size-3.5 shrink-0" aria-hidden />
                               {t("extensions.panelNeedsShort")}
                             </span></HoverHint>
                           ) : (
                             <>
-                              {/* The word as well as the colour: on and off differed only by shade in dark mode. */}
                               {pending?.name === extension.name ? null : (
                                 <span aria-hidden className={cn("min-w-7 text-right text-xs font-medium whitespace-nowrap", installing ? "text-muted-foreground" : extension.enabled ? "text-primary" : "text-muted-foreground")}>
                                   {installing
@@ -284,8 +253,6 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                                       : t("extensions.stateOff")}
                                 </span>
                               )}
-                              {/* The On/Off word beside it already says the state; a role that
-                                  cannot change it gets just the word. */}
                               {canManage ? (
                                 <ReasonTooltip reason={reason}>
                                   <Switch
@@ -303,7 +270,6 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                         </span>
                         )}
 
-                        {/* `enabled` is all-or-nothing, so a manual `phpdismod` can show "off" while still live. */}
                         {driftOf(extension) ? (
                           <span className="mt-1 flex items-center justify-end gap-1.5 text-xs text-warning">
                             <TriangleAlert className="size-3.5 shrink-0" />
@@ -316,12 +282,10 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                 })}
             </ul>
             </div>
-            {/* Fade so the cut-off last row reads as scrollable. */}
             <div className="pointer-events-none absolute inset-x-0 bottom-px h-8 bg-gradient-to-t from-card to-transparent" />
           </div>
         )}
 
-        {/* Built-ins: kept so search finds them, folded since nothing can change. */}
         {builtins.length > 0 ? (
           <details className="group rounded-lg border">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground">

@@ -8,8 +8,6 @@ import { stopImpersonating } from "@/lib/auth/auth-actions";
 import { Button } from "@/components/ui/button";
 import { apiMessage } from "@/lib/api/error-message";
 
-// Persistent banner while an admin impersonates `username`. "Stop" reverts to the
-// admin and hard-navigates to the admin Users list so SSR re-reads the session.
 export function ImpersonationBanner({ username, admin }) {
   const t = useTranslations("impersonation.banner");
   const [stopping, setStopping] = useState(false);

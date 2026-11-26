@@ -26,7 +26,7 @@ test("services: plain Restart, two summary tiles per phone row", () => {
 });
 
 test("log toolbar controls wrap one by one", () => {
-  assert.match(read("components/logs/log-toolbar.jsx"), /<div className="contents">\s*\{\/\* Severity/);
+  assert.match(read("components/logs/log-toolbar.jsx"), /<div className="contents">\s*<div role="group"/);
 });
 
 test("database processes: no second 'nothing running', empty state centred", () => {

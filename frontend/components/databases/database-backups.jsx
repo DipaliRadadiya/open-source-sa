@@ -6,8 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { BackupsPanel } from "@/components/applications/backups/backups-panel";
 
-// A database on its own gets the application backup screen, worded for a database. One
-// that belongs to an application is backed up with it, and its own schedule is refused.
 export function DatabaseBackups({ database, read, backups, destinations, backupOptions, archived = [], activeRestore = null, canManage, canHandleArchives }) {
   const t = useTranslations("backups.database");
 

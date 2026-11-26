@@ -18,10 +18,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// The kind-conflict rule lives in lib/applications/worker-kind.js, shared with
-// the kind select so the two never disagree.
-
-// The API takes one command string, so a preset fills in a full, editable command.
 export function WorkerCommandField({ form, presets, onPick, workers = [] }) {
   const t = useTranslations("applications.workers");
 
@@ -71,7 +67,6 @@ export function WorkerCommandField({ form, presets, onPick, workers = [] }) {
               className="font-mono"
               autoComplete="off"
               spellCheck={false}
-              // An example from this application's own presets, not a fixed Laravel command.
               placeholder={presets.find((p) => p.command)?.command ?? t("form.commandPlaceholder")}
               {...field}
             />

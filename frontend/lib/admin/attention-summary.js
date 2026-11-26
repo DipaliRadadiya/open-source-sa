@@ -1,9 +1,5 @@
-// Counts plus a few names for the dashboard; names and reasons come straight from the API.
-
-/** How many names to print before falling back to "and N more". */
 export const MAX_NAMES = 3;
 
-/** The first non-empty line of stderr, truncated to `limit`. */
 export function firstLine(text, limit = 80) {
   if (typeof text !== "string") return null;
   const line = text.split("\n").map((s) => s.trim()).find(Boolean);
@@ -11,7 +7,6 @@ export function firstLine(text, limit = 80) {
   return line.length > limit ? `${line.slice(0, limit - 1)}…` : line;
 }
 
-/** The stderr line shared by a strict majority of failures, else null. */
 export function dominantReason(groups = []) {
   const counts = new Map();
   let total = 0;
@@ -33,7 +28,6 @@ export function dominantReason(groups = []) {
 export function summarizeAttention({ checks = [], errorGroups = [] } = {}) {
   const failed = checks.filter((c) => c.status === "fail");
   const warnings = checks.filter((c) => c.status === "warn");
-  // Counts occurrences, not groups.
   const occurrences = errorGroups.reduce((sum, g) => sum + (g.count ?? 0), 0);
 
   return {
@@ -44,7 +38,6 @@ export function summarizeAttention({ checks = [], errorGroups = [] } = {}) {
       distinct: errorGroups.length,
       reason: dominantReason(errorGroups),
     },
-    // What "view all" would cover: each distinct problem once.
     total: failed.length + warnings.length + errorGroups.length,
   };
 }

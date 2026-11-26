@@ -12,8 +12,7 @@ export function DeleteFileDialog({ appId, file, open, onOpenChange }) {
   const t = useTranslations("applications.files");
   const { pending: refreshing, refreshThen } = useRefresh();
   const [pending, setPending] = useState(false);
-  // Ticked by default. Reset when the dialog opens, not when it closes: a dialog
-  // opened from a row's own menu never sees onOpenChange(false).
+  // Reset on open: opening from a row's own menu never fires onOpenChange(false).
   const [permanent, setPermanent] = useState(true);
 
   async function onConfirm() {
@@ -44,7 +43,6 @@ export function DeleteFileDialog({ appId, file, open, onOpenChange }) {
       icon={Trash2}
       tone="destructive"
       title={t("delete.title", { name: file.name })}
-      // Changes with the checkbox: only a permanent delete cannot be undone.
       description={
         permanent
           ? t("delete.descriptionPermanent")

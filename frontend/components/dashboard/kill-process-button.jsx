@@ -15,16 +15,13 @@ import {
 } from "@/components/ui/tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-// Always confirms: there is no undo. TERM first; KILL only as a follow-up.
 export function KillProcessButton({ process, canManage }) {
   const t = useTranslations("serverDashboard");
   const { refreshThen } = useRefresh();
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
-  // Only offered once TERM has been tried and the process is still there.
   const [offerForce, setOfferForce] = useState(false);
   const engine = databaseEngine(process.command);
-  // The server refuses some processes outright; say so before the click.
   const refusal = !canManage
     ? DENIED
     : process.stoppable === false
@@ -35,7 +32,6 @@ export function KillProcessButton({ process, canManage }) {
     setPending(true);
     try {
       await killProcess(process.pid, signal);
-      // Toast once the refreshed list no longer shows the process.
       refreshThen(() => {
         toast.success(t("kill.stopped", { command: shortCommand(process.command) }));
         setConfirming(false);
@@ -47,7 +43,6 @@ export function KillProcessButton({ process, canManage }) {
       const status = error.response?.status;
 
       if (status === 404) {
-        // NOT a success: PIDs are recycled, so the row may now be a different process.
         refreshThen(() => {
           toast.info(t("kill.alreadyGone"));
           setConfirming(false);
@@ -57,7 +52,6 @@ export function KillProcessButton({ process, canManage }) {
       }
 
       if (status === 422) {
-        // Permanent refusal (PID 1, kernel thread, protected service): never offer a retry.
         toast.error(apiMessage(error, t("kill.refused")));
         setConfirming(false);
         setPending(false);
@@ -67,7 +61,6 @@ export function KillProcessButton({ process, canManage }) {
       toast.error(
         apiMessage(error, t("kill.failed")),
       );
-      // The signal didn't land; offer KILL now rather than making the user reopen the dialog.
       if (signal === "TERM") setOfferForce(true);
     }
     setPending(false);
@@ -77,7 +70,6 @@ export function KillProcessButton({ process, canManage }) {
     <Button
       variant="ghost"
       size="icon"
-      // Same red stop styling the Services page uses.
       className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
       disabled={Boolean(refusal)}
       onClick={() => {
@@ -86,14 +78,12 @@ export function KillProcessButton({ process, canManage }) {
       }}
       aria-label={t("kill.action")}
     >
-      {/* A circled square: a bare outlined square reads as an unticked checkbox. */}
       <CircleStop className="size-4" />
     </Button>
   );
 
   return (
     <>
-      {/* ReasonTooltip also opens on tap and supplies the reason, so the Button adds no second tooltip. */}
       {refusal ? (
         <ReasonTooltip reason={refusal}>{stopButton}</ReasonTooltip>
       ) : (
@@ -124,7 +114,6 @@ export function KillProcessButton({ process, canManage }) {
         pending={pending}
         onConfirm={() => run(offerForce ? "KILL" : "TERM")}
       >
-        {/* The API still allows it, and a database stopped here stays down until restarted. */}
         {engine && !offerForce ? (
           <Caution tone="destructive" size="md">
             {t("kill.databaseWarning", { engine })}
@@ -146,7 +135,6 @@ function databaseEngine(command) {
   return DATABASE_PROCESSES.find(([pattern]) => pattern.test(name))?.[1] ?? null;
 }
 
-// The full command line can be hundreds of characters; keep the part that identifies it.
 function shortCommand(command) {
   const first = String(command ?? "").trim().split(/\s+/)[0] || "";
   const name = first.split("/").pop();

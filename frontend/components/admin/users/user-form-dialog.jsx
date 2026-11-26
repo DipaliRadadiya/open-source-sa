@@ -155,8 +155,6 @@ export function UserFormDialog({
                           autoComplete="off"
                           {...field}
                           onFocus={(e) => {
-                            // The browser selects the pre-filled value on auto-focus; move the caret to
-                            // the end once. (The dropdown's focus-restore is prevented separately.)
                             if (didAutoFocus.current) return;
                             didAutoFocus.current = true;
                             const el = e.currentTarget;
@@ -165,7 +163,7 @@ export function UserFormDialog({
                                 const len = el.value.length;
                                 el.setSelectionRange(len, len);
                               } catch {
-                                // Some input types (email, number) reject setSelectionRange; safe to ignore.
+                                // email and number inputs reject setSelectionRange
                               }
                             });
                           }}
@@ -266,8 +264,6 @@ export function UserFormDialog({
                     <div className="space-y-1">
                       <FormLabel hint={t("form.isAdminHint")}>{t("form.isAdmin")}</FormLabel>
                     </div>
-                    {/* Your own admin access stays on: the API allows removing it (even from
-                        the last admin), and the following role save then fails as non-admin. */}
                     <label className={cn("flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors", isEdit && isSelf ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-muted/50")}>
                       <FormControl>
                         <ReasonTooltip reason={isEdit && isSelf ? t("form.ownAdminLocked") : null}>

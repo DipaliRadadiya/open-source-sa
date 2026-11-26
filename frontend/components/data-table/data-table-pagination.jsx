@@ -7,7 +7,6 @@ import { Pager } from "@/components/data-table/pager";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { useNavPending } from "@/components/data-table/nav-transition";
 
-// The page number lives in the URL so a list being read survives a reload.
 export function DataTablePagination({ meta }) {
   const t = useTranslations("pagination");
   const setQuery = useSetQuery();
@@ -15,11 +14,9 @@ export function DataTablePagination({ meta }) {
 
   const { current_page: page, last_page: lastPage, total } = meta;
 
-  // Hide the pager only when a single page is certain (`last_page` known).
   const showPager = lastPage == null || lastPage > 1;
 
-  // Decided by total, not page count: otherwise picking a larger size would
-  // hide the selector and remove the way back.
+  // Decided by total, otherwise picking a bigger size hides the selector.
   const showPerPage = total == null || total > PER_PAGE_OPTIONS[0];
 
   if (!showPager && !showPerPage) return null;
@@ -33,7 +30,6 @@ export function DataTablePagination({ meta }) {
           lastPage={lastPage}
           total={total}
           pending={pending}
-          // page 1 drops the param entirely (keeps URLs clean, matches search/filter).
           onPageChange={(n) => setQuery({ page: n <= 1 ? undefined : n })}
         />
       ) : null}

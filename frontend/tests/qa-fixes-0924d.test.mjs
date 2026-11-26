@@ -20,7 +20,6 @@ test("the clone form leaves card spacing between its last field and the footer",
 
 test("deleting an application ticks files and databases by default, and resets to ticked", () => {
   const src = read("components/applications/delete-application-dialog.jsx");
-  assert.match(src, /useState\(true\);\n\s+\/\/ Null when the user is gone/);
   assert.match(src, /const \[removeDatabases, setRemoveDatabases\] = useState\(true\)/);
   assert.match(src, /setRemoveFiles\(true\);\n\s+setRemoveDatabases\(true\);/);
   // An orphaned site still never sends remove_files.

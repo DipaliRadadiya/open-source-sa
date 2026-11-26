@@ -6,14 +6,11 @@ import { roleName } from "@/lib/roles/role-label";
 import { initials } from "@/lib/format/initials";
 import { parseApiDate } from "@/lib/format/api-date";
 
-// Who this page is about, above the tabs: the same avatar as the user menu, the
-// roles that decide what you can open, and when and from where you last signed in.
 export function AccountIdentity({ user }) {
   const t = useTranslations("account.identity");
   const tr = useTranslations("roles");
   const format = useFormatter();
   const roles = user?.roles ?? [];
-  // A date, not "1 week ago": "member since" names a day.
   const created = parseApiDate(user?.created_at);
 
   return (

@@ -11,8 +11,7 @@ import { ensureIgnored, settingsPayload } from "@/lib/fail2ban/settings-payload"
 import { apiMessage } from "@/lib/api/error-message";
 import { useBrowserIpSettled } from "@/components/network/browser-ip";
 
-// Ignores the user's IP first, then enables every jail, so it can never leave
-// jails on with the user bannable.
+// Ignores the user's IP first, so jails are never on while the user is bannable.
 export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canManage }) {
   const t = useTranslations("fail2ban");
   const { refreshAndWait } = useRefresh();
@@ -27,18 +26,12 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
   async function apply() {
     setPending(true);
     try {
-      // One entry, not the whole list, so nobody else's addition is undone.
       if (willIgnoreMe) await ensureIgnored(yourIp);
       await updateFail2ban({
-        // Required on every call: the endpoint rewrites the config as a unit.
         ...settingsPayload(settings),
-        // Only the jails the server reports.
         jails: Object.fromEntries(jails.map((jail) => [jail.name, true])),
-        // Only when the user's IP is known and covered above; otherwise the
-        // API's lockout check runs against this request's address.
         acknowledged: Boolean(yourIp),
       });
-      // Refresh first, so the toast never sits above stale "not protected" state.
       await refreshAndWait();
       toast.success(t("recommended.done"));
     } catch (error) {
@@ -50,7 +43,6 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
     }
   }
 
-  // Its only content is the one-click setup, which a view-only role cannot run.
   if (!canManage) return null;
 
   return (

@@ -8,13 +8,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 export function DeleteUserDialog({ user, open, onOpenChange }) {
   const t = useTranslations("users");
   const { run, pending } = useAction();
-  // The row and the ⋯ that opened this are gone once it is deleted.
   const removed = useRef(false);
 
   async function onConfirm() {
     await run(() => deleteUser(user.id), {
       success: t("toast.deleted"),
-      // The backend's 422 message (e.g. self-deletion) replaces this fallback.
       error: t("toast.deleteFailed"),
       onSuccess: () => {
         removed.current = true;

@@ -29,8 +29,6 @@ export default async function AdminUsersPage({ searchParams }) {
     slug: r.slug,
     is_system: r.is_system,
   }));
-  // A user's roles arrive as {id, name}; the built-in flag comes from the roles list
-  // so the Administrator role can be shown in the reader's language.
   const roleById = new Map(roleOptions.map((r) => [r.id, r]));
   const usersWithRoles = users.map((u) => ({
     ...u,
@@ -39,22 +37,16 @@ export default async function AdminUsersPage({ searchParams }) {
 
   const hasFilters = Boolean(sp.search || sp.is_admin);
 
-
-  // Before the redirect below: a failed load returns an empty page-1 meta, so
-  // redirecting on it would land on page 1 with the same error.
   if (failed) {
     return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
   }
 
-  // A page past the end redirects to the last real page.
   redirectOutOfRange("/admin/users", sp, meta, failed);
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} />
 
       <UsersView roles={roleOptions} rolesFailed={rolesFailed}>
-        {/* Below lg the rows are cards of their own, so the list drops its frame there. The
-            pager is not gated on row count: it hides itself when the list is too short. */}
         <ListCard from="c900" toolbar={<UsersToolbar />} footer={<DataTablePagination meta={meta} />}>
           <UsersTable
             data={usersWithRoles}

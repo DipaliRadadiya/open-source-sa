@@ -10,9 +10,6 @@ import { useSetQuery } from "@/hooks/use-set-query";
 import { typeLabel } from "@/lib/activity-log/labels";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-/* Cells at module level: flexRender treats a cell function's identity as the
- * component type, so an inline cell remounts on every render of this table. */
-
 function WhenCell({ row }) {
   return (
     <span className="whitespace-nowrap text-muted-foreground">
@@ -42,8 +39,6 @@ function TypeCell({ row }) {
   );
 }
 
-// Below sm the When and User columns are hidden and ride under the description:
-// three columns at 390px wrapped "14 hours ago" onto three lines.
 function DescriptionCell({ row }) {
   const t = useTranslations("activity");
   const { description, user, created_at_human } = row.original;
@@ -92,11 +87,8 @@ export function ActivityTable({ data, hasFilters }) {
   }
 
   const columns = [
-    // Fixed widths: sized to the content, each page would lay the columns out differently.
     { accessorKey: "created_at_human", header: t("columns.when"), cell: WhenCell, meta: { className: "hidden w-44 sm:table-cell" } },
     { id: "user", header: t("columns.user"), cell: UserCell, meta: { className: "hidden w-44 sm:table-cell" } },
-    // Hidden below xl: the description carries the same information, and the widest
-    // label (es "Herramientas de compilación") needs 261px in mono caps, which leaves a 1024px screen too little for the description.
     { id: "type", header: t("table.type"), cell: TypeCell, meta: { className: "hidden w-68 xl:table-cell" } },
     {
       accessorKey: "description",

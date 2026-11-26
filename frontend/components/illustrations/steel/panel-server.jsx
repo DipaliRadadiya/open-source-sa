@@ -1,13 +1,6 @@
 import { cuboid, projector } from "@/lib/geometry/cuboid";
 import { Part } from "@/components/illustrations/steel/part";
 
-/**
- * The dashboard banner's drawing: one server with a slot per application (up to six, then
- * "+N"): green = running, amber = paused or failing, outlined = none yet. Its lights turn
- * amber when services are down; unknown counts light nothing. Decorative only. The settle-in
- * animation is pure CSS, so a live refresh does not replay it.
- */
-
 const P = projector(0, 0);
 P.origin = "panel-server";
 
@@ -78,7 +71,6 @@ function Chassis({ alert }) {
   );
 }
 
-/** An empty bay on the chassis top: nothing installed yet. */
 function EmptyBay({ spec }) {
   const top = cuboid(P, { ...spec, h: 0 }).top;
   return <path d={top} className="sv-bay" />;
@@ -101,7 +93,6 @@ function AppModule({ spec, state, more, step }) {
           />
         </g>
         <g transform={box.topT}>
-          {/* No vents on the "+N" module, so the number reads. */}
           {more ? null : (
             <rect
               x="8"
@@ -148,10 +139,6 @@ function viewBox() {
   return `${x.toFixed(1)} ${y.toFixed(1)} ${(Math.max(...xs) - x + pad).toFixed(1)} ${(Math.max(...ys) - y + pad).toFixed(1)}`;
 }
 
-/**
- * `total`/`online`: application counts (null when unknown). `alert`: something on the server
- * needs attention (services down).
- */
 export function PanelServer({
   total = null,
   online = 0,
@@ -162,7 +149,6 @@ export function PanelServer({
   const shown = known ? Math.min(total, MAX_SLOTS) : 0;
   const more = known && total > MAX_SLOTS ? total - (MAX_SLOTS - 1) : 0;
   const slots = Array.from({ length: MAX_SLOTS }, (_, i) => slotAt(i));
-  // Drawn back to front so a nearer module covers the one behind it.
   const order = slots
     .map((s, i) => ({ s, i }))
     .sort((a, b) => a.s.x + a.s.y - (b.s.x + b.s.y));
@@ -201,7 +187,6 @@ export function PanelServer({
         if (i >= shown)
           return known && total === 0 ? <EmptyBay key={i} spec={s} /> : null;
         const isMore = more && i === MAX_SLOTS - 1;
-        // Running apps first, so the green ones read as a count.
         const state = isMore ? "off" : i < online ? "ok" : "warn";
         return (
           <AppModule

@@ -30,8 +30,6 @@ export default async function FirewallPage({ searchParams }) {
   if (!can(permissions, "firewall", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "firewall", "manage");
 
-  // Presets are fetched independently and default to an empty list, so a failure
-  // cannot take the page down. `cache()`d: the layout already fetched it.
   const historyForEveryone = can(permissions, "activity_log", "view");
 
   const [
@@ -44,20 +42,16 @@ export default async function FirewallPage({ searchParams }) {
     getFirewallRules(sp),
   ]);
 
-
-  // A page past the end redirects to the last real page instead of erroring.
   redirectOutOfRange("/firewall", sp, meta, rulesFailed);
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} />
 
-      {/* A failed read must never render as "nothing is protecting this server". */}
       {failed || !data ? (
         <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
       ) : (
         <NavTransitionProvider>
           <div className="space-y-4">
-            {/* Status first: every rule below is inert while the firewall is off. */}
             <FirewallStatusCard
               enabled={data.enabled}
               reference={data.status_reference ?? null}
@@ -92,7 +86,6 @@ export default async function FirewallPage({ searchParams }) {
               <DataTablePagination meta={meta} />
             ) : null}
 
-            {/* Rules someone added with the ufw command: real, but not in the list above. */}
             <UnmanagedRulesCard rules={data.unmanaged_rules} canManage={canManage} />
           </div>
         </NavTransitionProvider>

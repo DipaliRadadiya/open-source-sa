@@ -2,8 +2,7 @@ import { converter, formatCss } from "culori";
 
 const toOklch = converter("oklch");
 
-// Lightness (l) and a chroma multiplier per shade step. Chroma tapers toward
-// the extremes, which cannot hold full chroma inside the sRGB gamut.
+// Chroma tapers at the ends because extreme shades can't hold it inside sRGB.
 const SHADE_STEPS = {
   50: { l: 0.97, chroma: 0.3 },
   100: { l: 0.94, chroma: 0.45 },
@@ -21,7 +20,6 @@ const SHADE_STEPS = {
 const NEUTRAL_WHITE = formatCss({ mode: "oklch", l: 0.985, c: 0, h: 0 });
 const NEUTRAL_BLACK = formatCss({ mode: "oklch", l: 0.145, c: 0, h: 0 });
 
-// Contrast follows the background's actual lightness, not the active theme.
 function pickForeground(l) {
   return l < 0.62 ? NEUTRAL_WHITE : NEUTRAL_BLACK;
 }
@@ -37,8 +35,6 @@ export function generatePalette(hex) {
     shades[step] = formatCss({ mode: "oklch", l, c: c * chroma, h: h ?? 0 });
   }
 
-  // The brand colour itself when it can carry a button (the redesign uses the
-  // exact brand blue); a very light or very dark one falls back to the 600 step.
   const usable = base.l >= 0.45 && base.l <= 0.7;
   return {
     shades,

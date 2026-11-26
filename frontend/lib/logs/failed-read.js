@@ -1,12 +1,11 @@
 import { apiMessage } from "../api/error-message.js";
 
-// Keeps the server's own reason and reference when it gave one.
 export async function failedRead(res) {
   let data = null;
   try {
     data = await res.json();
   } catch {
-    // Not JSON: nothing to quote, the generic sentence stands.
+    // not JSON
   }
   return { status: "failed", log: null, message: apiMessage({ response: { data } }, null) || null };
 }

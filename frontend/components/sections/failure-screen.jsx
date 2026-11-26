@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 
-// Takes a tone, unlike `FailurePanel`: updating is a warning and must not be styled as an error.
 export function FailureScreen({
   icon: Icon,
   tone = "destructive",
@@ -15,7 +14,6 @@ export function FailureScreen({
     <div
       role="alert"
       className={cn(
-        // Solid surface, as the login card: a translucent fill had no edge on the auth gradient.
         "flex w-full flex-col items-center rounded-xl border bg-card px-6 py-10 text-center shadow-xl shadow-black/5",
         muted ? "border-border" : "border-destructive/25",
       )}
@@ -29,8 +27,6 @@ export function FailureScreen({
         <Icon className="size-6" />
       </span>
 
-      {/* A <p>, not an <h1>, like other failure screens: `role="alert"` already
-          announces the card, and `check-page-header` reserves headings for real pages. */}
       <p className="mt-5 text-lg font-semibold tracking-tight text-balance">{title}</p>
       <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground text-pretty">
         {body}

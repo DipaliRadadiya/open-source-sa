@@ -10,7 +10,7 @@ import { can } from "@/lib/permissions/can";
 import { getGitAccounts } from "@/lib/git/get-git";
 import { gitProviderFor, providersByAccountId } from "@/lib/applications/git-provider";
 
-// The `(app)` sidebar never sees the `[application]` param, so this layout supplies the site's menu and crumb.
+// The (app) sidebar never gets the [application] param, so this layout adds the site menu.
 export default async function ApplicationLayout({ children, params }) {
   const { application } = await params;
   const [items, result, permissions] = await Promise.all([
@@ -19,21 +19,17 @@ export default async function ApplicationLayout({ children, params }) {
     getPermissions().catch(() => []),
   ]);
   const name = result?.application?.name;
-  // Null, not absent: null means the system user is gone (other routes answer 409).
   const orphaned = result?.application?.system_user === null;
-  // Only account-linked git sites need the accounts list; cached for the dashboard page.
   const gitAccounts = result?.application?.git_account_id
     ? await getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
     : [];
   const gitProvider = gitProviderFor(result?.application, providersByAccountId(gitAccounts));
-  // Recipe logos come from the catalog; only container sites can have one (cached).
   const iconDataUri = result?.application?.serving_profile === "docker"
     ? applicationIconDataUri(result.application, (await getSiteTypes().catch(() => null))?.siteTypes ?? [])
     : null;
 
   return (
     <>
-      {/* Always reported, even as null: the sidebar needs to know the site has no menu. */}
       <ApplicationNav items={items} application={result?.application ?? null} gitProvider={gitProvider} iconDataUri={iconDataUri} />
       {name ? <PageCrumb href={`/applications/${application}`}>{name}</PageCrumb> : null}
       {result?.application ? (
@@ -43,8 +39,6 @@ export default async function ApplicationLayout({ children, params }) {
           redeploy={result.application.container_redeploy ?? null}
         />
       ) : null}
-      {/* Above every application page: the overview and editors show saved settings,
-          which are not live while this is up. */}
       <ReloadPendingNotice appId={application} className="mb-6" />
       {orphaned ? (
         <SystemUserMissing

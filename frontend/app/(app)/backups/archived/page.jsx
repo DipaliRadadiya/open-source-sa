@@ -10,7 +10,6 @@ import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
-// Backups kept after their application or database was deleted.
 export default async function ArchivedBackupsPage({ searchParams }) {
   const sp = await searchParams;
   const [{ backups, meta, failed, status, failure, message }, permissions, t] = await Promise.all([
@@ -26,7 +25,6 @@ export default async function ArchivedBackupsPage({ searchParams }) {
     <NavTransitionProvider>
       <ArchivedBackups
         backups={backups}
-        // Downloading and deleting both hand over or remove a whole archive.
         canManage={can(permissions, "backup", "manage")}
         hasFilters={Boolean(sp.type || sp.period)}
         pager={<DataTablePagination meta={meta} />}

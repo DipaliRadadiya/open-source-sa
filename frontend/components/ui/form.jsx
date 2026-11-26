@@ -47,7 +47,7 @@ function useFormField() {
   }
 }
 
-// Label for "The Name field is required."; derived from the FormLabel child (refs cannot be written during render).
+// Refs can't be written during render, so derive from the FormLabel child.
 const FormItemContext = React.createContext({ label: null })
 
 function formLabelText(children) {
@@ -70,7 +70,6 @@ function FormItem({ className, children, ...props }) {
 
   return (
     <FormItemContext.Provider value={{ id, label }}>
-      {/* content-start keeps inputs aligned when a grid neighbour is taller. */}
       <div data-slot="form-item" className={cn("grid content-start gap-2", className)} {...props}>
         {children}
       </div>
@@ -78,14 +77,13 @@ function FormItem({ className, children, ...props }) {
   )
 }
 
-// No tab stop on purpose: Radix Dialog would auto-focus it and open the tooltip (radix-ui#1949).
+// No tab stop: Radix Dialog would auto-focus it and open the tooltip (radix-ui#1949).
 function RequiredMark() {
   const t = useTranslations("common")
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="ml-0.5 text-destructive">
-          {/* The tooltip is unreachable without hover, so the word is in the label for screen readers. */}
           <span aria-hidden="true">*</span>
           <span className="sr-only">{t("required")}</span>
         </span>
@@ -95,7 +93,6 @@ function RequiredMark() {
   )
 }
 
-// Use `hint` only on technical fields.
 function FormLabel({ className, required, hint, children, ...props }) {
   const { error, formItemId } = useFormField()
 
@@ -137,7 +134,6 @@ function FormDescription({ className, ...props }) {
     <p
       data-slot="form-description"
       id={formDescriptionId}
-      // Smaller than the label; muted-foreground is already near the contrast floor.
       className={cn("text-muted-foreground text-xs leading-relaxed font-normal", className)}
       {...props}
     />
@@ -150,9 +146,7 @@ function FormMessage({ className, field, ...props }) {
   const tc = useTranslations("common")
   const { label: detectedLabel } = React.useContext(FormItemContext)
 
-  // Zod messages are keys and get translated; anything else renders as-is. Explicit children win.
   const raw = props.children ?? (error ? String(error?.message ?? "") : null)
-  // Explicit `field` prop > label detected from FormLabel > generic message.
   const label = field ?? detectedLabel ?? null
   const body =
     typeof raw === "string" && raw

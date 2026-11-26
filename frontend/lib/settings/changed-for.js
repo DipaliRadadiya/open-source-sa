@@ -1,6 +1,5 @@
 import { getTranslations } from "next-intl/server";
 
-// Null when the API has no record (shown as nothing, not "never").
 export async function changedFor(lastChanged, group) {
   const entry = lastChanged?.[group];
   if (!entry?.user?.username || !entry?.at_human) return null;

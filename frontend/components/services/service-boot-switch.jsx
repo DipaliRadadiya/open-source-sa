@@ -14,21 +14,17 @@ import {
 } from "@/components/ui/tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-// Driven by the service's `actions`, so a protected unit cannot be switched off.
-// OFF asks first: a disabled service is only noticed at the next reboot.
 export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
   const t = useTranslations("services");
   const { refreshAndWait } = useRefresh();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  // The requested value, until the server agrees with it.
   const [asked, setAsked] = useState(null);
 
   const allowed = service.actions ?? [];
   const canToggle =
     canManage && allowed.includes(service.enabled ? "disable" : "enable");
 
-  // Optimistic: `service.enabled` only changes once `router.refresh()` lands.
   const shown =
     asked !== null && asked !== service.enabled ? asked : service.enabled;
 
@@ -41,16 +37,12 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
       await refreshAndWait();
       toast.success(t(`toast.${action}`, { name: service.label }));
     } catch (error) {
-  // Revert: the change did not happen.
       setAsked(null);
       const data = error.response?.data;
       showActionError({
-        // No answer at all (connection dropped) is not "left as it was": the
-        // server may have done it. The list re-reads every 3 s and shows which.
         title: error.response
           ? t(`error.${action}`, { name: service.label })
           : t("error.noAnswer", { name: service.label }),
-        // The title already says there was no answer.
         message: error.response ? apiMessage(error, undefined, { reference: false }) : undefined,
         reference: data?.reference,
         copyLabel: t('copyReference'),
@@ -65,14 +57,10 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
     }
   }
 
-  // Installing or failed-install rows have no unit yet (`actions` is empty),
-  // so a dash is shown, matching the empty usage figures on the row.
   if (service.state && service.state !== "installed") {
     return <span className="text-muted-foreground">—</span>;
   }
 
-  // A service that can never be switched off is stated in words; a
-  // disabled-and-on switch reads as a glitch.
   if (service.protected) {
     return (
       <Tooltip>
@@ -103,7 +91,6 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
 
   return (
     <>
-      {/* Without the permission the switch only shows whether the unit starts at boot. */}
       {control}
 
       <ConfirmDialog

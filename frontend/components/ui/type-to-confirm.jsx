@@ -6,9 +6,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// The value to type sits on its own line, apart from the sentence, so a long
-// domain cannot blend into the words around it. Never prefilled: typing it IS
-// the safeguard.
+// Never prefilled: typing it is the safeguard.
 export function TypeToConfirm({
   id,
   value,

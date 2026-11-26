@@ -32,7 +32,6 @@ import {
 
 const schema = z.object({ node_version: z.string().min(1, "requiredField") });
 
-// Only installed versions inside the site type's range: the API refuses the rest.
 export function NodeVersionDialog({ application, range, versions = [], versionsFailed = false, open, onOpenChange }) {
   const t = useTranslations("applications.nodeVersion");
   const { refreshAndWait } = useRefresh();
@@ -51,14 +50,12 @@ export function NodeVersionDialog({ application, range, versions = [], versionsF
     setSaving(true);
     try {
       const { status } = await updateNodeVersion(application.id, values.node_version);
-      // 202: the card follows `node_version_change`; 200: already on it, nothing restarts.
       await refreshAndWait();
       if (status === 202) toast.info(t("switching", { target: values.node_version }));
       else toast.success(t("already", { version: values.node_version }));
       onOpenChange?.(false);
       form.reset({ node_version: "" });
     } catch (error) {
-      // A 422 on node_version arrives translated and lands on the field.
       if (error.response?.data?.errors) handleValidationError(error, form, { fallback: t("failed") });
       else toast.error(apiMessage(error, t("failed")));
     } finally {
@@ -87,7 +84,6 @@ export function NodeVersionDialog({ application, range, versions = [], versionsF
             <Button type="button" variant="outline" onClick={() => onOpenChange?.(false)} disabled={saving}>
               {t("cancel")}
             </Button>
-            {/* Not offered when there is nothing to switch to; the note says why. */}
             {choices.length > 0 && !versionsFailed ? (
               <Button type="submit" disabled={saving}>
                 {saving ? <Loader2 className="size-4 animate-spin" /> : null}

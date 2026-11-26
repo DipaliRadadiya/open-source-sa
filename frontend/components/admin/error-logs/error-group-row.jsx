@@ -10,7 +10,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// The entry exactly as the API returned it, so any field is still findable.
 function RawEntry({ entry }) {
   const t = useTranslations("errorLogs");
   const json = JSON.stringify(entry, null, 2);
@@ -25,12 +24,9 @@ function RawEntry({ entry }) {
             <ChevronDown className="size-3.5 transition-transform group-data-[state=open]/raw:rotate-180" />
           </Button>
         </CollapsibleTrigger>
-        {/* Outside the trigger, so copying does not toggle the panel. */}
         <CopyButton value={json} label={t("rawCopy")} />
       </div>
       <CollapsibleContent className="pt-1.5">
-        {/* No max height: the occurrence list already scrolls, and nested
-            scroll areas fight over the wheel. */}
         <pre className="whitespace-pre-wrap break-words rounded-md border bg-zinc-950 p-3 font-mono text-xs leading-4 text-zinc-100">
           {json}
         </pre>
@@ -39,14 +35,12 @@ function RawEntry({ entry }) {
   );
 }
 
-// 503 means the panel refused work because something is already running, unlike a 500.
 function statusMeta(status) {
   return status === 503
     ? { Icon: TriangleAlert, tint: "text-warning", chip: "bg-warning/10", pill: "warning" }
     : { Icon: CircleX, tint: "text-destructive", chip: "bg-destructive/10", pill: "destructive" };
 }
 
-// `now` comes from the server render so relative times match on hydration.
 export function ErrorGroupRow({ group, now }) {
   const t = useTranslations("errorLogs");
   const format = useFormatter();
@@ -59,8 +53,6 @@ export function ErrorGroupRow({ group, now }) {
     date ? format.dateTime(date, { dateStyle: "medium", timeStyle: "medium" }) : null;
 
   return (
-    // One line per kind of error in a shared list: as separate tall
-    // cards, 19 errors filled three screens. The detail is one click away.
     <Collapsible>
       <CollapsibleTrigger className="group flex w-full items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring">
         <span
@@ -84,13 +76,11 @@ export function ErrorGroupRow({ group, now }) {
                 {group.status}
               </Badge>
             ) : null}
-            {/* The exit code distinguishes operations whose sentence is otherwise identical. */}
             {isOperation && group.exitCode != null ? (
               <Badge variant={meta.pill} className="font-normal tabular-nums">
                 {t("exitCode", { code: group.exitCode })}
               </Badge>
             ) : null}
-            {/* The count is why this screen groups: frequent faults must stand out. */}
             {group.count > 1 ? (
               <Badge variant="secondary" className="font-normal tabular-nums">
                 {t("occurrences", { count: group.count })}
@@ -98,8 +88,6 @@ export function ErrorGroupRow({ group, now }) {
             ) : null}
           </div>
 
-          {/* Where it happened (a route pattern for API failures, the feature for
-              operations, by name when the API sends one; identifiers stay mono) and when, on one line. */}
           <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-xs text-muted-foreground">
             {isOperation ? (
               <span className={cn("break-all", group.featureLabel || group.operationLabel ? "font-sans" : null)}>
@@ -131,7 +119,6 @@ export function ErrorGroupRow({ group, now }) {
 
       <CollapsibleContent>
         <div className="border-t bg-muted/20 px-4 py-3">
-          {/* Full class name, here rather than on the line: the namespace repeats on nearly every row. */}
           {group.exception && group.exception !== group.exceptionShort ? (
             <p className="mb-2 break-all font-mono text-xs leading-4 text-muted-foreground/70">
               {group.exception}
@@ -140,7 +127,6 @@ export function ErrorGroupRow({ group, now }) {
           <p className="mb-2 text-xs font-medium text-muted-foreground">
             {t("everyOccurrence")}
           </p>
-          {/* Own scroll so one busy group does not push the others off screen. */}
           <ul className="max-h-[30rem] space-y-1.5 overflow-y-auto pr-1">
             {group.occurrences.map((entry, index) => (
               <li
@@ -152,35 +138,28 @@ export function ErrorGroupRow({ group, now }) {
                     {exact(entry.at) ?? t("unknownTime")}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {/* The log carries only an id, so it is labelled as one. */}
                     {entry.user_id == null
                       ? t("signedOut")
                       : t("userId", { id: entry.user_id })}
                   </span>
                 </div>
 
-                {/* The exception's own message; older entries carry a fixed
-                    constant, so it is shown when present rather than assumed. */}
                 {entry.message ? (
                   <p className="text-sm leading-5">{entry.message}</p>
                 ) : null}
 
-                {/* The command line that failed. */}
                 {entry.command ? (
                   <pre className="overflow-x-auto rounded-md border bg-zinc-950 p-2 font-mono text-xs leading-4 text-zinc-100">
                     {entry.command}
                   </pre>
                 ) : null}
 
-                {/* Redacted, truncated stderr: the only field that says what
-                    broke. Pre-wrapped mono to keep command-output alignment. */}
                 {entry.error ? (
                   <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/60 p-2 font-mono text-xs leading-4 text-muted-foreground">
                     {entry.error}
                   </pre>
                 ) : null}
 
-                {/* Where it threw, then the frames (vendor frames already dropped). */}
                 {entry.file ? (
                   <p className="font-mono text-xs break-all text-muted-foreground">
                     {entry.file}
@@ -197,7 +176,6 @@ export function ErrorGroupRow({ group, now }) {
                   </ul>
                 ) : null}
 
-                {/* Attempts and duration tell a lock retried for seconds from a single fast failure. */}
                 {entry.attempts != null || entry.duration_ms != null ? (
                   <p className="text-xs tabular-nums text-muted-foreground/70">
                     {[
@@ -209,8 +187,7 @@ export function ErrorGroupRow({ group, now }) {
                   </p>
                 ) : null}
 
-                {/* Operations only: an API exception's reference is never sent
-                    to the client, so a lookup cannot succeed. */}
+                {/* An API exception's reference never reaches the client, so only link operations. */}
                 {isOperation && entry.reference ? (
                   <p className="font-mono text-xs text-muted-foreground/70">
                     {t("reference", { reference: entry.reference })}

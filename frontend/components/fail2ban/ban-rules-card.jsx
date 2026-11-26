@@ -28,8 +28,6 @@ import {
 } from "@/components/ui/select";
 import { apiMessage } from "@/lib/api/error-message";
 
-// Ban time -1 means permanent. Every save sends the whole settings object,
-// since the backend rewrites the file as a unit.
 export function BanRulesCard({ settings, presets, canManage }) {
   const t = useTranslations("fail2ban");
   const { refreshAndWait } = useRefresh();
@@ -42,10 +40,8 @@ export function BanRulesCard({ settings, presets, canManage }) {
 
   const isPermanent = Number(bantime) === PERMANENT_BANTIME;
 
-  // A preset list without the current value would silently change it on save.
   const hasCurrent = presets.some((p) => String(p.seconds) === String(settings.bantime));
 
-  // Mirrors UpdateFail2banRequest's bounds so errors show on the field.
   const inRange = (value, min, max) => /^\d+$/.test(value) && Number(value) >= min && Number(value) <= max;
   const maxretryError = inRange(maxretry, 2, 100) ? null : t("settings.maxretryRange");
   const findtimeError = inRange(findtime, 30, 86400) ? null : t("settings.findtimeRange");
@@ -62,8 +58,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
         bantime: Number(bantime),
         findtime: Number(findtime),
         maxretry: Number(maxretry),
-        // No `ignore_ips`: omitted, the server keeps its list, so this page's copy
-        // cannot undo an address someone added since it loaded.
+        // No ignore_ips, so the server keeps its list and a stale page can't drop an address.
       });
       await refreshAndWait();
       toast.success(t("settings.saved"));
@@ -96,7 +91,6 @@ export function BanRulesCard({ settings, presets, canManage }) {
           <CardDescription>{t("settings.description")}</CardDescription>
         </CardHeader>
 
-        {/* Use the card width, not the viewport, to keep paired fields comfortable. */}
         <CardContent className="px-5 py-5">
           <div className="grid gap-x-6 gap-y-5 @md/ban-rules:grid-cols-2">
             <div className="min-w-0 space-y-2">
@@ -105,14 +99,12 @@ export function BanRulesCard({ settings, presets, canManage }) {
                 id="f2b-maxretry"
                 placeholder="5"
                 type="number"
-                // The API's bounds.
                 min={2}
                 max={100}
                 value={maxretry}
                 aria-invalid={maxretryError ? true : undefined}
                 aria-describedby={maxretryError ? "f2b-maxretry-hint f2b-maxretry-error" : "f2b-maxretry-hint"}
                 onChange={(e) => setMaxretry(e.target.value)}
-                // Locked mid-save: the following refresh would overwrite an edit.
                 disabled={!canManage || pending}
               />
               <p id="f2b-maxretry-hint" className="text-xs leading-relaxed text-muted-foreground">{t("settings.maxretryHint")}</p>
@@ -135,7 +127,6 @@ export function BanRulesCard({ settings, presets, canManage }) {
                 onChange={(e) => setFindtime(e.target.value)}
                 disabled={!canManage || pending}
               />
-              {/* The field stays in seconds; only valid values get a readable duration. */}
               {findtimeError ? (
                 <p id="f2b-findtime-error" className="text-xs text-destructive">{findtimeError}</p>
               ) : null}

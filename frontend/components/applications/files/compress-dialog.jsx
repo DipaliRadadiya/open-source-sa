@@ -30,7 +30,6 @@ export function CompressDialog({ appId, file, existingPaths, open, onOpenChange,
       successMessage={() => t("compressDialog.done", { name: file.name })}
       failureMessage={t("compressDialog.failed")}
       onSuccess={onSuccess}
-      /* The backend resolves the whole relative path, so show the destination folder. */
       destinationLabel={t("compressDialog.savesTo")}
       destinationOf={dirname}
       warning={t("compressDialog.folderMustExist")}

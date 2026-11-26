@@ -17,17 +17,9 @@ import { Caution } from "@/components/ui/caution";
 import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Masked until asked for: the card stays on the dashboard on every visit until dismissed,
-// so a shown password sat on every screen share. The API's own `secret`
-// flag decides; without it, the label (or a raw env key's name) does.
 const SECRET_LABELS = new Set(["password", "token"]);
 const SECRET_KEY = /PASS|SECRET|TOKEN|KEY/i;
 
-/**
- * The credentials a one-click app generated, shown where the user lands. Loaded on mount
- * with the password masked. It stays until dismissed (a site column, so across reloads),
- * since the values can't be rotated; they remain under Container → Reveal afterwards.
- */
 export function FirstRunCredentials({ application, className }) {
   const t = useTranslations("applications.container.firstRun");
   const router = useRouter();
@@ -35,7 +27,6 @@ export function FirstRunCredentials({ application, className }) {
   const [credentials, setCredentials] = useState(null);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
-  // Gone the moment the API agrees, not after the page re-renders (~1.5 s later).
   const [dismissed, setDismissed] = useState(false);
 
   const keys = application.container_secret_keys ?? [];
@@ -61,10 +52,6 @@ export function FirstRunCredentials({ application, className }) {
           setCredentials(data?.credentials ?? null);
         }
       } catch (requestError) {
-        // Shown rather than swallowed. A card that promises credentials and
-        // renders nothing is worse than no card — the user has no way to tell
-        // "still loading" from "there are none" from "the request failed", and
-        // the one thing they must not conclude is that there was nothing to save.
         if (!cancelled) setError(apiMessage(requestError, t("failed")));
       }
     }
@@ -81,8 +68,6 @@ export function FirstRunCredentials({ application, className }) {
     try {
       await acknowledgeContainerSecrets(application.id);
       setDismissed(true);
-      // The card's visibility comes from a server-rendered field, so without this
-      // it would sit there after a successful dismiss until the next navigation.
       router.refresh();
     } catch (requestError) {
       toast.error(apiMessage(requestError, t("acknowledgeFailed")));
@@ -95,12 +80,9 @@ export function FirstRunCredentials({ application, className }) {
 
   return (
     <Card className={className}>
-      {/* The application page's card head: the title, and the card's one button beside it. */}
       <CardHeader className="items-center border-b">
         <CardTitle icon={KeyRound} as="h2">{t("title")}</CardTitle>
         <CardAction className="row-span-1 self-center">
-          {/* Enabled only once the values are on screen. A dismiss button beside a
-              row of spinners invites the one click that cannot be undone. */}
           <Button
             size="sm"
             onClick={acknowledge}
@@ -122,9 +104,6 @@ export function FirstRunCredentials({ application, className }) {
             <p>{error}</p>
           </Caution>
         ) : (
-          // Label over value in framed cells, side by side once the card is wide enough
-          // (username and password on one line, there is room). A narrow
-          // card stacks them, so the unbreakable password never clips its name.
           <div className={FACT_FRAME}>
             <ul className={`${FACT_GRID} grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))]`}>
               {rows.map((row) => (
@@ -154,7 +133,6 @@ export function FirstRunCredentials({ application, className }) {
   );
 }
 
-// Copy works while masked; the eye shows the value for whoever wants to read it.
 function SecretValue({ value, secret }) {
   const t = useTranslations("common");
   const [shown, setShown] = useState(false);
@@ -162,8 +140,6 @@ function SecretValue({ value, secret }) {
 
   return (
     <>
-      {/* Not truncated when shown. A password clipped to fit is a password somebody
-          transcribes wrongly, and this card exists for exactly that one reading. */}
       <code className="min-w-0 break-all font-mono text-[13px] font-medium">
         {masked ? "••••••••••••" : value}
       </code>

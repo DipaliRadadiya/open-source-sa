@@ -5,8 +5,6 @@ import { isReference } from "@/lib/schemas/error-log";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-// Looked up via the URL on the server, since the entry may predate the loaded
-// lines. The backend 422s anything that is not a uuid, so validate here.
 export function ReferenceLookup({ value, onSubmit, onClear, autoFocus = false }) {
   const t = useTranslations("errorLogs");
   const [draft, setDraft] = useState(value ?? "");
@@ -52,7 +50,6 @@ export function ReferenceLookup({ value, onSubmit, onClear, autoFocus = false })
             </button>
           ) : null}
         </div>
-        {/* Only once something is typed; an empty box is not an error. */}
         {dirty && !valid ? (
           <p className="mt-1 text-xs text-destructive">{t("referenceInvalid")}</p>
         ) : null}
@@ -62,7 +59,6 @@ export function ReferenceLookup({ value, onSubmit, onClear, autoFocus = false })
         type="submit"
         variant="secondary"
         disabled={!valid}
-        // The inline message covers a wrong reference; this covers the empty box.
         disabledReason={dirty ? t("referenceInvalid") : t("referenceEmpty")}
       >
         {t("referenceSubmit")}

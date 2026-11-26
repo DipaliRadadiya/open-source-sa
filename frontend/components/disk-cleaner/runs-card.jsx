@@ -14,25 +14,20 @@ import { parseApiWallClock } from "@/lib/format/api-date";
 import { formatBytes } from "@/lib/format/bytes";
 import { SizeText } from "@/components/ui/size-text";
 
-// The API's status vocabulary is undocumented, so anything that is not an
-// explicit success is flagged: a false alarm beats a silently failing schedule.
 function failed(status) {
   return Boolean(status) && !["success", "completed", "ok", "done"].includes(status);
 }
 
-/** Cleanup history, a page at a time; rendered only when there is history. */
 export async function RunsCard({ runs, meta, categories, keepSupported = true }) {
   if (!runs?.length) return null;
   const [t, format] = await Promise.all([getTranslations("diskCleaner"), getFormatter()]);
   const labelFor = (key) => categories.find((c) => c.key === key)?.label ?? key;
   const triggerOf = (run) => (t.has(`runs.trigger.${run.trigger}`) ? t(`runs.trigger.${run.trigger}`) : run.trigger);
-  // The keep choice the run used; runs from before it existed did each category's default.
-  // An older API records no choice: label nothing rather than call every run "as before".
   const keepOf = (run) =>
     !keepSupported ? null : run.keep_days == null ? t("keep.defaultAsBefore") : run.keep_days === 0 ? t("keep.deleteAll") : t("keep.days", { count: run.keep_days });
   const when = (at) => format.dateTime(at, { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });
 
-  // Each item the run cleaned, with what it freed (`freed` is `[]` from PHP when empty).
+  // freed is [] from PHP when empty.
   function Cleaned({ run }) {
     const freed = run.freed && !Array.isArray(run.freed) ? run.freed : {};
     return (
@@ -50,7 +45,6 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
   }
 
   return (
-    // Rows reach the card edges, like the cleanup list above.
     <Card className="gap-0 overflow-hidden pb-0">
       <CardHeader className="items-center pb-4">
         <CardTitle icon={History}>{t("runs.title")}</CardTitle>
@@ -59,9 +53,6 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
         </CardAction>
       </CardHeader>
 
-      {/* A table, not name-left/size-right rows: the API sends what each run cleaned
-          and freed, which filled the empty middle (Krishna, 13 Oct). */}
-      {/* Phone: one stacked block per run; five columns do not fit 390px. */}
       <div className="@container">
       <ul className="divide-y border-t @min-[900px]/page:hidden">
         {runs.map((run) => {
@@ -105,7 +96,6 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
                 <TableRow key={run.id}>
                   <TableCell className="align-top">
                     <p>{run.created_at_human ?? run.created_at}</p>
-                    {/* The server's own clock, read as written (no zone shift). */}
                     {at ? <p className="text-xs text-muted-foreground">{when(at)}</p> : null}
                   </TableCell>
                   <TableCell className="align-top whitespace-normal">
@@ -119,7 +109,6 @@ export async function RunsCard({ runs, meta, categories, keepSupported = true })
                     {run.disk_percent != null ? t("summary.percentUsed", { percent: Math.round(run.disk_percent) }) : "—"}
                   </TableCell>
                   <TableCell className="align-top text-right">
-                    {/* A crashed run and an empty run both freed "0 B"; flag the crash. */}
                     <span className="inline-flex items-center justify-end gap-2">
                       {failed(run.status) ? (
                         <Badge variant="destructive" className="font-normal">{t("runs.failed")}</Badge>

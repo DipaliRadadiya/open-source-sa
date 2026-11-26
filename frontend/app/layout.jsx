@@ -25,11 +25,10 @@ export async function generateMetadata() {
   const branding = await getBranding();
 
   return {
-    // Pages set a plain title; the template appends the brand.
     title: { default: branding.name, template: `%s · ${branding.name}` },
     description: `${branding.name} panel`,
     icons: {
-      // Our own SVG favicon gets a PNG twin: older Safari shows no SVG tab icon.
+      // PNG fallback: older Safari doesn't show SVG favicons.
       icon:
         branding.favicon === DEFAULT_BRANDING.favicon
           ? [
@@ -46,7 +45,6 @@ export default async function RootLayout({ children }) {
   const messages = await getMessages();
   const branding = await getBranding();
   const palette = generatePalette(branding.primary_color);
-  // One colour in both themes, as Central does (its apply-theme.js brandThemeCss).
   if (palette) palette.dark = palette.light;
   const themeStyles = buildThemeStyles(palette);
 
@@ -55,7 +53,6 @@ export default async function RootLayout({ children }) {
       <head>
         {themeStyles && <style dangerouslySetInnerHTML={{ __html: themeStyles }} />}
       </head>
-      {/* Grayscale smoothing: subpixel text read heavier. */}
       <body className="antialiased">
         <IntlProvider locale={locale} messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>

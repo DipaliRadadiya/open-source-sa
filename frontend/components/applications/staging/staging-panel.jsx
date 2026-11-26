@@ -17,8 +17,6 @@ import { SafetyCopiesCard } from "@/components/applications/staging/safety-copie
 import { StagingRunStatus } from "@/components/applications/staging/staging-run-status";
 import { stagingRunActive } from "@/lib/schemas/application-staging";
 
-// Push takes production offline and rsyncs with `--delete` (`files` mode keeps no
-// safety copy), so it needs typed confirmation and has no default mode.
 export function StagingPanel({ appId, production, staging, latestRun = null, canManage, canDelete = false, canBackUp = false, safetyCopies = [] }) {
   const t = useTranslations("applications.staging");
   const [creating, setCreating] = useState(false);
@@ -26,11 +24,8 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
   const [pulling, setPulling] = useState(false);
   const [removing, setRemoving] = useState(false);
   const ready = staging?.status === "active";
-  // One push or update at a time; the API refuses a second while one is queued or running.
   const busyReason = stagingRunActive(latestRun) ? t("run.busy") : null;
 
-  // The dialogs close by being unmounted with their view, so clear their
-  // flags whenever the copy appears or goes.
   const hasCopy = Boolean(staging);
   const [seenCopy, setSeenCopy] = useState(hasCopy);
   if (seenCopy !== hasCopy) {
@@ -41,7 +36,6 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
     setPulling(false);
   }
 
-  // This site is a staging copy: link back to production instead.
   if (production?.is_staging) {
     return (
       <div className="space-y-4">
@@ -60,7 +54,6 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
             ) : null}
           </CardContent>
         </Card>
-        {/* An update from live saves this copy's database first; this is where it is undone. */}
         {canManage && safetyCopies.length ? (
           <SafetyCopiesCard appId={appId} copies={safetyCopies} ns="stagingSafetyCopies" />
         ) : null}
@@ -88,7 +81,6 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
           </CardContent>
         </Card>
 
-        {/* Remounted on each open to reset the field. */}
         <CreateStagingDialog
           key={String(creating)}
           appId={appId}
@@ -115,7 +107,6 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
             </p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
               <a
-                // The API's URL is http:// until a certificate is servable.
                 href={staging.url ?? `https://${staging.domain}`}
                 target="_blank"
                 rel="noreferrer"
@@ -124,21 +115,16 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
                 {staging.domain}
                 <ExternalLink className="size-3.5" />
               </a>
-              {/* The copy's age matters before a push. No "·" separator: it
-                  dangles when the line wraps. */}
               {staging.created_at_human ? (
                 <span>{t("copyAge", { age: staging.created_at_human })}</span>
               ) : null}
             </div>
           </div>
-          {/* The copy is managed on its own application pages. */}
           <Button asChild variant="outline">
             <Link href={`/applications/${staging.id}`}>{t("manageAction")}</Link>
           </Button>
         </CardContent>
 
-        {/* The safe direction first: live is only read. The not-ready reason is given
-            once, on the push row below. Both rows are hidden from a role that cannot use them. */}
         {canManage ? (
         <>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-5 py-4">
@@ -162,7 +148,6 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
             <p className="text-sm text-muted-foreground">
               {t("push.body", { domain: production.domain })}
             </p>
-            {/* An unfinished copy (left by a failed create) cannot be pushed. */}
             {!ready ? (
               <p className="flex items-start gap-2 pt-1 text-sm text-warning">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -185,7 +170,6 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
 
       {canManage && safetyCopies.length ? <SafetyCopiesCard appId={appId} copies={safetyCopies} /> : null}
 
-      {/* Kept apart from Push so the two are never one misclick apart. */}
       {canDelete ? (
       <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
@@ -217,8 +201,7 @@ export function StagingPanel({ appId, production, staging, latestRun = null, can
         onOpenChange={setPulling}
       />
 
-      {/* Remounted on open: the typed domain is the safeguard and must never
-          be pre-filled. */}
+      {/* Remounted on open: the typed domain is the safeguard and must never be prefilled. */}
       <PushStagingDialog
         key={String(pushing)}
         appId={appId}

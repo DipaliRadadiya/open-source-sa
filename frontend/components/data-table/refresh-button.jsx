@@ -7,7 +7,6 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Under a <NavTransitionProvider> it shares the list's pending signal; otherwise local.
 export function RefreshButton({ className }) {
   const t = useTranslations("common");
   const { pending, refresh } = useRefresh();
@@ -15,12 +14,10 @@ export function RefreshButton({ className }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {/* aria-disabled, not disabled: a disabled button drops keyboard focus. */}
         <Button
           type="button"
           variant="outline"
           size="icon"
-          // 36px matches card-header clusters; toolbars of `sm` buttons pass size-8.
           className={cn("size-9 shrink-0", pending && "cursor-progress", className)}
           onClick={pending ? undefined : refresh}
           aria-disabled={pending}

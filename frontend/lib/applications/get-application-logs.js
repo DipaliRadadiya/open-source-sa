@@ -5,7 +5,6 @@ import {
 } from "@/lib/schemas/application-log";
 import { failedRead } from "@/lib/logs/failed-read";
 
-// Carries the status and server reason with a failure for the page's error box.
 export async function getApplicationLogs(id) {
   try {
     const res = await serverFetch(`/applications/${id}/logs`);
@@ -22,7 +21,6 @@ export async function getApplicationLogs(id) {
   }
 }
 
-/** Rendered server-side so the console paints with content. 403/404 are states, not failures. */
 export async function getApplicationLog(id, key, { lines = 200 } = {}) {
   try {
     const res = await serverFetch(

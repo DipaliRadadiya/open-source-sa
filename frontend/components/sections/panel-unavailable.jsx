@@ -6,8 +6,6 @@ import { FailureScreen, FailureFooterLabel } from "@/components/sections/failure
 
 const COMMAND = "php artisan up";
 
-// Not destructive styling: nothing is broken. May not clear on its own (an
-// update stopped between `artisan down` and `up`), so the footer gives the command.
 export function PanelUnavailableCard() {
   const t = useTranslations("errors.unavailable");
 
@@ -32,8 +30,6 @@ export function PanelUnavailableCard() {
   );
 }
 
-// For layouts that own the viewport. Auth pages render the card directly: a
-// nested min-h-svh squeezes it.
 export function PanelUnavailable() {
   return (
     <div className="flex min-h-svh items-center justify-center p-6">

@@ -1,5 +1,3 @@
-// The tail (last two labels, three for a two-part suffix) never shrinks. A short
-// list, not the public-suffix list: a miss costs one label of tail.
 const TWO_PART_SUFFIXES = new Set([
   "co.uk", "org.uk", "me.uk", "ltd.uk", "plc.uk", "net.uk", "sch.uk", "ac.uk", "gov.uk",
   "com.au", "net.au", "org.au", "edu.au", "gov.au",
@@ -21,7 +19,6 @@ export function splitDomain(domain) {
   const labels = value.split(".");
   const suffixLabels = TWO_PART_SUFFIXES.has(labels.slice(-2).join(".").toLowerCase()) ? 3 : 2;
 
-  // Already only the registrable part: nothing to split.
   if (labels.length <= suffixLabels) return { head: "", tail: value };
 
   return {

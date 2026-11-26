@@ -1,6 +1,3 @@
-// Gated purely on role === "admin", so a fixed list. `key` → `admin.nav.<key>`; `icon`
-// is a kebab-case Lucide name; `group` → `admin.navGroups.<group>` (none: no label, as Dashboard
-// in the server menu).
 export const ADMIN_NAV = [
   { key: "dashboard", url: "/admin", icon: "layout-dashboard" },
   { key: "users", group: "access", url: "/admin/users", icon: "users" },
@@ -12,8 +9,6 @@ export const ADMIN_NAV = [
   { key: "errorLogs", group: "system", url: "/admin/error-logs", icon: "bug" },
 ];
 
-// Dashboard is the index, so it matches only exactly; the rest match by prefix
-// so nested detail pages keep their parent nav item highlighted.
 export function isAdminNavActive(pathname, url) {
   return url === "/admin" ? pathname === "/admin" : pathname.startsWith(url);
 }

@@ -1,15 +1,10 @@
 import { parseApiDate } from "../format/api-date.js";
 import { UPDATE_IN_FLIGHT } from "../schemas/application-update.js";
 
-// Installers implementing ApplicationUpdater (backend cd4a443f). Only decides whether the
-// dashboard asks at all, so other types get no skeleton flash; the API's `supported` decides
-// the card. A new updatable type needs adding here.
 export const UPDATABLE_SITE_TYPES = ["moodle", "mautic", "statamic", "craftcms", "uptimekuma", "phpmyadmin", "adminer", "n8n", "nodered"];
 
 const BACKUP_FRESH_MS = 24 * 60 * 60 * 1000;
 
-// `last_backup_at` comes as "YYYY-MM-DD HH:mm:ss" (RC-10); accept the panel's usual
-// "DD-MM-YYYY HH:mm:ss" too, so a backend fix does not break this.
 export function parseBackupStamp(value) {
   const panel = parseApiDate(value);
   if (panel) return panel;
@@ -24,12 +19,6 @@ export function backupIsFresh(value, now = Date.now()) {
   return Boolean(date) && now - date.getTime() < BACKUP_FRESH_MS;
 }
 
-/**
- * One state for the card's badge. A run in flight outranks everything; a failed last run
- * stays visible while the same update is still on offer.
- *
- * running | failed | available | up_to_date | lookup_failed | version_unknown | not_active
- */
 export function updateCardState(update, history = []) {
   const latest = history[0] ?? null;
   if ((latest && UPDATE_IN_FLIGHT.includes(latest.status)) || update?.blocked_reason === "running") {
@@ -44,7 +33,6 @@ export function updateCardState(update, history = []) {
   return update?.update_available ? "available" : "up_to_date";
 }
 
-// Why Update cannot be pressed, as a message key under `applications.update.blocked`, or null.
 export function updateBlockedKey(update, { canManage }) {
   if (!canManage) return "noPermission";
   const reason = update?.blocked_reason;

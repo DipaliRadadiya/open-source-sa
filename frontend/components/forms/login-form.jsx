@@ -26,8 +26,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Picked here, not by app/page.js: a redirect during a client navigation renders an
-// empty page first, and the form would vanish for the whole of the dashboard's render.
 async function landingFor() {
   try {
     return landingPath(await getMyPermissions());
@@ -40,7 +38,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations("auth");
-  // `router.push` cannot be awaited, so a transition keeps the button busy until navigation ends.
+  // router.push can't be awaited, so a transition keeps the button busy.
   const [navigating, startNavigation] = useTransition();
   const form = useForm({
     resolver: zodResolver(loginSchema),
@@ -50,13 +48,10 @@ export function LoginForm() {
   async function onSubmit(values) {
     try {
       await login(values);
-      // Both sources are untrusted and go through `safeNext`.
       const wanted = safeNext(searchParams.get("next")) ?? takeRememberedPath();
       const target = wanted && wanted !== "/" ? wanted : await landingFor();
-      // No `router.refresh()`: queued behind the push, it fetched the new page a second time.
       startNavigation(() => router.push(target));
     } catch (error) {
-      // The login throttle: shown on the form, not as the generic rate-limit toast.
       if (error?.response?.status === 429) {
         form.setError("password", { message: t("tooManyAttempts") });
         return;
@@ -70,7 +65,6 @@ export function LoginForm() {
   return (
     <Form {...form}>
       <form noValidate
-        // Unhydrated, a form with no method submits via GET and leaks the password into the URL.
         method="post"
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         className="grid gap-4"

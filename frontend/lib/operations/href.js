@@ -1,8 +1,3 @@
-/**
- * Where a job's own screen is. The API only returns kinds the role can see, so the
- * kind's own permission is already held; an application's screens also need the
- * `application` permission, and without it the row is shown without a link.
- */
 export function operationHref(operation, { canOpenApplications }) {
   const subject = operation.subject ?? {};
   const appId = subject.type === "application" ? subject.id : null;

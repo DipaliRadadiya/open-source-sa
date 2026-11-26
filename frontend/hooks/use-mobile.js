@@ -12,8 +12,6 @@ function useMediaQuery(query) {
       setMatches(mql.matches)
     }
     mql.addEventListener("change", onChange)
-    // Sync initial value via the same callback the listener uses, kept out of
-    // the effect body to satisfy react-hooks/set-state-in-effect.
     const id = requestAnimationFrame(onChange)
     return () => {
       cancelAnimationFrame(id)
@@ -28,7 +26,6 @@ export function useIsMobile() {
   return useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
 }
 
-// Too wide for the slide-over nav, too narrow for a 256px expanded sidebar.
 export function useIsTablet() {
   return useMediaQuery(
     `(min-width: ${MOBILE_BREAKPOINT}px) and (max-width: ${DESKTOP_BREAKPOINT - 1}px)`,

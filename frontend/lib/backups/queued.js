@@ -1,6 +1,3 @@
-// The POST answers 202; the backup row exists only once a worker picks the job up.
-
-// Ids, not timestamps: `created_at` has only second resolution.
 export function newestBackupId(backups = []) {
   return backups.reduce((max, backup) => {
     const id = Number(backup?.id);
@@ -8,14 +5,11 @@ export function newestBackupId(backups = []) {
   }, 0);
 }
 
-// `queuedAfter` is the newest id before the click, or null. Any newer id ends
-// the wait, since a small backup can finish between two polls.
 export function isBackupQueued(backups, queuedAfter) {
   if (queuedAfter === null || queuedAfter === undefined) return false;
   return newestBackupId(backups) <= queuedAfter;
 }
 
-// `started` maps applicationId to its newest id at the click. Returns ids as strings.
 export function queuedApplications(backups = [], started = {}) {
   const newest = new Map();
   for (const backup of backups) {

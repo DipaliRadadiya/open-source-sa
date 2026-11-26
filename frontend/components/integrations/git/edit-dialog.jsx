@@ -27,7 +27,6 @@ const schema = z.object({
   workspace: z.string().trim().optional(),
 });
 
-// The token is deliberately absent: replacing it is a verified round-trip in its own dialog.
 export function EditDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.edit");
   const { refreshAndWait } = useRefresh();
@@ -45,7 +44,6 @@ export function EditDialog({ account, open, onOpenChange }) {
 
   async function onSubmit(values) {
     const payload = { label: values.label };
-    // Only sent where the provider has the concept at all.
     if (account.host !== null && account.host !== undefined) payload.host = values.host;
     if (account.workspace) payload.workspace = values.workspace;
 

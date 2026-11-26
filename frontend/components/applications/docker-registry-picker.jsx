@@ -20,8 +20,6 @@ import {
 
 const NO_REGISTRY = "__none__";
 
-// A saved registry login, folded away: a public image (the normal case) needs none.
-// Shared by the image and compose modes so both offer it the same way.
 export function DockerRegistryPicker({ form, registryOptions = [], open, onOpenChange }) {
   const t = useTranslations("applications.dockerImage");
   if (!registryOptions.length) return null;

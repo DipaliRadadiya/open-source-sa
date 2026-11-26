@@ -16,9 +16,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { isIpAddress } from "@/lib/validation/ip";
 import { useRefresh } from "@/hooks/use-refresh";
 
-// This application's own jail (FS-C45). New `panel-site-` jails ban at this site only;
-// a jail kept from v7 keeps its bare name and the server-default firewall action, so
-// its bans block the address on the whole server and must not be called site-only.
+// Old v7 jails ban on the whole server, not just this site.
 export function BannedAddressesCard({ appId, bans, jailName = null, canManage }) {
   const t = useTranslations("applications.fail2ban.bans");
   const { refreshAndWait } = useRefresh();
@@ -48,8 +46,6 @@ export function BannedAddressesCard({ appId, bans, jailName = null, canManage })
       toast.success(t(serverWide ? "bannedServerWide" : "banned", { ip: value }));
       setIp("");
     } catch (error) {
-      // The server's own address and the caller's come back as a bare 422 sentence; it
-      // still belongs under the field that was typed.
       const message =
         error.response?.data?.errors?.ip?.[0] ??
         (error.response?.status === 422 ? error.response?.data?.message : null);

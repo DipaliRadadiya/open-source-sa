@@ -6,8 +6,6 @@ import { installEngine } from "@/lib/api/databases";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-// The engine is already chosen by the opener. States the consequence: one SQL
-// engine per server, no migration afterwards.
 export function InstallConfirm({ engine, open, onOpenChange, onSuccess }) {
   const t = useTranslations("databases");
   const [pending, setPending] = useState(false);
@@ -19,7 +17,6 @@ export function InstallConfirm({ engine, open, onOpenChange, onSuccess }) {
     setPending(true);
     try {
       const { data } = await installEngine(engine.engine);
-      // Named: this toast is all that shows before the progress card appears.
       const name = t(`engines.${engine.engine}`);
 
       toast.success(

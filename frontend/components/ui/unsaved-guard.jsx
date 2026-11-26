@@ -14,15 +14,13 @@ import { TriangleAlert } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { trackPush } from "@/lib/browser/navigation-pending";
 
-// Shell navigation and session actions ask this provider before leaving.
 const UnsavedContext = createContext(null);
 
 export function UnsavedProvider({ children }) {
   const router = useRouter();
   const t = useTranslations("common");
-  // A set, not a boolean: one card saving must not clear another's warning.
+  // A set: one card saving must not clear another's warning.
   const [dirty, setDirty] = useState(() => new Set());
-  // One panel-wide confirmation dialog.
   const [pendingAction, setPendingAction] = useState(null);
 
   const setSectionDirty = useCallback((id, isDirty) => {
@@ -37,7 +35,6 @@ export function UnsavedProvider({ children }) {
 
   const hasUnsaved = dirty.size > 0;
 
-  /** Returns true only when the caller must prevent its normal click/select. */
   const guardAction = useCallback(
     (action) => {
       if (!hasUnsaved) return false;
@@ -62,12 +59,11 @@ export function UnsavedProvider({ children }) {
     [guardAction, guardNavigation, hasUnsaved, setSectionDirty],
   );
 
-  // Covers browser exits (reload, close) that in-app handlers cannot intercept.
+  // Covers reload and closing the tab, which in-app handlers can't catch.
   useEffect(() => {
     if (!value.hasUnsaved) return;
     const onBeforeUnload = (event) => {
       event.preventDefault();
-      // Chrome ignores the string but still needs returnValue set for the prompt.
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", onBeforeUnload);
@@ -98,7 +94,6 @@ export function UnsavedProvider({ children }) {
 }
 
 export function useUnsaved() {
-  // Outside the panel shell (e.g. auth pages), actions are unguarded.
   return (
     useContext(UnsavedContext) ?? {
       hasUnsaved: false,
@@ -109,7 +104,6 @@ export function useUnsaved() {
   );
 }
 
-/** Registers one card's dirty state, and clears it when the card unmounts. */
 export function useWatchUnsaved(id, isDirty) {
   const { setSectionDirty } = useUnsaved();
 

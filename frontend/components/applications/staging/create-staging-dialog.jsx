@@ -22,14 +22,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// The request is synchronous (no job to poll), so the dialog stays open until it finishes.
-// Callers MUST pass a `key` that changes on open so the field resets.
+// Synchronous request with no job to poll. Callers must pass a key that changes on open.
 export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
   const t = useTranslations("applications.staging.createDialog");
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [awaitingPage, setAwaitingPage] = useState(false);
-  // The success toast waits until the dialog unmounts.
   const announce = useRef(null);
   useEffect(() => () => announce.current?.(), []);
   useEffect(() => {
@@ -43,7 +41,6 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
     return () => window.clearTimeout(timer);
   }, [awaitingPage, onOpenChange]);
 
-  // Suggested default; the user can type over it.
   const suggestion = production?.domain ? `staging.${production.domain}` : "";
 
   const form = useForm({
@@ -56,8 +53,6 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
     setPending(true);
     try {
       await createApplicationStaging(appId, values.domain);
-      // Stays on "Creating…" until the refresh replaces the no-staging state
-      // this dialog lives in.
       announce.current = () => toast.success(t("done", { domain: values.domain }));
       router.refresh();
       setAwaitingPage(true);
@@ -67,7 +62,6 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
         handleValidationError(error, form);
       } else {
         toast.error(apiMessage(error, t("failed")));
-        // Usually a copy already exists (made elsewhere); refresh to show it.
         router.refresh();
       }
     }
@@ -125,7 +119,6 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
           )}
         />
 
-        {/* Warns up front: creation takes minutes with no progress reported. */}
         <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
           {t("slow")}
         </p>

@@ -1,8 +1,4 @@
-/**
- * Fails lint when a file declares `"use client"` it doesn't need: a file reached only from
- * client components is already client code. The directive is required only where a Server
- * Component imports the file, so the real boundaries stay easy to find.
- */
+// Fails lint on a "use client" that isn't a real server/client boundary.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -33,12 +29,7 @@ const withExtension = (base) => {
   return null;
 };
 
-/**
- * Both import spellings, or the answer is wrong in the dangerous direction:
- * missing an importer makes a real boundary look redundant, and deleting that
- * directive breaks the build. `import()` is matched too — the four dashboard
- * charts are reached only that way.
- */
+// Match both import forms (and import()), or a real boundary looks redundant.
 const resolve = (spec, from) => {
   if (spec.startsWith("@/")) return withExtension(spec.slice(2));
   if (spec.startsWith(".")) {
@@ -59,8 +50,7 @@ for (const [file, text] of source) {
 
 const redundant = files.filter((f) => {
   if (!isClient(f)) return false;
-  // Route files are entered by Next rather than imported, so "who imports it"
-  // cannot answer the question — a page marking itself client is its own call.
+  // Route files aren't imported, so this check can't judge them.
   if (f.startsWith("app" + path.sep)) return false;
   const who = [...(importers.get(f) ?? [])];
   return who.length > 0 && who.every(isClient);

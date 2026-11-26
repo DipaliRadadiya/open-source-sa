@@ -1,7 +1,7 @@
 import axios from "axios";
 import { api } from "@/lib/api/client";
 
-// The CSRF-cookie endpoint is at the root, NOT under /api, so it bypasses the Axios instance.
+// The CSRF cookie endpoint is not under /api.
 async function ensureCsrfCookie() {
   await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/sanctum/csrf-cookie`, {
     withCredentials: true,
@@ -29,12 +29,11 @@ export async function updateProfile(values) {
   return res.data?.user;
 }
 
-// The backend re-issues a Bearer token; ignored, since the cookie session stays valid.
 export async function changePassword(values) {
   await api.put("/auth/password", values);
 }
 
-// 422 on a normal session. On success the caller must do a FULL-PAGE navigation so SSR re-reads identity.
+// Caller must do a full page load afterwards so SSR reads the new session.
 export async function stopImpersonating() {
   await api.post("/auth/stop-impersonating");
 }

@@ -18,7 +18,6 @@ import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog"
 import { backupTypeLabel } from "@/lib/backups/type-label";
 import { DENIED } from "@/components/ui/reason-tooltip";
 
-// `showSite` is off on a site's own page.
 export function BackupsCards({
   backups,
   canRestore,
@@ -28,17 +27,14 @@ export function BackupsCards({
   onClear,
   busyId,
   retryBlockedFor = null,
-  // `(backup) => boolean`, as on the table.
   retryable = null,
   canClear = false,
   showSite = true,
   restoreInFlight = false,
-  // A card has no room for row selection, so each card gets its own delete button.
   canDelete = false,
   onDeleted,
   subject = "application",
   canDownload,
-  // Off on the Archived tab: those are restored from a database's own tab, or not at all.
   showRestore = true,
 }) {
   const t = useTranslations("backups.history");
@@ -70,7 +66,6 @@ export function BackupsCards({
                   <p className="truncate text-xs text-muted-foreground">{subjectLine(about, t)}</p>
                 </div>
               ) : (
-                // Wraps rather than truncating: the type is the card's title.
                 <p className="min-w-0 break-words font-medium">
                   {backupTypeLabel(backup, t)}
                 </p>
@@ -97,7 +92,6 @@ export function BackupsCards({
                 label={t("columns.size")}
                 value={backup.size_bytes ? formatBytes(backup.size_bytes, format) : sizeNote(backup, t)}
               />
-              {/* Only when the API sends it; absent means an older backend. */}
               {backup.storage_destination_name !== undefined ? (
                 <CardFact
                   label={t("columns.destination")}
@@ -112,13 +106,11 @@ export function BackupsCards({
               </p>
             ) : null}
 
-            {/* mt-auto pins the buttons to the bottom; the blocker gets its own line. */}
             <div className="mt-auto flex flex-col items-end gap-2">
               {blocker && blocker !== DENIED && backup.status !== "failed" ? (
                 <span className="text-xs text-muted-foreground">{blocker}</span>
               ) : null}
               <div className="flex flex-wrap items-center justify-end gap-2">
-                {/* Labelled rather than icon-only: no hover on a phone. */}
                 {canDelete && !BACKUP_IN_FLIGHT.includes(backup.status) ? (
                   <Button
                     size="icon-sm"

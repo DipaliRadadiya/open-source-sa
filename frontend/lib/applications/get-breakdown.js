@@ -1,8 +1,6 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 import { breakdownResponseSchema } from "@/lib/schemas/file";
 
-// Large folders can time out. Failure returns `null` ("could not measure"),
-// distinct from an empty folder.
 export async function getBreakdown(appId, path = "") {
   try {
     const res = await serverFetch(`/applications/${appId}/files/breakdown`, {

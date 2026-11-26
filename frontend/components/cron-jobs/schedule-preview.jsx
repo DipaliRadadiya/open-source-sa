@@ -4,11 +4,8 @@ import { useFormatter, useNow, useTranslations } from "next-intl";
 import { CalendarClock, TriangleAlert } from "lucide-react";
 import { describeCron, nextRuns, parseCron, wallClockNow } from "@/lib/cron-jobs/schedule";
 
-// Dates built from wall-clock fields are formatted in UTC so nothing shifts
-// them into the reader's own zone; the times are the server's.
 const UTC = { timeZone: "UTC" };
 
-// Words when the schedule can be said in a sentence; the next three run times always.
 export function useScheduleText(expression, timezone) {
   const t = useTranslations("cronJobs.preview");
   const format = useFormatter();
@@ -18,9 +15,7 @@ export function useScheduleText(expression, timezone) {
   if (!cron) return null;
 
   const time = ([h, m]) =>
-    // Kept whole so "12:00" and "AM" never land on different lines.
     format.dateTime(new Date(Date.UTC(2000, 0, 1, h, m)), { ...UTC, hour: "numeric", minute: "2-digit" }).replace(/\s/g, "\u00a0");
-  // 2 January 2000 was a Sunday, so day d of that week is weekday d.
   const weekday = (d) => format.dateTime(new Date(Date.UTC(2000, 0, 2 + d)), { ...UTC, weekday: "long" });
   const month = (m) => format.dateTime(new Date(Date.UTC(2000, m - 1, 1)), { ...UTC, month: "long" });
   const list = (items, type = "conjunction") => format.list(items, { type });
@@ -31,7 +26,6 @@ export function useScheduleText(expression, timezone) {
     const timeText = {
       everyMinute: () => t("everyMinute"),
       everyMinutes: () => t("everyMinutes", { n: d.time.n }),
-      // Example times rather than idioms like "on the hour".
       hourly: () => t("hourly", { examples: [0, 1, 2].map((h) => time([h, d.time.minute])).join(", ") }),
       everyHours: () =>
         t("everyHours", { n: d.time.n, examples: [0, 1, 2].map((i) => time([i * d.time.n, d.time.minute])).join(", ") }),
@@ -82,7 +76,6 @@ export function SchedulePreview({ expression, timezone }) {
       <CalendarClock className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 space-y-0.5">
         {text.sentence ? <p className="font-medium">{text.sentence}</p> : null}
-        {/* Each date kept whole, so a wrap falls between dates, never inside one. */}
         <p className="text-xs text-muted-foreground">
           {t("nextRuns", { runs: text.runs.map((run) => run.replace(/ /g, "\u00a0")).join(" · ") })}
         </p>

@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-// Not a poll: refreshes only on returning to the tab after `afterMs`.
 export function RefreshOnReturn({ afterMs = 10000 }) {
   const router = useRouter();
   const hiddenAt = useRef(null);

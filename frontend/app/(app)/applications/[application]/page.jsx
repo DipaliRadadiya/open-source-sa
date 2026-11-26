@@ -65,23 +65,17 @@ export default async function ApplicationDetailPage({ params }) {
   const { application: id } = await params;
   const [permissions, appPermissions, t, result] = await Promise.all([
     getPermissions(),
-    // Application-level grants live in their own catalog; deploy and domains are
-    // gated there, not by the server-level `application` permission.
-    // Null on a failed read, never []: an empty catalog would read as "may open nothing".
+    // null on a failed read, never []: an empty catalog would mean no access at all.
     getPermissions("application", id).catch(() => null),
     getTranslations("applications"),
     getApplication(id),
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("title")} />;
-  // The site is gone: land on the list and explain why on arrival.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
-  // The dashboard is its own grant (`app_dashboard`), as the sidebar already treats it
-  // (a role with only server-level "Applications: view" landed on a half-empty
-  // dashboard with an empty menu). Without it, open the first screen the role does allow.
   if (appPermissions && !can(appPermissions, "app_dashboard", "view", "application")) {
     const first = firstAllowedScreen(appPermissions);
     if (first !== null) redirect(`/applications/${id}${first}`);
@@ -91,10 +85,7 @@ export default async function ApplicationDetailPage({ params }) {
   const canDeploy = can(appPermissions, "app_deployment", "manage", "application");
   const canSeeDeployment = can(appPermissions, "app_deployment", "view", "application");
   const canSeeDomains = can(appPermissions, "app_domain", "view", "application");
-  // `/issues` is gated by `app_dashboard`, not by the `application` permission
-  // that opens this page; asking without it is a 403.
   const canSeeChecks = can(appPermissions, "app_dashboard", "view", "application");
-  // The API already gates this by site type; a new type must not need a frontend change.
   const canMagicLogin = can(appPermissions, "app_magic_login", "manage", "application");
   const canSeeBackups = can(appPermissions, "app_backup", "view", "application");
   const canRunBackup = can(appPermissions, "app_backup", "manage", "application");
@@ -109,31 +100,23 @@ export default async function ApplicationDetailPage({ params }) {
       canEditEnv={can(appPermissions, "app_environment", "view", "application")}
     />
   ) : null;
-  // Only a serving site has domains, a certificate or a running process.
   const settled = isSettled(application);
 
-  // The generated credentials, until somebody says they have saved them. Gated on
-  // `app_container` manage -- the same permission the values are behind.
   const showFirstRunCredentials =
     !application.credentials_acknowledged &&
     (application.container_secret_keys ?? []).length > 0 &&
     can(appPermissions, "app_container", "manage", "application");
 
-  // Gated like the compose file it is read from (RC-23).
   const showContainerAccess =
     showsContainerAccess(application) &&
     can(appPermissions, "app_compose", "view", "application");
 
-  // The payload has `git_account_id` but no provider. `cache()`d, no provider API call.
   const gitAccounts =
     application.git_account_missing || application.git_account_id
-      // The fetcher already unwraps the envelope: `.accounts`, not `.data.git_accounts`.
       ? await getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
       : [];
 
-  // Databases are a SERVER-level permission; a site-level reader may hold none.
   const canSeeDatabases = can(permissions, "database", "view");
-  // Attaching and creating need manage; viewers get the card without buttons.
   const canManageDatabases = can(permissions, "database", "manage");
 
   const [domainList, certificate, backup, backupRuns, siteDatabases, siteTypes, spareDatabases, engineList, rootLock, latestDeploy, node] = await Promise.all([
@@ -146,29 +129,23 @@ export default async function ApplicationDetailPage({ params }) {
     settled && canSeeBackups
       ? getBackupTarget(id)
       : Promise.resolve({ target: null, failed: false }),
-    // One row is enough: `GET /backups` orders by newest id, so a run in flight is first.
     settled && canSeeBackups
       ? getApplicationBackups(id, { per_page: 1 })
       : Promise.resolve({ backups: [] }),
     settled && canSeeDatabases
       ? getApplicationDatabases(id)
       : Promise.resolve({ databases: [], failed: false }),
-    // `needs_database` is on the site type; the facts card also needs the list to relabel.
     settled && (canSeeDatabases || canManage)
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
-    // For the database card's Attach picker and Create dialog.
     settled && canManageDatabases
       ? getUnattachedDatabases()
       : Promise.resolve({ databases: [] }),
     settled && canManageDatabases ? getEngines() : Promise.resolve({ engines: [] }),
-    // Whether the site folder is locked against its own user.
     settled ? getRootLock(id) : Promise.resolve({ rootLock: null, failed: false }),
-    // Whether a deploy is running, so Deploy now cannot queue a second one.
     settled && isGit && canSeeDeployment
       ? getLatestDeployment(id)
       : Promise.resolve({ latest: null, failed: false }),
-    // For the Node.js fact's version picker; only someone who can change it needs the list.
     settled && canManage && application.node_version
       ? getNode().catch(() => ({ data: null, failed: true }))
       : Promise.resolve({ data: null, failed: false }),
@@ -176,11 +153,9 @@ export default async function ApplicationDetailPage({ params }) {
   const folderStatus = rootLock.rootLock?.status ?? null;
 
   const needsDatabase = siteNeedsDatabase(siteTypes.siteTypes, application.site_type);
-  // Only when the list was read and empty, for a type that wants a database.
   const missingDatabase =
     canSeeDatabases && !siteDatabases.failed && needsDatabase && siteDatabases.databases.length === 0;
 
-  // Each row is gated on the grant that guards its screen, so no row links to a dead end.
   const protectionItems = [
     can(appPermissions, "app_security", "view", "application") && {
       key: "password",
@@ -193,7 +168,6 @@ export default async function ApplicationDetailPage({ params }) {
       key: "firewall",
       label: t("protection.firewall"),
       on: application.waf_enabled,
-      // "Watch, don't block" is on but not blocking; show the mode, not just "On".
       state: application.waf_enabled
         ? (application.waf_mode_title ?? t("protection.on"))
         : t("protection.off"),
@@ -209,12 +183,10 @@ export default async function ApplicationDetailPage({ params }) {
     can(appPermissions, "app_bot_blocker", "view", "application") && {
       key: "bots",
       label: t("protection.bots"),
-      // A policy, not a switch: "on" means it blocks something at all.
       on: Boolean(application.ai_bot_policy) && application.ai_bot_policy !== "allow_all",
       state: application.ai_bot_policy_title ?? t("protection.off"),
       href: `/applications/${id}/bot-blocker`,
     },
-    // `unknown` or a failed read must not render as "Not locked".
     (folderStatus === "locked" || folderStatus === "unlocked") && {
       key: "folder",
       label: t("protection.folder"),
@@ -226,8 +198,6 @@ export default async function ApplicationDetailPage({ params }) {
         ) : null,
     },
   ].filter(Boolean);
-  // Every protection whose state is known, whatever the role may open, so a role that sees
-  // one row does not read "1 of 1 on" when the site has 1 of 5.
   const allProtections = [
     application.basic_auth_enabled,
     application.waf_enabled,
@@ -237,21 +207,14 @@ export default async function ApplicationDetailPage({ params }) {
   ].filter((value) => value !== undefined);
   const protectionTotals = { on: allProtections.filter(Boolean).length, total: allProtections.length };
 
-
-  // Use the server's `application.url`; deriving the scheme from a failed certificate
-  // read would downgrade an https-only site. The fallback is for older APIs.
   const secured = certificate.certificate?.status === "active";
   const certificateIssuing = ["pending", "issuing"].includes(certificate.certificate?.status);
   const siteUrl =
     application.url ?? `${secured ? "https" : "http"}://${application.domain}`;
 
-
-  // The server's own findings come first; it checks things this page cannot see.
-  // Not cached: certificate days and disk usage change on their own.
   const issues = settled && canSeeChecks
     ? await getApplicationIssues(id).catch(() => ({ issues: [], healthy: true, failed: true }))
     : { issues: [], healthy: true, failed: false };
-  // The server's "process is stopped" check fires while a first deploy is queued or running.
   const deployInFlight = Boolean(latestDeploy.latest?.in_flight);
   const issueList = firstDeployPending(application) || deployInFlight
     ? issues.issues.filter((issue) => issue.type !== "worker")
@@ -260,25 +223,19 @@ export default async function ApplicationDetailPage({ params }) {
 
   const attentionItems = [
     ...issueItems(issueList, id, (type) => t(`attention.issueAction.${type}`)),
-    // The checks did not come back; never read that as "Nothing needs attention".
     issues.failed && { key: "checks", label: t("attention.checksFailed") },
-    // Not while the automatic certificate is on its way; see DomainsCard.
     canSeeDomains && !domainList.failed && !certificate.failed && !secured && !certificateIssuing && {
       key: "ssl",
       label: t("attention.noCertificate"),
       action: t("attention.issueCertificate"),
-      // ?tab=ssl: the Domains page opens on its Domains tab.
       href: `/applications/${id}/domains?tab=ssl`,
     },
-    // Above the backup item: backups without an attached database miss the data.
     missingDatabase && {
       key: "database",
       label: t("attention.noDatabase"),
       action: t("attention.attachDatabase"),
       href: "/databases",
     },
-    // A risk, not a choice: the site user can swap the folder. Only managers get
-    // the link to the lock button; others see a plain line.
     folderStatus === "unlocked" && {
       key: "folder",
       label: t("attention.folderUnlocked"),
@@ -290,8 +247,6 @@ export default async function ApplicationDetailPage({ params }) {
       action: t("attention.setUpBackups"),
       href: `/applications/${id}/backups`,
     },
-    // One line per container that needs attention (main part first), linked to its Container page.
-    // Not while starting: an install lists services as "not started" for a few minutes.
     ...(["degraded", "failed", "restarting"].includes(containerState(application)) ? healthWarnings(application) : []).map((warning) => ({
       key: `container-${warning.service}`,
       label: t("healthWarnings.item", {
@@ -302,14 +257,10 @@ export default async function ApplicationDetailPage({ params }) {
         ? { action: t("healthWarnings.action"), href: `/applications/${id}/container` }
         : null),
     })),
-    // Switched-off protections are deliberately not findings: each is a per-site choice.
   ]
     .filter(Boolean)
-    // Drop local inferences the server's own findings already cover.
     .filter((item) => !superseded.has(item.key));
 
-  // Said by a card below already: the Backups card's state, the Source card's failed deploy.
-  // A missing certificate has no card of its own, so it is a line here.
   const alerts = attentionItems.filter(
     (item) => item.key !== "backups" && !/^issue-deploy_failed-/.test(item.key),
   );
@@ -331,8 +282,6 @@ export default async function ApplicationDetailPage({ params }) {
       href={`/applications/${id}/domains`}
     />
   ) : null;
-  // Shown for every site type; the card itself distinguishes types
-  // that need a database from those that do not declare it.
   const databaseCard = canSeeDatabases ? (
     <DatabaseCard
       application={application}
@@ -349,14 +298,11 @@ export default async function ApplicationDetailPage({ params }) {
       applicationId={id}
       target={backup.target}
       backups={backupRuns.backups}
-      // The target keeps its last run time after every backup is
-      // deleted, so the list decides whether one is actually kept.
       noneKept={backupState?.noneKept ?? false}
       failed={backup.failed}
       canManage={canRunBackup}
       href={`/applications/${id}/backups`}
       application={application}
-      // Unknown (no permission, failed read) is null: never "None attached".
       databases={canSeeDatabases && !siteDatabases.failed ? siteDatabases.databases : null}
     />
   ) : null;
@@ -364,16 +310,11 @@ export default async function ApplicationDetailPage({ params }) {
 
   return (
     <div className="space-y-6">
-      {/* The header card IS the application's details (they are what this
-          page is for and were far down it). Identity and actions on top, the facts below;
-          an 18px name, since the 20px one still read as a banner. */}
       <div className="@container/masthead relative overflow-hidden rounded-2xl border bg-card shadow-e1">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_140%_at_100%_0%,color-mix(in_oklch,var(--primary)_8%,transparent),transparent_60%)]"
         />
-        {/* Narrow: a grid, so ⋯ sits beside the name and the buttons fill the row below
-            (on its own line it looked forgotten). Wide: one flex row. */}
         <div className="relative grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-5 py-4 @3xl/masthead:flex @3xl/masthead:items-center @3xl/masthead:justify-between">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-card">
@@ -388,18 +329,13 @@ export default async function ApplicationDetailPage({ params }) {
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="min-w-0 text-lg leading-tight font-semibold tracking-tight break-words">{application.name}</h1>
                 <ApplicationStatusBadge application={application} deploying={Boolean(deployTile?.inFlight)} />
-                {/* The type is the logo tile and the Type fact below; the badge says where it came from. */}
                 <ApplicationOriginBadge origin={application.origin} />
-                {/* Staging copies look like the site they copy; mark them where the name is. */}
                 {application.is_staging ? (
                   <Badge variant="warning" className="font-normal">
                     {t("stagingBadge")}
                   </Badge>
                 ) : null}
               </div>
-              {/* Inline text, not flex: on a phone the domain wraps at its dots and both
-                  icons follow its last letter (break-all split "116" and left the copy
-                  button floating beside the first line). */}
               <p className="mt-0.5 font-mono text-[13px] leading-5 [overflow-wrap:anywhere]">
                 {application.status === "active" ? (
                   <a href={siteUrl} target="_blank" rel="noreferrer" className="text-primary underline-offset-4 hover:underline">
@@ -410,12 +346,10 @@ export default async function ApplicationDetailPage({ params }) {
                 ) : (
                   <BreakableDomain domain={application.domain} />
                 )}
-                {/* U+2060 joins the button to the text so it never wraps alone. */}
+                {/* U+2060 keeps the button from wrapping onto its own line. */}
                 {"\u2060"}
                 <CopyButton value={application.domain} className="-my-1 ml-0.5 inline-flex align-middle" />
               </p>
-              {/* The container's own words for why it is down; the fixes are in the panel below.
-                  A tinted tag like the list's status notes, not loose red text under the name. */}
               {containerFailed ? (
                 <p className="mt-1.5 flex w-fit max-w-full items-start gap-1.5 rounded-md bg-destructive-soft px-2 py-1 text-xs leading-4 [overflow-wrap:anywhere] text-destructive">
                   <CircleAlert className="mt-px size-3 shrink-0" aria-hidden />
@@ -434,8 +368,6 @@ export default async function ApplicationDetailPage({ params }) {
                     {t("actions.visit")}
                   </a>
                 </Button>
-                {/* Beside Visit and filled: signing in as the site's administrator is what
-                    people open this page for most. */}
                 {canMagicLogin ? <MagicLoginLauncher appId={id} variant="default" size="default" /> : null}
               </div>
             ) : null}
@@ -453,14 +385,12 @@ export default async function ApplicationDetailPage({ params }) {
             </div>
           </div>
         </div>
-        {/* Only once it is serving: before that there is no web root or size to show. */}
         {settled ? (
           <div className="relative border-t">
             <SiteFactsCard
               application={application}
               canManage={canManage}
               canManageSystemUsers={can(permissions, "system_user", "manage")}
-              // Type titles arrive translated on the catalog, not from the message files.
               siteTypes={siteTypes.siteTypes}
               nodeVersions={installedNodeVersions(node.data)}
               nodeVersionsFailed={node.failed}
@@ -470,11 +400,9 @@ export default async function ApplicationDetailPage({ params }) {
         ) : null}
       </div>
 
-      {/* Until it is serving, the provisioning card is the whole page. */}
       {!settled ? (
         <div className="space-y-4">
           {containerFailure}
-          {/* The panel's Redeploy is the same Retry; one button for one action. */}
           <ProvisioningCard
             application={application}
             canManage={canManage && !containerFailed}
@@ -482,18 +410,11 @@ export default async function ApplicationDetailPage({ params }) {
         </div>
       ) : (
         <>
-          {/* Why the container is down and the one-click fixes, before anything else. */}
           {containerFailure}
-          {/* Full width, above the tiles. It disappears for good once somebody says they
-              have saved them, and these cannot be rotated from the panel. */}
           {showFirstRunCredentials ? <FirstRunCredentials application={application} /> : null}
 
-          {/* What needs attention, one line each. No status tiles: the
-              header badge and the cards below already say up, secure and restorable. */}
           <AttentionList alerts={alerts} />
 
-          {/* Wide, like Source: three facts in one row. Streamed on its own because the
-              first open can wait on a release lookup; renders nothing for other types. */}
           {settled && UPDATABLE_SITE_TYPES.includes(application.site_type) ? (
             <Suspense fallback={<UpdateCardSkeleton />}>
               <UpdateCardLoader
@@ -505,8 +426,6 @@ export default async function ApplicationDetailPage({ params }) {
             </Suspense>
           ) : null}
 
-          {/* Deploy and Process are wide; the rest is an aligned two-by-two grid, every
-              card the same shape: title with its state, one button, rows (Krishna, 7 Oct). */}
           {isGit ? (
             <SourceCard
               application={application}
@@ -516,9 +435,6 @@ export default async function ApplicationDetailPage({ params }) {
               deployInFlight={Boolean(latestDeploy.latest?.in_flight)}
             />
           ) : null}
-          {/* A container app, in rows of cards of about the same height: Domains (and an
-              attached database) on top, Security beside Backups, then Command-line access
-              full width, where its commands sit side by side. */}
           {showContainerAccess ? (
             <>
               {databaseCard ? (

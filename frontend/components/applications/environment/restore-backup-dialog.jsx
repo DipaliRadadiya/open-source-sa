@@ -12,7 +12,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
-// Restoring first backs up the current file, so the choice is itself undoable.
 export function RestoreBackupDialog({
   appId,
   backups = [],
@@ -26,7 +25,6 @@ export function RestoreBackupDialog({
   const format = useFormatter();
   const [selected, setSelected] = useState(null);
   const [restart, setRestart] = useState(false);
-  // On by default and on again every time the dialog closes.
   const [safetyCopy, setSafetyCopy] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -71,11 +69,8 @@ export function RestoreBackupDialog({
       confirmDisabled={!selected}
       pending={busy}
       onConfirm={onRestore}
-      // Wider than a yes/no confirmation: the body lists backup filenames.
       className="sm:!max-w-lg"
     >
-      {/* A radio group so screen readers announce the selection. */}
-      {/* Height-bounded so the buttons stay reachable on phones; padding keeps focus rings unclipped. */}
       <div
         role="radiogroup"
         aria-label={t("restore.title")}

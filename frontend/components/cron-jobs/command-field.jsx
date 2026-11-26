@@ -32,14 +32,10 @@ import {
 import { HoverHint } from "@/components/ui/hover-hint";
 
 const CUSTOM = "custom";
-// Examples are commands, so not translated. The PHP one only where a PHP template fits.
 const PHP_EXAMPLE = "php /home/deploy/myapp/artisan schedule:run";
 const GENERIC_EXAMPLE = "/usr/bin/curl -fsS https://example.com/cron";
 const CUSTOM_PATH = "__custom_path__";
 
-// A template fills BOTH command and expression (the API pairs them: WordPress wants 5 min, Laravel 1).
-// Its {path} placeholder must be resolved before submit, so picking one reveals the path input.
-// Its {php} becomes the picked site's own PHP binary, or plain `php` (the server default) without one.
 export function CommandField({
   form,
   presets,
@@ -55,12 +51,8 @@ export function CommandField({
   const [template, setTemplate] = useState(starter?.command ?? null);
   const [templateKey, setTemplateKey] = useState(starter?.key ?? null);
   const [path, setPath] = useState("");
-  // Which site the path came from, or CUSTOM_PATH; empty means nothing picked yet.
   const [source, setSource] = useState("");
 
-  // Only sites with a `path` (absent on older APIs). Provisioning sites are kept: the path is derived.
-  // Only sites the chosen template can run in (a Laravel command on a WordPress
-  // or Docker site finds nothing). Without a template, every site with a path.
   const sites = applications.filter(
     (application) => application.path && (!templateKey || presetFits(templateKey, application)),
   );
@@ -68,7 +60,6 @@ export function CommandField({
 
   function applyTemplate(tpl, dir, site = null) {
     const resolved = resolveTemplate(tpl, { dir, site, placeholder, phpPlaceholder });
-    // Every change here is a user edit to the command, so mark dirty.
     form.setValue("command", resolved, {
       shouldValidate: Boolean(dir.trim()),
       shouldDirty: true,
@@ -80,16 +71,14 @@ export function CommandField({
       setTemplate(null);
       setTemplateKey(null);
       setPath("");
-      // Reset `source` too, or the next template resolves {path} against a stale site.
+      // Reset source too, or {path} resolves against the old site.
       setSource("");
       linkSite(null);
-      // Clearing is an edit too: it takes a template off an existing job, and Save must be reachable.
       form.setValue("command", "", { shouldValidate: false, shouldDirty: true });
       return;
     }
     setTemplate(preset.command);
     setTemplateKey(preset.key);
-    // A site picked for the previous template that this one cannot run in is dropped.
     const picked = applications.find((application) => String(application.id) === source);
     if (picked && !presetFits(preset.key, picked)) {
       setSource("");
@@ -107,13 +96,11 @@ export function CommandField({
     }
   }
 
-  // `site` is null for a typed path: that runs the server default `php`.
   function onPath(value, site = null) {
     setPath(value);
     if (template) applyTemplate(template, value, site);
   }
 
-  // The job belongs to the site it runs in; a typed path is a server-level job.
   function linkSite(id) {
     form.setValue("application_id", id, { shouldDirty: true });
   }
@@ -132,8 +119,7 @@ export function CommandField({
     linkSite(site.id);
     onPath(site.path, site);
 
-    // "Run as" follows the site: its files belong to its own user, and another site's user cannot
-    // open them ("Could not open input file"). It can still be changed afterwards.
+    // Run as follows the site: another site's user can't open its files.
     if (site.system_user?.id) {
       form.setValue("run_as", String(site.system_user.id), {
         shouldValidate: true,
@@ -142,7 +128,6 @@ export function CommandField({
     }
   }
 
-  // A quick-start template fills the form on mount; no `shouldDirty`, so the leave-guard stays quiet.
   useEffect(() => {
     if (!starter) return;
     form.setValue("command", resolveTemplate(starter.command, { placeholder, phpPlaceholder }), { shouldValidate: false });
@@ -163,7 +148,6 @@ export function CommandField({
           <FormItem>
             <div className="flex items-center justify-between gap-2">
               <FormLabel required>{t("form.command")}</FormLabel>
-              {/* Only "Custom" left (e.g. a Docker-only server) is no menu at all. */}
               {presets.some((p) => p.command) ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -171,7 +155,6 @@ export function CommandField({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      // Brand-tinted: muted-foreground read as disabled.
                       className="-my-1 h-7 gap-1 px-2 text-xs font-medium text-primary hover:bg-primary/10 hover:text-primary"
                     >
                       <Wand2 className="size-3.5" />
@@ -199,7 +182,6 @@ export function CommandField({
                 {...field}
               />
             </FormControl>
-            {/* A hint rather than validation: both checks are usually, not always, right. */}
             <p className="text-xs text-muted-foreground">
               {t.rich("form.commandHint", {
                 code: (chunks) => <code className="font-mono text-foreground">{chunks}</code>,
@@ -214,17 +196,14 @@ export function CommandField({
         <FormItem>
           <FormLabel required hint={t("form.pathHint")}>{t("form.path")}</FormLabel>
 
-          {/* Pick the site rather than type its directory: a typo fails silently in cron. */}
           {sites.length > 0 ? (
             <Select value={source} onValueChange={onPickSite}>
               <FormControl>
-                {/* Two-line value: overrides h-9, line-clamp-1 and items-center; `flex!` as line-clamp-none sets block. */}
                 <SelectTrigger
-                  // `text-left`: SelectTrigger is a <button>, which the UA stylesheet centres.
                   className="h-auto w-full py-2 text-left data-[size=default]:h-auto *:data-[slot=select-value]:line-clamp-none *:data-[slot=select-value]:flex! *:data-[slot=select-value]:w-full *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:flex-col *:data-[slot=select-value]:items-stretch! *:data-[slot=select-value]:gap-0.5"
                 >
                   <SelectValue placeholder={t("form.pathPickerPlaceholder")}>
-                    {/* `items-stretch!`: tailwind-merge does not dedupe `*:data-[slot=…]` variants. */}
+                    {/* items-stretch!: tailwind-merge doesn't dedupe *:data-[slot=…] variants. */}
                     {selectedSite ? (
                       <>
                         <span className="w-full truncate text-left">{selectedSite.name}</span>
@@ -238,9 +217,7 @@ export function CommandField({
                   </SelectValue>
                 </SelectTrigger>
               </FormControl>
-              {/* Capped so the list visibly scrolls instead of filling the screen. */}
               <SelectContent position="popper" className="max-h-72">
-                {/* First, so it is never below the fold. */}
                 <SelectItem value={CUSTOM_PATH}>
                   <span className="flex items-center gap-2">
                     <FolderPen className="size-4 text-muted-foreground" />
@@ -250,13 +227,12 @@ export function CommandField({
 
                 <SelectSeparator />
 
-                {/* SelectGroup is required: Radix throws if `SelectLabel` is used outside it. */}
+                {/* Radix throws if SelectLabel is outside a SelectGroup. */}
                 <SelectGroup>
                   <SelectLabel>{t("form.pathSitesGroup")}</SelectLabel>
 
                   {sites.map((application) => (
                     <SelectItem key={application.id} value={String(application.id)}>
-                      {/* Stacked: a fixed label column would widen the dropdown past the dialog. */}
                       <span className="flex min-w-0 flex-col items-start gap-0.5 py-0.5">
                         <HoverHint content={application.name}><span className="truncate">{application.name}</span></HoverHint>
                         <span className="truncate font-mono text-xs text-muted-foreground">
@@ -270,14 +246,12 @@ export function CommandField({
             </Select>
           ) : null}
 
-          {/* Which PHP the job will run: the site's own, not the server default. */}
           {selectedSite?.php_binary && template?.includes(phpPlaceholder) ? (
             <p className="text-xs text-muted-foreground">
               {t("form.phpFromSite", { version: selectedSite.php_version ?? "", binary: selectedSite.php_binary })}
             </p>
           ) : null}
 
-          {/* Shown once "Enter a path myself" is chosen, or when there are no sites. */}
           {sites.length === 0 || source === CUSTOM_PATH ? (
             <FormControl>
               <Input

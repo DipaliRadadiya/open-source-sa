@@ -3,7 +3,6 @@ import { Hourglass } from "lucide-react";
 import { RetryButton } from "@/components/ui/retry-button";
 import { FailureScreen } from "@/components/sections/failure-screen";
 
-// Not styled as destructive: nothing is broken, and waiting fixes it.
 export function RateLimitedCard() {
   const t = useTranslations("errors.rateLimited");
 

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 
 const HIGHLIGHT_MS = 1200;
 
-// Works as a plain link before hydration. `className` renders a bare link, not a Button.
 export function SectionJumpLink({ href, children, variant = "outline", size = "sm", className }) {
   const highlightTimer = useRef(null);
   const highlightFrame = useRef(null);
@@ -41,7 +40,6 @@ export function SectionJumpLink({ href, children, variant = "outline", size = "s
     cancelAnimationFrame(highlightFrame.current);
     target.removeAttribute("data-jump-highlight");
 
-    // Re-add on the next frame so a repeat click restarts the cue.
     highlightFrame.current = requestAnimationFrame(() => {
       target.setAttribute("data-jump-highlight", "true");
       highlightTimer.current = setTimeout(() => {

@@ -10,7 +10,6 @@ import { Combobox } from "@/components/ui/combobox";
 import { FormModal } from "@/components/ui/form-modal";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-// Only unattached databases are offered, so none is silently moved off another site.
 export function AttachDatabaseDialog({
   applicationId,
   applicationName,
@@ -103,8 +102,6 @@ export function AttachDatabaseDialog({
           <p role="alert" className="text-sm font-medium text-destructive">{error}</p>
         ) : null}
 
-        {/* Same hint as every attach surface: affects backups, rewrites no
-            connection string. */}
         <p className="text-xs text-muted-foreground">{t("hint")}</p>
       </div>
     </FormModal>

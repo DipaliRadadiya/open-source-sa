@@ -55,8 +55,6 @@ function SidebarProvider({
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
 
-  // This is the internal state of the sidebar.
-  // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen)
   const open = openProp ?? _open
   const setOpen = React.useCallback((value) => {
@@ -67,16 +65,13 @@ function SidebarProvider({
       _setOpen(openState)
     }
 
-    // This sets the cookie to keep the sidebar state.
     document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
   }, [setOpenProp, open])
 
-  // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
   }, [isMobile, setOpen, setOpenMobile])
 
-  // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event) => {
       if (
@@ -92,8 +87,6 @@ function SidebarProvider({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleSidebar])
 
-  // We add a state so that we can do data-state="expanded" or "collapsed".
-  // This makes it easier to style the sidebar with Tailwind classes.
   const state = open ? "expanded" : "collapsed"
 
   const contextValue = React.useMemo(() => ({
@@ -135,13 +128,11 @@ function Sidebar({
   className,
   children,
   dir,
-  // Translated accessible name for the desktop landmark and the phone drawer.
   label,
   ...props
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
-  // Peek clears `data-collapsible` so labels show; the gap stays narrow so the page does not reflow.
   const { hovered: peeking, handlers: peekHandlers } = useHoverIntent({
     enabled: collapsible === "icon" && state === "collapsed",
   });
@@ -197,13 +188,11 @@ function Sidebar({
       data-variant={variant}
       data-side={side}
       data-slot="sidebar">
-      {/* This is what handles the sidebar gap on desktop */}
       <div
         data-slot="sidebar-gap"
         className={cn(
           "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear motion-reduce:transition-none",
           "group-data-[collapsible=offcanvas]:w-0",
-          // Held at rail width while peeking so the page does not shift.
           variant === "floating" || variant === "inset"
             ? "group-data-[peek=true]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
             : "group-data-[peek=true]:w-(--sidebar-width-icon)",
@@ -217,12 +206,9 @@ function Sidebar({
         data-side={side}
         className={cn(
           "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 [transition-timing-function:cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
-          // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
-          // While peeking: shadow because it overlaps content, and z-30 because
-          // z-10 sits below the sticky page header.
           "group-data-[peek=true]:z-30 group-data-[peek=true]:shadow-xl",
           className
         )}
@@ -238,7 +224,6 @@ function Sidebar({
   );
 }
 
-/* Translated accessible names for the toggle and rail (shadcn hard-codes English). */
 function useToggleLabel() {
   const t = useTranslations("common");
   const { state } = useSidebar();
@@ -303,7 +288,6 @@ function SidebarInset({
   className,
   ...props
 }) {
-  // A div, not <main>: each layout renders its own <main id="main-content">.
   return (
     <div
       data-slot="sidebar-inset"
@@ -582,7 +566,6 @@ function SidebarMenuSkeleton({
   showIcon = false,
   ...props
 }) {
-  // Random width between 50 to 90%.
   const [width] = React.useState(() => {
     return `${Math.floor(Math.random() * 40) + 50}%`;
   })

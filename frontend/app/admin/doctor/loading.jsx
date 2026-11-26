@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkHeader, SkSummary } from "@/components/ui/skeleton-kit";
 
-
-// System health: the summary card, then one card per check.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

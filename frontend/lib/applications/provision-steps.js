@@ -1,6 +1,4 @@
-// Keep in step with ApplicationProvisioner::step(), the installers' run() calls, and GitDeployer.
 export const PROVISION_STEPS = new Set([
-  // Core provisioning.
   "create_directory",
   "placeholder",
   "set_ownership",
@@ -13,13 +11,11 @@ export const PROVISION_STEPS = new Set([
   "script",
   "restart_app",
   "restart_workers",
-  // Git deploys. `verify` only ever appears in failed_step.
   "init",
   "fetch",
   "checkout",
   "seed_env",
   "verify",
-  // One-click installers.
   "download",
   "extract",
   "configure",
@@ -37,11 +33,9 @@ export const PROVISION_STEPS = new Set([
   "start_app",
   "verify_install",
   "verify_serving",
-  // Only in failed_step: the install job died without a word (disk full, OOM, reboot).
   "worker",
 ]);
 
-// Unknown steps still go through `t()`, whose fallback humanises the key; `unknownStep` is only for no step.
 export function provisionStepLabel(step, t, prefix = "") {
   if (!step) return t(`${prefix}unknownStep`);
   return t(`${prefix}steps.${step}`);

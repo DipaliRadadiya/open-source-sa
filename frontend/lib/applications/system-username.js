@@ -1,5 +1,3 @@
-// Mirrors the backend's SystemUsernameGenerator and
-// StoreSystemUserRequest::RESERVED; keep in step.
 const RESERVED = new Set([
   "root", "daemon", "bin", "sys", "sync", "games", "man", "lp", "mail",
   "news", "uucp", "proxy", "www-data", "backup", "list", "irc", "gnats",
@@ -21,14 +19,11 @@ function base(name) {
   return RESERVED.has(slug) ? `app-${slug}`.slice(0, MAX) : slug;
 }
 
-// Empty when the name has nothing usable; see fallbackSystemUsername.
 export function suggestSystemUsername(name, taken = []) {
   const first = base(name);
   if (!first) return "";
   const used = new Set(taken);
   if (!used.has(first)) return first;
-  // A counter, not the backend's random suffix: a random value would cause a
-  // hydration mismatch.
   for (let n = 2; ; n += 1) {
     const suffix = `-${n}`;
     const candidate = `${first.slice(0, MAX - suffix.length).replace(/-+$/, "")}${suffix}`;
@@ -36,7 +31,6 @@ export function suggestSystemUsername(name, taken = []) {
   }
 }
 
-// Call after mount only, to avoid a hydration mismatch.
 export function fallbackSystemUsername(taken = []) {
   const used = new Set(taken);
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";

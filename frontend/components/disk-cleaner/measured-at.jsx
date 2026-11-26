@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
-// How old the sizes are; the card's refresh button re-measures (the scan walks the filesystem, so no polling).
 export function MeasuredAt({ at }) {
   const t = useTranslations("diskCleaner");
   const [minutes, setMinutes] = useState(0);

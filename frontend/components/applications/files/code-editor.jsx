@@ -4,8 +4,6 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { codeLanguageFor } from "@/lib/files/code-lang";
 
-// Built from the app's --console-* tokens (app/globals.css) rather than a canned
-// CodeMirror theme, matching the other console surfaces.
 const consoleTheme = EditorView.theme(
   {
     "&": {
@@ -41,8 +39,7 @@ const consoleTheme = EditorView.theme(
       backgroundColor: "color-mix(in oklch, var(--console-foreground) 15%, transparent)",
     },
     "&.cm-editor.cm-focused": { outline: "none" },
-    // The scroller, not the editor root, overflows. Mirrors .console-scroll in
-    // globals.css, which cannot reach CodeMirror's internal scroll element.
+    // Mirrors .console-scroll, which can't reach CodeMirror's internal scroller.
     ".cm-scroller": { scrollbarWidth: "thin", scrollbarColor: "var(--console-border) transparent" },
     ".cm-scroller::-webkit-scrollbar": { width: "10px", height: "10px" },
     ".cm-scroller::-webkit-scrollbar-track": { background: "transparent" },
@@ -67,7 +64,6 @@ const consoleHighlight = HighlightStyle.define([
   { tag: tags.invalid, color: "var(--console-error)" },
 ]);
 
-// Language comes from the file extension; unknown ones fall back to plain text.
 export function CodeEditor({ filename, value, onChange, readOnly = false, className }) {
   const language = useMemo(() => codeLanguageFor(filename), [filename]);
   const extensions = useMemo(

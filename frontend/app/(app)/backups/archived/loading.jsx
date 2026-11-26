@@ -11,7 +11,6 @@ const TOOLBAR = (
   </div>
 );
 
-// Archived backups: the note, then the list card.
 export default function Loading() {
   return (
     <div className="space-y-4" aria-busy="true">

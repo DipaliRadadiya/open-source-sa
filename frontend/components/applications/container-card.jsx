@@ -33,24 +33,12 @@ import {
 } from "@/components/ui/select";
 import { Form, FormControl, FormField } from "@/components/ui/form";
 
-/**
- * "No network — Docker's default bridge", as a value the form can hold.
- *
- * Radix reserves `""` for "nothing selected", so an empty `SelectItem` value
- * throws. One constant, used by the defaults, the item and the submit mapping,
- * because the bug here is the three of them disagreeing.
- */
+// Radix throws on an empty SelectItem value, so the default network needs its own value.
 const DEFAULT_NETWORK = "__default__";
 
-// "No registry — pull anonymously". Radix reserves `""` for "nothing selected", so the
-// defaults, the item and the submit mapping must all use this value.
+// Radix reserves "" for no selection.
 const NO_REGISTRY = "__none__";
 
-/**
- * What a container site runs as, and where it joins a panel-made Docker network (named
- * `external: true` in the generated compose file). `image` is read-only: changing it pulls
- * and belongs to deploy. Saving recreates the container, so the card warns of brief downtime.
- */
 export function ContainerCard({
   application,
   networks = [],
@@ -76,9 +64,6 @@ export function ContainerCard({
   const redeploying = containerRedeployInFlight(application);
   const redeployFailure = containerRedeployFailure(lastRedeploy, t("pullFailed"));
 
-  // The registry saves with the image card, the rest with the network card: each card
-  // saves only its own fields (every field is optional on the PUT).
-  // Installed from the 1-Click catalog: its memory and CPU are set here even though it runs its own compose file.
   const isRecipe = application.origin?.kind === "recipe";
   const imageDefaults = {
     registry_id: application.registry_id
@@ -89,9 +74,7 @@ export function ContainerCard({
     container_port: application.container_port ?? 80,
     memory_limit: application.memory_limit ?? "",
     cpu_limit: application.cpu_limit ?? "",
-    // The sentinel, not `""`: Radix refuses an empty `SelectItem` value, and the
-    // defaults, the item and the submit mapping must hold the SAME value or
-    // "Its own network" goes to the API as "__default__".
+    // Must be the same sentinel everywhere or __default__ gets sent to the API.
     docker_network: application.docker_network ?? DEFAULT_NETWORK,
   };
 
@@ -117,29 +100,22 @@ export function ContainerCard({
   });
   const ownNetwork = ownNetworkName(application.id);
 
-  // The application's own network, kept in the list even when it is gone: dropping it
-  // would show "Its own network" for an application that will not start.
   const missing =
     defaults.docker_network !== DEFAULT_NETWORK &&
     !networks.some((network) => network.name === defaults.docker_network);
 
-  // Only networks somebody created to share. Docker's own break the published port,
-  // and another application's network is that application's private one.
   const joinable = networks.filter(
     (network) =>
       (!network.built_in && !network.application_id) ||
       network.name === defaults.docker_network,
   );
 
-  // Reachable: deleting a credential detaches its applications instead of refusing.
   const missingRegistry =
     imageDefaults.registry_id !== NO_REGISTRY &&
     !registries.some(
       (registry) => String(registry.id) === imageDefaults.registry_id,
     );
 
-  // Memory and CPU, the same fields and rules for a simple app and a 1-Click Recipe.
-  // Side by side, a pair's inputs share one line however long either hint wraps.
   const PAIRED = "@3xl/section:row-span-2 @3xl/section:grid-rows-subgrid";
 
   const limitFields = (
@@ -170,11 +146,9 @@ export function ContainerCard({
           <Row
             label={t("cpuLimit")}
             className={PAIRED}
-            // The server's real core count; the rule only when it could not be asked.
             hint={limits.cpus ? t("cpuLimitHint", { cores: limits.cpus }) : t("cpuLimitHintUnknown")}
           >
             <FormControl>
-              {/* Empty here means NO limit, the opposite of memory's empty. */}
               <Input placeholder={t("cpuLimitPlaceholder")} inputMode="decimal" disabled={!canManage} {...field} />
             </FormControl>
           </Row>
@@ -187,7 +161,6 @@ export function ContainerCard({
     setBusy(true);
     try {
       await updateContainerSettings(application.id, payload);
-      // Before the toast: the Docker page and the dashboard facts are server-rendered.
       await refreshAndWait();
       toast.success(await savedMessage());
       target.reset(values);
@@ -210,13 +183,11 @@ export function ContainerCard({
     put(
       {
         container_port: values.container_port,
-        // Empty means "no limit" / "server default" and must reach the API as null,
-        // or a limit once set could never be taken off again.
+        // Empty must be sent as null, or a limit could never be removed.
         memory_limit: values.memory_limit === "" ? null : values.memory_limit,
         cpu_limit: values.cpu_limit === "" ? null : values.cpu_limit,
         docker_network:
           values.docker_network === DEFAULT_NETWORK ? null : values.docker_network,
-        // Only on a move that could remove the app's own network; otherwise the server's default.
         ...(keepChoice ? { remove_previous_network: removePrevious } : {}),
       },
       setSavingSettings,
@@ -225,8 +196,6 @@ export function ContainerCard({
       keepChoice ? () => movedMessage(values.docker_network, removePrevious) : undefined,
     );
 
-  // A recipe's compose file owns its port, network and volumes; only the limits are the panel's,
-  // and they apply to the app's own service (its database keeps its own limit).
   const saveLimits = (values) =>
     put(
       {
@@ -238,7 +207,6 @@ export function ContainerCard({
       values,
     );
 
-  // Said from the networks after the save: the server keeps the old one while something uses it.
   async function movedMessage(network, removeRequested) {
     let networksAfter = networks;
     try {
@@ -253,7 +221,6 @@ export function ContainerCard({
   async function pull() {
     setPulling(true);
     try {
-      // 202: queued, and the layout's watcher reports how it ended. An older API answers 200, done.
       const res = await pullContainerImage(application.id);
       await refreshAndWait();
       toast.success(res.status === 202 ? tr("started") : t("pulled"));
@@ -288,8 +255,6 @@ export function ContainerCard({
               }
             >
               <InfoRow label={t("image")}>
-                {/* Not editable: a new image pulls, and a bad reference fails after the
-                    old container is gone. Pull is its own button, not part of Save. */}
                 <div className="flex flex-wrap items-center gap-2">
                   <code className="min-w-0 flex-1 truncate rounded-lg border bg-muted/40 px-3 py-2 font-mono text-xs">
                     {application.image || (ownCompose ? t("ownCompose.title") : t("noImage"))}
@@ -301,7 +266,6 @@ export function ContainerCard({
                     </Button>
                   ) : null}
                 </div>
-                {/* Minutes on a big image: a spinning button with no words read as stuck. */}
                 {pulling || redeploying ? (
                   <p role="status" className="mt-2 text-xs text-muted-foreground">
                     {tr("runningHint")}
@@ -322,7 +286,6 @@ export function ContainerCard({
                     label={t("registry")}
                     hint={
                       registries.length === 0 ? (
-                        // An empty chooser with no explanation reads as a broken control.
                         <>
                           {t("noRegistries")}{" "}
                           <Link href="/integrations/registries" className={linkClass}>
@@ -359,10 +322,6 @@ export function ContainerCard({
           </form>
         </Form>
 
-        {/* A compose file the user owns is what runs. A 1-Click Recipe still takes its
-            memory and CPU from here (the backend writes them to the app's own service);
-            a file taken over on the Compose File page owns everything, so saving here
-            would answer "saved" and change nothing. */}
         {ownCompose && isRecipe ? (
           <>
             <Form {...form}>
@@ -490,8 +449,6 @@ export function ContainerCard({
                     control={form.control}
                     name="container_port"
                     render={({ field }) => {
-                      // An input like every other field; only a port the image
-                      // does not declare gets a line under it.
                       const matches = detectedPort && Number(field.value) === detectedPort;
                       return (
                         <Row label={t("containerPort")} hint={t("containerPortHint")} className={PAIRED}>
@@ -499,7 +456,6 @@ export function ContainerCard({
                             <Input type="number" inputMode="numeric" disabled={!canManage} {...field} />
                           </FormControl>
                           {detectedPort && !matches ? (
-                            // Main's higher-contrast amber; plain `text-warning` is faint on white.
                             <p className="flex flex-wrap items-center gap-x-2 text-xs text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning">
                               <span>{tImage("portDiffers", { port: detectedPort })}</span>
                               {canManage ? (
@@ -526,7 +482,6 @@ export function ContainerCard({
 
                   {limitFields}
 
-                  {/* How the two limits fail, which is the part nobody knows: one line, not a box. */}
                   <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
                     <Gauge className="mt-0.5 size-3.5 shrink-0" />
                     {t("limitsBody")}
@@ -538,8 +493,6 @@ export function ContainerCard({
                     </Note>
                   ) : null}
 
-                  {/* The name to type: every generated file's service is `app`, so on a
-                      shared network only the slug alias is unique. */}
                   {defaults.docker_network !== DEFAULT_NETWORK && !missing ? (
                     <Note icon={Network} title={t("reachableTitle")}>
                       {t("reachableBody", { alias: application.slug })}
@@ -549,16 +502,12 @@ export function ContainerCard({
               </form>
             </Form>
 
-            {/* Saves on add and remove: each change recreates the container, so it
-                is not batched behind a Save. */}
             <Section icon={HardDrive} title={t("volumes.title")} description={t("volumes.hint")}>
               <ContainerVolumes application={application} volumes={volumes} canManage={canManage} />
             </Section>
           </>
         )}
 
-        {/* Only for an application the panel generated credentials for, and only for
-            someone who can manage it: the endpoint is gated on `manage`. */}
         {showCredentials ? (
           <Section icon={KeyRound} title={t("credentials.title")} description={t("credentials.hint")}>
             <ContainerCredentials application={application} />

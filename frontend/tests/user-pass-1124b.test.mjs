@@ -131,7 +131,7 @@ test("a hand-written filter is left alone by the login field", () => {
 
 test("Disk Cleaner says what it freed in a toast as well as the note", () => {
   const panel = read("components/disk-cleaner/cleanup-panel.jsx");
-  assert.match(panel, /setResult\(parsed\.data\);\s*\/\/[^\n]*\n\s*toast\.success\(\s*t\("clean\.freed"/);
+  assert.match(panel, /setResult\(parsed\.data\);\s*toast\.success\(\s*t\("clean\.freed"/);
 });
 
 test("Server Sync counts only what can be added", () => {

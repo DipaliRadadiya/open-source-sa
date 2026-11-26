@@ -33,8 +33,6 @@ export function SshForm({
   const tv = useTranslations("settings.validation");
   const { refreshAndWait } = useRefresh();
   const [pendingValues, setPendingValues] = useState(null);
-  // The confirmed save runs outside handleSubmit (the dialog resolved it), so
-  // react-hook-form's own isSubmitting is already false by then.
   const [saving, setSaving] = useState(false);
 
   const defaults = {
@@ -46,8 +44,6 @@ export function SshForm({
   const form = useForm({
     resolver: zodResolver(securityFormSchema),
     mode: "onBlur",
-    // The port is held as text: the resolver coerces it for the API, and a
-    // numeric default reads as "changed" the moment someone retypes it.
     defaultValues: { ...defaults, port: String(defaults.port) },
   });
 
@@ -69,7 +65,6 @@ export function SshForm({
     ) {
       risks.push("rootPassword");
     }
-    // Any save, even an unrelated one: the server says whether it will start enforcing.
     if (security?.save_enforces_ssh_access) risks.push("enforcesAccess");
     return risks;
   }
@@ -83,8 +78,6 @@ export function SshForm({
       setPendingValues(null);
       toast.success(t("saved"));
     } catch (error) {
-      // Close the dialog so a 422 (e.g. "no SSH key present") is readable on the
-      // field it belongs to rather than behind an overlay.
       setPendingValues(null);
       handleValidationError(error, form, { fallback: t("saveFailed") });
     } finally {
@@ -110,9 +103,6 @@ export function SshForm({
           <Section
             icon={KeyRound}
             title={t("title")}
-            // One question per row, answers as cards (three narrow columns wrapped every
-            // answer). The port gets its own ruled row: beside the cards it read as a
-            // third sign-in choice.
             readOnly={!canManage}
             changedBy={changedBy}
             actions={
@@ -127,7 +117,6 @@ export function SshForm({
               />
             }
           >
-            {/* Only when the SAVED config is dangerous; names the fix. */}
             {security?.permit_root_login === "yes" ? (
               <div className="flex gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -164,8 +153,7 @@ export function SshForm({
                         value: "key",
                         label: t("signIn.option.key.label"),
                         hint: t("signIn.option.key.hint"),
-                        // The API 422s this without a key (lockout guard). Keyed on the SAVED setting, not
-                        // `field.value`, or the option disables itself once another radio is picked.
+                        // The API refuses this without a key. Key on the saved value or the option disables itself.
                         disabledReason:
                           security?.has_ssh_key === false &&
                           defaults.password_authentication
@@ -203,8 +191,6 @@ export function SshForm({
               )}
             />
 
-            {/* A rule above the port, so it does not read as a third sign-in choice
-                (Krishna, 12 Oct). Label on top and one column wide, like every other field. */}
             <hr className="border-border" />
 
             <FormField
@@ -241,7 +227,6 @@ export function SshForm({
           onOpenChange={(open) => !open && setPendingValues(null)}
           icon={ShieldAlert}
           tone="warning"
-          // Matches the worst consequence in the list.
           confirmVariant={isSevereSshChange(risks) ? "destructive" : "default"}
           title={t("confirm.title")}
           cancelLabel={t("confirm.cancel")}

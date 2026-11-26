@@ -16,8 +16,6 @@ import { COVERAGE_STATE } from "@/components/backups/status-meta";
 import { HoverHint } from "@/components/ui/hover-hint";
 import { CoverageCard, CoverageCardActions, CoverageFact, NotSetUpList, NotSetUpRow } from "@/components/backups/coverage-card-parts";
 
-// Phone and tablet layout: a table would scroll sideways and hide the action button.
-
 export function CoverageCards({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null, scheduleTimezone = null }) {
   const t = useTranslations("backups.coverage");
   const tb = useTranslations("backups");
@@ -25,7 +23,6 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
   const tn = useTranslations("applications.backups");
   const format = useFormatter();
 
-  // "Daily · 2:00 AM · keeps 7"; the time zone is in the Schedule label when every site shares one.
   const scheduleFact = (target) => {
     const when = scheduleWhen(target, options, format);
     return [
@@ -66,7 +63,6 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
           {configured.map(({ application, target, state, lastBackup }) => {
             const meta = COVERAGE_STATE[state];
             const Icon = meta.icon;
-            // Same rule as the table: an imminent run outranks tomorrow's slot.
             const next = target.is_due
               ? t("runsShortly")
               : (target.next_run_at_human ? t("nextRun", { when: target.next_run_at_human }) : null);
@@ -88,8 +84,6 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                   </div>
                 }
                 subtitle={application.domain}
-                // No badge where the card already says it, as in the table: "Manual only" is on
-                // the Schedule line.
                 badge={state === "paused" || state === "unprotected" ? null : (
                   <Badge variant={meta.variant} className="gap-1.5 font-normal">
                     <Icon className="size-3" />
@@ -119,8 +113,6 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                 }
               >
                 <CoverageFact label={t("columns.typeShort")}>{target.type_title ?? target.type}</CoverageFact>
-                {/* Includes the hour, same as the table; amber when paused, since the card has
-                    no "Manual only" badge. */}
                 <CoverageFact label={scheduleTimezone ? t("columns.scheduleIn", { timezone: wrappableTimezoneLabel(scheduleTimezone) }) : t("columns.schedule")} className={state === "paused" ? "[&>dd]:font-medium [&>dd]:text-warning" : undefined}>
                   {scheduleFact(target)}
                 </CoverageFact>
@@ -128,14 +120,11 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                   <span className="break-words">{target.storage_destination_name ?? t("placeholders.storage")}</span>
                 </CoverageFact>
                 <CoverageFact label={t("columns.lastRun")}>
-                  {/* The table's status dot, as a badge: without it a run in progress or a failed
-                      one read as an ordinary "Last run". */}
                   {lastBackup && (BACKUP_IN_FLIGHT.includes(lastBackup.status) || lastBackup.status === "failed") ? (
                     <span className="mb-1 block">
                       <BackupStatusBadge backup={lastBackup} />
                     </span>
                   ) : null}
-                  {/* Same fallback as the table: a crashed run leaves last_run_at unset, so not "Never". */}
                   <span className="block">{lastBackup?.created_at_human ?? target.last_backup_at_human ?? t("neverRunShort")}</span>
                   {next ? <span className="block text-xs text-muted-foreground">{next}</span> : null}
                 </CoverageFact>

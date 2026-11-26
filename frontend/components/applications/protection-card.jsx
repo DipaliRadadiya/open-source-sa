@@ -3,8 +3,7 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { ChevronRight, ShieldCheck, ShieldOff, Shield } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Status only, no toggles: enabling most of these needs real choices, and a
-// toggle could wipe settings (the firewall PUT requires `mode` and `categories`).
+// No toggles: the firewall PUT needs mode and categories, so a toggle could wipe settings.
 export async function ProtectionCard({ application, items, totals = null }) {
   const t = await getTranslations("applications.protection");
 
@@ -12,13 +11,9 @@ export async function ProtectionCard({ application, items, totals = null }) {
 
   const onItems = items.filter((item) => item.on);
   const on = onItems.length;
-  // Named: two users read "1 of 5 on" against four "Off" rows and missed the last one,
-  // "Application folder: Locked".
   const format = on ? await getFormatter() : null;
 
   return (
-    // Target of the strip's "Review security"; scroll-mt uses the measured
-    // `--app-chrome` height of the sticky header, never a fixed number.
     <Card
       id="security"
       tabIndex={-1}
@@ -29,8 +24,6 @@ export async function ProtectionCard({ application, items, totals = null }) {
         <CardTitle icon={Shield} id="security-heading" as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}
           <span className="text-xs font-normal tabular-nums text-muted-foreground">
-            {/* Some rows hidden by the role: the count covers them all, without naming
-                protections this reader cannot open. */}
             {totals && totals.total > items.length
               ? t("summary", { on: totals.on, total: totals.total })
               : on
@@ -43,12 +36,9 @@ export async function ProtectionCard({ application, items, totals = null }) {
         <ul className="-mt-(--card-spacing) divide-y">
           {items.map((item) => {
             const Icon = item.on ? ShieldCheck : ShieldOff;
-            /* A row with its own control (the folder lock) acts in place, so no link. */
             if (!item.href) {
               return (
                 <li key={item.key} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-(--card-spacing) py-2.5">
-                  {/* Label stays on one line; state and button wrap below it together. As
-                      flex-1 the label was squeezed to one word per line. */}
                   <span className="flex items-center gap-3 whitespace-nowrap">
                     <Icon
                       className={`size-4 shrink-0 ${item.on ? "text-success" : "text-warning"}`}
@@ -73,8 +63,6 @@ export async function ProtectionCard({ application, items, totals = null }) {
                   prefetch={false}
                   className="flex items-center gap-3 px-(--card-spacing) py-2.5 transition-colors hover:bg-muted/50"
                 >
-                  {/* Off is amber on the mark only: grey reads as unavailable, red is kept for
-                      real breakage. */}
                   <Icon
                     className={`size-4 shrink-0 ${item.on ? "text-success" : "text-warning"}`}
                   />

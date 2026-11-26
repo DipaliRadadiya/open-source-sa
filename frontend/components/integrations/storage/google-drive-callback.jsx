@@ -12,7 +12,6 @@ import { apiMessage } from "@/lib/api/error-message";
 
 const STORAGE_PAGE = "/integrations/storage";
 
-// Exported so every state can be rendered; the connected state otherwise needs a live single-use Google code.
 export function CallbackCard({ status, message }) {
   const t = useTranslations("storage.oauth");
 
@@ -28,7 +27,6 @@ export function CallbackCard({ status, message }) {
       icon: CheckCircle2,
       tone: "bg-success/10 text-success",
       title: t("connected"),
-      // The scope reassurance is the body at the end of setup.
       body: t("scopeNote"),
     },
     failed: {
@@ -57,14 +55,12 @@ export function CallbackCard({ status, message }) {
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{view.body}</p>
       ) : null}
 
-      {/* No way out while the exchange is in flight. */}
       {status !== "working" ? (
         <Button
           asChild
           variant={status === "connected" ? "default" : "outline"}
           className="mt-6 w-full"
         >
-          {/* A plain link, so middle-click and new-tab work. */}
           <a href={STORAGE_PAGE}>{t("backToStorage")}</a>
         </Button>
       ) : null}
@@ -72,15 +68,14 @@ export function CallbackCard({ status, message }) {
   );
 }
 
-// The code and `state` are single-use and strict mode runs effects twice; the ref is set
-// before the await so a second exchange cannot paint a failure over a success.
+// The code is single-use and strict mode runs effects twice, so the ref guards a second exchange.
 export function GoogleDriveCallback({ code, state, deniedError }) {
   const t = useTranslations("storage.oauth");
   const router = useRouter();
   const [result, setResult] = useState(null);
   const started = useRef(false);
 
-  // Derived during render: setState from the effect is a cascading render the lint rule rejects.
+  // Derived during render; setState in the effect is a cascading render.
   const blocked = deniedError
     ? deniedError === "access_denied"
       ? t("denied")
@@ -96,8 +91,6 @@ export function GoogleDriveCallback({ code, state, deniedError }) {
     completeDriveConnect({ code, state })
       .then(({ data }) => {
         if (data.oauth.status === "connected") {
-          // The destinations list is server-rendered; refresh so the row shows
-          // the new connection without a hard reload.
           router.refresh();
           setResult({ status: "connected", message: null });
           return;

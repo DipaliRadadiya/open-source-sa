@@ -2,8 +2,6 @@ import { z } from "zod";
 
 export const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 
-// Mirrors the backend password policy: min 10, mixed case + a number. Empty
-// gets "required" first; the checklist beside the field already shows the length rule.
 const passwordField = z
   .string()
   .min(1, "required_password")
@@ -27,7 +25,6 @@ export const userSchema = z.object({
   roles: z.array(roleRefSchema).default([]),
   created_at: z.string().nullable().optional(),
   created_at_human: z.string().nullable().optional(),
-  // Null until the first sign-in.
   last_login_at: z.string().nullish(),
   last_login_at_human: z.string().nullish(),
   last_login_ip: z.string().nullish(),
@@ -45,8 +42,6 @@ export const usersResponseSchema = z.object({
   meta: usersMetaSchema,
 });
 
-// Every user must hold at least one role. is_admin grants admin-area access;
-// permissions come only from roles.
 const roleIdsField = z
   .array(z.number())
   .min(1, "selectRole");
@@ -65,8 +60,6 @@ export const createUserSchema = z
     path: ["password_confirmation"],
   });
 
-// On edit, name/username/is_admin go to PUT /users/{id} and role_ids to
-// PUT /users/{id}/roles, validated together in one form.
 export const updateUserSchema = z.object({
   name: z.string().min(1, "required_name"),
   username: usernameField,

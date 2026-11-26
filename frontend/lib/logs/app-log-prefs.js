@@ -1,13 +1,10 @@
 import { normalizeLineCount } from "../schemas/log.js";
 
-// Live is per source: following a quiet error log is not consent to tail the busiest access log.
 export const APP_LOG_FOLLOW_COOKIE = "sv_app_logs_follow";
 export const APP_LOG_LINES_COOKIE = "sv_app_logs_lines";
 
-// Sources that follow by default: low-volume, and read for "what just broke".
 export const AUTO_FOLLOW_KEYS = new Set(["error", "error_ssl", "application", "application_error"]);
 
-// "error:on,access:off" → { error: true, access: false }
 export function parseFollowPrefs(value) {
   const prefs = {};
   for (const part of typeof value === "string" ? value.split(",") : []) {
@@ -36,6 +33,6 @@ export function writeCookie(name, value) {
   try {
     document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
   } catch {
-    // A blocked cookie costs the preference, nothing else.
+    // storage blocked; ignore
   }
 }

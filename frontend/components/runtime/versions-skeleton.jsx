@@ -2,8 +2,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SK_CARD } from "@/components/ui/skeleton-kit";
 import { cn } from "@/lib/utils";
 
-// The Installed versions card (PHP and Node.js): header with the install button, the
-// column band from 48rem of card width, one row per version, and the footnote.
 export function VersionsCardSkeleton({ rows = 3, columns = 4 }) {
   return (
     <div className={cn(SK_CARD, "@container/versions overflow-hidden")} aria-hidden>

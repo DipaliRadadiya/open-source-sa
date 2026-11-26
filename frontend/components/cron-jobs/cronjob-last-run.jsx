@@ -7,12 +7,9 @@ import { HoverHint } from "@/components/ui/hover-hint";
 
 const VARIANT = { succeeded: "success", failed: "destructive", interrupted: "warning", running: "muted" };
 
-/** A run's outcome as a badge, and a failure's exit code after it. */
 export function RunStatusBadge({ status, exitCode = null }) {
   const t = useTranslations("cronJobs.lastRun");
   const known = Object.hasOwn(VARIANT, status);
-  // The exit code beside the badge, not in it: a badge never wraps, and "Fehlgeschlagen · Code 2"
-  // was wider than a phone card's column. Both sit in their parent's wrapping row.
   return (
     <>
       <Badge variant={VARIANT[status] ?? "muted"} className="gap-1 font-normal">
@@ -34,7 +31,6 @@ export function useRunDuration() {
   };
 }
 
-// The list's "did it work?": the latest run, or Running now while one is going.
 export function CronjobLastRun({ job }) {
   const t = useTranslations("cronJobs.lastRun");
   const format = useFormatter();
@@ -51,7 +47,6 @@ export function CronjobLastRun({ job }) {
   }
   if (!run) return <span className="whitespace-normal text-muted-foreground">{t("notYet")}</span>;
 
-  // Server clock, read as the server wrote it, then said relative to now.
   const at = run.finished_at ?? run.started_at;
   const epoch = serverTimeToEpoch(at, job.timezone);
   const when = epoch === null ? at : format.relativeTime(Math.min(epoch, now.getTime()), now);
@@ -67,7 +62,6 @@ export function CronjobLastRun({ job }) {
           </Badge>
         ) : null}
       </div>
-      {/* Two lines, not "when · took": one line made the column too wide for the table at 1280px. */}
       {when ? (
         <HoverHint content={at}><span className="text-xs whitespace-normal text-muted-foreground" suppressHydrationWarning>
           {when}

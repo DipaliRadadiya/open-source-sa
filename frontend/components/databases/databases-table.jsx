@@ -29,22 +29,14 @@ import { DatabaseRowActions } from "@/components/databases/database-row-actions"
 import { HoverHint } from "@/components/ui/hover-hint";
 import { SizeText } from "@/components/ui/size-text";
 
-/* Cells are module-level: inline cell functions remount every cell on each search keystroke. */
+// Cells at module level: inline cells remount on every keystroke.
 
-// The name links to the detail page (users, credentials, connection string).
-// The short-value columns get 12px side padding, not 16: Russian at 1440 was 27px
-// too wide for the content box, and these four columns hold a logo or a few characters.
 const COMPACT = "px-3";
 
 function NameCell({ row }) {
   return (
     <HoverHint content={row.original.name}><Link
       href={`/databases/${row.original.id}`}
-      // Primary colour plus chevron, so the link does not rely on colour alone. The chevron
-      // always shows: with no Manage button in the row, the name is the way in.
-      // A usual name shows in full; past 13.5rem it ellipsises, so a long one cannot
-      // widen the column over its neighbours. A max-width, not
-      // max-w-0 on the cell: that cut every 27-character staging name too.
       className="group flex min-w-0 items-center gap-1.5 font-mono font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
     >
       <span className="max-w-54 truncate">{row.original.name}</span>
@@ -57,10 +49,7 @@ function EngineCell({ row, table }) {
   const name = table.options.meta.engineName(row.original.engine);
   return (
     <span className="flex items-center gap-2 text-muted-foreground">
-      {/* The name stays beside the logo: the column sorts and searches on it. */}
-      {/* 64px, not 80: the widest locale needed the 16px for the Application column. */}
       <EngineLogo engine={row.original.engine} size="h-5 w-auto max-w-16" />
-      {/* Mark-only logos (PostgreSQL's elephant) need the printed name. */}
       {engineLogo(row.original.engine)?.wordmark ? (
         <span className="sr-only">{name}</span>
       ) : (
@@ -78,13 +67,11 @@ function SizeCell({ row }) {
   );
 }
 
-// "Not linked" is a warning: no site backup contains this database.
 function ApplicationCell({ database, applications, canOpenApplications, onAttach }) {
   const t = useTranslations("databases");
   const application = attachedApplication(database, applications);
 
   if (application?.name) {
-    // A link only for a reader who may open the application.
     return canOpenApplications ? (
       <HoverHint content={application.name}><Link
         href={`/applications/${application.id}`}
@@ -98,15 +85,10 @@ function ApplicationCell({ database, applications, canOpenApplications, onAttach
     );
   }
 
-  // Attached but unnamed (an older API) is not "not linked": an attach there
-  // would be refused.
   if (application) {
     return <span className="text-muted-foreground">{t("columns.applicationUnknown")}</span>;
   }
 
-  // Grey text, not a yellow badge: three yellow badges a row made every row look
-  // broken. Still the attach control when the reader can act,
-  // dotted like "Not set up" on Applications; plain text otherwise.
   if (!onAttach) {
     return <span className="text-muted-foreground">{t("columns.notLinked")}</span>;
   }
@@ -123,8 +105,6 @@ function ApplicationCell({ database, applications, canOpenApplications, onAttach
   );
 }
 
-// Zero in grey: the header already says "Users", and "No users" in German was wide
-// enough to squeeze the Application column. The greyed-out phpMyAdmin flags it too.
 function UsersCell({ row }) {
   const t = useTranslations("databases");
   const count = row.original.users_count ?? 0;
@@ -139,7 +119,6 @@ function UsersCell({ row }) {
   return <span className="tabular-nums">{count}</span>;
 }
 
-// When the exports request failed, nothing is claimed.
 function BackupCell({ row, table }) {
   const t = useTranslations("databases");
   const { lastBackup, backupsUnknown } = table.options.meta;
@@ -169,8 +148,6 @@ function RowActionsCell({ row, table }) {
       phpmyadminSites={table.options.meta.phpmyadminSites}
       adminerSites={table.options.meta.adminerSites}
       showManage={false}
-      // The ⋯ menu, as on every list: the client buttons made the row ~1100px, so the
-      // table only fitted from 1440 (tables on a laptop).
       menu
       className="flex justify-end"
     />
@@ -178,8 +155,6 @@ function RowActionsCell({ row, table }) {
 }
 
 export function DatabasesTable(props) {
-  // One shared transition for search and paging, so the box spins and the table
-  // dims while the server answers.
   return (
     <NavTransitionProvider>
       <DatabasesList {...props} />
@@ -194,11 +169,9 @@ function DatabasesList({
   canManage = false,
   lastBackup = {},
   backupsUnknown = false,
-  // null when the lookup failed — see getPhpmyadminSite.
   phpmyadminSites = null,
   adminerSites = null,
   siteTypes = [],
-  // For the create dialog's site picker.
   applications = [],
   canOpenApplications = false,
   databaseCounts = null,
@@ -209,11 +182,8 @@ function DatabasesList({
   const setQuery = useSetQuery();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleting, setDeleting] = useState(null);
-  // The database whose site is being chosen, or null.
   const [attaching, setAttaching] = useState(null);
 
-  // Based on the server's engine list, not the current page, so the column
-  // does not appear and vanish while paging.
   const showEngine = engines.length > 1;
 
   const columns = [
@@ -222,12 +192,9 @@ function DatabasesList({
       ? [{ accessorKey: "engine", header: () => <SortHeader col="engine">{t("columns.engine")}</SortHeader>, meta: { sortKey: "engine", className: COMPACT }, cell: EngineCell }]
       : []),
     {
-      // The site link decides what gets backed up.
       id: "application",
       accessorFn: (row) => attachedApplication(row, applications)?.name ?? "",
       header: t("columns.application"),
-      // Wraps rather than truncating: with `max-w-0` the action buttons squeezed this
-      // column to 32px in Russian. Wrapped, it never drops below its longest word.
       meta: { className: "min-w-24 whitespace-normal" },
       cell: ({ row }) => (
         <ApplicationCell
@@ -248,14 +215,11 @@ function DatabasesList({
     {
       accessorKey: "users_count",
       header: () => <SortHeader col="users_count" descFirst>{t("columns.users")}</SortHeader>,
-      // Long headers wrap ("Пользователи"), so they do not set the column width.
       meta: { sortKey: "users_count", className: `${COMPACT} whitespace-normal` },
       cell: UsersCell,
     },
     {
       id: "lastBackup",
-      // Sorts on the dump's timestamp, so "Never" (0) sinks to the bottom
-      // ascending and rises to the top descending.
       accessorFn: (row) => lastBackup?.[row.id]?.at ?? 0,
       header: t("columns.lastExport"),
       meta: { className: `${COMPACT} whitespace-normal` },
@@ -268,7 +232,6 @@ function DatabasesList({
             id: "actions",
             enableSorting: false,
             header: () => <span className="sr-only">{t("actions")}</span>,
-      // Same placement as other lists: last column, fixed width, right-aligned.
             meta: { className: "w-12 text-right" },
             cell: RowActionsCell,
           },
@@ -276,7 +239,6 @@ function DatabasesList({
       : []),
   ];
 
-  // No running engine means create would fail before it started.
   const usable = engines.filter((engine) => engine.running);
   const createReason = !canManage
     ? DENIED
@@ -293,8 +255,7 @@ function DatabasesList({
     </ReasonTooltip>
   );
 
-  // `attached` has no control of its own (only the banner sets it), so it
-  // must count as a filter or an empty result reads as "no databases".
+  // attached has no control of its own, so count it as a filter.
   const onlyUnlinked = searchParams.get("attached") === "0";
   const isFiltered = Boolean(searchParams.get("search")) || onlyUnlinked;
 
@@ -302,8 +263,6 @@ function DatabasesList({
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-48 flex-1 flex-wrap items-center gap-2">
         <SearchInput placeholder={t("searchPlaceholder")} />
-        {/* The one filter with no control of its own, so it is shown with a
-            way to clear it. */}
         {onlyUnlinked ? (
           <span className="flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs">
             <FilterX className="size-3.5 shrink-0 text-warning" />
@@ -350,10 +309,7 @@ function DatabasesList({
           )}
         </ListCard>
       ) : (
-        // Below 1440 the rows are cards of their own, so the list drops its frame there.
         <ListCard from="c900" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
-          {/* 1440 is measured: seven columns plus the sidebar first fit there.
-              The cards carry every field, so using them wider loses nothing. */}
           <div className="@min-[900px]/page:hidden">
             <DatabasesCards
               databases={data}

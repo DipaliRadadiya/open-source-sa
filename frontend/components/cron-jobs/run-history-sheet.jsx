@@ -19,15 +19,12 @@ import { timezoneLabel } from "@/lib/format/timezone";
 
 const POLL_MS = 5000;
 
-// The job's latest runs with what each printed, read from its log on open.
 export function RunHistorySheet({ job, open, onOpenChange, canViewLogs = false }) {
   const t = useTranslations("cronJobs.history");
-  // { runs, timezone } | { error } | null while the first read is out.
   const [state, setState] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Resolves to the next state, or null when aborted; state is set only in callbacks, never
-  // synchronously inside an effect.
+  // State is only set in callbacks, never synchronously in an effect.
   const request = useCallback(
     (signal) =>
       getCronjobRuns(job.id, { signal }).then(
@@ -35,7 +32,6 @@ export function RunHistorySheet({ job, open, onOpenChange, canViewLogs = false }
           const parsed = cronjobRunsResponseSchema.safeParse(data);
           return parsed.success ? parsed.data : { error: t("failed") };
         },
-        // An unreadable log is a 500 with a reference, never an empty list: say so.
         (error) => (signal?.aborted ? null : { error: apiMessage(error, t("failed")) }),
       ),
     [job.id, t],
@@ -58,7 +54,6 @@ export function RunHistorySheet({ job, open, onOpenChange, canViewLogs = false }
     return () => controller.abort();
   }, [open, request]);
 
-  // A run still going is re-read until it ends; nothing polls otherwise.
   const anyRunning = state?.runs?.some((run) => run.status === "running");
   useEffect(() => {
     if (!open || !anyRunning) return undefined;
@@ -98,7 +93,6 @@ export function RunHistorySheet({ job, open, onOpenChange, canViewLogs = false }
             </Button>
             {canViewLogs && job.log_key ? (
               <Button asChild variant="ghost" size="sm">
-                {/* New tab: this leaves Cron Jobs for the server-wide Logs page. */}
                 <Link href={`/logs?source=${encodeURIComponent(job.log_key)}`} target="_blank" rel="noreferrer">
                   <ScrollText className="size-4" aria-hidden />
                   {t("fullLog")}

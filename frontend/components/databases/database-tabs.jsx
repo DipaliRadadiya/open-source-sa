@@ -6,10 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// `replaceState`, not a route change: sections are loaded, and Back should return to the list.
 const VALUES = ["overview", "users", "tables", "exports", "backups"];
-// Old tab values still appear in saved links. `backups` was the exports tab's name
-// until scheduled backups of a database arrived; it now opens those.
 const LEGACY = {};
 
 export function DatabaseTabs({ overview, users, tables, exports: exportsNode, backups: backupsNode, counts, initial }) {
@@ -18,8 +15,6 @@ export function DatabaseTabs({ overview, users, tables, exports: exportsNode, ba
     const wanted = LEGACY[initial] ?? initial;
     return VALUES.includes(wanted) ? wanted : "overview";
   });
-  // A link to this page with another `?tab=` (e.g. the import card's "Open Users") renders
-  // the same component again, so the open tab follows the URL, not only the first render.
   const [seenInitial, setSeenInitial] = useState(initial);
   if (initial !== seenInitial) {
     setSeenInitial(initial);
@@ -28,7 +23,6 @@ export function DatabaseTabs({ overview, users, tables, exports: exportsNode, ba
   }
 
   const sections = [
-    // Connection details and the facts first: connecting an application is the main task.
     { value: "overview", label: t("overview"), count: null, node: overview },
     { value: "users", label: t("users"), count: counts.users, node: users },
     { value: "tables", label: t("tables"), count: counts.tables, node: tables },
@@ -46,8 +40,6 @@ export function DatabaseTabs({ overview, users, tables, exports: exportsNode, ba
   return (
     <div className="space-y-4">
       <Tabs value={tab} onValueChange={select} className="gap-4">
-        {/* Scrolls rather than wraps, like the Settings tab bar; ScrollFade
-            signals more content to the side. */}
         <ScrollFade className="-mx-1 px-1 pb-1">
           <TabsList className="!h-auto w-fit gap-1 p-1">
             {sections.map((section) => (
@@ -57,7 +49,6 @@ export function DatabaseTabs({ overview, users, tables, exports: exportsNode, ba
                 className="!h-auto gap-2 px-4 py-2"
               >
                 {section.label}
-                {/* Zero is shown too: "Users 0" means nothing can connect. */}
                 {section.count === null ? null : (
                   <Badge variant="secondary" className="ml-1.5 font-normal tabular-nums">
                     {section.count}
@@ -68,15 +59,12 @@ export function DatabaseTabs({ overview, users, tables, exports: exportsNode, ba
           </TabsList>
         </ScrollFade>
 
-        {/* Inside real tab panels so each tab's aria-controls resolves. Only
-            the active panel mounts. */}
         {sections.map((section) => (
           <TabsContent key={section.value} value={section.value}>
             {section.node}
           </TabsContent>
         ))}
       </Tabs>
-
 
     </div>
   );

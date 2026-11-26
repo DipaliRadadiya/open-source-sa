@@ -2,7 +2,6 @@ import { useTranslations } from "next-intl";
 import { CircleCheck, TriangleAlert, CircleMinus, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-// `degraded` (some processes down) is deliberately a warning, not success.
 const STATE_META = {
   running: { icon: CircleCheck, variant: "success" },
   degraded: { icon: TriangleAlert, variant: "warning" },
@@ -23,7 +22,6 @@ export function WorkerStatusBadge({ worker, busyAction }) {
 
   const meta = STATE_META[worker.state] ?? STATE_META.stopped;
   const Icon = meta.icon;
-  // Process counts for running/degraded, skipped for single-process workers.
   const showCount = worker.processes > 1 && (worker.state === "running" || worker.state === "degraded");
 
   return (
@@ -42,7 +40,6 @@ export function WorkerStatusBadge({ worker, busyAction }) {
           {t("disabledTag")}
         </Badge>
       ) : null}
-      {/* Flagged only when OFF, the risky non-default. */}
       {!worker.restart_on_deploy ? (
         <Badge variant="warning" className="font-normal">
           {t("noRestartOnDeployTag")}

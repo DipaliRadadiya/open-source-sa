@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { AttachDatabaseDialog } from "@/components/applications/attach-database-dialog";
 import { CreateDatabaseDialog } from "@/components/databases/create-database-dialog";
 
-// Opens the attached database; otherwise attaches a spare or creates one, in a dialog.
 export function DatabaseCardActions({
   application,
   databases = [],
@@ -33,7 +32,6 @@ export function DatabaseCardActions({
     );
   }
 
-  // Nothing to attach, so offer creating one instead of an empty picker.
   if (unattached.length === 0) {
     return (
       <>

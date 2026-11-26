@@ -12,15 +12,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
-// The API adopts everything found of the ticked types, with no per-item selection,
-// so the exact count and composition are stated right above the button.
 export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPresent, pending, onConfirm }) {
   const t = useTranslations("sync");
 
   const deferred = useMemo(() => deferredTypes(items), [items]);
 
-  // Only types with something to add, plus those read after the applications:
-  // a type present only as skipped rows (the panel's own site) would be a ticked box adding 0.
   const adoptable = useMemo(
     () =>
       typesPresent.filter(
@@ -32,14 +28,11 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
     [typesPresent, items, deferred],
   );
 
-  // null means "everything adoptable". Not `useState(adoptable)`: the dialog mounts
-  // before its items arrive, which would freeze an empty selection.
   const [picked, setPicked] = useState(null);
   const selected = picked ?? adoptable;
   const [includeFirewall, setIncludeFirewall] = useState(false);
 
-  // The component stays mounted within a scan run, so Cancel must discard the selection.
-  // Reset on close, not open, so the checkboxes do not visibly repaint.
+  // Reset on close, not open, so the checkboxes don't visibly repaint.
   function handleOpenChange(next) {
     if (!next) {
       setPicked(null);
@@ -50,8 +43,6 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
 
   const hasFirewall = typesPresent.includes(FIREWALL_RESOURCE_TYPE);
 
-  // Computed ONCE for both the request and the summary. Firewall rules have no tick-box
-  // (the warning checkbox gates them), so `selected` never contains them.
   const adopting = useMemo(
     () =>
       withImplicitParents(
@@ -61,10 +52,8 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
     [selected, includeFirewall, adoptable],
   );
 
-  // `adopting`, not `selected` — the same list the count and the request use.
   const unmet = useMemo(() => unmetDependencies(adopting), [adopting]);
 
-  // A type whose parent is unticked is skipped whole by the backend, so it adds nothing.
   const plan = useMemo(() => {
     const blocked = new Set(unmet.map((entry) => entry.type));
     return adoptionPlan({
@@ -77,7 +66,6 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
 
   function toggleType(type, checked) {
     setPicked((current) => {
-      // First tick: start from what is currently shown, not from nothing.
       const base = current ?? adoptable;
       return checked ? [...base, type] : base.filter((entry) => entry !== type);
     });
@@ -118,7 +106,6 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
                   htmlFor={`adopt-type-${type}`}
                   className="flex flex-wrap items-center gap-x-1.5 font-normal"
                 >
-                  {/* Wraps whole, below the name, rather than squeezing it onto two lines. */}
                   <span className="whitespace-nowrap">{t(`types.${type}`)}</span>
                   <span className="text-xs whitespace-nowrap text-muted-foreground">
                     {deferred.includes(type)
@@ -131,8 +118,7 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
           </div>
         </fieldset>
 
-        {/* Set apart and never ticked by default: adopting a rule set can lock
-            someone out, which is why the backend has a separate flag for it. */}
+        {/* Never ticked by default: adopting firewall rules can lock someone out. */}
         {hasFirewall ? (
           <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 p-3">
             <Checkbox
@@ -152,8 +138,6 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
           </div>
         ) : null}
 
-        {/* Unticking a parent type makes every child fail with `requires_…`;
-            name them so it is a visible choice. */}
         {unmet.length ? (
           <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-warning">
             <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />

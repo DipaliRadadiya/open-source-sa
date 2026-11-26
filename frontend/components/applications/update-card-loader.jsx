@@ -3,12 +3,8 @@ import { UpdateCard } from "@/components/applications/update-card";
 import { SkCard } from "@/components/ui/skeleton-kit";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Streamed on its own: a first visit can wait on a release lookup, and the rest of the
-// dashboard must not wait with it.
 export async function UpdateCardLoader({ appId, appTitle, canManage, backupsHref }) {
   const result = await getApplicationUpdate(appId);
-  // Unsupported types have no card. A failed read hides it too: the card is an offer,
-  // and a broken offer helps nobody; the version facts live in the files, not here.
   if (result.failed || !result.data?.update?.supported) return null;
 
   return (

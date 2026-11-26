@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 
 const CHIP = "flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-2 py-1";
 
-// Worst first, so the lead line is the most important issue.
 const RANK = { normal: 0, high: 1, review: 2 };
 
 const TONE = {
@@ -38,7 +37,6 @@ export function HealthSummary({ engine, status, processes = [] }) {
   const format = useFormatter();
   const { tone, issues, recentlyRestarted } = assessHealth({ status, processes });
 
-  // No status means the check did not answer: say so instead of "Healthy".
   if (!status) {
     return (
       <Card className="gap-0 overflow-hidden py-0">
@@ -62,7 +60,6 @@ export function HealthSummary({ engine, status, processes = [] }) {
   const styles = TONE[tone];
   const Icon = styles.icon;
 
-  // The worst issue sits beside the verdict; the rest go in the strip below.
   const ranked = [...issues].sort((a, b) => RANK[b.tone] - RANK[a.tone]);
   const [lead, ...rest] = ranked;
   const issueText = (issue) =>
@@ -76,7 +73,6 @@ export function HealthSummary({ engine, status, processes = [] }) {
 
   return (
     <Card className={cn("gap-0 overflow-hidden py-0", styles.card)}>
-      {/* Slim: a verdict line, not a hero. */}
       <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span
@@ -111,8 +107,6 @@ export function HealthSummary({ engine, status, processes = [] }) {
           </div>
         </div>
 
-        {/* Engine, state and uptime as three matching white chips: a green "Running" pill
-            vanished on the green healthy card (Krishna, 7 Oct). */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className={CHIP}>
             <Database className="size-3.5 text-muted-foreground" aria-hidden />

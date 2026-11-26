@@ -24,7 +24,6 @@ import { UserPasswordDialog } from "@/components/databases/user-password-dialog"
 import { DeleteUserDialog } from "@/components/databases/delete-user-dialog";
 import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 
-/** The panel's own account; the API refuses to remove it. */
 const PANEL_PREFIX = "panel_";
 
 export const ACCESS_TONE = {
@@ -55,8 +54,6 @@ export function DatabaseUsers({ database, canManage, remoteUsers = true }) {
     <DisabledReasonProvider denied={!canManage}>
       <>
         <Card className="gap-0 overflow-hidden py-0">
-          {/* flex-wrap plus a minimum width on the text, so the button drops to
-              its own row instead of squeezing the sentence. */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
             <div className="flex min-w-40 flex-1 items-center gap-3">
               <CardIcon icon={Users} />
@@ -143,11 +140,8 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
 
   const access = user.connection_preference ?? "localhost";
 
-  // No flex-wrap: on a phone the actions button would drop onto its own line.
-  // min-w-0 on the text side lets it shrink instead.
   return (
     <div className="flex items-start gap-3 py-4">
-      {/* The initial, so a list of similar generated names is easier to scan. */}
       <span
         aria-hidden
         className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary uppercase"
@@ -157,11 +151,8 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
       <div className="min-w-0 flex-1 space-y-2.5">
         <div className="flex flex-wrap items-center gap-2 pt-1.5">
           <span className="min-w-0 font-mono text-sm font-medium break-all">{user.username}</span>
-          {/* Config files want the username on its own. */}
           <CopyButton value={user.username} label={t("copyUsername")} />
 
-          {/* Colour carries the risk: local is safe, one address opens a
-              firewall hole, `anywhere` opens the port to the internet. */}
           <Badge variant={ACCESS_TONE[access] ?? "muted"} className="font-normal">
             {tAccess(`${access}.label`)}
             {access === "remote" && user.host ? ` · ${user.host}` : ""}
@@ -174,17 +165,14 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
           ) : null}
         </div>
 
-        {/* Masked on screen; Copy carries the password. */}
         {user.connection_string ? (
           <div className="space-y-1.5">
             <p className="text-xs text-muted-foreground">{tc("connectionString")}</p>
             <ConnectionString value={user.connection_string} variant="inline" />
           </div>
         ) : user.password_known === false ? (
-          /* Withheld for users adopted from a migrated server: the engine keeps only a hash. */
           <p className="text-xs text-muted-foreground">{t("passwordUnknown")}</p>
         ) : !canManage && user.password_known ? (
-          // Withheld from a role without `database` manage.
           <p className="text-xs text-muted-foreground">{t("passwordWithheld")}</p>
         ) : null}
       </div>
@@ -196,7 +184,6 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
             <span className="sr-only">{t("actions")}</span>
           </Button>
         </DropdownMenuTrigger>
-        {/* Wide enough that "Change password" stays on one line. */}
         <DropdownMenuContent align="end" className="min-w-44">
           <DropdownMenuItem onClick={onPassword}>
             <KeyRound className="size-4" />
@@ -206,8 +193,6 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
             <Pencil className="size-4" />
             {t("edit")}
           </DropdownMenuItem>
-          {/* The reason is a tooltip, not the label (which would be clipped), as in the
-              admin and system-user menus. */}
           <MenuItemHint hint={isPanel ? t("cannotDeletePanel") : null}>
             <DropdownMenuItem
               variant="destructive"

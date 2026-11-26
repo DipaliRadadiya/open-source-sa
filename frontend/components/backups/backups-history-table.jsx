@@ -23,8 +23,6 @@ import { backupTypeLabel } from "@/lib/backups/type-label";
 import { backupSubject } from "@/lib/backups/backup-subject";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-/* Every backup that has run, as the same table the overview uses. */
-
 function SiteCell({ row }) {
   const t = useTranslations("backups.history");
   const backup = row.original;
@@ -49,7 +47,6 @@ function SiteCell({ row }) {
   );
 }
 
-// The line under the name: the site's domain, or what kind of thing this was.
 export function subjectLine(subject, t) {
   if (subject.kind === "database") return subject.archived ? t("subject.databaseDeleted") : t("subject.database");
   return subject.archived ? t("subject.applicationDeleted") : (subject.domain ?? "");
@@ -72,18 +69,14 @@ function StatusCell({ row, table }) {
       ? backupFailureText(backup, t("unknownReason"))
       : null;
 
-  // One width on every list; badges wrap and the reason is clamped to two
-  // lines, with the full text on hover/focus.
   const width = "w-32 max-w-32";
 
   return (
     <div className={cn(width, "min-w-0 space-y-1")}>
       <div className="flex flex-wrap items-center gap-1.5">
         <BackupStatusBadge backup={backup} />
-        {/* A site's own page hides the Site column, which carries this badge otherwise. */}
         {backup.is_safety && !table.options.meta?.showSite ? <SafetyBadge /> : null}
       </div>
-      {/* `truncate` without a bounded width lets a long reason widen the auto-layout table. */}
       {reason ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -110,24 +103,20 @@ function TypeCell({ row }) {
   );
 }
 
-// Enough to match an object in a bucket listing; the full value is what gets copied.
 function uidFragment(uid) {
   const text = String(uid);
   return text.length > 8 ? `${text.slice(0, 8)}…` : text;
 }
 
-// The backup's own target, not the site's current one, which may have changed since.
 function DestinationCell({ row }) {
   const t = useTranslations("backups.history");
   const { storage_destination_name: name, uid } = row.original;
   if (!name) return <span className="text-sm text-muted-foreground">—</span>;
-  // `title` suffices: this column only renders on pointer-sized screens. Never the full uid: 36 mono chars overflow.
   return (
     <span className="flex min-w-0 flex-col gap-0.5">
       <HoverHint content={name}><span className="truncate text-sm">
         {name}
       </span></HoverHint>
-      {/* A failed upload still has a uid that matches nothing. Same predicate as Download. */}
       {uid && backupHasArchive(row.original.status) ? (
         <span className="flex min-w-0 items-center gap-0.5">
           <HoverHint content={uid}><span className="truncate font-mono text-xs text-muted-foreground">
@@ -151,8 +140,6 @@ function WhenCell({ row }) {
       <p className="truncate text-sm tabular-nums">{backup.created_at_human ?? backup.created_at}</p>
       <p className="truncate text-xs tabular-nums text-muted-foreground">
         {duration}
-        {/* Inside a `history` container narrower than 1000px the Size column folds in here,
-            so German and Russian fit a 1280 screen. Outside one it never shows. */}
         <span className="hidden @max-[1000px]/history:inline">
           {duration ? " · " : null}
           {sizeText(backup, t, format)}
@@ -167,7 +154,6 @@ function SizeCell({ row }) {
   const format = useFormatter();
   const { size_bytes: size } = row.original;
 
-  // A finished backup has a size; a running one has upload progress.
   const progress = uploadProgress(row.original, t, format);
 
   return (
@@ -183,7 +169,6 @@ function sizeText(backup, t, format) {
     : (uploadProgress(backup, t, format) ?? sizeNote(backup, t));
 }
 
-// Null if not reported yet; a bare byte count when the total is unknown.
 export function uploadProgress(backup, t, format) {
   const done = backup.bytes_transferred;
 
@@ -199,15 +184,13 @@ export function uploadProgress(backup, t, format) {
   });
 }
 
-/** Why there is no size: still in flight, or failed with no archive. */
 export function sizeNote(backup, t) {
   if (BACKUP_IN_FLIGHT.includes(backup.status)) return t("sizePending");
   if (backup.status === "failed") return t("sizeNone");
   return t("sizeUnknown");
 }
 
-// Retry dispatches the same job as "Back up now" and creates a NEW row, so anything
-// waiting on a started run must treat the two identically.
+// Retry creates a NEW row, same as Back up now.
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");
@@ -227,8 +210,6 @@ function ActionsCell({ row, table }) {
   } = table.options.meta;
   const backup = row.original;
 
-  // Download is offered in every state that has an archive. It needs
-  // `backup,manage` like restore: the archive holds every file and a database dump.
   const download = <DownloadBackupButton backup={backup} canDownload={canDownload} />;
   const retryBlocked = retryBlockedFor?.(backup) ?? null;
 
@@ -256,12 +237,10 @@ function ActionsCell({ row, table }) {
     return (
       <div className="flex items-center justify-end gap-2">
         {download}
-        {/* Only a target's newest backup: an older failed row is history (see retry-eligibility). */}
         {canRun && (retryable?.(backup) ?? true) ? (
           <Button
             size="sm"
             variant="outline"
-            // Same width as Restore, so the download icons line up down the column.
             className="min-w-28"
             disabled={busyId === backup.id || Boolean(retryBlocked)}
             disabledReason={retryBlocked}
@@ -284,7 +263,6 @@ function ActionsCell({ row, table }) {
   return (
     <div className="flex items-center justify-end gap-2">
       {download}
-      {/* Reason in the tooltip (opens on tap too), so the buttons stay aligned. */}
       <ReasonTooltip reason={blocker}>
         <Button
           size="sm"
@@ -335,27 +313,16 @@ export function BackupsHistoryTable({
   onRetry,
   onClear,
   busyId,
-  // `(backup) => reason | null`. Per row because the server-wide list spans
-  // every site: one site's run must not disable Retry on another's rows.
   retryBlockedFor = null,
-  // `(backup) => boolean`: whether a failed row still offers Retry. Absent, every failed row does.
   retryable = null,
-  // Hides the Site column on a site's own page.
   showSite = true,
-  // Its header; "Database" when the list is filtered to one.
   siteHeader,
-  // "database" on a database's own Backups tab, which restores into it.
   subject = "application",
-  // There, restoring is the database's permission but downloading is still `backup`.
   canDownload,
-  // Off on the Archived tab.
   showRestore = true,
   emptyMessage,
   emptyIcon,
-  // Set when the caller already wraps this in a Card.
   bare = false,
-  // Deleting also removes the archive from object storage, so it needs the
-  // restore permission, not the schedule one.
   canDelete = false,
   canClear = false,
   onDeleted,
@@ -363,11 +330,9 @@ export function BackupsHistoryTable({
   const t = useTranslations("backups.history");
   const [selection, setSelection] = useState({});
 
-  // Keyed by backup id, not row index, so a refetch that reorders the list
-  // cannot change which rows get deleted.
+  // Keyed by id so a reorder can't change which rows get deleted.
   const selected = backups.filter((backup) => selection[String(backup.id)]);
   const [confirming, setConfirming] = useState(false);
-  // The API loads the destination relation for the whole page or none of it.
   const showDestination = backups.some(
     (backup) => backup.storage_destination_name !== undefined,
   );
@@ -385,25 +350,16 @@ export function BackupsHistoryTable({
       ? {
           accessorKey: "application_name",
           header: siteHeader ?? t("columns.site"),
-          // A share, not a minimum: `min-w-48` let this column take all the slack and
-          // squeezed Type and Size onto two lines.
           meta: { className: showDestination ? "w-[24%]" : "w-[30%]" },
           cell: SiteCell,
         }
       : null,
-    // Sized to the badge, not reserved, to leave room for the actions column.
-    // Wider without the Site column: the safety badge sits here then, and is 175px in French.
     { accessorKey: "status", header: t("columns.status"), meta: { className: showSite ? "w-[17%]" : "w-[22%]" }, cell: StatusCell },
-    // One line: "Files and / database" read as two values.
     { id: "type", header: t("columns.type"), meta: { className: "w-[16%] whitespace-nowrap" }, cell: TypeCell },
-    // Only when the API sends it: the field is absent (not null) on older
-    // backends, and an always-empty column would look like a load failure.
     showDestination
       ? {
           id: "destination",
           header: t("columns.destination"),
-          // Hidden below 2xl on the server-wide list only: with the Site column
-          // it overflows the card at common laptop widths.
           meta: { className: cn("max-w-40", showSite && "hidden 2xl:table-cell") },
           cell: DestinationCell,
         }
@@ -418,8 +374,6 @@ export function BackupsHistoryTable({
     {
       id: "actions",
       header: () => <span className="sr-only">{t("columns.actions")}</span>,
-      // Fits the download button beside the state action; the blocked reason
-      // lives in a tooltip, so no text shares this column.
       meta: { className: "w-48 text-right" },
       cell: ActionsCell,
     },
@@ -427,13 +381,10 @@ export function BackupsHistoryTable({
 
   return (
     <>
-      {/* Only once something is selected. */}
       {canDelete && selected.length > 0 ? (
         <div
           className={cn(
             "flex flex-wrap items-center justify-between gap-3 bg-muted/40",
-            // `bare`: the table sits in an unpadded CardContent, so the bar is
-            // full-bleed with a bottom rule, matching the queued-run strip.
             bare
               ? "border-b px-5 py-3"
               : "mb-3 rounded-lg border px-4 py-2.5",
@@ -488,7 +439,6 @@ export function BackupsHistoryTable({
         onOpenChange={setConfirming}
         backups={selected}
         onDeleted={(ids, failedIds = []) => {
-          // Keep the refusals selected so a partial failure can be acted on again.
           setSelection(Object.fromEntries(failedIds.map((id) => [String(id), true])));
           onDeleted?.(ids);
         }}

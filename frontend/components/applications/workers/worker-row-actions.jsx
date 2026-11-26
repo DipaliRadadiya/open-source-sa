@@ -31,7 +31,6 @@ export function WorkerRowActions({ worker, appId, presets, workers = [], canMana
         <DropdownMenuContent align="end" className="w-44" onCloseAutoFocus={(e) => e.preventDefault()}>
           {worker.log_identifier && canViewLogs ? (
             <DropdownMenuItem asChild>
-              {/* New tab: the server-wide Logs page is outside this application. */}
               <Link
                 href={`/logs?source=${encodeURIComponent(worker.log_identifier)}`}
                 target="_blank"
@@ -43,7 +42,6 @@ export function WorkerRowActions({ worker, appId, presets, workers = [], canMana
               </Link>
             </DropdownMenuItem>
           ) : worker.log_identifier ? (
-            // The Logs page needs its own grant; explain instead of linking.
             <MenuItemHint hint={t("actions.viewLogsNoPermission")}>
               <DropdownMenuItem disabled>
                 <ScrollText className="size-4" />

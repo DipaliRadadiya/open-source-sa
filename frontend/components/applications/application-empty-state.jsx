@@ -8,7 +8,6 @@ import { useBranding } from "@/components/branding-provider";
 const STEP_ICONS = [CircleDot, CheckCircle2, Globe2];
 const STEPS = ["choose", "configure", "provision"];
 
-// Client code via its only caller, the applications table.
 export function ApplicationEmptyState({ canManage = false }) {
   const t = useTranslations("applications");
   const { name: brand } = useBranding();

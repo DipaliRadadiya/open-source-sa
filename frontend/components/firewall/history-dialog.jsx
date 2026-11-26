@@ -16,8 +16,6 @@ import { readPerPage } from "@/lib/tables/per-page-cookie";
 import { apiMessage } from "@/lib/api/error-message";
 import { PER_PAGE_OPTIONS } from "@/lib/schemas/user";
 
-// `everyone` (the `activity_log` permission) reads the server log; without it only
-// the reader's own rows are shown, and the dialog says so.
 export function HistoryDialog({ everyone = false, variant = "outline" }) {
   const t = useTranslations("firewall");
   const paginationT = useTranslations("pagination");
@@ -29,7 +27,6 @@ export function HistoryDialog({ everyone = false, variant = "outline" }) {
     failed: false,
     entries: [],
     meta: null,
-    // "Could not load" and "you may not see this" are different answers on a security screen.
     status: null,
   });
 
@@ -45,7 +42,6 @@ export function HistoryDialog({ everyone = false, variant = "outline" }) {
         response.data,
       );
       if (!parsed.success) {
-        // The request worked; the payload is not what this screen expects.
         setState({ loading: false, failed: true, entries: [], meta: null, status: null, failure: "shape" });
         return;
       }
@@ -63,7 +59,6 @@ export function HistoryDialog({ everyone = false, variant = "outline" }) {
         entries: [],
         meta: null,
         status: error?.response?.status ?? null,
-        // Fetched on the client, not through `read()`, so the message comes from the axios error.
         message: apiMessage(error, null),
       });
     }
@@ -126,7 +121,6 @@ export function HistoryDialog({ everyone = false, variant = "outline" }) {
               {state.entries.map((entry) => (
                 <li key={entry.id} className="flex items-start justify-between gap-3 py-2.5">
                   <div className="min-w-0 space-y-1">
-                    {/* `description` is the server's finished sentence; the humanized verb is a fallback. */}
                     <p className="text-sm leading-snug">
                       {entry.description || humanizeActivity(entry.action)}
                     </p>
@@ -144,10 +138,8 @@ export function HistoryDialog({ everyone = false, variant = "outline" }) {
                 </li>
               ))}
             </ul>
-            {/* Kept while the history is longer than the smallest option, so the way back to 10 stays. */}
             {state.meta?.last_page > 1 || state.meta?.total > PER_PAGE_OPTIONS[0] ? (
               <div className="flex flex-col gap-3">
-                {/* The dialog is capped at `sm:max-w-lg`, so viewport `sm:flex-row` would squeeze the pager. */}
                 <PerPageSelect
                   label={paginationT("perPage")}
                   value={String(perPage)}

@@ -24,7 +24,6 @@ import { blockersAreFixable } from "@/lib/applications/blockers";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { dockerMemoryText } from "@/lib/docker/memory-text";
 
-// Category glyph for a type with no logo; types with artwork use SiteTypeLogo.
 function TypeIcon({ type, className }) {
   const Icon =
     type.method === "git"
@@ -35,7 +34,6 @@ function TypeIcon({ type, className }) {
   return <Icon className={className} aria-hidden />;
 }
 
-// Logos get no tile; only the fallback glyph keeps one.
 function TypeTile({ type, dimmed, size = "h-9 w-14" }) {
   if (type.recipe?.icon_data_uri || siteTypeLogo(type.name)) {
     return <SiteTypeLogo name={type.name} iconDataUri={type.recipe?.icon_data_uri} size={size} className={cn(dimmed && "opacity-50")} />;
@@ -52,8 +50,6 @@ function TypeTile({ type, dimmed, size = "h-9 w-14" }) {
   );
 }
 
-// A short reason for a greyed card, or null to keep the API's full sentence (too long
-// for a 190px card). Unrecognised codes keep the server's sentence.
 function blockerItem(blocker, type, { t, tEngines, format }) {
   if (blocker?.kind === "database") {
     const names = engineNames(blocker.engines ?? acceptedEngines(type) ?? [], tEngines);
@@ -64,12 +60,10 @@ function blockerItem(blocker, type, { t, tEngines, format }) {
 
   const name = RUNTIME_NAMES[blocker.runtime];
   if (!name) return null;
-  // Name `suggest`, not the range: the range's lower bound may be end-of-life and hidden.
   if (blocker.suggest) return `${name} ${blocker.suggest}`;
   return blocker.label ? `${name} ${blocker.label}` : name;
 }
 
-/** Engine keys as the names the databases pages already use. */
 function engineNames(engines, tEngines) {
   return (Array.isArray(engines) ? engines : []).map((engine) =>
     tEngines.has(`engines.${engine}`) ? tEngines(`engines.${engine}`) : engine,
@@ -78,8 +72,6 @@ function engineNames(engines, tEngines) {
 
 const RUNTIME_NAMES = { php: "PHP", node: "Node" };
 
-// Every blocker in one line so no errand is missed. Null when any blocker has no short
-// form, so the server's sentence is shown.
 function blockerLine(type, { t, tEngines, format }) {
   const blockers = Array.isArray(type?.blockers) ? type.blockers : [];
   if (blockers.length === 0) return legacyBlockerLabel(type, { t, tEngines, format });
@@ -90,11 +82,8 @@ function blockerLine(type, { t, tEngines, format }) {
   return t("form.needs", { items: format.list(items, { type: "conjunction" }) });
 }
 
-// The same line for payloads without a `blockers` array.
 function legacyBlockerLabel(type, { t, tEngines, format }) {
   if (type?.unavailable_code === "database") {
-    // Name the accepted engines (SQL pair is the fallback for older APIs); the
-    // disjunction list gives each locale's own "or".
     const engines = acceptedEngines(type) ?? [];
     const names = engines.map((engine) =>
       tEngines.has(`engines.${engine}`) ? tEngines(`engines.${engine}`) : engine,
@@ -105,7 +94,6 @@ function legacyBlockerLabel(type, { t, tEngines, format }) {
   }
   if (type?.unavailable_code !== "runtime") return null;
 
-  // Include the range so the reader knows upgrade vs install. `rangeLabel` returns "" when unbounded.
   if (type.php_version_range) {
     const range = rangeLabel(type.php_version_range);
     return range ? t("form.blockedPhpVersion", { range }) : t("form.blockedPhp");
@@ -117,7 +105,6 @@ function legacyBlockerLabel(type, { t, tEngines, format }) {
   return null;
 }
 
-/** One sentence per blocker, stacked, for the card's tooltip. */
 function BlockerReasons({ type }) {
   const reasons = (Array.isArray(type?.blockers) ? type.blockers : [])
     .map((blocker) => blocker.reason)
@@ -142,12 +129,10 @@ const RUNTIME_FIX = {
 
 const DATABASE_FIX = { href: "/databases", label: "form.installDatabaseEngine" };
 
-// Every fix link, so a type with two blockers shows both.
 function blockerFixes(type) {
   const blockers = Array.isArray(type?.blockers) ? type.blockers : [];
 
   if (blockers.length === 0) {
-    // The pre-`blockers` shape, kept for anything not fed by the create page.
     if (type?.unavailable_code === "database") return [DATABASE_FIX];
     if (type?.unavailable_code !== "runtime") return [];
     if (type.php_version_range) return [RUNTIME_FIX.php];
@@ -159,14 +144,11 @@ function blockerFixes(type) {
     .map((blocker) => {
       if (blocker.kind === "database") return DATABASE_FIX;
       if (blocker.kind === "runtime") return RUNTIME_FIX[blocker.runtime] ?? null;
-      // A web-server refusal has nothing to install, so no link.
       return null;
     })
     .filter(Boolean);
 }
 
-// A logo grid while nothing is chosen, collapsing to one row with Change once chosen.
-// Unavailable types stay visible, greyed, with their reason and fix link.
 export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder, renderNoMatch }) {
   const t = useTranslations("applications");
   const tg = useTranslations("applications.guided");
@@ -187,10 +169,8 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
   const groups = useMemo(() => groupsWithTypes(types), [types]);
   const popularCount = useMemo(() => types.filter((type) => type.popular).length, [types]);
 
-  // `popular` is a backend flag, not usage data; All when nothing is flagged.
   const [activeGroup, setActiveGroup] = useState(() => (popularCount ? "popular" : "all"));
 
-  // Uses the chip's own label, so the empty state matches the visible words.
   const groupLabel = (key) =>
     t(`form.category${key.charAt(0).toUpperCase()}${key.slice(1)}`);
 
@@ -206,7 +186,6 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
         ? Boolean(type.popular)
         : groupForType(type) === activeGroup;
 
-  // Chip and search narrow together, so the grid never contradicts the active chip.
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     const pool = ordered.filter(inGroup);
@@ -214,7 +193,6 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ordered, query, activeGroup]);
 
-  // Matches the chip is hiding; zero means no match anywhere.
   const hiddenByGroup = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term || filtered.length) return 0;
@@ -223,7 +201,6 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
 
   const selectedType = types.find((type) => type.name === value);
 
-  // One entry per destination, not per card, and only for cards on screen.
   const fixes = useMemo(() => {
     const byHref = new Map();
     for (const type of filtered) {
@@ -235,7 +212,6 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
     return [...byHref.values()];
   }, [filtered]);
 
-  // Change clears the field: type-specific fields must not stay mounted under a half-made choice.
   if (selectedType) {
     return (
       <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-3">
@@ -266,15 +242,12 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
 
   return (
     <div className="space-y-3">
-      {/* Search first: with this many cards it is for people who know the name. */}
       <div className="relative">
         <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           ref={searchRef}
           value={query}
           onChange={(event) => {
-            // Typing searches every category: "glance" found nothing in Popular until
-            // "Search all categories" was clicked. A chip still narrows after.
             if (!query.trim() && event.target.value.trim() && activeGroup !== "all") setActiveGroup("all");
             setQuery(event.target.value);
           }}
@@ -297,11 +270,8 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
         ) : null}
       </div>
 
-      {/* Buckets from type-categories.js; empty ones are not rendered. Chips, not Tabs:
-          they filter one grid rather than switching panels. */}
       {groups.length > 1 ? (
         <div className="flex flex-wrap gap-1.5">
-          {/* Popular first, All last. */}
           {[
             ...(popularCount ? [{ key: "popular", count: popularCount }] : []),
             ...groups,
@@ -329,15 +299,10 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
       ) : null}
 
       {filtered.length ? (
-        /* Container queries: the grid sits beside a 20rem summary panel, so the
-           viewport width says nothing about its room. */
         <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2 @3xl:grid-cols-3">
           {filtered.map((type) => {
             const disabled = !type.available;
-            // Blocked but choosable when every blocker is installable from here; Create
-            // stays refused until the server reports them present.
             const choosable = !disabled || blockersAreFixable(type);
-            // A `div`, not a disabled `button`: screen readers skip text in disabled buttons.
             const Card = choosable ? "button" : "div";
             const cardProps = choosable
               ? { type: "button", onClick: () => onChange(type.name) }
@@ -348,29 +313,23 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
                 key={type.name}
                 {...cardProps}
                 className={cn(
-                  // Logo beside the words, keeping cards two lines tall.
                   "flex w-full items-center gap-3 rounded-xl border bg-muted/40 p-2.5 text-left transition-colors",
-                  // Dashed means unchoosable; a choosable card must look pressable.
                   !choosable && "border-dashed",
                   choosable &&
                     "hover:border-primary/40 hover:bg-card hover:shadow-[0_1px_2px_rgb(0_0_0/0.04),0_2px_6px_rgb(0_0_0/0.05)] focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
                 )}
               >
-                {/* No "Popular" badge: the order already says it. */}
                 <TypeTile type={type} dimmed={!choosable} size="h-8 w-10" />
 
                 <span className={cn("min-w-0 flex-1")}>
-                  {/* TruncatedText offers the clipped rest on hover, only when clipped. */}
                   <TruncatedText
                     className={cn("text-sm font-medium", !choosable && "opacity-60")}
                   >
                     {type.title}
                   </TruncatedText>
-                  {/* On a blocked card the reason replaces the tagline. */}
                   {disabled && type.unavailable_reason ? (
                     <span className="mt-0.5 flex items-center gap-1 text-xs leading-4 text-warning">
                       <TriangleAlert className="size-3 shrink-0" />
-                      {/* The bubble shows one sentence per blocker, stacked, so none is skimmed. */}
                       <TruncatedText tooltip={<BlockerReasons type={type} />}>
                         {blockerLine(type, { t, tEngines, format }) ?? type.unavailable_reason}
                       </TruncatedText>
@@ -395,7 +354,6 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
       ) : query.trim() && !hiddenByGroup && renderNoMatch ? (
         renderNoMatch(query.trim())
       ) : (
-        /* Search matches only outside the active chip: name it and offer one click back. */
         <div className="rounded-xl border border-dashed px-3 py-8 text-center">
           <p className="text-sm text-muted-foreground">
             {hiddenByGroup
@@ -420,8 +378,6 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
         </div>
       )}
 
-      {/* Every fix link once, deduplicated by destination. Matched on
-          `unavailable_code`, which the API sends so it need not be inferred. */}
       {fixes.length ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
           {fixes.map((fix) => (

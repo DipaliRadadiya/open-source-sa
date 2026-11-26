@@ -40,9 +40,6 @@ import {
   Users,
 } from "lucide-react";
 
-// Every name the menus send today, bundled. DynamicIcon fetches each icon as its own
-// chunk and shows the fallback "?" until it arrives, so on a slow load or a new build
-// the whole sidebar flashed question marks.
 const ICONS = {
   "app-window": AppWindow,
   archive: Archive,
@@ -83,8 +80,6 @@ const ICONS = {
   users: Users,
 };
 
-// The backend sends a kebab-case Lucide icon name (e.g. "layout-dashboard"). A name not
-// in the map (a newer backend) still loads on demand; a missing one gets a neutral icon.
 export function NavIcon({ name, className = "size-4" }) {
   if (!name) return <CircleHelp className={className} />;
   const Icon = ICONS[name];
@@ -93,7 +88,6 @@ export function NavIcon({ name, className = "size-4" }) {
     <DynamicIcon
       name={name}
       className={className}
-      // Blank while it loads, not "?": a placeholder that looks like an icon reads as broken.
       fallback={() => <span className={className} aria-hidden />}
     />
   );

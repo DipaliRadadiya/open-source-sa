@@ -16,10 +16,9 @@ import { useCreateUser } from "@/components/admin/users/users-view";
 import { initials } from "@/lib/format/initials";
 import { UsersCards } from "@/components/admin/users/users-cards";
 
-
 const MAX_ROLE_BADGES = 2;
 
-// Cells at module level: inline cells would remount (losing dialog state) every render.
+// Cells at module level: inline cells remount and lose dialog state.
 
 function NameCell({ row, table }) {
   const t = useTranslations("users");
@@ -34,8 +33,6 @@ function NameCell({ row, table }) {
           {t("you")}
         </Badge>
       ) : null}
-      {/* Account type as a badge beside an administrator's name, not a column of its own: with
-          headers on one line the table did not fit a laptop in Russian (19 Nov). */}
       {row.original.is_admin ? <Badge>{t("roleBadge.admin")}</Badge> : null}
     </div>
   );
@@ -145,8 +142,6 @@ export function UsersTable({ data, roles = [], rolesFailed = false, currentUserI
 
   const columns = [
     { accessorKey: "name", header: t("columns.name"), cell: NameCell },
-    // These two headers are wider than anything under them (fr/ru): letting them wrap
-    // kept the table from scrolling sideways at 1280px once headers went to 14px.
     { accessorKey: "username", header: t("columns.username"), cell: UsernameCell },
     { id: "roles", header: t("columns.roles"), cell: RolesCell },
     { accessorKey: "last_login_at_human", header: t("columns.lastSignIn"), cell: LastSignInCell },

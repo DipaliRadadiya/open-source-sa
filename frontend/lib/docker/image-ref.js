@@ -1,10 +1,3 @@
-/**
- * Image references as people type them: `memos`, `nginx:1.27`,
- * `ghcr.io/org/app:1.2`, `localhost:5000/app`, `app@sha256:…`.
- *
- * A colon is a tag separator only after the last slash — before it, it is a
- * registry port.
- */
 export function splitImageRef(ref) {
   const value = String(ref ?? "").trim();
   if (!value) return { repository: "", tag: "", digest: "" };
@@ -22,7 +15,7 @@ export function joinImageRef(repository, tag) {
   return tag ? `${repository}:${tag}` : repository;
 }
 
-// Mirrors DockerSiteType's `image` rule: whitespace and shell characters reach a command line.
+// Same rule as the backend: whitespace and shell characters end up on a command line.
 export const IMAGE_REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/:@-]*$/;
 
 export function looksLikeImageRef(value) {
@@ -35,10 +28,7 @@ const slugPart = (value) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-/**
- * `<application>-<last path segment>`, the naming DS-03 uses, so one site's
- * volumes never collide with another's (`/data` is common to dozens of images).
- */
+// Prefix with the app name; paths like /data are shared by many images.
 export function volumeNameFor(applicationName, path, taken = []) {
   const site = slugPart(applicationName) || "app";
   const segment = slugPart(String(path ?? "").split("/").filter(Boolean).pop()) || "data";
@@ -48,7 +38,6 @@ export function volumeNameFor(applicationName, path, taken = []) {
   return name;
 }
 
-/** The mounts and env rows the create request carries for the chosen image. */
 export function dockerCreateExtras({ applicationName, volumes = [], env = [] }) {
   const names = [];
   const mounts = volumes

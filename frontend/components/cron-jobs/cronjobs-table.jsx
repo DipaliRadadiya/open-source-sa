@@ -17,24 +17,16 @@ import { CronjobLastRun } from "@/components/cron-jobs/cronjob-last-run";
 import { hasRunHistory } from "@/lib/cron-jobs/run-duration";
 import { timezoneLabel } from "@/lib/format/timezone";
 
-// Labels from the API's own preset list; deliberately not a cron-to-prose library.
 function scheduleLabel(expression, presets) {
   return presets.find((p) => p.expression && p.expression === expression)?.label ?? null;
 }
-
-// Cells at module level: inline cells would remount (losing dialog state) every render.
-
-// Exported so the phone cards show exactly what the table shows.
 
 export function CronjobName({ job }) {
   const t = useTranslations("cronJobs");
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {/* Wraps even inside a word, so a long unbroken name cannot widen the table. */}
       <span className="max-w-56 font-medium whitespace-normal [overflow-wrap:anywhere]">{job.name}</span>
-      {/* Paused gets a badge; a switch position alone is easy to miss. */}
       {!job.active ? (
-        // Amber like a paused application: nothing is broken, but it must be seen.
         <Badge variant="warning" className="h-auto font-normal whitespace-normal">
           {t("paused")}
         </Badge>
@@ -46,12 +38,9 @@ export function CronjobName({ job }) {
 export function CronjobSchedule({ job, presets = [] }) {
   const custom = useScheduleText(job.expression, job.timezone);
   const preset = scheduleLabel(job.expression, presets);
-  // A custom schedule gets its sentence: "0 0 2 * *" is not 2 AM daily.
   const label = preset ?? custom?.sentence ?? null;
-  // Plain language when nameable; otherwise the expression alone, not "Custom".
   return label ? (
     <div className="flex flex-col gap-0.5">
-      {/* Wraps (TableCell defaults to nowrap): long presets in Russian kept the table off a laptop. */}
       <span className="max-w-44 whitespace-normal">{label}</span>
       <span className="font-mono text-xs text-muted-foreground">{job.expression}</span>
     </div>
@@ -64,17 +53,13 @@ export function CronjobNextRun({ job }) {
   const format = useFormatter();
   const now = useNow({ updateInterval: 15000 });
   const { next_run_at: at } = job;
-  // A paused job has no next run.
   if (!at) return <span className="text-muted-foreground">—</span>;
 
-  // Counted down live (`next_run_at_human` is only true at page load); reads "now" until the re-read.
   const epoch = serverTimeToEpoch(at, job.timezone);
   const human = epoch === null ? job.next_run_at_human : format.relativeTime(Math.max(epoch, now.getTime()), now);
 
-  // As the API computed it, in the server's zone; the browser's formatter would convert it.
   return (
     <div className="flex flex-col gap-0.5">
-      {/* Server and client render a moment apart ("in 19s" vs "in 18s"); expected. */}
       <span className="whitespace-normal" suppressHydrationWarning>{human}</span>
       <span className="text-xs whitespace-normal text-muted-foreground">{at}</span>
     </div>
@@ -86,7 +71,6 @@ export function CronjobRunAs({ job }) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className="font-mono text-xs">{job.username}</span>
-      {/* No linked system_user => an unmanaged OS account like root. */}
       {!job.system_user ? (
         <Badge variant="outline" className="font-normal">
           {t("unmanaged")}
@@ -96,13 +80,10 @@ export function CronjobRunAs({ job }) {
   );
 }
 
-// Headers may wrap, so long translations don't push the ⋯ column off screen.
 function Head({ children }) {
   return <span className="block whitespace-nowrap">{children}</span>;
 }
 
-// "Runs as" sits under the name, not in a column of its own: with headers on one line the
-// eighth column kept the table past a laptop's width in German and Russian.
 function NameCell({ row }) {
   const t = useTranslations("cronJobs");
   return (
@@ -133,7 +114,6 @@ function CommandCell({ row, table }) {
     <div className="max-w-32 space-y-1">
     <Tooltip>
       <TooltipTrigger asChild>
-        {/* tabIndex: a truncated value must be reachable without a mouse. */}
         <span
           tabIndex={0}
           className="block max-w-32 truncate rounded font-mono text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -196,14 +176,12 @@ export function CronjobsTable({
     { accessorKey: "expression", header: () => <Head>{t("columns.schedule")}</Head>, cell: ScheduleCell },
     {
       accessorKey: "next_run_at",
-      // The timezone is stated once, in the column header it applies to.
       header: () => <Head>{timezone ? t("columns.nextRunIn", { timezone: timezoneLabel(timezone) }) : t("columns.nextRun")}</Head>,
       cell: NextRunCell,
     },
     ...(historySupported ? [{ id: "last_run", header: () => <Head>{t("lastRun.column")}</Head>, cell: LastRunCell }] : []),
     { accessorKey: "command", header: () => <Head>{t("columns.command")}</Head>, cell: CommandCell },
     { id: "active", header: () => <Head>{t("columns.active")}</Head>, cell: ActiveCell },
-    // Always there: a view-only reader still gets the menu, each item saying why it is off.
     {
       id: "actions",
       header: () => <span className="sr-only">{t("actions.label")}</span>,
@@ -211,8 +189,6 @@ export function CronjobsTable({
     },
   ];
 
-  // Cards until the table fits. Seven columns need ~950px, so xl did. Last run makes eight, whose narrowest is
-  // 1097px in Russian (981 en): more than xl's 958px beside the sidebar, so the switch reads the list's own width.
   const cardsClass = "@min-[900px]/page:hidden";
   const tableClass = "hidden @min-[900px]/page:block";
 
@@ -254,7 +230,6 @@ export function CronjobsTable({
             historySupported,
           }}
           emptyMessage={t("empty.title")}
-          // De-emphasise text, not controls: a paused job must stay operable.
           rowClassName={(job) => cn(!job.active && "[&_td]:text-muted-foreground")}
         />
       </div>

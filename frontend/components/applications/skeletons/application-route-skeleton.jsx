@@ -38,7 +38,6 @@ const BY_SECTION = {
   "workers": WorkersSkeleton,
 };
 
-// Next shows the NEAREST loading file (often a parent's), so the skeleton is picked from the URL.
 export function ApplicationRouteSkeleton({ fallback = null }) {
   const pathname = usePathname() ?? "";
   const match = pathname.match(/^\/applications\/(\d+)(?:\/([^/]+))?/);

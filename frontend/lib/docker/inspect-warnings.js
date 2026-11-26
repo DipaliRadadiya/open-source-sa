@@ -1,12 +1,5 @@
-// Said at their own field already: the env rows ask for the required settings, the Port field
-// explains a missing or ambiguous port.
 const SAID_AT_FIELD = new Set(["required_env", "no_port", "several_ports"]);
 
-/**
- * The image warnings worth a "Before you deploy" box: the ones not already said at their
- * own field. By `warning_codes` (RC-32) when they line up with `warnings`; an older API
- * sends sentences only, in a fixed order (required settings first, the port note last).
- */
 export function beforeDeployWarnings(detected) {
   const warnings = [...(detected?.warnings ?? [])];
   const codes = detected?.warning_codes ?? [];

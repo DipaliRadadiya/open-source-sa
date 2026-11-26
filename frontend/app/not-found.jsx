@@ -2,14 +2,12 @@ import { getTranslations } from "next-intl/server";
 import { NotFoundContent } from "@/components/sections/not-found-content";
 import { getQuickLinks } from "@/lib/navigation/get-quick-links";
 
-// Root not-found renders outside the panel layout, so it carries its own links.
 export async function generateMetadata() {
   const t = await getTranslations("errors.notFound");
   return { title: t("title") };
 }
 
 export default async function NotFound() {
-  // Signed out, this is an empty list and the page renders message-only.
   const links = await getQuickLinks().catch(() => []);
 
   return (

@@ -1,5 +1,3 @@
-// Presentational tinting only; an unrecognised line stays untinted.
-
 const LEVEL_PATTERNS = [
   { level: "error", re: /\b(error|critical|crit|fatal|emerg|alert|panic)\b/i },
   { level: "warn", re: /\b(warn|warning)\b/i },
@@ -7,7 +5,6 @@ const LEVEL_PATTERNS = [
   { level: "info", re: /\b(info|information)\b/i },
 ];
 
-// Access logs carry no level word — the HTTP status is the signal.
 const ACCESS_STATUS = /"\s(\d{3})\s|\s(\d{3})\s\d+\s*$|"\s\d+\s(\d{3})\s/;
 
 function accessLevel(line) {
@@ -20,7 +17,6 @@ function accessLevel(line) {
   return "success";
 }
 
-/** Returns "error" | "warn" | "info" | "notice" | "success" | null. */
 export function lineLevel(line, group) {
   if (!line) return null;
   if (group === "web") {
@@ -30,13 +26,10 @@ export function lineLevel(line, group) {
   return LEVEL_PATTERNS.find((p) => p.re.test(line))?.level ?? null;
 }
 
-// Request logs, whose only level is the HTTP status. By source, not group: System Logs files the web
-// servers' error logs under "web" too, and those do carry level words.
 export function isAccessLog(key) {
   return typeof key === "string" && (/(^|_)access(_ssl)?$/.test(key) || key === "waf_detect");
 }
 
-// Severity filter buckets. "warnings" includes errors.
 export const SEVERITY_FILTERS = ["all", "errors", "warnings"];
 
 const IN_BUCKET = {
@@ -44,14 +37,12 @@ const IN_BUCKET = {
   warnings: new Set(["error", "warn"]),
 };
 
-// Filters only the loaded buffer (unlike server-side grep), so it works while tailing.
 export function matchesSeverity(line, group, filter) {
   const bucket = IN_BUCKET[filter];
   if (!bucket) return true;
   return bucket.has(lineLevel(line, group));
 }
 
-// Text colour only, no row backgrounds; console hues tuned for the dark canvas.
 export const LEVEL_CLASS = {
   error: "text-console-error",
   warn: "text-console-warning",
@@ -60,7 +51,6 @@ export const LEVEL_CLASS = {
   info: "",
 };
 
-// Returns [{ text, match }]; one entry when there is no term.
 export function splitOnTerm(line, term) {
   const needle = term?.trim();
   if (!needle) return [{ text: line, match: false }];

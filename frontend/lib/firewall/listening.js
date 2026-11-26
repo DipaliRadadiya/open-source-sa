@@ -1,5 +1,3 @@
-
-// Only meaningful while the firewall is actually enforcing.
 export function unreachablePorts({ listening = [], rules = [], enabled }) {
   if (!enabled) return [];
 

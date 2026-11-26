@@ -13,8 +13,6 @@ export const serverFactsSchema = z.object({
     .nullable()
     .optional(),
   ip: nullableString,
-  // The public address (what DNS points at). `ip` is the interface address,
-  // often private on cloud hosts. Null when undeterminable (e.g. behind NAT).
   public_ip: nullableString,
   cpu: z
     .object({ model: nullableString, cores: nullableNumber })
@@ -40,7 +38,6 @@ export const historyPointSchema = z.object({
   load_15: nullableNumber,
   net_in: nullableNumber,
   net_out: nullableNumber,
-  // Bytes/second. IOPS is live-only, so history charts show throughput only.
   disk_read: nullableNumber,
   disk_write: nullableNumber,
 });
@@ -51,7 +48,6 @@ export const processSchema = z.object({
   cpu: nullableNumber,
   memory: nullableNumber,
   command: nullableString,
-  // False for PID 1, kernel threads and protected services; `reason` says why.
   stoppable: z.boolean().default(true),
   reason: nullableString,
 });

@@ -1,9 +1,6 @@
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-// "Create a copy first" (restore, staging push/pull, .env and file saves). The hint only promises an
-// undo while the switch is on; the caller shows its own red warning when it is off.
-// `compact`: one line without a frame, for an editor whose height belongs to the text.
 export function SafetyCopySwitch({ id, checked, onCheckedChange, disabled, label, hint, compact = false, className }) {
   if (compact) {
     return (

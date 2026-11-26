@@ -1,14 +1,11 @@
 import { z } from "zod";
 
-/** The windows the History filter offers, and the only ones it honours. */
 export const BACKUP_PERIODS = ["7", "30", "90"];
 
 export const BACKUP_TYPES = ["full", "filesystem", "database"];
 
-// Copy of `BackupTarget::CRON`'s `0 2 * * *`; shown only when the API sends `null`.
 export const BACKUP_DEFAULT_TIME = "02:00";
 
-// `time`: `minute` (hourly, only the minute of `schedule_time` is used), `time`, or null (manual).
 export const backupTargetOptionsSchema = z.object({
   frequencies: z.array(
     z.object({
@@ -19,16 +16,11 @@ export const backupTargetOptionsSchema = z.object({
     }),
   ),
   default_frequency: z.string(),
-  // `family`: container types (volumes, config) belong to Docker sites only; the API refuses a mismatch.
   types: z.array(z.object({ value: z.string(), label: z.string(), family: z.enum(["hosted", "container"]).nullish() })),
   retention: z.object({ min: z.number(), max: z.number() }),
-  // The panel's clock, which `schedule_time` is read in — not the server's.
   timezone: z.string().nullish(),
 });
 
-// Mirrors `RestoreBackupRequest::withValidator()`.
-// `hasDatabase` is the backup's own `has_database`: a site with no database still
-// gets `full` backups, with no dump in them. Unknown (older API) keeps the type's list.
 export function restorableTypes(backupType, hasDatabase = null) {
   if (backupType === "full") return hasDatabase === false ? ["filesystem"] : ["full", "filesystem", "database"];
   if (backupType === "filesystem") return ["filesystem"];
@@ -36,65 +28,48 @@ export function restorableTypes(backupType, hasDatabase = null) {
   return [];
 }
 
-// There is no "completed": `verified` is success. Use this constant, not a literal.
 export const BACKUP_SUCCEEDED = "verified";
 
-/** Only a verified backup can be restored — the first guard in the request. */
 export const RESTORABLE_STATUS = BACKUP_SUCCEEDED;
 
-/** Whether this run left an archive to download or restore from. */
 export function backupHasArchive(status) {
   return status === BACKUP_SUCCEEDED;
 }
 
-/** Statuses that mean a run is still in flight, so a second must not start. */
 export const BACKUP_IN_FLIGHT = ["pending", "running", "verifying"];
 export const RESTORE_IN_FLIGHT = ["pending", "running"];
 
-/** `RestoreStatus` on the backend, and what `filter[status]` will accept. */
 export const RESTORE_STATUSES = ["pending", "running", "succeeded", "failed"];
 
-// What `filter[status]` accepts, in the filter's order.
 export const BACKUP_STATUSES = ["verified", "verifying", "running", "pending", "failed"];
 
 export const backupSchema = z
   .object({
     id: z.number(),
-    /* The archive's name in the bucket; older rows have none. */
     uid: z.string().nullish(),
     application_id: z.number().nullish(),
     type: z.string(),
     type_title: z.string().nullish(),
-    // Whether the archive holds a database dump; false on a `full` backup of a site without one.
     has_database: z.boolean().nullish(),
-    // Taken just before a restore, exempt from retention.
     is_safety: z.boolean().default(false),
     status: z.string(),
     status_title: z.string().nullish(),
-    // Branch on `reason`, display `reason_title`.
     reason: z.string().nullish(),
     reason_title: z.string().nullish(),
-    // What the storage said, when the failing step was an upload (auth, permission, …).
     error_class: z.string().nullish(),
     error_class_title: z.string().nullish(),
-    // The server's own rule for whether Clear will be accepted.
     is_stale: z.boolean().nullish(),
     clearable: z.boolean().nullish(),
     size_bytes: z.number().nullish(),
-    // Absent, not null, unless eager-loaded, so "no destination" and "not asked for" differ.
     storage_destination_name: z.string().nullish(),
-    // Sent on the server-wide history, where a row has to name its own site.
     application_name: z.string().nullish(),
     application_domain: z.string().nullish(),
-    // A backup of a database on its own. After the database (or site) is deleted the
-    // row is `archived`: its id is null and the name and engine are kept.
     database_id: z.number().nullish(),
     database_name: z.string().nullish(),
     database_engine: z.string().nullish(),
     site_name: z.string().nullish(),
     archived: z.boolean().default(false),
     reference: z.string().nullish(),
-    // The run's last heartbeat — what decides whether Clear can work.
     progress_at: z.string().nullish(),
     started_at: z.string().nullish(),
     finished_at: z.string().nullish(),
@@ -109,7 +84,6 @@ const metaSchema = z.object({
   per_page: z.number().default(20),
   total: z.number().default(0),
   last_page: z.number().default(1),
-  // Per-status totals across the whole filtered set, not just this page.
   counts: z
     .object({
       total: z.number().default(0),
@@ -122,7 +96,6 @@ const metaSchema = z.object({
     .nullish(),
 });
 
-/** One backup, as `GET /backups/{id}` returns it. */
 export const backupResponseSchema = z.object({ backup: backupSchema });
 
 export const backupsResponseSchema = z.object({
@@ -134,32 +107,25 @@ export const backupTargetSchema = z
   .object({
     id: z.number(),
     application_id: z.number().nullish(),
-    // Set instead of `application_id` on a database's own schedule.
     database_id: z.number().nullish(),
     storage_destination_id: z.number(),
-    // Only present when the controller eager-loads the relation.
     storage_destination_name: z.string().nullish(),
     type: z.string(),
     type_title: z.string().nullish(),
     retention_count: z.number(),
     frequency: z.string(),
     frequency_title: z.string().nullish(),
-    // "HH:MM" in `timezone` below (the panel's clock, not the server's).
     schedule_time: z.string().nullish(),
     enabled: z.boolean().default(true),
     file_excludes: z.array(z.string()).default([]),
     database_excludes: z.array(z.string()).default([]),
-    // When the schedule last fired, successful or not; the scheduler reads it.
     last_run_at: z.string().nullish(),
     last_run_at_human: z.string().nullish(),
-    // The newest verified backup still kept; null once they are all deleted.
     last_backup_at: z.string().nullish(),
     last_backup_at_human: z.string().nullish(),
-    // Never recompute these from cron constants; a frontend copy would drift.
     next_run_at: z.string().nullish(),
     next_run_at_human: z.string().nullish(),
-    /* Deliberately NOT a cron job's `timezone` (server OS clock): backups resolve against
-     * the app timezone. Do not "fix" one to match the other. */
+    // Backups use the app timezone, not the server clock like cron jobs.
     timezone: z.string().nullish(),
     is_due: z.boolean().nullish(),
     created_at: z.string().nullish(),
@@ -167,8 +133,6 @@ export const backupTargetSchema = z
   })
   .passthrough();
 
-// Nested so "not configured" (null) differs from "configured with nothing set".
-// A site's backup state (GET /backup-targets), in the server's `sort=state` order.
 export const COVERAGE_STATES = ["failing", "protected", "paused", "unprotected"];
 
 export const applicationBackupSchema = z
@@ -178,13 +142,10 @@ export const applicationBackupSchema = z
     application_domain: z.string(),
     backup_target: backupTargetSchema.nullable(),
     last_backup: backupSchema.nullable(),
-    // Decided by the server (BackupCoverage), the same rule as its filter and counts.
     state: z.enum(COVERAGE_STATES).optional(),
   })
   .passthrough();
 
-// `matched` is what the current search and filter hit; `total` and the four state counts cover
-// every application, whatever the page or filter.
 export const backupTargetsResponseSchema = z.object({
   backup_targets: z.array(applicationBackupSchema).default([]),
   meta: z
@@ -214,13 +175,7 @@ export const backupTargetsResponseSchema = z.object({
     }),
 });
 
-/**
- * `backup_target` is null for a site nobody has configured yet. `has_volumes`:
- * whether a container site has any volumes, null when unknown or not a container
- * site (S-02). Declared, or Zod strips it.
- */
-// GET /backup-targets?kind=database (RC-23): databases that are not part of an
-// application, each with its own schedule. A site's database is backed up with the site.
+// Must be declared or Zod strips it.
 export const databaseBackupTargetsResponseSchema = z.object({
   backup_targets: z
     .array(
@@ -243,8 +198,6 @@ export const backupTargetResponseSchema = z.object({
   has_volumes: z.boolean().nullable().default(null),
 });
 
-// `backed_up_with`: the database belongs to a site, whose schedule covers it, and a
-// schedule of its own is refused.
 export const databaseBackupTargetResponseSchema = z.object({
   backup_target: backupTargetSchema.nullable().default(null),
   backed_up_with: z
@@ -256,13 +209,10 @@ export const databaseBackupTargetResponseSchema = z.object({
 export const restoreSchema = z
   .object({
     id: z.number(),
-    // Null once the source backup is deleted; required would reject the whole response.
     backup_id: z.number().nullish(),
     application_id: z.number().nullish(),
-    // Null when the site has since been deleted.
     application_name: z.string().nullish(),
     application_domain: z.string().nullish(),
-    // A database's own restore (RC-19); name and engine outlive the database.
     database_id: z.number().nullish(),
     database_name: z.string().nullish(),
     database_engine: z.string().nullish(),
@@ -272,14 +222,11 @@ export const restoreSchema = z
     status_title: z.string().nullish(),
     current_step: z.string().nullish(),
     current_step_title: z.string().nullish(),
-    // A progress bar needs no frontend copy of the step list.
     step_number: z.number().nullish(),
     total_steps: z.number().nullish(),
     reason: z.string().nullish(),
     reason_title: z.string().nullish(),
-    // The way back out of a restore that put the wrong thing live.
     safety_backup_id: z.number().nullish(),
-    // False when the user skipped the copy: there is nothing to undo from.
     safety_copy: z.boolean().nullish(),
     rollback_path: z.string().nullish(),
     reference: z.string().nullish(),
@@ -295,7 +242,6 @@ export const restoresResponseSchema = z.object({
   meta: metaSchema.default({ current_page: 1, per_page: 20, total: 0, last_page: 1 }),
 });
 
-// `retention_count` floor of 1: zero would prune the backup the run had just taken.
 export function backupTargetFormSchema(options) {
   const frequencies = options?.frequencies.map((f) => f.value) ?? [];
   const types = options?.types.map((t) => t.value) ?? [];
@@ -311,15 +257,12 @@ export function backupTargetFormSchema(options) {
       .int("retentionRange")
       .min(retention.min, "retentionRange")
       .max(retention.max, "retentionRange"),
-    // Only what the API offered; without options nothing is accepted.
     frequency: z.string().refine((value) => frequencies.includes(value), "required_frequency"),
-    // `date_format:H:i` on the backend; guards values that bypass the time input.
     schedule_time: z
       .string()
       .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "scheduleTime")
       .default(BACKUP_DEFAULT_TIME),
     enabled: z.boolean().default(true),
-    // Relative to the site folder; `..` and absolute paths point outside it.
     file_excludes: z
       .array(
         z

@@ -1,5 +1,4 @@
-// The clone this browser last started per site, so a reload shows the job, not a form
-// inviting a duplicate. Every access is wrapped: Safari private mode throws.
+// Every storage access is wrapped: Safari private mode throws.
 import { useSyncExternalStore } from "react";
 
 const KEY = "sv-oss:clone-in-flight";
@@ -8,7 +7,6 @@ const listeners = new Set();
 
 function subscribe(listener) {
   listeners.add(listener);
-  // Another tab finishing or starting a clone counts too.
   window.addEventListener("storage", listener);
   return () => {
     listeners.delete(listener);
@@ -35,7 +33,7 @@ function write(value) {
   try {
     window.localStorage.setItem(KEY, JSON.stringify(value));
   } catch {
-    // Ignored: the clone itself is unaffected.
+    // storage blocked; ignore
   }
   announce();
 }
@@ -56,7 +54,7 @@ export function forgetClone(applicationId) {
   write(all);
 }
 
-// A subscription so the server snapshot is null without a setState-in-effect.
+// useSyncExternalStore so the server snapshot is null without a setState in an effect.
 export function useRememberedClone(applicationId) {
   return useSyncExternalStore(
     subscribe,

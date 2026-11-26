@@ -6,7 +6,6 @@ import { getEnvironmentDiff } from "@/lib/api/environment";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 
-// Values come from backup files, so they load when the row opens and are kept: a past state cannot change.
 export function useEnvironmentDiff(appId, entry) {
   const t = useTranslations("applications.environment.history");
   const [open, setOpen] = useState(false);
@@ -57,12 +56,10 @@ export function EnvironmentDiff({ state }) {
       ) : error ? (
         <p className="p-3 text-xs text-muted-foreground">{error}</p>
       ) : !data?.available ? (
-        // Not "nothing changed": the previous version's backup was deleted.
         <p className="p-3 text-xs text-muted-foreground">{t("diffUnavailable")}</p>
       ) : data.changes.length === 0 ? (
         <p className="p-3 text-xs text-muted-foreground">{t("noKeysNote")}</p>
       ) : (
-        // Table when the container fits three columns, stacked rows otherwise.
         <div className="@container">
           <table className="hidden w-full text-xs @md:table">
             <thead className="bg-muted/40 text-muted-foreground">
@@ -78,7 +75,7 @@ export function EnvironmentDiff({ state }) {
                   <td className="px-3 py-2 align-top">
                     <KeyName change={change} />
                   </td>
-                  {/* A secret never carries its values; null here is not "not set". */}
+                  {/* Secrets never carry values; null here doesn't mean not set. */}
                   {change.secret ? (
                     <td colSpan={2} className="px-3 py-2 align-top">
                       <Hidden status={change.status} />
@@ -148,7 +145,6 @@ function Hidden({ status }) {
   );
 }
 
-// An absent side is an em dash, since an empty string is a real `.env` value.
 function Value({ value, tone }) {
   const t = useTranslations("applications.environment.history");
 

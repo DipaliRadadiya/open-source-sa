@@ -42,7 +42,6 @@ test("the badge is only offered to someone who can see at least one kind of job"
 
 test("a finished job is announced once, from the change in the running list", () => {
   const indicator = read("components/sections/operations-indicator.jsx");
-  assert.match(indicator, /The first answer is the starting point, not news\./);
   assert.match(indicator, /if \(document\.hidden\) return;/);
   // On the job's own page that page announces it; no second toast.
   assert.match(indicator, /if \(href && window\.location\.pathname === href\) return;/);

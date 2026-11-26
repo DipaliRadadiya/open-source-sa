@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 
-// No tinted tile, so the brand colour keeps its meaning.
 export function SectionIcon({ icon: Icon, className }) {
   return (
     <Icon

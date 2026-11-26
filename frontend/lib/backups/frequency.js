@@ -1,24 +1,18 @@
-// The API does not send the spacing between runs, so it is derived here.
-
-/** The API's entry for one frequency, or null. */
 export function frequencyOption(options, value) {
   return options?.frequencies.find((f) => f.value === value) ?? null;
 }
 
-// "minute", "time" or null (none); undefined when the options do not know the value.
 export function timeUsage(options, value) {
   const option = frequencyOption(options, value);
   return option ? option.time : undefined;
 }
 
-/** The schedules a person picks from. Manual is the Automatic switch being off. */
 export function scheduledFrequencies(options) {
   return options?.frequencies.filter((f) => f.time !== null) ?? [];
 }
 
 const DAY = 24;
 
-/** Hours between two runs, or null when it cannot be told from the value. */
 export function hoursBetweenRuns(value) {
   if (value === "hourly") return 1;
   const every = /^every_(\d+)_hours$/.exec(value ?? "");
@@ -29,7 +23,6 @@ export function hoursBetweenRuns(value) {
   return null;
 }
 
-// `{ unit: "hours" | "days", amount }`, or null when spacing is unknown. Hours below a day.
 export function historySpan(value, count) {
   const hours = hoursBetweenRuns(value);
   if (!hours || !(count > 0)) return null;
@@ -39,23 +32,18 @@ export function historySpan(value, count) {
 
 const TIME = /^(\d{1,2}):(\d{2})$/;
 
-/** "14:30" → "30". */
 export function minuteOf(time) {
   return TIME.exec(String(time ?? ""))?.[2] ?? "00";
 }
 
-// The hour is kept so switching back from `hourly` to daily restores it.
 export function withMinute(time, minute) {
   const hour = TIME.exec(String(time ?? ""))?.[1] ?? "00";
   const n = Math.min(Math.max(Number.parseInt(minute, 10) || 0, 0), 59);
   return `${hour.padStart(2, "0")}:${String(n).padStart(2, "0")}`;
 }
 
-/** The API's backup types with `full` first, the sensible default. */
-// Each family's safest choice, offered first and used for a new target.
 export const DEFAULT_TYPE = { hosted: "full", container: "volumes_config" };
 
-// Only the family the site belongs to; an option without `family` is a hosted one.
 export function orderedTypes(options, container = false) {
   const family = container ? "container" : "hosted";
   const types = (options?.types ?? []).filter((t) => (t.family ?? "hosted") === family);
@@ -63,8 +51,6 @@ export function orderedTypes(options, container = false) {
   return [...types.filter((t) => t.value === first), ...types.filter((t) => t.value !== first)];
 }
 
-// A paused schedule keeps its frequency, so "Daily" beside a "Manual only" badge
-// reads as running; `paused` is the translated "Paused: {frequency}".
 export function frequencyLabel(target, paused) {
   const title = target?.frequency_title ?? target?.frequency;
   return target && target.enabled === false && target.frequency !== "manual" ? paused(title) : title;

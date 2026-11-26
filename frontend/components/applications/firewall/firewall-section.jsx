@@ -23,8 +23,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { RuleList } from "@/components/applications/firewall/rule-list";
 
-// Local plain-language hints per category (the API sends only a title). A
-// category the backend adds later renders title-only instead of throwing.
 const DESCRIBED_CATEGORIES = new Set([
   "query_string",
   "request_uri",
@@ -34,7 +32,6 @@ const DESCRIBED_CATEGORIES = new Set([
   "method",
 ]);
 
-
 const COLLAPSIBLE_ANIMATION =
   "overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down";
 
@@ -42,7 +39,6 @@ function sameList(a, b) {
   return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
-// Saves everything in one call: the API is a single atomic PUT.
 export function FirewallSection({ appId, application, categories: catalog, modes, canManage, detectCount = 0, detectFailed = false }) {
   const t = useTranslations("applications.firewall");
   const tPending = useTranslations("applications.reloadPending");
@@ -57,8 +53,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
     exceptions: application.waf_exceptions ?? [],
     blocks: application.waf_custom_rules ?? [],
   };
-  // What the last save sent, held until the refreshed page agrees, so the card is
-  // not "unsaved" in between and badge, tint and hint do not lag the toast.
   const [justSaved, setJustSaved] = useState(null);
   if (
     justSaved &&
@@ -78,7 +72,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   const [exceptions, setExceptions] = useState(saved.exceptions);
   const [blocks, setBlocks] = useState(saved.blocks);
   const [saving, setSaving] = useState(false);
-  // Opened by default only when the site already has exceptions or blocks.
   const [advancedOpen, setAdvancedOpen] = useState(
     saved.exceptions.length > 0 || saved.blocks.length > 0,
   );
@@ -90,14 +83,11 @@ export function FirewallSection({ appId, application, categories: catalog, modes
     !sameList(exceptions, saved.exceptions) ||
     !sameList(blocks, saved.blocks);
 
-  // Without this a sidebar click discards the edit with no warning.
   useWatchUnsaved("app-firewall", isDirty);
 
   const saveReason = !canManage ? DENIED : !isDirty ? t("nothingToSave") : null;
 
-  // Not reloaded since a save, so nothing about the running firewall is known.
   const blocking = !pending && saved.enabled && saved.mode === "enforce";
-  // Watch mode is not protection, so it must not use the success colour.
   const caution = pending || (saved.enabled && !blocking);
   const statusVariant = blocking ? "success" : caution ? "warning" : "muted";
   const statusLabel = pending
@@ -107,7 +97,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
       : saved.enabled
         ? t("statusWatching")
         : t("statusOff");
-  // The log exists only once watch mode is saved and running.
   const showDetectLog = !pending && saved.enabled && saved.mode === "detect";
 
   function toggleCategory(value, checked) {
@@ -119,7 +108,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
 
   async function save() {
     setSaving(true);
-    // Never an empty array: the backend reads `categories: []` as "all six".
+    // Never send []: the backend reads it as all six.
     const categories = active.length > 0 ? active : catalog.map((item) => item.value);
     const sent = { enabled, mode, categories, exceptions, blocks };
     try {
@@ -130,7 +119,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
       if (stillPending(appId)) toast.warning(tPending("stillPendingToast"));
       else toast.success(t("saved"));
     } catch (error) {
-      // Saved but not live: keep it as the saved state, with no success toast.
       if (isReloadFailed(error)) {
         mark(appId, error);
         setJustSaved(sent);
@@ -158,7 +146,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
       <div className="space-y-4">
         <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="space-y-5 p-5">
-            {/* A real <label> so the whole row toggles, not just the switch. */}
             <label
               className={cn(
                 "flex flex-col gap-3 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
@@ -168,7 +155,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                 locked ? "cursor-not-allowed" : "cursor-pointer",
               )}
             >
-              {/* A title alone centres on the icon; with a line under it, both start at its top. */}
               <div className={cn("flex min-w-0 flex-1 gap-3", pending || saved.enabled ? "items-start" : "items-center")}>
                 <span
                   className={cn(
@@ -186,7 +172,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                     <span className="font-medium">{t("enable")}</span>
                     <Badge variant={statusVariant}>{statusLabel}</Badge>
                   </div>
-                  {/* Off needs no line: the Off badge says it. */}
                   {pending || saved.enabled ? (
                     <p className="text-sm text-muted-foreground">
                       {pending ? tPending("hint") : blocking ? t("blockingHint") : t("watchingHint")}
@@ -194,8 +179,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                   ) : null}
                 </div>
               </div>
-              {/* The badge beside the title already says On or Off, so a role that
-                  cannot change it gets no switch at all. */}
               {canManage ? (
                 <div className="flex h-5 shrink-0 items-center">
                   <Switch
@@ -210,8 +193,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   
             <Collapsible open={!enabled}>
               <CollapsibleContent className={COLLAPSIBLE_ANIMATION}>
-                {/* One note, not a page banner plus this one. Only the advice:
-                    the page no longer explains what a firewall is (18 Nov). */}
                 <Note icon={Lightbulb} title={t("whenToUseTitle")}>
                   {t("whenToUseBody")}
                 </Note>
@@ -230,17 +211,13 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                       name="waf-mode"
                       options={modes.map((option) => ({
                         value: option.value,
-                        // Straight from the API, never a local copy.
                         label: option.title,
                         hint: option.value === "enforce" ? t("modeEnforceHint") : t("modeDetectHint"),
                         tone: option.value === "enforce" ? "warning" : undefined,
                       }))}
                     />
                     {showDetectLog ? (
-                      // The caught count sits next to the mode choice so enabling
-                      // blocking is an informed decision.
                       <p className="pt-1 text-xs text-muted-foreground">
-                        {/* An unreadable log must not claim "Nothing caught yet". */}
                         {detectFailed
                           ? t("detectUnknown")
                           : detectCount > 0
@@ -256,8 +233,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                     <div className="divide-y rounded-xl border">
                       {catalog.map((category) => {
                         const checked = active.includes(category.value);
-                        // Unticking the last one would send `categories: []`,
-                        // which the API reads as ALL SIX, so it is blocked.
                         const lastOne = checked && active.length === 1;
                         return (
                           <label
@@ -267,8 +242,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                               locked || lastOne ? "cursor-not-allowed" : "cursor-pointer hover:bg-muted/40",
                             )}
                           >
-                            {/* Switch pairs with the title; the hint runs full
-                                width beneath so it is not squeezed on narrow screens. */}
                             <div className="flex items-center justify-between gap-4">
                               <span className="min-w-0 text-sm font-medium">{category.title}</span>
                               <ReasonTooltip reason={lastOne ? t("lastCategory") : null}>
@@ -293,7 +266,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                     </div>
                   </div>
   
-                  {/* Rule lists stay folded away; most sites never need them. */}
                   <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="border-t pt-5">
                     <CollapsibleTrigger asChild>
                       <Button type="button" variant="ghost" size="sm" className="-ml-2">
@@ -313,8 +285,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                             disabled={locked}
                             placeholder={t("exceptionsPlaceholder")}
                             emptyText={t("exceptionsEmpty")}
-                            // An exception skips every check for any path containing it,
-                            // so "a" or "/" would switch the firewall off; the API refuses under 4.
                             minLength={4}
                           />
                         </div>

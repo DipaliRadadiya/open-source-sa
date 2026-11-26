@@ -1,8 +1,5 @@
 import { cn } from "@/lib/utils";
 
-// The masthead of a detail page (one database, one role…), drawn like the application
-// page's: an icon tile, the name with its badges, one line of facts, actions on the right.
-// It is the page's h1, so the breadcrumb is the only way back; no "Back to" link.
 export function DetailHeader({ icon, title, mono = false, badges = null, facts = [], actions = null }) {
   const shown = facts.filter(Boolean);
   return (

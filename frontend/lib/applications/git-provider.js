@@ -1,7 +1,5 @@
 import { providerFromRepositoryUrl } from "../git/provider-from-url.js";
 
-// Account-linked sites store "owner/repo" with no host, so look up by `git_account_id`.
-// Null for self-hosted hosts, deleted accounts, and readers who cannot see the accounts list.
 export function gitProviderFor(application, providerByAccountId) {
   if (!application || application.site_type !== "git") return null;
   if (application.git_account_missing) return null;
@@ -14,7 +12,7 @@ export function gitProviderFor(application, providerByAccountId) {
   return providerFromRepositoryUrl(application.repository_url);
 }
 
-// Keyed by string so number/string id mismatches cannot miss.
+// Keyed by string so number/string ids still match.
 export function providersByAccountId(accounts = []) {
   const byId = new Map();
   for (const account of accounts) {

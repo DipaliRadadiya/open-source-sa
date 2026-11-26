@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-// Empty gets "required" first; the checklist beside the field already shows
-// the length rule.
 const passwordField = z
   .string()
   .min(1, "required_password")
@@ -34,13 +32,10 @@ export const changePasswordSchema = z
     path: ["password_confirmation"],
   });
 
-// Self activity entries omit `user` (always the caller) and `type`.
 export const myActivityEntrySchema = z.object({
   id: z.number(),
   type: z.string().nullable().optional(),
   action: z.string(),
-  // People vs machine; drives the chip on the server Activity page (this tab
-  // shows `account` only).
   scope: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   created_at: z.string().nullable().optional(),

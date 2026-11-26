@@ -16,9 +16,7 @@ import { DeleteRoleDialog } from "@/components/admin/roles/delete-role-dialog";
 export function RoleRowActions({ role }) {
   const t = useTranslations("roles");
   const [deleteOpen, setDeleteOpen] = useState(false);
-  // Escape or a click away returns focus to ⋯; only Delete (a dialog) keeps it off.
   const openingDialog = useRef(false);
-  // System roles are protected: the backend rejects edit/delete with a 422.
   const isSystem = role.is_system;
 
   return (

@@ -42,7 +42,6 @@ export async function generateMetadata() {
 
 export default async function DatabasesPage({ searchParams }) {
   const sp = await searchParams;
-  // Serialised so React's `cache` sees a stable primitive argument.
   const query = new URLSearchParams(
     Object.entries(sp ?? {}).filter(([, v]) => typeof v === "string"),
   ).toString();
@@ -58,11 +57,6 @@ export default async function DatabasesPage({ searchParams }) {
     return <PermissionDenied title={t("title")} feature="database" />;
   const canManage = can(permissions, "database", "manage");
 
-  // A 409 is the honest answer on a Docker box, not a failure to report: an
-  // application that wants a database there brings one as a container, and the
-  // panel manages no engine. The sidebar already stops offering this screen, so
-  // this is reached by a bookmark or a tab left open across a stack change — both
-  // of which deserve a sentence rather than a red error card.
   if (failed && status === 409) {
     return (
       <div className="space-y-6">
@@ -86,7 +80,6 @@ export default async function DatabasesPage({ searchParams }) {
       />
     );
 
-  // Only a running engine can hold databases; skip the list otherwise.
   const usable = engines.some((engine) => engine.running);
 
   const [
@@ -112,27 +105,18 @@ export default async function DatabasesPage({ searchParams }) {
       ? getDatabases(query)
       : Promise.resolve({ databases: [], failed: false }),
     usable && canManage ? getUntracked(engines) : Promise.resolve([]),
-  // Needed most when nothing is reachable.
     canManage ? getConnections() : Promise.resolve([]),
-  // For the "Last backup" column; one global request, not one per row.
     usable ? getExports() : Promise.resolve({ exports: [], failed: false }),
-  // Whether this server has a phpMyAdmin to open at all.
     usable ? getPhpmyadminSite() : Promise.resolve(null),
-    // And an Adminer, the client that also opens PostgreSQL.
     usable ? getAdminerSite() : Promise.resolve(null),
-  // The create dialog's site picker and which sites already have a database.
     usable && canManage ? getAllApplications() : Promise.resolve({ applications: [] }),
     usable && canManage ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),
-  // Server-wide, so it is unaffected by the table's search and paging.
     usable ? getUnlinkedCount() : Promise.resolve(0),
-  // `cache`d; a failure only loses the greying, not the page.
     usable && canManage
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
   ]);
 
-  // A 422 means a bad filter/sort in the link (an old bookmark, a typo): drop them,
-  // keep the search, as the Applications page does. "Try again" would only repeat it.
   if (dbFailed && dbStatus === 422 && ["sort", "engine", "attached", "per_page", "direction"].some((key) => sp?.[key])) {
     const kept = new URLSearchParams();
     if (typeof sp.search === "string" && sp.search) kept.set("search", sp.search);
@@ -149,8 +133,6 @@ export default async function DatabasesPage({ searchParams }) {
       />
     );
 
-  // The newest restorable dump per database: completed and its file still on
-  // disk. Compared by timestamp, not by endpoint order or id.
   const lastBackup = {};
   for (const row of exportList.exports) {
     if (row.status !== "completed" || row.available === false) continue;
@@ -160,8 +142,6 @@ export default async function DatabasesPage({ searchParams }) {
       lastBackup[row.database_id] = { ...row, at };
   }
 
-  // No server-side size total: show the size only when this page holds every
-  // database, so a partial sum never poses as a total.
   const totalBytes = databases.reduce(
     (sum, db) => sum + (Number(db.size_bytes) || 0),
     0,
@@ -176,8 +156,6 @@ export default async function DatabasesPage({ searchParams }) {
         .join(" · ")
     : null;
 
-
-  // A page past the end redirects to the last real page instead of erroring.
   redirectOutOfRange("/databases", sp, dbMeta, dbFailed);
   return (
     <div className="space-y-6">
@@ -192,7 +170,6 @@ export default async function DatabasesPage({ searchParams }) {
             summary={summary}
           />
           <UntrackedBanner untracked={untracked} canManage={canManage} />
-          {/* Below Adopt: an untracked database must be adopted before it can be linked. */}
           <UnlinkedBanner
             count={unlinkedCount}
             filtered={new URLSearchParams(query).get("attached") === "0"}
@@ -203,21 +180,17 @@ export default async function DatabasesPage({ searchParams }) {
             engines={engines}
             canManage={canManage}
             lastBackup={lastBackup}
-            // A failed exports request must not read as "never backed up".
             backupsUnknown={exportList.failed}
-            // Null when the lookup failed, which must not read as "none".
             phpmyadminSites={phpmyadmin.known ? phpmyadmin.sites : null}
             adminerSites={adminer?.known ? adminer.sites : null}
             applications={appList.applications}
             canOpenApplications={can(permissions, "application", "view")}
             databaseCounts={dbCounts.counts}
             databasesKnown={dbCounts.known}
-            // Lets the site picker grey sites that cannot use the chosen engine.
             siteTypes={catalogue.siteTypes}
           />
         </div>
       ) : (
-        // Nothing to connect to: the engine's state is the page.
         <EngineState
           engines={engines}
           connections={connections}

@@ -8,8 +8,7 @@ import { WorkerStatusBadge } from "@/components/applications/workers/worker-stat
 import { WorkerActions } from "@/components/applications/workers/worker-actions";
 import { WorkerRowActions } from "@/components/applications/workers/worker-row-actions";
 
-// Cells are module-level: an inline cell function is a new component type each
-// render, so React would remount the cell and close any open menu.
+// Cells at module level: inline cells remount and close open menus.
 
 function NameCell({ row }) {
   const t = useTranslations("applications.workers");
@@ -60,7 +59,6 @@ function CommandCell({ row }) {
         </Tooltip>
         <CopyButton value={worker.command} label={t("form.command")} className="size-6" />
       </div>
-      {/* Shown only when set away from the default document root. */}
       {worker.directory ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -77,8 +75,6 @@ function CommandCell({ row }) {
           </TooltipContent>
         </Tooltip>
       ) : null}
-      {/* Shown only for a non-default user; `effective_user` is what it
-          actually runs as. */}
       {worker.user && worker.effective_user ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -165,7 +161,6 @@ export function WorkersTable({ data, appId, presets = [], canManage = false, can
       emptyMessage={t("empty.title")}
       rowClassName={(worker) =>
         cn(
-          // Taller rows: cells hold two or three lines.
           "[&_td]:py-3",
           worker.state === "degraded" && "bg-warning/5 hover:bg-warning/10",
         )

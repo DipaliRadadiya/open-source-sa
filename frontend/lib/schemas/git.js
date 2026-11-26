@@ -1,14 +1,10 @@
 import { z } from "zod";
 
-// The token is write-only at the API, so it never appears in these shapes.
-
-// Fields differ per provider; the form renders from this, so new providers need no frontend change.
 export const providerFieldSchema = z.object({
   name: z.string(),
   label: z.string(),
   required: z.boolean().default(false),
   type: z.string().default("text"),
-  // Per-field guidance, localized by the backend. Null when self-explanatory.
   help: z.string().nullish(),
 });
 
@@ -28,7 +24,6 @@ export const gitAccountSchema = z.object({
   provider: z.string(),
   provider_title: z.string(),
   label: z.string(),
-  // From the provider: the GitHub/GitLab username or the Bitbucket workspace slug.
   identifier: z.string().nullish(),
   host: z.string().nullish(),
   workspace: z.string().nullish(),
@@ -43,7 +38,6 @@ export const gitAccountsResponseSchema = z.object({
   git_accounts: z.array(gitAccountSchema).default([]),
 });
 
-// `unknown` means the provider could not be reached; never tell the user to act on it.
 export const gitStatusSchema = z.object({
   id: z.number(),
   label: z.string().nullish(),
@@ -52,7 +46,6 @@ export const gitStatusSchema = z.object({
   status: z.enum(["valid", "invalid", "unknown"]).catch("unknown"),
   status_title: z.string().nullish(),
   expires_at: z.string().nullish(),
-  // Null means no expiry (e.g. Bitbucket), never "could not tell".
   expires_in_days: z.number().nullish(),
   checked_at: z.string().nullish(),
 });
@@ -61,14 +54,12 @@ export const gitStatusesResponseSchema = z.object({
   statuses: z.array(gitStatusSchema).default([]),
 });
 
-/** A name the user chooses; it is how the account is identified everywhere. */
 export const labelSchema = z
   .string()
   .trim()
   .min(1, "requiredField")
   .max(60, "tooLong");
 
-// Built from the provider's fields so provider-specific keys are not stripped.
 export function connectFormSchema(provider) {
   const shape = { label: labelSchema };
 
@@ -80,7 +71,6 @@ export function connectFormSchema(provider) {
   return z.object(shape);
 }
 
-/** Rotation: the new credential and nothing else. */
 export const replaceTokenSchema = z.object({
   token: z.string().trim().min(1, "requiredField"),
 });
@@ -95,7 +85,6 @@ export const repositorySchema = z.object({
 
 export const repositoriesResponseSchema = z.object({
   repositories: z.array(repositorySchema).default([]),
-  // A continuation marker, not a total (avoids a provider-wide count).
   meta: z.object({
     page: z.number().optional(),
     has_more: z.boolean().optional(),

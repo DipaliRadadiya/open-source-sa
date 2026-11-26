@@ -2,7 +2,6 @@ import { CircleCheck, TriangleAlert, CircleX, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-// Status → icon, pill label and card tint. Colour always carries meaning.
 const META = {
   pass: { Icon: CircleCheck, tint: "text-success", chip: "bg-success/10", pill: "success", card: "" },
   warn: {
@@ -41,7 +40,6 @@ export function CheckRow({ check, labels }) {
             </Badge>
           </div>
 
-          {/* Raw evidence (version, path, unit name); untranslated by design. */}
           {check.detail ? (
             <p className="mt-1.5 break-words font-mono text-xs leading-5 text-muted-foreground">
               {check.detail}
@@ -60,8 +58,6 @@ export function CheckRow({ check, labels }) {
   );
 }
 
-// Passed checks need no reading, only proof they ran: one card, two columns of compact
-// rows, instead of a full card each (15 cards made a 2,000 px page).
 export function PassedChecks({ checks, title }) {
   return (
     <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">

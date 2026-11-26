@@ -8,7 +8,6 @@ import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
-// No GET-single-role endpoint exists, so fetch the (small) full list and match.
 export default async function EditRolePage({ params }) {
   const { role: roleId } = await params;
   const [{ roles, failed, status, failure, message }, catalog, t] = await Promise.all([
@@ -17,13 +16,12 @@ export default async function EditRolePage({ params }) {
     getTranslations("roles"),
   ]);
 
-  // A failed fetch is not a missing role; never answer it with notFound().
+  // A failed fetch is not a missing role, so don't call notFound().
   if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
   if (catalog.failed) return <LoadFailed description={t("catalogLoadFailed")} status={catalog.status} failure={catalog.failure} />;
 
   const role = roles.find((r) => String(r.id) === String(roleId));
   if (!role) notFound();
-  // System roles (Administrator) cannot be edited; the backend rejects it.
   if (role.is_system) redirect("/admin/roles");
 
   return (

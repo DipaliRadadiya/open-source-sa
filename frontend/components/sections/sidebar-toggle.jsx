@@ -7,7 +7,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// The span forwards hover to the tooltip: SidebarTrigger does not forward a ref.
 export function SidebarToggle() {
   const t = useTranslations("common");
   const { state } = useSidebar();

@@ -2,8 +2,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SK_CARD } from "@/components/ui/skeleton-kit";
 import { cn } from "@/lib/utils";
 
-// Must match the application page: the header card with its details row, the
-// status tiles, then two-by-two cards (title and button over a rule, rows below).
 export function ApplicationDashboardSkeleton() {
   return (
     <div className="space-y-6" aria-busy="true">

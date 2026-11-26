@@ -21,7 +21,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-// In menu order; a group starts where the first of its items appears.
 const ADMIN_GROUPS = ADMIN_NAV.reduce((groups, item) => {
   const key = item.group ?? "";
   const last = groups.at(-1);
@@ -49,7 +48,6 @@ export function AdminSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent className="gap-0 py-2">
-        {/* Grouped like the server menu: Dashboard on its own, then labelled groups. */}
         {ADMIN_GROUPS.map((group) => (
           <SidebarGroup key={group.key || "top"} className="py-1">
             {group.key ? (

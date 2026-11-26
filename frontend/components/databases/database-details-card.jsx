@@ -12,15 +12,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { AttachApplicationDialog } from "@/components/databases/attach-application-dialog";
 import { FACT_LABEL } from "@/lib/theme/facts";
 
-// The facts in one grid, with "Used by" among them rather than a card of its own,
-// and what that link means for backups underneath.
 export function DatabaseDetailsCard({
   database,
   engineName,
   engineVersion = null,
-  // The API reports 0 B while the engine is down, which would read as empty.
   engineDown = false,
-  // `undefined` when the exports could not be read: nothing is claimed then.
   lastExport,
   canManage,
   applications = [],
@@ -34,7 +30,6 @@ export function DatabaseDetailsCard({
   const [open, setOpen] = useState(false);
 
   const application = applicationById(applications, database.application_id);
-  // Attached to a site this user cannot see (or just deleted); "not linked" would be false.
   const attachedButUnknown = database.application_id !== null
     && database.application_id !== undefined
     && application === null;
@@ -73,8 +68,6 @@ export function DatabaseDetailsCard({
           </button>
         </ReasonTooltip>
       ),
-      // One line with an ellipsis, the full name in a tooltip: wrapped, it made its box
-      // taller than the other five. On a phone the box is full width.
       value: application ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -86,7 +79,6 @@ export function DatabaseDetailsCard({
               {application.name}
             </Link>
           </TooltipTrigger>
-          {/* Below: above, it covered "Used by" and Change. */}
           <TooltipContent side="bottom">{application.name}</TooltipContent>
         </Tooltip>
       ) : attachedButUnknown ? (
@@ -105,13 +97,9 @@ export function DatabaseDetailsCard({
           <h2 className="text-[15px] font-semibold tracking-tight">{t("detailsTitle")}</h2>
         </div>
 
-        {/* All four on one row when the card is wide enough, then two, then
-            one as it narrows. Size and created live under the name in the header (18 Nov).
-            Measured on the card, not the window. */}
         <dl className="grid gap-px bg-border @md/details:grid-cols-2 @3xl/details:grid-cols-4">
           {cells.map((cell) => (
             <div key={cell.key} className="min-w-0 space-y-1 bg-card px-5 py-3.5">
-              {/* Wraps: in a sixth of the card, "Change" was cut off in Russian. */}
               <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                 <dt className={FACT_LABEL}>{cell.label}</dt>
                 {cell.action ?? null}
@@ -121,7 +109,6 @@ export function DatabaseDetailsCard({
           ))}
         </dl>
 
-        {/* What the link means: site backups only dump the databases attached to them. */}
         <p className="flex items-start gap-2 border-t px-5 py-3 text-xs text-muted-foreground">
           {application ? (
             <CircleCheck className="mt-px size-3.5 shrink-0 text-success" aria-hidden />

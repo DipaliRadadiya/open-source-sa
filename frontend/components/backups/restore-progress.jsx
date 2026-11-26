@@ -15,28 +15,21 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
 
-/** The backend polls comfortably at 120/min; every 2s is well inside that. */
 const POLL_MS = 2000;
 
-/** Give up after 20 minutes; a restore that has not moved by then is stuck. */
 const POLL_LIMIT_MS = 20 * 60 * 1000;
 
-// Not yet STARTED means waiting for a worker (seconds), so a much shorter limit.
 const QUEUED_LIMIT_MS = 2 * 60 * 1000;
 
-// Banner buttons: the action is filled default; closing is neutral, never the status colour.
 const NEUTRAL =
   "border-transparent bg-background text-foreground shadow-xs hover:bg-muted dark:bg-secondary dark:hover:bg-muted";
 
 export function RestoreProgress({
   restore: initial,
   applicationDomain,
-  // True when this run restored a safety copy (an undo); from the page so a reload says so too.
   restoredSafetyCopy = false,
-  // Told each status, so the page can block actions that must wait for a restore.
   onStatusChange,
   onDismiss,
-  // "database": a database's own restore, worded for it; its undo restores there too.
   subject = "application",
   database = null,
 }) {
@@ -44,27 +37,21 @@ export function RestoreProgress({
   const { refreshAndWait } = useRefresh();
   const router = useRouter();
   const [restore, setRestore] = useState(initial);
-  // Polling stops at success, so the API's "2 seconds ago" would stay frozen; the
-  // stamp is UTC wall-clock (app timezone), ticked here.
   const format = useFormatter();
   const now = useNow({ updateInterval: 30000 });
   const finishedAt = parseApiWallClock(restore?.finished_at);
   const finishedAgo = finishedAt
-    ? // At least a second back, so it never reads "Finished now."
+    ?
       format.relativeTime(Math.min(finishedAt.getTime(), now.getTime() - 1000), now)
     : restore?.finished_at_human ?? null;
   const [undoBackup, setUndoBackup] = useState(null);
-  // Whether this run put the safety copy back; otherwise the banner would offer to "undo" the undo.
-  // Seeded from the prop for reloads mid-undo.
+  // Otherwise the banner would offer to undo the undo.
   const [wasUndo, setWasUndo] = useState(Boolean(restoredSafetyCopy));
   const [loadingUndo, setLoadingUndo] = useState(false);
-  // Set when polling gives up: still pending/running per the API, but nothing has moved.
   const [stalled, setStalled] = useState(false);
-  // Bumped by "Check again" so polling restarts even on the same status.
   const [round, setRound] = useState(0);
   const [checking, setChecking] = useState(false);
   const timer = useRef(null);
-  // A ref: as an effect dependency the inline callback restarted polling every render.
   const statusRef = useRef(onStatusChange);
   useEffect(() => {
     statusRef.current = onStatusChange;
@@ -72,7 +59,6 @@ export function RestoreProgress({
 
   const inFlight = RESTORE_IN_FLIGHT.includes(restore?.status);
 
-  // Queued: `pending` with no `started_at` means the site has not been touched yet.
   const queued = restore?.status === "pending" && !restore?.started_at;
 
   const id = restore?.id;
@@ -87,18 +73,15 @@ export function RestoreProgress({
         if (!next) return;
         setRestore(next);
         statusRef.current?.(next.status, next.id);
-        // The site's files and database changed; refresh every other screen.
         if (!RESTORE_IN_FLIGHT.includes(next.status)) router.refresh();
       } catch {
-        // Transient errors are ignored; the next tick retries.
+        // retry on the next poll
       }
     }
 
     timer.current = setInterval(poll, POLL_MS);
-    // Stop polling eventually: a restore no worker picks up stays `pending` forever.
     const stop = setTimeout(() => {
       clearInterval(timer.current);
-      // Say so, rather than leave a spinner implying work is happening.
       setStalled(true);
     }, queued ? QUEUED_LIMIT_MS : POLL_LIMIT_MS);
 
@@ -108,7 +91,6 @@ export function RestoreProgress({
     };
   }, [inFlight, id, queued, router, round]);
 
-  // Ask about THIS restore: the banner keeps its own copy, which a page refresh would not update.
   async function checkAgain() {
     setChecking(true);
     try {
@@ -140,7 +122,6 @@ export function RestoreProgress({
       const response = await fetchBackup(restore.safety_backup_id);
       const backup = response.data?.backup;
       if (!backup) throw new Error("missing");
-      // Put back only what this restore replaced (e.g. database only).
       setUndoBackup({ ...backup, application_domain: applicationDomain, preferred_type: restore.type });
     } catch (error) {
       toast.error(apiMessage(error, t("undoFailed")));
@@ -152,8 +133,6 @@ export function RestoreProgress({
   if (restore.status === "succeeded") {
     return (
       <>
-        {/* Buttons on the right, beside the text: under it they left the right half empty
-            (Krishna, 9 Oct). On a phone they drop below, lined up with the text. */}
         <div className="flex flex-col gap-3 rounded-2xl border border-success/30 bg-success/5 p-5 sm:flex-row sm:items-center">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-success/10">
@@ -161,7 +140,6 @@ export function RestoreProgress({
             </span>
             <div className="min-w-0 space-y-1">
               <p className="font-medium">{wasUndo ? t("undone") : t("succeeded")}</p>
-              {/* Server and browser read the clock a moment apart. */}
               <p className="text-sm text-muted-foreground" suppressHydrationWarning>
                 {wasUndo
                   ? t("undoneBody")
@@ -175,7 +153,6 @@ export function RestoreProgress({
             </div>
           </div>
 
-          {/* Undo and Dismiss share one size and style. */}
           <div className="ms-14 flex shrink-0 flex-wrap gap-2 sm:ms-0">
             {restore.safety_backup_id && restore.safety_copy !== false && !wasUndo ? (
               <Button size="sm" onClick={openUndo} disabled={loadingUndo}>
@@ -204,7 +181,6 @@ export function RestoreProgress({
           onStarted={(next) => {
             setUndoBackup(null);
             if (!next) return;
-            // The run that follows IS the undo, so its banner must not offer undo.
             setWasUndo(true);
             setRestore(next);
             onStatusChange?.(next.status, next.id);
@@ -223,7 +199,6 @@ export function RestoreProgress({
           </span>
           <div className="min-w-0 space-y-1">
             <p className="font-medium">{t("failed")}</p>
-            {/* A translated key naming the failed step; the backend never sends raw stderr. */}
             <p className="text-sm text-muted-foreground">
               {reasonText(restore.reason_title, t("unknownReason"))}
             </p>
@@ -245,7 +220,6 @@ export function RestoreProgress({
     );
   }
 
-  // Still in flight per the API, but not moving. Amber: nothing has reported a failure.
   if (stalled) {
     return (
       <div className="flex flex-col gap-3 rounded-2xl border border-warning/30 bg-warning/5 p-5 sm:flex-row sm:items-center">
@@ -254,13 +228,11 @@ export function RestoreProgress({
             <TriangleAlert className="size-6 text-warning" aria-hidden />
           </span>
           <div className="min-w-0 space-y-1">
-            {/* Queued and running restores time out differently and mean different things. */}
             <p className="font-medium">{t(queued ? "stalledQueued" : "stalled")}</p>
             <p className="text-sm text-muted-foreground">
               {t(queued ? "stalledQueuedBody" : "stalledBody")}
             </p>
             {restore.reference ? (
-              // The one thing worth quoting to whoever looks at the server.
               <p className="pt-1 font-mono text-xs text-muted-foreground">
                 {t("reference", { reference: restore.reference })}
               </p>
@@ -281,7 +253,6 @@ export function RestoreProgress({
     );
   }
 
-  // Queued: no step has run, so nothing on the site has changed yet.
   if (queued) {
     return (
       <div className="space-y-3 rounded-2xl border bg-muted/20 p-5">
@@ -314,7 +285,6 @@ export function RestoreProgress({
             {restore.current_step_title ?? t("starting")}
           </p>
         </div>
-        {/* Hide, so a restore that never finishes does not leave an uncloseable banner. */}
         <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("shrink-0", NEUTRAL)}>
           <EyeOff className="size-4" />
           {t("hide")}

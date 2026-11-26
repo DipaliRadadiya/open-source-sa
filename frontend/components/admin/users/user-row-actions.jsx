@@ -31,15 +31,13 @@ export function UserRowActions({ user, roles = [], rolesFailed = false, currentU
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [impersonateOpen, setImpersonateOpen] = useState(false);
   const [impersonating, setImpersonating] = useState(false);
-  // Only an item that opens a dialog keeps focus off ⋯ (the dialog takes it and hands
-  // it back); Escape or a click away must return it to ⋯, not the top of the page.
+  // Return focus to ⋯ unless a dialog took it.
   const openingDialog = useRef(false);
   const open = (setter) => () => {
     openingDialog.current = true;
     setter(true);
   };
   const isSelf = user.id === currentUserId;
-  // Mirrors the backend: no impersonating yourself or another admin (422).
   const canImpersonate = !isSelf && !user.is_admin;
   const impersonateHint = isSelf
     ? t("actions.impersonateSelfHint")
@@ -51,8 +49,6 @@ export function UserRowActions({ user, roles = [], rolesFailed = false, currentU
     setImpersonating(true);
     try {
       await impersonateUser(user.id);
-      // Hard navigation so SSR re-reads the new session cookie. "/" lets the front
-      // door route each role to the first page it may open.
       window.location.href = "/";
     } catch (error) {
       toast.error(apiMessage(error, t("actions.impersonateFailed")));

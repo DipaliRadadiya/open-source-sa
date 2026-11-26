@@ -20,7 +20,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-// Register only what the charts use. Never switch to the bare `echarts` import.
+// Register only what the charts use. Don't switch to the bare echarts import.
 echarts.use([
   LineChart,
   PieChart,
@@ -29,22 +29,17 @@ echarts.use([
   LegendComponent,
   DataZoomComponent,
   AriaComponent,
-  // Capacity lines on the load chart. ECharts silently drops config for
-  // unregistered components, so a missing entry fails with no warning.
   MarkLineComponent,
-  // The peak marker on the database query chart.
   MarkPointComponent,
   CanvasRenderer,
 ]);
 
-// Tokens are read from the CSS cascade, so globals.css stays the source and themes apply.
 const NO_TOKENS = Object.freeze({});
 
-/** One shared 1x1 context for every token on the page. */
 let probe = null;
 const SENTINEL = "#010203";
 
-// Tokens resolve as `lab()`, which zrender cannot parse; convert by painting one pixel.
+// Colours resolve as lab(), which zrender can't parse, so convert by painting one pixel.
 function toSrgb(value) {
   if (!value) return value;
 
@@ -55,7 +50,6 @@ function toSrgb(value) {
 
   probe.fillStyle = SENTINEL;
   probe.fillStyle = value;
-  // An invalid colour is ignored, so a surviving sentinel means "not a colour".
   if (probe.fillStyle === SENTINEL) return value;
 
   probe.clearRect(0, 0, 1, 1);
@@ -79,11 +73,9 @@ function readTokens(names) {
 
 export function useChartTokens(names) {
   const key = names.join("|");
-  // The snapshot must keep its identity while values are unchanged, or
-  // useSyncExternalStore re-renders forever.
+  // Keep the snapshot's identity while values are unchanged, or useSyncExternalStore loops.
   const cache = useRef({ key: null, signature: null, value: NO_TOKENS });
 
-  // The theme toggle swaps a class on <html> without re-rendering this component.
   const subscribe = useCallback((notify) => {
     const observer = new MutationObserver(notify);
     observer.observe(document.documentElement, {
@@ -109,7 +101,6 @@ export function useChartTokens(names) {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
-// Always pass `dataTable`: a canvas is opaque to screen readers.
 export function EChart({
   option,
   className,
@@ -128,7 +119,6 @@ export function EChart({
     const chart = echarts.init(host, null, { renderer: "canvas" });
     chartRef.current = chart;
 
-    // Covers a zero first size during layout and container changes window.resize misses.
     const observer = new ResizeObserver(() => chart.resize());
     observer.observe(host);
 
@@ -143,7 +133,7 @@ export function EChart({
     const chart = chartRef.current;
     if (!chart || !option) return;
 
-    // notMerge: removed series must not linger from the previous draw.
+    // notMerge so removed series don't linger.
     chart.setOption(option, { notMerge: true });
     setPainted(true);
   }, [option]);

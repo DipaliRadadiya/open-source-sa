@@ -1,7 +1,5 @@
 import { SkCard, SkFacts, SkHeader, SkNote, SkRows, SkTabs } from "@/components/ui/skeleton-kit";
 
-
-// Deployment: the deploy card with its facts, the tabs, then the history.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

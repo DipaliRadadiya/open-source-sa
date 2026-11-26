@@ -1,15 +1,11 @@
 import { api } from "@/lib/api/client";
 import { applicationLogsResponseSchema } from "@/lib/schemas/application-log";
 
-// Re-read after a clear or a reload so each tab's size and last write stay current.
 export async function listApplicationLogs(appId) {
   const res = await api.get(`/applications/${appId}/logs`);
   return applicationLogsResponseSchema.parse(res.data).logs;
 }
 
-// No `after` cursor, so live-tail re-reads the last N lines (throttle 120/min).
-// `grep` is a literal, case-insensitive substring applied server-side.
-// `filters` holds `from` and the access log's ip/status/method/url; empty ones are not sent.
 export function readApplicationLog(appId, key, { lines, grep, filters, signal } = {}) {
   const set = Object.fromEntries(Object.entries(filters ?? {}).filter(([, value]) => value !== ""));
   return api.get(`/applications/${appId}/logs/${encodeURIComponent(key)}`, {
@@ -22,12 +18,10 @@ export function readApplicationLog(appId, key, { lines, grep, filters, signal } 
   });
 }
 
-// Truncated, never deleted, so the writer keeps its handle. Needs `app_log` manage.
 export function clearApplicationLog(appId, key) {
   return api.delete(`/applications/${appId}/logs/${encodeURIComponent(key)}`);
 }
 
-// Cookie-authenticated `<a href download>`, like the server logs (LOG-dl).
 export function applicationLogDownloadUrl(appId, key) {
   return `${process.env.NEXT_PUBLIC_API_URL}/api/applications/${appId}/logs/${encodeURIComponent(key)}/download`;
 }

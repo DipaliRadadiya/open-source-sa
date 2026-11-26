@@ -9,7 +9,6 @@ import { apiMessage } from "@/lib/api/error-message";
 import { useBranding } from "@/components/branding-provider";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-// The token stays valid at the provider until revoked there, so the dialog says so and links to it.
 export function DisconnectDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.disconnect");
   const { name: brand } = useBranding();

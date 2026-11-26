@@ -1,27 +1,22 @@
 import { z } from "zod";
 import { listMetaSchema } from "./list.js";
 
-// The pivot stores two booleans, but "manage without view" rewrites itself.
 export const ACCESS_NONE = "none";
 export const ACCESS_VIEW = "view";
 export const ACCESS_MANAGE = "manage";
 
-// Collapse a stored pair into its level. `manage` is checked first: a legacy
-// manage=true, view=false row does grant management.
 export function accessFromGrant(view, manage) {
   if (manage) return ACCESS_MANAGE;
   if (view) return ACCESS_VIEW;
   return ACCESS_NONE;
 }
 
-// Titles and order come from the server; never hardcode or re-sort them.
 export const accessLevelSchema = z.object({
   key: z.string(),
   title: z.string(),
   description: z.string().default(""),
 });
 
-// A permission entry embedded on a role (from GET/POST /admin/roles).
 export const rolePermissionSchema = z
   .object({
     level: z.string(),
@@ -32,7 +27,6 @@ export const rolePermissionSchema = z
       .object({ view: z.boolean(), manage: z.boolean() })
       .optional(),
   })
-  // `access` is authoritative; the boolean pair is a fallback for older backends.
   .transform((entry) => ({
     ...entry,
     access:
@@ -43,7 +37,6 @@ export const rolePermissionSchema = z
       ),
   }));
 
-// Keyed on level AND sub_level: `logs` is two permissions (server and application).
 export const permissionGroupSchema = z.object({
   level: z.string().default(""),
   sub_level: z.string().default(""),
@@ -67,8 +60,6 @@ export const rolesResponseSchema = z.object({
   meta: listMetaSchema,
 });
 
-// Name and description only; the permission matrix is separate component state
-// assembled on submit.
 export const roleFormSchema = z.object({
   name: z.string().min(1, "required_name").max(255, "tooLong"),
   description: z

@@ -53,7 +53,6 @@ export function FilesPanel({
   breakdown = null,
   siteType = null,
   servingProfile = null,
-  // A file named in the link (`?open=`), opened on arrival.
   openName = null,
 }) {
   const t = useTranslations("applications.files");
@@ -61,13 +60,11 @@ export function FilesPanel({
     ? (initialFiles ?? []).find((f) => f.name === openName && f.type !== "dir")
     : null;
   const openedFile = opened ? { ...opened, path: joinPath(initialPath ?? "", opened.name) } : null;
-  // An image opens in the preview, text in the editor; anything else (an archive,
-  // a binary) cannot be opened, so its row is highlighted instead.
   const [action, setAction] = useState(() =>
     openedFile && canManage && canOpenFile(openedFile.name)
       ? { type: isImageFile(openedFile.name) ? "preview" : "edit", file: openedFile }
       : null,
-  ); // { type, file }
+  );
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFileOpen, setNewFileOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -75,18 +72,12 @@ export function FilesPanel({
   const [query, setQuery] = useState("");
   const [siteSearch, setSiteSearch] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  // dragenter/dragleave fire for every child a drag crosses, so a boolean flickers;
-  // a depth counter only reads "outside" back at zero.
   const dragDepth = useRef(0);
 
-  // Which row to flash after a create/rename/copy/compress/upload lands: the list
-  // re-sorts on refresh, so the result could be anywhere.
   const [highlightPath, setHighlightPath] = useState(openedFile?.path ?? null);
   const highlightTimeout = useRef(null);
   useEffect(() => () => clearTimeout(highlightTimeout.current), []);
 
-  // `open` is dropped from the URL once the file is shown, without a navigation, so
-  // a refresh or Back does not reopen it.
   useEffect(() => {
     if (!openName) return;
     const url = new URL(window.location.href);
@@ -101,18 +92,14 @@ export function FilesPanel({
     highlightTimeout.current = setTimeout(() => setHighlightPath(null), 2000);
   }
 
-  // Server-provided on every navigation/refresh; a directory listing has no live
-  // state to poll. The path segment keys the server component's fetch.
   const path = initialPath ?? "";
   const files = (initialFiles ?? []).map((f) => ({ ...f, path: joinPath(path, f.name) }));
 
-  // Selection is a list of paths, not row indexes: the list re-sorts and refreshes,
-  // and an index would then point at a different file.
   const [selected, setSelected] = useState([]);
   const [bulkAction, setBulkAction] = useState(null);
   const [bulkOutcome, setBulkOutcome] = useState(null);
 
-  // Leaving the folder clears the selection, adjusted during render to avoid a stale frame.
+  // Adjusted during render to avoid a stale frame.
   const [selectionPath, setSelectionPath] = useState(path);
   if (selectionPath !== path) {
     setSelectionPath(path);
@@ -138,10 +125,8 @@ export function FilesPanel({
 
   function onBulkResult(action, result, { permanent = false } = {}) {
     setSelected([]);
-    // Full success: a toast is enough. Anything else stays on screen to be read.
     if (!result.failed.length) {
       setBulkOutcome(null);
-      // A permanent delete must not report "moved to the trash".
       const key = action === "delete" && permanent ? "bulk.deleteDoneForever" : `bulk.${action}Done`;
       toast.success(t(key, { count: result.succeeded.length }));
       return;
@@ -153,8 +138,6 @@ export function FilesPanel({
     const needle = query.trim().toLowerCase();
     return needle ? files.filter((f) => f.name.toLowerCase().includes(needle)) : files;
   }, [files, query]);
-  // Only rows on screen count as selected, so a filter cannot leave a hidden file selected.
-  // Derived, not pruned: clearing the filter restores the ticks.
   const shownSelection = useMemo(() => {
     const onScreen = new Set(filtered.map((f) => f.path));
     return selected.filter((entry) => onScreen.has(entry));
@@ -163,10 +146,8 @@ export function FilesPanel({
   const writeReason = canWrite ? null : DENIED;
 
   const hiddenHref = hiddenToggleHref({ appId, path, showHidden });
-  // Remembered for the next folder too, not only this URL.
   const rememberHidden = () => writePref(HIDDEN_COOKIE, showHidden ? "hide" : null);
 
-  // Hidden folders are measured too, so only a folder with no subfolders skips the walk.
   const hasFolders = files.some((f) => f.type === "dir");
   const sizes = useFolderSizes(appId, path, initialFiles, hasFolders);
   const folderSizes = { ...sizes.data, loading: sizes.loading };
@@ -179,7 +160,6 @@ export function FilesPanel({
     setAction(null);
   }
 
-  // Drop anywhere on the panel to upload; the dialog flow still works too.
   function onDragEnter(e) {
     if (!canWrite) return;
     e.preventDefault();
@@ -202,8 +182,6 @@ export function FilesPanel({
     dragDepth.current = 0;
     setDragOver(false);
     if (e.dataTransfer.files?.length) {
-      // A snapshot, not the live FileList: `dataTransfer` is emptied once the drop
-      // event finishes, and this is read later during the dialog's render.
       setDroppedFiles(Array.from(e.dataTransfer.files));
       setUploadOpen(true);
     }
@@ -211,12 +189,8 @@ export function FilesPanel({
 
   const addButtons = (
     <div className="flex flex-wrap items-center gap-1.5">
-      {/* A container query: the strip's width depends on the sidebar. 73rem is measured;
-          72rem made the rule itself cause the wrap, 74rem hid it on rows that fit. */}
       <Separator
         orientation="vertical"
-        // `!self-center` because the primitive's `data-vertical:self-stretch` beats the
-        // row's `items-center` and would pin the 20px rule to the top.
         className="mx-0.5 !h-5 !self-center hidden @[73rem]/toolbar:block"
       />
       <ReasonTooltip reason={writeReason}>
@@ -237,23 +211,15 @@ export function FilesPanel({
           {t("uploadDialog.action")}
         </Button>
       </ReasonTooltip>
-      {/* Neither is part of adding a file. Rank comes from Upload being the one filled
-          button; grey text on this strip read as disabled. */}
-      {/* Gated like the first one: wrapped onto a phone line it stood alone before Fix
-          permissions. 52rem fits the widest locale's row (French, 815px). */}
       {canWrite ? (
         <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center hidden @[52rem]/toolbar:block" />
       ) : null}
       <FixPermissionsButton appId={appId} canManage={canManage} servingProfile={servingProfile} />
-      {/* Text is red mixed 22% toward foreground: plain `text-destructive` on this tint is under 4.5:1. */}
       <Button
         variant="outline"
         size="sm"
         className={cn(
           "border-destructive/30 bg-destructive/5 text-destructive [--destructive-ink:color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] text-(--destructive-ink) hover:bg-destructive/10 hover:text-(--destructive-ink) dark:border-destructive/40 dark:bg-destructive/10 dark:text-destructive dark:hover:bg-destructive/15 dark:hover:text-destructive",
-          // The toolbar is a card now, and outline buttons take the brand tint inside cards;
-          // Trash keeps its red over that, hover included: the tint's hover text and border
-          // are blue, so leaving them out turned the label blue on a red fill.
           "in-[.bg-card]:border-destructive/30 in-[.bg-card]:bg-destructive/5 in-[.bg-card]:text-(--destructive-ink) in-[.bg-card]:hover:bg-destructive/10 in-[.bg-card]:dark:border-destructive/40 in-[.bg-card]:dark:bg-destructive/10 in-[.bg-card]:dark:text-destructive in-[.bg-card]:dark:hover:bg-destructive/15",
           "in-[.bg-card]:hover:border-destructive/40 in-[.bg-card]:hover:text-[color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] in-[.bg-card]:dark:hover:border-destructive/50 in-[.bg-card]:dark:hover:text-destructive",
         )}
@@ -275,7 +241,6 @@ export function FilesPanel({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      {/* Above the listing: queued archives are not in the rows yet. */}
       <ArchiveJobsBanner appId={appId} />
       {dragOver ? (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border-2 border-dashed border-primary bg-primary/5 backdrop-blur-[1px]">
@@ -288,7 +253,6 @@ export function FilesPanel({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <FileBreadcrumb appId={appId} path={path} />
-        {/* Site search spans every folder, so a local "X of Y" count would be wrong. */}
         {files.length && !siteSearch ? (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             {hasFolders ? <FolderSizesStatus sizes={sizes} /> : null}
@@ -303,12 +267,7 @@ export function FilesPanel({
 
       <FileShortcuts appId={appId} siteType={siteType} path={path} onAction={onAction} canManage={canManage} />
 
-      {/* One toolbar on one white card, with search inside it, so the controls read as a
-          group tied to the table. White, not grey: on a grey band the grey search well and
-          the neutral buttons disappeared into it (Krishna, 7 Oct). */}
       <div className="@container/toolbar flex flex-col gap-2 rounded-2xl border border-border/70 bg-card p-2.5 shadow-e1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        {/* Sized to content, not `flex-1`, so the two groups wrap as wholes instead of
-            squeezing each other. */}
         <div className="flex flex-wrap items-center gap-1.5">
           {files.length > 0 ? (
             <LocalSearchInput
@@ -318,29 +277,22 @@ export function FilesPanel({
                 setSiteSearch(false);
               }}
               placeholder={t("searchPlaceholder")}
-              // 176px: measured at 1440 with the sidebar open, the strip is 1098px and the
-              // two groups need 1154 at 224px; this and the 6px gaps bring it to one row.
               className="sm:max-w-44"
             />
           ) : null}
-          {/* Files change outside the panel (deploys, cron, SSH); this also refreshes trash and search. */}
           <RefreshButton className="size-8" />
-          {/* Context for the listing, not an action, so it sits with the view controls. */}
           <SizeBreakdownSheet breakdown={breakdown} />
-          {/* A link, not a button: the listing is fetched on the server, so the choice must
-              be in the URL (also shareable and reload-safe). */}
+          {/* A link: the listing is fetched on the server, so the choice has to be in the URL. */}
           {files.length > 0 || hiddenCount > 0 ? (
             <Button asChild variant="outline" size="sm">
               <Link
                 href={hiddenHref}
-                // The same page with every server fetch; never rendered speculatively.
                 prefetch={false}
                 scroll={false}
                 onClick={rememberHidden}
               >
                 {showHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                 {showHidden ? t("hidden.hide") : t("hidden.show")}
-                {/* Hidden files are counted so the screen never looks like it lost them. */}
                 {!showHidden && hiddenCount > 0 ? (
                   <span className="ms-1 tabular-nums">
                     {t("hidden.count", { count: hiddenCount })}
@@ -366,7 +318,6 @@ export function FilesPanel({
       {siteSearch ? (
         <SiteSearchResults appId={appId} query={query} onAction={onAction} canManage={canManage} />
       ) : files.length === 0 && !showHidden && hiddenCount > 0 ? (
-        /* Files exist but are hidden, so "empty" would be false. Reuses the toggle's href. */
         <EmptyState
           icon={EyeOff}
           title={t("empty.hiddenOnlyTitle", { count: hiddenCount })}
@@ -388,7 +339,6 @@ export function FilesPanel({
           action={
             canWrite ? (
               <div className="flex flex-wrap justify-center gap-2">
-                {/* Outlined: the toolbar's Upload is already the filled primary. */}
                 <Button variant="outline" size="sm" onClick={() => setUploadOpen(true)}>
                   <UploadCloud className="size-3.5" />
                   {t("uploadDialog.action")}
@@ -446,7 +396,6 @@ export function FilesPanel({
               initialSort={initialSort}
             />
           </div>
-          {/* Advertises the whole-panel drop target. Desktop only. */}
           {canWrite ? (
             <p className="hidden items-center gap-1.5 text-xs text-muted-foreground lg:flex">
               <MousePointerClick className="size-3.5" aria-hidden />
@@ -484,14 +433,12 @@ export function FilesPanel({
         onSuccess={flashPath}
       />
 
-      {/* Mounted only while active, so each dialog initializes fresh from props instead
-          of resetting via setState-in-effect. */}
+      {/* Mounted only while active so each dialog starts fresh from props. */}
       {bulkAction ? (
         <BulkDialogs
           appId={appId}
           action={bulkAction}
           paths={shownSelection}
-          // The rows, not just paths: the Permissions dialog starts from the actual modes.
           files={files}
           path={path}
           onOpenChange={(open) => !open && setBulkAction(null)}

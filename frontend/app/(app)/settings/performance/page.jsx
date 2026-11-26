@@ -19,7 +19,6 @@ export default async function SettingsPerformancePage() {
 
   const canManage = can(permissions, "setting", "manage");
 
-  // Optional context for the swap recommendation; needs dashboard permission.
   const memoryTotal = can(permissions, "dashboard", "view")
     ? await getMemoryTotal()
     : null;
@@ -36,7 +35,6 @@ export default async function SettingsPerformancePage() {
         />
       ) : null}
 
-      {/* Absent means Redis isn't installed, so no card is rendered. */}
       {data.redis ? (
         <RedisForm
           redis={data.redis}

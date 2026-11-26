@@ -2,7 +2,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const CARD = "rounded-2xl border border-border/70 bg-card shadow-e1";
 
-// The setup page's own shape: header, overview, one card to install, the installed list.
 export default function SetupLoading() {
   return (
     <div className="space-y-6" aria-hidden>

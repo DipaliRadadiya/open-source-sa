@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// Shape of GET /admin/dashboard -> { dashboard: {...} }
 export const dashboardSchema = z.object({
   users: z.object({
     total: z.number(),

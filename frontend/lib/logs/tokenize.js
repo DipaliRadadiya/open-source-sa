@@ -1,7 +1,3 @@
-// Splits a raw line into timestamp, level and message so each can be coloured.
-// Conservative: anything not confidently matched stays in the message.
-
-// 2026-07-29 04:16:22,301 | 2026-07-29T04:16:22 | Jul 29 04:37:16 | [29/Jul/2026:04:38:03 +0000]
 const TIMESTAMP = new RegExp(
   "^(" +
     "\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d+)?(?:\\s?[+-]\\d{2}:?\\d{2}|Z)?" +
@@ -10,7 +6,6 @@ const TIMESTAMP = new RegExp(
     ")\\s*",
 );
 
-// A level word, optionally bracketed, right after the timestamp.
 const LEVEL = /^(\[)?(EMERG|ALERT|CRIT(?:ICAL)?|FATAL|ERROR|ERR|WARN(?:ING)?|NOTICE|INFO|DEBUG|TRACE)(\])?\s*/i;
 
 const LEVEL_TO_KEY = {
@@ -29,7 +24,6 @@ const LEVEL_TO_KEY = {
   info: "info",
 };
 
-/** @returns {{ time: string|null, level: string|null, levelKey: string|null, message: string }} */
 export function tokenizeLine(line) {
   if (!line) return { time: null, level: null, levelKey: null, message: line ?? "" };
 

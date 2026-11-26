@@ -14,9 +14,6 @@ import {
 
 const RESET_MS = 1500;
 
-// Only failure toasts: a clipboard write can be refused (insecure context, denied permission).
-// `outlined`: drawn as a bordered button (beside other buttons), so it takes the steel button look.
-// `icon`: a different glyph where two copy buttons sit side by side (username and password).
 export function CopyButton({ value, label, className, text = false, outlined = false, icon: Icon = Copy }) {
   const t = useTranslations("common");
   const [copied, setCopied] = useState(false);
@@ -40,7 +37,6 @@ export function CopyButton({ value, label, className, text = false, outlined = f
 
   const title = label ?? t("copy");
 
-  /* For when the value is not beside the button. */
   if (text) {
     return (
       <Button

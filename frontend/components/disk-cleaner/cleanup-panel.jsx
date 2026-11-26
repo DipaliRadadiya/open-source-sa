@@ -35,14 +35,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-// Nothing is pre-selected: a destructive action must be deliberate.
 export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
   const format = useFormatter();
   const t = useTranslations("diskCleaner");
   const keepLabel = useKeepLabel();
   const { choices, recommended } = keepOptions(keepDays);
   const keepSupported = hasKeepChoice(keepDays);
-  // One choice for the whole clean; every size, the split and the total follow it.
   const [keep, setKeep] = useKeepChoice();
   const { refreshAndWait } = useRefresh();
   const [selected, setSelected] = useState(() => new Set());
@@ -52,8 +50,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
   const [showPaths, setShowPaths] = useState(false);
   const [error, setError] = useState(null);
 
-  // Each row priced for the chosen keep. The no-choice `reclaimable` would hide real work:
-  // a journal at 0 B for "keep 7 days" can hold 24 MB for "delete all".
   const priced = useMemo(
     () =>
       categories
@@ -65,14 +61,11 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
     [categories, keep],
   );
 
-  // Rows with nothing to reclaim under this choice are listed but cannot be selected.
   const cleanable = useMemo(() => priced.filter((c) => c.bytes > 0), [priced]);
 
-  // By measured size, not the API's category grouping.
   const cleanableRows = useMemo(() => [...cleanable].sort((a, b) => b.bytes - a.bytes), [cleanable]);
   const cleanRows = useMemo(() => priced.filter((c) => !(c.bytes > 0)), [priced]);
 
-  // A ticked row that has nothing to free under a new choice drops out of the selection.
   const chosen = cleanable.filter((c) => selected.has(c.key));
   const chosenBytes = chosen.reduce((total, c) => total + c.bytes, 0);
   const riskyChosen = chosen.filter((c) => !c.safe);
@@ -102,11 +95,9 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
     try {
       const response = await cleanDisk(chosen.map((c) => c.key), keep);
       const parsed = cleanResultSchema.safeParse(response.data);
-      // What the disk actually freed; sizes are re-read first so the result never sits beside stale ones.
       await refreshAndWait();
       if (parsed.success) {
         setResult(parsed.data);
-        // The note sits at the top of the list; a toast reaches someone scrolled below it.
         toast.success(
           t("clean.freed", {
             size: localizeSizeText(parsed.data.freed_total_human ?? "0 B", format),
@@ -117,7 +108,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
       setConfirming(false);
       setSelected(new Set());
     } catch (err) {
-      // Also kept in the dialog, which stays open on failure and needs the support reference.
       const reference = err.response?.data?.reference;
       setError([apiMessage(err, t("clean.failed")), reference].filter(Boolean).join(" · "));
       toast.error(apiMessage(err, t("clean.failed")));
@@ -131,7 +121,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
   return (
     <DisabledReasonProvider denied={!canManage}>
       <>
-        {/* pb-0 so the footer band reaches the card edge. */}
         <Card className="gap-0 overflow-hidden pb-0">
           <CardHeader className="pb-4">
             <CardTitle icon={Sparkles}>{t("list.title")}</CardTitle>
@@ -140,7 +129,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                 <MeasuredAt at={measuredAt} />
               </CardDescription>
             ) : null}
-            {/* View controls, not actions; below a phone's width they drop under the text. */}
             <CardAction className="flex items-center gap-2 @max-sm/card-header:col-start-1 @max-sm/card-header:row-span-1 @max-sm/card-header:row-start-3 @max-sm/card-header:mt-3 @max-sm/card-header:justify-self-start">
               {!nothingToClean ? (
                 <Button
@@ -158,10 +146,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
             </CardAction>
           </CardHeader>
 
-          {/* No gap between list and footer: space-y left an empty strip above the footer band. */}
           <CardContent className="px-0 pb-0">
-            {/* Always shown when the API has the choice: when nothing is left at "keep 7 days",
-                Delete all may still free space. An older API ignores it, so it is not offered. */}
             {keepSupported ? (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-4 py-3">
               <Label htmlFor="clean-keep" className="text-sm font-medium">
@@ -183,8 +168,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
             ) : null}
 
             {result ? (
-              // m-4, not mb-4: the header is a bordered band, so without a top margin the note
-              // sat flush against it.
               <div className="m-4 flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
                 <Check className="mt-0.5 size-4 shrink-0 text-success" />
                 <div className="space-y-1">
@@ -194,7 +177,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                       percent: result.disk?.percent ?? 0,
                     })}
                   </p>
-                  {/* Per category, so a "0 B" on one is visible behind the total. */}
                   <p className="text-xs text-muted-foreground">
                     {result.cleaned
                       .map((c) => `${labelFor(categories, c.key)} ${localizeSizeText(c.freed_human ?? "0 B", format)}`)
@@ -206,7 +188,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
 
             {nothingToClean ? (
               <div className="border-t">
-                {/* Under a keep choice, "all tidy" is not true: a shorter one may still free space. */}
                 <EmptyState
                   compact
                   icon={Sparkles}
@@ -216,9 +197,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
               </div>
             ) : (
               <div className="border-t">
-                {/* One control, both directions; half-ticked while only some are chosen. */}
-                {/* px-7 lines this checkbox up with the ones inside the tiles (16px + 12px).
-                    Picking only feeds Clean, so a role that cannot clean gets neither. */}
                 {canManage ? (
                 <div className="flex items-center gap-3 border-b bg-muted/40 px-7 py-2.5">
                   <Checkbox
@@ -232,8 +210,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                 </div>
                 ) : null}
 
-                {/* Selectable tiles, two across when there is room: in full-width rows the
-                    size sat a whole card away from its name (Krishna, 13 Oct). */}
                 <div className="@container/items px-4 py-4">
                   <ul className="grid grid-cols-1 gap-3 @2xl/items:grid-cols-2">
                     {cleanableRows.map((category) => {
@@ -241,7 +217,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
 
                       return (
                         <li key={category.key} className="min-w-0">
-                          {/* The whole tile is the label, so a click anywhere on it toggles. */}
                           <label
                             htmlFor={`clean-${category.key}`}
                             className={cn(
@@ -263,7 +238,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                             <div className="min-w-0 flex-1 space-y-0.5">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                                  {/* Keeps the ⓘ from wrapping onto its own line. */}
                                   <span className="inline-flex items-center gap-1.5">
                                     <span className="text-sm font-medium">{category.label}</span>
                                     {category.note ? (
@@ -271,7 +245,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                                     ) : null}
                                   </span>
 
-                                  {/* The API decides what is safe to remove unattended. */}
                                   {!category.safe ? (
                                     <Badge variant="warning" className="font-normal">
                                       {t("list.checkFirst")}
@@ -283,7 +256,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                                   <span className="text-sm font-semibold tabular-nums">
                                     {localizeSizeText(category.human, format) ?? humanBytes(category.bytes, format)}
                                   </span>
-                                  {/* The choice does not apply here: unused packages go whole. */}
                                   {category.keeps_days === false && keep !== 0 ? (
                                     <span className="text-xs text-muted-foreground">{t("keep.alwaysAll")}</span>
                                   ) : null}
@@ -294,7 +266,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                                 <p className="text-sm text-muted-foreground">{category.description}</p>
                               ) : null}
 
-                              {/* One path per line, monospace. */}
                               {showPaths && category.paths?.length ? (
                                 <PathList
                                   paths={category.paths}
@@ -310,7 +281,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                     })}
                   </ul>
 
-                  {/* Nothing to free: named once, in one line, with nothing to tick. */}
                   {cleanRows.length ? (
                     <p className="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
@@ -340,12 +310,11 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                   <Button
                     disabled={chosen.length === 0}
                     onClick={() => {
-                      // Opening from here skips onOpenChange, so clear a stale error explicitly.
+                      // Opening from here skips onOpenChange, so clear the old error.
                       setError(null);
                       setConfirming(true);
                     }}
                   >
-                    {/* The button states the amount it will free. */}
                     {chosen.length > 0
                       ? t("action.cleanSized", { size: humanBytes(chosenBytes, format) })
                       : t("action.clean")}
@@ -363,7 +332,7 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
             if (open) setError(null);
             setConfirming(open);
           }}
-          // The base width is a data-attribute variant; a plain sm:max-w-* never wins.
+          // The base width is a data-attribute variant, so a plain sm:max-w-* never wins.
           className="data-[size=default]:max-w-[calc(100vw-2rem)] data-[size=default]:sm:max-w-xl"
           icon={Trash2}
           tone="destructive"
@@ -374,7 +343,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
           pending={pending}
           onConfirm={clean}
         >
-          {/* Review before anything is deleted. */}
           <div className="overflow-hidden rounded-lg border">
             <ul className="max-h-72 divide-y overflow-auto">
               {chosen.map((category) => (
@@ -385,7 +353,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
                       {localizeSizeText(category.human, format) ?? humanBytes(category.bytes, format)}
                     </span>
                   </div>
-                  {/* One path per line, wrapping: a truncated path misleads. */}
                   {category.paths?.length ? (
                     <ul className="space-y-0.5">
                       {category.paths.map((path) => (
@@ -399,7 +366,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
               ))}
             </ul>
   
-            {/* The number the button promises, restated where the list ends. */}
             <div className="flex items-baseline justify-between gap-3 border-t bg-muted/40 px-3 py-2.5 text-sm font-medium">
               <span>{t("confirm.total")}</span>
               <span className="tabular-nums">{humanBytes(chosenBytes, format)}</span>
@@ -408,15 +374,12 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
 
           {notes.truncates ? <p className="text-sm">{t("confirm.truncateNote")}</p> : null}
 
-          {/* Only when something ticked uses it: Docker images and unused packages always go whole. */}
           {keep != null && notes.keepApplies ? (
             <p className="text-sm">
               {t("keep.confirmLine", { choice: keepLabel(keep, recommended) })}
             </p>
           ) : null}
 
-          {/* Names only what is ticked: the old sentence said every log goes even with only the journal
-              chosen. Application logs are the history people go back to after an incident. */}
           {keep === 0 && notes.keepApplies ? (
             <Caution tone="destructive" size="md">
               <p>
@@ -426,7 +389,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
             </Caution>
           ) : null}
   
-          {/* Named, not counted. */}
           {riskyChosen.length ? (
             <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs text-warning">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
@@ -455,7 +417,6 @@ export function CleanupPanel({ categories, keepDays, canManage, measuredAt }) {
   );
 }
 
-// Paths shown per category before "more"; the rest stay one click away.
 const PATH_PREVIEW = 5;
 
 function PathList({ paths, moreLabel }) {
@@ -477,7 +438,6 @@ function PathList({ paths, moreLabel }) {
           type="button"
           className="mt-0.5 text-xs text-muted-foreground underline-offset-4 hover:underline"
           onClick={(e) => {
-            // Inside the row's <label>: without this the click also toggles the checkbox.
             e.preventDefault();
             setExpanded((v) => !v);
           }}
@@ -493,7 +453,6 @@ function labelFor(categories, key) {
   return categories.find((c) => c.key === key)?.label ?? key;
 }
 
-// Only for the live selection total; other sizes are API-formatted strings.
 function humanBytes(bytes, format) {
   return formatBytes(bytes || 0, format);
 }

@@ -39,12 +39,9 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   const [pendingValues, setPendingValues] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // The API reads bytes and writes megabytes; the conversion happens here, once.
   const currentMb = Math.round((swap?.size ?? 0) / MB);
   const defaults = { size_mb: String(currentMb) };
 
-  // Swap is a safety net, not extra RAM: 1–2 GB covers a spike, more just
-  // costs disk. Only offered when the memory size could be read.
   const recommendedMb = memoryTotal
     ? memoryTotal.bytes / MB < 2048
       ? 1024
@@ -60,7 +57,6 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   const sizeMb = useWatch({ control: form.control, name: "size_mb" });
   const format = useFormatter();
 
-  // Checks the swap file fits (the API does not); silent if unreadable.
   const [diskFree, setDiskFree] = useState(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -73,15 +69,11 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
     return () => controller.abort();
   }, []);
 
-  // Only the growth needs new space: the current file is replaced.
   const growth = Math.max(0, Number(sizeMb) * MB - (swap?.size ?? 0));
   const left = diskFree === null ? null : diskFree - growth;
-  // Refused past half the free space, not only when it cannot fit.
   const noRoom = diskFree !== null && growth > 0 && growth > diskFree * 0.5;
   const tight = diskFree !== null && growth > 0 && !noRoom && (left < 10 * 1024 * MB || left < diskFree * 0.6);
   const matchesPreset = PRESETS.includes(Number(sizeMb));
-  // Custom stays open once chosen, so the field doesn't vanish under the cursor
-  // the moment a typed value happens to equal a preset.
   const [custom, setCustom] = useState(!matchesPreset);
 
   async function save(values) {
@@ -105,8 +97,6 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
       form.setError("size_mb", { type: "manual", message: t("swap.noRoom", { free: formatBytes(diskFree, format) }) });
       return;
     }
-    // Turning swap off while it's in use is the one change here that can end
-    // with the kernel killing processes.
     if (Number(values.size_mb) === 0 && swap?.enabled) {
       setPendingValues(values);
       return;
@@ -134,7 +124,6 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
             icon={HardDriveDownload}
             title={t("swap.title")}
             description={t("swap.description")}
-            // The size buttons need the wider share; the current usage is one line.
             gridClassName="@3xl/section:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
             readOnly={!canManage}
             changedBy={changedBy}
@@ -161,7 +150,6 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                   : undefined
               }
             >
-              {/* The API's *_human strings are English-formatted; format the bytes for the locale. */}
               <div className="space-y-1.5">
                 <p className="text-sm tabular-nums">
                   {swap?.enabled
@@ -171,7 +159,6 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                       })
                     : t("swap.none")}
                 </p>
-                {/* How full it is, at a glance. */}
                 {swap?.enabled && swap.size > 0 && typeof swap.used === "number" ? (
                   <Progress
                     value={Math.min(100, (swap.used / swap.size) * 100)}
@@ -225,7 +212,6 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                     </ToggleGroupItem>
                   </ToggleGroup>
   
-                  {/* Only once "Custom" is chosen, so there is one control per value. */}
                   {custom ? (
                     <div className="flex items-center gap-2 pt-1">
                       <FormControl>

@@ -39,11 +39,8 @@ import { hasNoDatabase } from "@/lib/backups/database-availability";
 import { FACT_CELL, FACT_FRAME, FACT_GRID, FACT_LABEL } from "@/lib/theme/facts";
 import { DENIED } from "@/components/ui/reason-tooltip";
 
-// How long "queued" is shown before reporting that the worker has not taken it.
 const QUEUE_STALLED_MS = 3 * 60 * 1000;
 
-// `subject="database"`: the same screen for a database on its own (its own schedule,
-// no site). `database` is `{ id, name }`; the application-only parts are not passed.
 export function BackupsPanel({
   application = null,
   subject = "application",
@@ -52,39 +49,26 @@ export function BackupsPanel({
   destinations,
   backups,
   archiveDestinations = [],
-  // Complete, non-safety backups kept now; null when unknown.
   keptCount = null,
   total = 0,
   activeRestore = null,
   canManage,
   canRestore,
-  // `backup` manage: removing the schedule can delete every archive, so the
-  // API requires the server-level permission, not `app_backup`.
   canTurnOff = false,
   databaseCounts = null,
   databasesKnown = false,
-  // Only supplied when the reader can manage databases.
   siteDatabases = [],
-  // False when the database read failed: an empty list then means unknown,
-  // and the warning below must not fire.
   siteDatabasesKnown = true,
   unattachedDatabases = [],
   engines = [],
   needsDatabase = false,
   siteTypes = null,
   canManageDatabases = false,
-  // The history request failed (empty is not "never backed up").
   backupsFailed = false,
-  // 403: the history needs the server-level Backups permission, which a
-  // site-only role may lack.
   backupsForbidden = false,
-  // `GET /backup-targets/options`; null when it could not be read.
   backupOptions = null,
-  // Container site: whether it has any volumes; null when unknown (S-02).
   hasVolumes = null,
-  // Database page only: `backup` manage, which download and delete still need.
   canHandleArchives = false,
-  // Database page only: backups of deleted databases of the same engine, restorable here.
   archived = [],
 }) {
   const t = useSubjectTranslations("backups.application", "backups.database", subject);
@@ -92,7 +76,6 @@ export function BackupsPanel({
   const { refreshAndWait } = useRefresh();
   const isDatabase = subject === "database";
   const owner = isDatabase ? database : application;
-  // What a restore asks to be typed: the site's domain, or the database's name.
   const confirmValue = isDatabase ? database.name : application.domain;
   const [running, setRunning] = useState(false);
   const [retryingId, setRetryingId] = useState(null);
@@ -100,39 +83,26 @@ export function BackupsPanel({
   const [restoring, setRestoring] = useState(null);
   const [editing, setEditing] = useState(false);
   const [turningOff, setTurningOff] = useState(false);
-  // Replaced when a restore starts here so progress shows without a round trip.
   const [restore, setRestore] = useState(activeRestore);
-  // Only a restore started here should scroll the viewport.
   const [restoreStartedHere, setRestoreStartedHere] = useState(false);
-  // Latest status reported by the restore banner's polling, so the rest of the
-  // page can block Restore and Back up now while the site is being overwritten.
   const [restoreStatus, setRestoreStatus] = useState(null);
   const restoreRunning = RESTORE_IN_FLIGHT.includes(restoreStatus ?? restore?.status);
-  // Newest backup id when a run was started here. The POST returns 202 before the row exists,
-  // so this keeps the queued state and polling alive until it appears.
   const [queuedAfter, setQueuedAfter] = useState(null);
   const [stalled, setStalled] = useState(false);
 
-  // Poll only while a run is in flight.
   const busy = backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status));
 
-  // The wait ends as soon as a backup newer than the starting one appears.
   const newestId = newestBackupId(backups);
   const queued = isBackupQueued(backups, queuedAfter);
 
-  // Clear once the wait is over, or deleting the newest backup shows "queued" again.
-  // Done during render to avoid painting the wrong state for a frame.
   if (queuedAfter !== null && !queued) setQueuedAfter(null);
 
-  // Report a stalled queue instead of silently reverting to "nothing happened".
   useEffect(() => {
     if (!queued || stalled) return undefined;
     const id = setTimeout(() => setStalled(true), QUEUE_STALLED_MS);
     return () => clearTimeout(id);
   }, [queued, stalled]);
 
-  // Retry dispatches a fresh `RunBackup` (a new row, not this one), so it
-  // needs the same queue-window bookkeeping as "Back up now".
   async function retry(backup) {
     setRetryingId(backup.id);
     setStalled(false);
@@ -170,7 +140,6 @@ export function BackupsPanel({
     setStalled(false);
     try {
       await (isDatabase ? runDatabaseBackupNow(database.id) : runBackupNow(application.id));
-  // Remember where the list stood so the queued state ends when the row appears.
       setQueuedAfter(newestId);
       await refreshAndWait();
       toast.success(t("started"));
@@ -183,15 +152,12 @@ export function BackupsPanel({
 
   return (
     <div className="space-y-6">
-      {/* Fast while something runs; otherwise once a minute, so "4 seconds ago" does not sit
-          on screen for minutes (Krishna, 24 Nov). Only while the tab is visible. */}
       {busy || queued ? (
         <AutoRefresh intervalMs={5000} stopAfterMs={600000} />
       ) : (
         <AutoRefresh intervalMs={60000} stopAfterMs={30 * 60 * 1000} quiet />
       )}
 
-      {/* First: a restore is rewriting this site's files and database now. */}
       {restore ? (
         <ActiveRestore
           key={restore.id}
@@ -205,8 +171,6 @@ export function BackupsPanel({
         />
       ) : null}
 
-      {/* On the page rather than in the settings dialog: an action there would
-          open a second dialog over a half-filled form. */}
       {canManageDatabases && needsDatabase && siteDatabasesKnown && siteDatabases.length === 0 ? (
         <div className="flex flex-col gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-start gap-2.5">
@@ -240,8 +204,6 @@ export function BackupsPanel({
         options={backupOptions}
         noneKept={nothingKept(target)}
         canManage={canManage}
-        // Spinner only for a run this page is waiting on: a listed in-flight row can stay
-        // "running" forever if its worker died.
         running={running || queued}
         blockedReason={
           restoreRunning
@@ -253,8 +215,6 @@ export function BackupsPanel({
         onBackUpNow={backUpNow}
         onEdit={() => setEditing(true)}
         canTurnOff={canTurnOff}
-        // The API refuses while a run is in flight: its archive would belong
-        // to a schedule that no longer exists.
         turnOffBlockedReason={
           restoreRunning ? t("restoreRunning") : running || queued || busy ? t("turnOff.running") : null
         }
@@ -277,8 +237,6 @@ export function BackupsPanel({
         busyId={retryingId}
         queued={queued}
         stalled={stalled}
-        // The endpoint answers 422 while a run is under way; say so on the
-        // button. All rows belong to this site, so the reason is shared.
         retryBlockedReason={
           restoreRunning ? t("restoreRunning") : queued || busy ? t("alreadyRunning") : null
         }
@@ -290,7 +248,6 @@ export function BackupsPanel({
         <ArchivedBackups
           backups={archived}
           database={database}
-          // The restore takes a safety copy through this database's own schedule.
           blockedReason={
             !canRestore
               ? null
@@ -305,8 +262,6 @@ export function BackupsPanel({
         />
       ) : null}
 
-      {/* Edit mode when a target exists; `applicationId` is fixed, so the site
-          picker never renders. */}
       <SetupBackupsDialog
         open={editing}
         onOpenChange={setEditing}
@@ -323,15 +278,12 @@ export function BackupsPanel({
         servingProfile={application?.serving_profile}
         hasVolumes={hasVolumes}
         options={backupOptions}
-        // Starts the same queue window as the card's button.
         onStarted={() => {
           setStalled(false);
           setQueuedAfter(newestId);
         }}
       />
 
-      {/* Kept while open: a successful turn-off refreshes to no target, and
-          the dialog must outlive that to close and confirm. */}
       {target || turningOff ? (
         <TurnOffBackupsDialog
           open={turningOff}
@@ -340,7 +292,6 @@ export function BackupsPanel({
           subject={subject}
           target={target}
           count={backupsFailed ? null : total}
-          // Every destination this site's archives sit in, not just the current one.
           destinationNames={[
             ...new Set(
               [
@@ -374,8 +325,6 @@ export function BackupsPanel({
                 ...restoring,
                 application_domain: confirmValue,
                 application_name: owner.name,
-                // A type that never has a database: its archives hold files only,
-                // so "Database only" restores nothing.
                 files_only:
                   !isDatabase &&
                   Boolean(siteTypes?.length) &&
@@ -414,10 +363,7 @@ const STATE = {
 
 function stateOf(target, noneKept) {
   if (!target) return "unprotected";
-  // A disabled or manual target runs on no schedule and backs up nothing, so
-  // it is never reported as protected.
   if (!target.enabled || target.frequency === "manual") return "paused";
-  // Scheduled, but nothing to restore from.
   if (noneKept) return "empty";
   return "protected";
 }
@@ -426,10 +372,8 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
   const t = useSubjectTranslations("backups.application", "backups.database", subject);
   const state = stateOf(target, noneKept);
   const { icon: Icon, tone } = STATE[state];
-  // The stored time is 24-hour; format it so the card matches the locale-based picker.
   const format = useFormatter();
 
-  // The zone is shown with the time, otherwise it reads as the reader's own clock.
   const when = scheduleWhen(target, options, format);
   const tb = useTranslations("backups");
   const frequencyTitle = frequencyLabel(target, (frequency) => tb("pausedFrequency", { frequency }));
@@ -445,17 +389,15 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
 
   const facts = target
     ? [
-        // A database's schedule always backs up the database: nothing to say.
         subject === "database" ? null : { label: t("summary.what"), value: target.type_title ?? target.type },
         {
           label: t("summary.howOften"),
-          // Reader's clock format, NOT their timezone: the hour is the app clock, as stored.
-          // Converting would name an hour the scheduler never runs at.
+          // The schedule is in the app's timezone; converting would show an hour it never runs at.
           value: schedule,
         },
         {
           label: t("summary.keeps"),
-          // Never a dash: zero means keep every backup (`RetentionEnforcer` skips `keep <= 0`).
+          // 0 means keep every backup.
           value:
             target.retention_count === null || target.retention_count === undefined
               ? t("summary.keepsNotApplicable")
@@ -469,13 +411,10 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
         },
         {
           label: t("summary.lastBackup"),
-          // The newest backup still kept; a schedule that ran but kept nothing says so.
           value: target.last_backup_at_human ?? (target.last_run_at ? t("noneKept") : t("neverRun")),
         },
         {
           label: t("summary.nextBackup"),
-          // `is_due` outranks the timestamp: a new target runs on the next
-          // scheduler tick, not at the next scheduled slot.
           value: target.is_due
             ? t("summary.runsShortly")
             : (target.next_run_at_human ?? t("summary.noNextRun")),
@@ -487,8 +426,6 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
   const noPermission = DENIED;
 
   return (
-    // The state is carried by the icon tile and the button, not a coloured card edge:
-    // the pink outline read as an error banner rather than a card.
     <Card className="gap-0 overflow-hidden py-0">
       <div className={cn("flex flex-col items-start gap-3 px-5 py-4 sm:flex-row sm:items-center", target && "border-b")}>
         <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", tone)}>
@@ -496,8 +433,6 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-[15px] font-semibold tracking-tight">{t(`state.${state}.title`)}</h2>
-          {/* Protected: no line under the title. Schedule and storage are in the facts just
-              below, and the line repeated them word for word (22 Nov). */}
           {state === "protected" ? null : (
             <p className="text-sm text-muted-foreground">
               {state === "unprotected" && !canManage
@@ -507,10 +442,7 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
           )}
         </div>
 
-        {/* Column on a phone so long labels cannot overflow (buttons never
-            wrap). Hidden from roles that cannot change backups. */}
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          {/* Filled when there is no schedule: setting one up is the page's main action. */}
           <Button
             variant={target ? "outline" : "default"}
             onClick={onEdit}
@@ -556,15 +488,11 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
           </dl>
           </div>
 
-          {/* Exclusions change what a restore returns, so they are shown even
-              when there are no patterns to list. */}
           {excludes > 0 || target ? (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3">
               <p className="text-xs text-muted-foreground">
                 {excludes > 0 ? t("summary.excludes", { count: excludes }) : null}
               </p>
-              {/* Quiet and last, so it is not pressed by accident beside
-                  "Back up now". */}
               {target ? (
                 <Button
                   variant="ghost"
@@ -586,7 +514,6 @@ function ProtectionCard({ subject = "application", target, options = null, noneK
   );
 }
 
-// The History screen's table without the Site column, so both describe a backup identically.
 function RecentBackups({
   backups,
   total = 0,
@@ -609,18 +536,13 @@ function RecentBackups({
 }) {
   const t = useSubjectTranslations("backups.application", "backups.database", subject);
   const router = useRouter();
-  // Nothing to list and nothing failed: say what this list will hold and offer the next
-  // step, instead of one grey line.
   const firstRun = backups.length === 0 && !failed && !forbidden && !queued;
 
-  // A failed request is not evidence that the site has no history.
   const emptyMessage = forbidden ? t("historyForbidden") : failed ? t("historyFailed") : t("noRuns");
 
   const listProps = {
     backups,
     canRestore,
-    // Same permission as restore: deleting removes the archive from the bucket.
-    // A database page restores under `database` but deletes and downloads under `backup`.
     canDelete: archiveAccess ?? canRestore,
     canDownload: archiveAccess ?? canRestore,
     onDeleted: () => router.refresh(),
@@ -631,7 +553,6 @@ function RecentBackups({
     canClear: canManage,
     busyId,
     retryBlockedFor: retryBlockedReason ? () => retryBlockedReason : null,
-    // One target, newest first, unfiltered: the newest row is the only one worth retrying.
     retryable: (backup) => isRetryable(backup, backups),
     restoreInFlight,
     showSite: false,
@@ -642,7 +563,6 @@ function RecentBackups({
     <Card className="gap-0 overflow-hidden py-0">
       <div className="flex flex-wrap items-center gap-3 border-b px-5 py-3.5">
         <HeadIcon icon={History} />
-        {/* The count only shows when the list is capped at the newest five. */}
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <h3 className="text-[15px] font-semibold tracking-tight">{t("recentTitle")}</h3>
           {total > backups.length ? (
@@ -651,10 +571,8 @@ function RecentBackups({
             </span>
           ) : null}
         </div>
-        {/* Sized to match the 36px RefreshButton beside it. */}
         <div className="flex shrink-0 items-center gap-2">
           <RefreshButton />
-          {/* Full history needs the permission this list was refused for. */}
           {forbidden ? null : (
             <Button asChild variant="outline">
               <Link href={historyHref}>
@@ -666,8 +584,6 @@ function RecentBackups({
         </div>
       </div>
 
-      {/* A queued run has no row yet; this shows where it will appear and
-          disappears once it does. */}
       {queued ? (
         <div
           role="status"
@@ -689,7 +605,6 @@ function RecentBackups({
         <FirstBackupEmpty hasTarget={hasTarget} subject={subject} />
       ) : (
       <CardContent className="p-0">
-        {/* Cards below xl: with a site's columns the table needs ~930px. */}
         <div className="xl:hidden p-4">
           {backups.length === 0 ? (
             <EmptyState compact icon={Archive} title={emptyMessage} />
@@ -697,7 +612,6 @@ function RecentBackups({
             <BackupsCards {...listProps} />
           )}
         </div>
-        {/* `history`: below 1000px the Size column folds under "When"; German overflowed by 30px. */}
         <div className="hidden @container/history xl:block">
           <BackupsHistoryTable {...listProps} emptyMessage={emptyMessage} emptyIcon={Archive} bare />
         </div>
@@ -707,8 +621,6 @@ function RecentBackups({
   );
 }
 
-// The first-run state of the list: what will appear here, in one sentence. No button: the
-// status card above holds Set up / Back up now.
 function FirstBackupEmpty({ hasTarget, subject = "application" }) {
   const t = useSubjectTranslations("backups.application", "backups.database", subject);
   return (
@@ -716,14 +628,12 @@ function FirstBackupEmpty({ hasTarget, subject = "application" }) {
       <EmptyArt icon={Archive} />
       <div className="max-w-md space-y-1.5">
         <p className="font-semibold">{t("noRuns")}</p>
-        {/* Unprotected needs no hint: the status card above already offers Set up. */}
         {hasTarget ? <p className="text-sm text-muted-foreground">{t("emptyHint.scheduled")}</p> : null}
       </div>
     </div>
   );
 }
 
-// Backups of deleted databases of the same engine: the API restores them into this one.
 function ArchivedBackups({ backups, database, canRestore, blockedReason, onRestore }) {
   const t = useTranslations("backups.database.archived");
   const tHistory = useTranslations("backups.history");

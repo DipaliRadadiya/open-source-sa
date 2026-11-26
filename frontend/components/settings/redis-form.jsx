@@ -38,8 +38,6 @@ import {
 } from "@/components/settings/setting-row";
 
 export function RedisForm({ redis, canManage, changedBy }) {
-  // A password change also rewrites the panel's own REDIS_PASSWORD, so it needs a writable .env.
-  // `has_password === null`: the stored credential does not connect, and the API 422s a change.
   const passwordUnreadable = redis?.has_password === null;
   const passwordLocked =
     !canManage || redis?.password_manageable === false || passwordUnreadable;
@@ -49,20 +47,15 @@ export function RedisForm({ redis, canManage, changedBy }) {
   const { refreshAndWait } = useRefresh();
   const [removing, setRemoving] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState(false);
-  // Nothing reports when a 202 password change lands, so this never claims a result.
   const [applying, setApplying] = useState(false);
-  // Swapped in only when replacing the password; normally the row shows the stored credential.
   const [changing, setChanging] = useState(false);
 
-  // One automatic re-read so the common case settles; not a poll, as there is
-  // nothing to poll for.
   useEffect(() => {
     if (!applying) return undefined;
     const timer = setTimeout(() => router.refresh(), 5000);
     return () => clearTimeout(timer);
   }, [applying, router]);
 
-  // Falls through to the input when there is no stored value or the API withholds it.
   const showStored = Boolean(redis?.password) && !changing;
 
   const defaults = {
@@ -78,7 +71,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
       ? formatBytes(redis.memory_used, format)
       : (localizeSizeText(redis?.memory_used_human, format) ?? null);
 
-  // Refused by the API; listed only when it is what the server runs now, and then flagged.
   const unsafe = redis?.unsafe_policies ?? [];
   const policies = REDIS_POLICIES.filter((policy) => !unsafe.includes(policy) || policy === defaults.maxmemory_policy);
 
@@ -88,8 +80,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
     defaultValues: defaults,
   });
 
-  // Its own request: the flag is destructive, so it must not ride along with
-  // an unrelated memory-limit edit.
+  // Separate request: it's destructive and shouldn't ride along with another edit.
   async function removePassword() {
     setPendingRemoval(true);
     try {
@@ -102,7 +93,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
       toast.success(t("redis.removed"));
       setRemoving(false);
     } catch (error) {
-      // The fallback must describe the failure.
       toast.error(apiMessage(error, t("redis.removeFailed")));
     } finally {
       setPendingRemoval(false);
@@ -110,22 +100,18 @@ export function RedisForm({ redis, canManage, changedBy }) {
   }
 
   async function onSubmit(values) {
-    // Said before sending: the 422 named a field the person never touched.
     if (unsafe.includes(values.maxmemory_policy)) {
       form.setError("maxmemory_policy", { type: "manual", message: t("redis.unsafePolicy") });
       scrollToFirstError();
       return;
     }
     try {
-      // An empty password field means "leave it alone", not "clear it" — the
-      // API only touches the password when one is sent.
       const payload = { ...values };
       if (!payload.password) delete payload.password;
 
       const response = await updateRedisSettings(payload);
 
-      // 202: the password is applied AFTER this response (the panel's current
-      // credential is the one being replaced), so don't report "Saved" or refresh.
+      // 202: the password applies after this response, so don't refresh or say Saved.
       if (response?.status === 202) {
         form.reset({ ...values, password: "" });
         setChanging(false);
@@ -161,7 +147,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
               />
             }
           >
-            {/* Stays until dismissed; a toast would fade before the change lands. */}
             {applying ? (
               <div
                 role="status"
@@ -225,7 +210,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
                       {...field}
                     />
                   </FormControl>
-                  {/* What it is using now, against the saved limit. */}
                   {usedLabel ? (
                     <div className="space-y-1 pt-1">
                       <p className="text-xs text-muted-foreground tabular-nums">
@@ -260,18 +244,14 @@ export function RedisForm({ redis, canManage, changedBy }) {
                     disabled={!canManage}
                   >
                     <FormControl>
-                      {/* Wraps rather than clips: the plain-words label is long in Russian and on a phone. */}
                       <SelectTrigger className="redis-policy-trigger h-auto min-h-9 w-full data-[size=default]:h-auto py-1.5 text-left whitespace-normal *:data-[slot=select-value]:line-clamp-none *:data-[slot=select-value]:flex-wrap">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
-                    {/* Plain words first; Redis's own name after, for anyone matching docs. */}
                     <SelectContent>
                       {policies.map((policy) => (
                         <SelectItem key={policy} value={policy}>
                           {t(`redis.policies.${policy}`)}
-                          {/* Only in the open list: in the closed box it pushed the label onto two lines.
-                              A class, not data-slot: FormControl overwrites the trigger's data-slot. */}
                           <span className="ms-1.5 font-mono text-xs whitespace-nowrap text-muted-foreground in-[.redis-policy-trigger]:hidden">
                             {policy}
                           </span>
@@ -283,7 +263,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
               )}
             />
   
-            {/* One row: the stored value, with replacing it as a deliberate step. */}
             <FormField
               control={form.control}
               name="password"
@@ -292,7 +271,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
                   wide
                   label={t("redis.password")}
                   hint={
-                    // The full sentence lives here; the input is too narrow for it.
                     passwordUnreadable
                       ? t("redis.passwordUnknown")
                       : redis?.password_manageable === false
@@ -301,7 +279,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
                           ? t("redis.passwordHint")
                           : showStored
                             ? t("redis.currentPasswordHint")
-                            : // Withheld from view-only users, so a missing value does not mean "none".
+                            :
                               redis?.has_password
                               ? canManage
                                 ? t("redis.passwordSet")
@@ -313,13 +291,9 @@ export function RedisForm({ redis, canManage, changedBy }) {
                     form.formState.errors.password?.message,
                   )}
                 >
-                  {/* The field keeps the same column width as Memory limit above it; its
-                      buttons sit beside it in the second column (Krishna, 12 Oct). */}
                   <div className="grid gap-x-6 gap-y-2 @3xl/section:grid-cols-2 @3xl/section:items-center">
                     <div className="min-w-0">
                     {showStored ? (
-                      // Shaped like the inputs beside it, at their full width, with its
-                      // two buttons inside: a short grey strip read as a different field.
                       <PasswordReveal
                         password={redis.password}
                         className="min-h-9 rounded-md border border-input bg-muted/40 pr-1 text-left dark:bg-input/30 [&>code]:bg-transparent"
@@ -357,7 +331,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
                     )}
                     </div>
 
-                    {/* Only when there is something to go back to. */}
                     {changing && canManage ? (
                       <Button
                         type="button"
@@ -371,8 +344,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
                       </Button>
                     ) : null}
 
-                    {/* Removing is its own action (`remove_password`), not an
-                        empty value: Laravel rewrites "" to null before validation. */}
                     {!passwordLocked && !changing ? (
                       <div className="flex shrink-0 flex-wrap items-center gap-2">
                         {showStored ? (
@@ -386,8 +357,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
                         ) : null}
 
                         {redis?.has_password === true ? (
-                          // The `destructive` variant, so it pairs visually with
-                          // the outlined "Change password".
                           <Button
                             type="button"
                             variant="destructive"
@@ -404,7 +373,6 @@ export function RedisForm({ redis, canManage, changedBy }) {
             />
           </Section>
         </form>
-
 
         <ConfirmDialog
           open={removing}

@@ -1,6 +1,3 @@
-// Mirrors the backend's parser (dragonmantank/cron-expression), incl. 7 as Sunday
-// and day-of-month OR day-of-week. Null for anything unreadable; validation takes over.
-
 const MACROS = {
   "@yearly": "0 0 1 1 *",
   "@annually": "0 0 1 1 *",
@@ -48,7 +45,6 @@ function parseField(text, field) {
       to = toNumber(b, field);
     } else {
       from = toNumber(range, field);
-      // "5/15" means from 5 to the end in steps of 15.
       to = stepText === undefined ? from : field.max;
     }
     if (!Number.isInteger(from) || !Number.isInteger(to)) return null;
@@ -58,7 +54,6 @@ function parseField(text, field) {
   return values;
 }
 
-// Weekday 7 is folded into 0.
 export function parseCron(expression) {
   if (typeof expression !== "string") return null;
   const trimmed = expression.trim();
@@ -77,8 +72,6 @@ export function parseCron(expression) {
     days,
     months,
     weekdays,
-    // Restricted = not a bare star. With both restricted, cron runs when
-    // EITHER matches; with one of them a star, only the other counts.
     daysRestricted: parts[2] !== "*",
     weekdaysRestricted: parts[4] !== "*",
     minuteText: parts[0],
@@ -95,7 +88,6 @@ function dayMatches(cron, day, weekday) {
   return true;
 }
 
-/** The current wall-clock time in `timeZone`, as a Date whose UTC fields hold it. */
 export function wallClockNow(timeZone, now = new Date()) {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
@@ -116,8 +108,7 @@ export function wallClockNow(timeZone, now = new Date()) {
   );
 }
 
-// Wall-clock Dates: the UTC fields are the server's local time. Skips whole
-// months, days and hours that cannot match, so even a yearly job is found quickly.
+// The UTC fields hold the server's local time.
 export function nextRuns(cron, from, count = 3) {
   const runs = [];
   if (!cron) return runs;
@@ -125,7 +116,6 @@ export function nextRuns(cron, from, count = 3) {
   t.setUTCSeconds(0, 0);
   t.setUTCMinutes(t.getUTCMinutes() + 1);
 
-  // Five years covers any valid expression (29 Feb on a Monday, say).
   const limit = from.getTime() + 5 * 366 * 24 * 3600 * 1000;
   while (runs.length < count && t.getTime() < limit) {
     if (!cron.months.has(t.getUTCMonth() + 1)) {
@@ -164,7 +154,6 @@ function contiguous(values) {
   return values.length > 1 && values.every((v, i) => i === 0 || v === values[i - 1] + 1);
 }
 
-// `time` is null when the pattern is too irregular for a sentence.
 export function describeCron(cron) {
   if (!cron) return null;
   const minutes = sorted(cron.minutes);
@@ -176,7 +165,6 @@ export function describeCron(cron) {
   else if (stepOf(cron.minuteText) && allHours) time = { kind: "everyMinutes", n: stepOf(cron.minuteText) };
   else if (minutes.length === 1 && allHours) time = { kind: "hourly", minute: minutes[0] };
   else if ((isAll(cron.minutes, FIELDS[0]) || stepOf(cron.minuteText)) && contiguous(hours)) {
-    // From the first run to the last one — "9-17" with */10 ends at 17:50, not 17:00.
     time = {
       kind: "everyBetween",
       n: stepOf(cron.minuteText) ?? 1,
@@ -199,14 +187,10 @@ export function describeCron(cron) {
   };
 }
 
-// `next_run_at` ("28-09-2026 05:01:00", server wall clock) as an instant in
-// `timeZone`, or null.
 export function serverTimeToEpoch(text, timeZone) {
   const m = /^(\d{2})-(\d{2})-(\d{4}) (\d{2}):(\d{2}):(\d{2})$/.exec(text ?? "");
   if (!m) return null;
   const wall = Date.UTC(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4]), Number(m[5]), Number(m[6]));
-  // The zone's offset at that moment, found by asking what wall time the
-  // guessed instant shows there; twice, so a DST edge between the two settles.
   let epoch = wall;
   for (let i = 0; i < 2; i++) epoch = wall - (wallClockNow(timeZone, new Date(epoch)).getTime() - epoch);
   return epoch;

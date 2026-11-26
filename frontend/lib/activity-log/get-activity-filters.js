@@ -3,7 +3,6 @@ import { activityFiltersSchema } from "@/lib/schemas/activity";
 
 const EMPTY = { types: [], actions: {} };
 
-// Both scopes share a shape. `own` is DISTINCT over the caller's rows, so it never offers a dead filter.
 async function fetchFilters(path) {
   const res = await serverFetch(path);
   if (!res.ok) return EMPTY;
@@ -20,7 +19,6 @@ export function getActivityFilters() {
   return fetchFilters("/admin/activity-log/filters");
 }
 
-// Every viewer of the server log, not only admins (FS-C11).
 export function getServerActivityFilters() {
   return fetchFilters("/server/activity-log/filters");
 }

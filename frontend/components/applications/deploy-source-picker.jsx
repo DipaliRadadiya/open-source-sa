@@ -9,14 +9,11 @@ import { setDockerSource } from "@/lib/docker/create-request";
 import { SiteTypePicker } from "@/components/applications/site-type-picker";
 import { RecipeSummary } from "@/components/applications/recipe-summary";
 
-// Title over a one-line subtitle; the active half is raised with the brand outline
-// and a green icon. `h-auto`: the base trigger is sized for a single line.
 const TAB =
   "h-auto min-w-0 flex-col items-start justify-start gap-0.5 whitespace-normal px-3 py-2.5 text-left data-active:bg-card data-active:ring-1 data-active:ring-primary/60 data-active:[&_svg]:text-primary";
 
 export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSource }) {
   const t = useTranslations("applications");
-  // Each tab is named by its title; the subtitle is its description.
   const tabId = useId();
   const recipeTypes = siteTypes.filter((type) => type.recipe);
   const dockerType = siteTypes.find((type) => type.name === "docker");
@@ -30,8 +27,6 @@ export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSo
   const isRecipe = Boolean(selected);
 
   useEffect(() => {
-    // Image search can select a recipe outside this picker. Keep the tab and
-    // its remembered recipe in step with that form field too.
     if (isRecipe) lastRecipe.current = value;
     if (value !== "docker" && !isRecipe) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync external recipe selection with the controlled tab.
@@ -41,8 +36,6 @@ export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSo
   function changeTab(next) {
     if (next === "docker" && !dockerType) return;
     setTab(next);
-    // Type changes unregister Docker's backend fields; restore its mode from
-    // the UI choice before the type's generic simple default can be applied.
     if (next === "docker") setDockerSource(form, dockerSource);
     onChange(next === "docker" ? dockerType.name : (lastRecipe.current ?? ""));
   }
@@ -54,15 +47,11 @@ export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSo
 
   function searchDocker(query) {
     if (!dockerType) return;
-    // An explicit new search replaces the previous image, unlike a tab round-trip.
-    // Without this, leaving Docker before choosing a recipe would restore that
-    // image and hide the requested search when the Docker fields mount again.
     for (const [name, value] of Object.entries({
       image: "", container_port: "", docker_image_state: "",
       docker_volumes: [], docker_env: [], docker_required_env: [],
     })) form.setValue(name, value, { shouldDirty: true });
     form.clearErrors(["image", "container_port", "docker_env", "docker_env_list", "docker_volumes", "docker_volumes_list"]);
-    // UI-only answers; the create request still uses the backend's type fields.
     setDockerSource(form, "search");
     form.setValue("docker_search_query", query);
     setTab("docker");
@@ -72,9 +61,6 @@ export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSo
 
   return (
     <Tabs value={tab} onValueChange={changeTab} className="min-w-0 gap-3">
-      {/* The first choice, so it reads as one: each half says what it gives you,
-          and the chosen half is raised with the brand outline. The mode cards
-          below are the second, smaller choice. */}
       <TabsList className="grid w-full grid-cols-2 items-stretch gap-1 p-1 group-data-horizontal/tabs:h-auto">
         <TabsTrigger value="recipes" className={TAB} aria-labelledby={`${tabId}-recipes`} aria-describedby={`${tabId}-recipes-hint`}>
           <span id={`${tabId}-recipes`} className="flex items-center gap-2 text-sm font-semibold">
@@ -96,7 +82,6 @@ export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSo
           onChange={chooseRecipe}
           searchPlaceholder={t("recipes.searchPlaceholder")}
           renderNoMatch={(query) => (
-            // The picker's own no-result shape (dashed, centred), with the way out under it.
             <div className="rounded-xl border border-dashed px-3 py-8 text-center">
               <p className="text-sm wrap-anywhere text-muted-foreground">{t("recipes.noMatch", { query })}</p>
               <Button type="button" variant="outline" size="sm" className="mt-3 h-auto max-w-full py-1.5 whitespace-normal wrap-anywhere" onClick={() => searchDocker(query)}>
@@ -108,10 +93,6 @@ export function DeploySourcePicker({ siteTypes, value, onChange, form, initialSo
         {selected ? <RecipeSummary type={selected} /> : null}
       </TabsContent>
       <TabsContent value="docker" className="min-w-0 space-y-3">
-        {/* Cards, not a second row of tabs: each says what it is for, so the
-            Container tab needs no paragraph above or below it. */}
-        {/* Three across only where the column is wide enough; beside the review
-            panel it is ~600px and three cards squeezed each hint to four lines. */}
         <div className="@container">
         <ChoiceField
           variant="card"

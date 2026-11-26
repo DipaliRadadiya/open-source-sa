@@ -4,8 +4,6 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { getFirewall } from "@/lib/api/firewall";
 import { getFail2ban } from "@/lib/api/fail2ban";
 
-// `your_ip` is the requester, and SSR requests come from the panel's server, so only the browser can ask.
-// Null until answered or on failure: no address rather than the wrong one.
 const SOURCES = {
   firewall: { load: getFirewall, pick: (data) => data?.your_ip },
   fail2ban: { load: getFail2ban, pick: (data) => data?.fail2ban?.your_ip },
@@ -32,7 +30,7 @@ export function useBrowserIp() {
   return useContext(BrowserIpContext)?.ip ?? null;
 }
 
-// Actions that add "your" address must wait, or they send none and the API refuses with a lock-out warning.
+// Wait for the address, or the request sends none and the API refuses with a lockout warning.
 export function useBrowserIpSettled() {
   return useContext(BrowserIpContext)?.settled ?? true;
 }

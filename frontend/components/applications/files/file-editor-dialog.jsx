@@ -26,8 +26,6 @@ import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 import { RestoreFileBackupDialog } from "@/components/applications/files/restore-file-backup-dialog";
 
-// CodeMirror and its language packages are only needed here, so they load on
-// first open.
 const CodeEditor = dynamic(
   () => import("@/components/applications/files/code-editor").then((m) => m.CodeEditor),
   {
@@ -40,37 +38,25 @@ const CodeEditor = dynamic(
   },
 );
 
-// Content is fetched on every open; the list carries only metadata.
 export function FileEditorDialog({ appId, file, canManage, open, onOpenChange }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
-  // The row that opened the editor, captured before focus moves into it.
   const [opener] = useState(() => (typeof document === "undefined" ? null : document.activeElement));
   const saved = useRef(false);
-  // Mounted fresh per file (see files-panel.jsx), so state starts at "about to
-  // load" rather than being reset by an effect.
   const tooLarge = file.size > EDITOR_MAX_BYTES;
   const [loading, setLoading] = useState(!tooLarge);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(null); // { path, content, backups }
+  const [loaded, setLoaded] = useState(null);
   const [contents, setContents] = useState("");
-  // Set when the file can't be opened here at all (too large or binary); Download
-  // is the way out.
   const [blocked, setBlocked] = useState(() => (tooLarge ? t("editor.tooLarge") : null));
-  // Why the last save was refused, shown beside the unsaved text rather than in a
-  // toast that clears itself.
   const [saveError, setSaveError] = useState(null);
-  // The file changed on disk after it was opened: Save would overwrite someone else's edit.
   const [stale, setStale] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
-  // Keep the version being replaced. Mounted per open, so it is on again every time.
   const [safetyCopy, setSafetyCopy] = useState(true);
 
-  // Re-read after a restore (it answers only `{restored: true}`), or the next Save
-  // overwrites it. If the re-read fails the editor closes.
   async function reloadAfterRestore() {
     setLoading(true);
     setSaveError(null);
@@ -82,7 +68,6 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
       setLoaded(parsed.data);
       setContents(parsed.data.content);
     } catch (error) {
-      // Our sentence leads, the server's reason follows.
       toast.error(t("restore.reloadFailed"), { description: apiMessage(error, null) ?? undefined });
       onOpenChange?.(false);
     } finally {
@@ -103,12 +88,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
       })
       .catch((error) => {
         if (!active) return;
-        // Both refusals are a bare 422 with a message and no field. A 422 that names a
-        // field is a bad path, which is a real failure.
         const response = error.response;
         if (response?.status === 422 && !response.data?.errors?.path) {
-          // A shortcut opens a file with no listing size; the server's sentence says which
-          // refusal it was.
           setBlocked(
             file.size == null
               ? apiMessage(error, t("editor.notText"), { reference: false })
@@ -144,8 +125,6 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
       saved.current = true;
       onOpenChange?.(false);
     } catch (error) {
-      // Shown in the dialog, not as a toast: the unsaved work stays open, so the reason
-      // must too.
       setSaveError(apiMessage(error, t("editor.saveFailed")));
       setStale(error.response?.status === 409 && error.response?.data?.reason === "changed_on_disk");
     } finally {
@@ -153,8 +132,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
     }
   }
 
-  // Radix calls onOpenChange(false) for Escape, the backdrop and Cancel, so one
-  // guard covers every way to close.
+  // Radix calls this for Escape, the backdrop and Cancel.
   function handleOpenChange(next) {
     if (saving) return;
     if (!next && dirty) {
@@ -171,12 +149,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {/* `minmax(0,1fr)` lets the editor scroll instead of pushing the footer off screen.
-          Cmd/Ctrl+S is on the dialog; preventDefault even read-only, or "save page" opens. */}
       <DialogContent
         className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-6xl"
-        // Focus returns to the file's row without the ring: after typing in the editor
-        // the browser treats the returned focus as keyboard focus.
         onCloseAutoFocus={(event) => {
           if (!saved.current) return;
           event.preventDefault();
@@ -196,8 +170,6 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
             </span>
             <DialogTitle className="truncate font-mono text-base">{file?.path}</DialogTitle>
           </div>
-          {/* A blocked file has nothing to save, so the backups line would be wrong; screen
-              readers get the reason instead. */}
           <DialogDescription className={blocked ? "sr-only" : "pt-1"}>
             {blocked ?? (canEdit ? t(safetyCopy ? "editor.subtitle" : "editor.subtitleNoCopy") : t("editor.readOnly"))}
           </DialogDescription>
@@ -245,8 +217,6 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
                 filename={file?.name}
                 value={contents}
                 onChange={(next) => {
-                  // Editing is the retry; the previous error no longer describes what is on screen.
-                  // Not when stale: typing does not make the file on disk any less changed.
                   if (saveError && !stale) setSaveError(null);
                   setContents(next);
                 }}
@@ -257,7 +227,6 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
           </div>
         )}
 
-        {/* Between the editor and the buttons: the last thing read before Save. */}
         {saveError ? (
           <div
             role="alert"
@@ -266,7 +235,6 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
             <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span className="min-w-0 flex-1 break-words">{saveError}</span>
             {stale ? (
-              // Copy is in the editor bar, so the user can keep their text before reloading.
               <Button variant="outline" size="sm" className="-my-1 shrink-0 text-foreground" onClick={reloadAfterRestore}>
                 <RotateCw className="size-4" />
                 {t("editor.reload")}
@@ -282,7 +250,6 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
         ) : null}
 
         <DialogFooter>
-          {/* Left of the buttons, read just before Save; its own row on a phone so the buttons stay together. */}
           {canEdit && !blocked && !loading ? (
             <SafetyCopySwitch
               id="file-safety-copy"
@@ -302,8 +269,6 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
             <Button onClick={save} disabled={!dirty || saving || loading || stale}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               {t("editor.save")}
-              {/* Inside the button, as this action's shortcut. Hidden while saving so it does
-                  not invite a second press. */}
               {saving ? null : (
                 <ShortcutHint letter="S" className="ms-1 border-primary-foreground/25 bg-primary-foreground/15 text-primary-foreground/80" />
               )}

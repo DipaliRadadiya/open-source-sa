@@ -1,12 +1,7 @@
-// Shared sidebar nav-item styling, used by both the server and admin panel
-// sidebars so they cannot drift.
 export const NAV_ITEM_CLASS =
   "relative h-9 gap-3 rounded-[2px] px-2.5 font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground [&_svg]:size-[18px] [&_svg]:text-muted-foreground hover:[&_svg]:text-foreground " +
-  // Grey fill, a green bar on the left edge, light label.
   "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:hover:bg-sidebar-accent data-[active=true]:hover:text-sidebar-accent-foreground data-[active=true]:[&_svg]:text-[var(--primary-700,var(--primary))] dark:data-[active=true]:[&_svg]:text-primary data-[active=true]:before:absolute data-[active=true]:before:inset-y-0 data-[active=true]:before:left-0 data-[active=true]:before:w-[3px] data-[active=true]:before:bg-primary";
 
-// A nav item stays active on its sub-pages (e.g. `/settings/server`). Longest
-// match wins when two items share a prefix.
 export function isNavActive(pathname, url) {
   if (!pathname || !url) return false;
   return pathname === url || pathname.startsWith(`${url}/`);
@@ -18,14 +13,10 @@ export function findActiveNavItem(items, pathname) {
     .sort((a, b) => (b.href ?? b.url).length - (a.href ?? a.url).length)[0];
 }
 
-// Catalog `url`s are relative (`""` is the dashboard); unprefixed they 404 or
-// land on the server-wide screen.
 export function applicationNavHref(applicationId, url) {
   return `/applications/${applicationId}${url ?? ""}`;
 }
 
-// The catalog advertises every application screen the backend supports; only
-// built routes are linked, the rest are held back until their route lands.
 const BUILT_APPLICATION_URLS = new Set([
   "",
   "/domains",
@@ -50,8 +41,6 @@ export function isApplicationNavBuilt(url) {
   return BUILT_APPLICATION_URLS.has(url ?? "");
 }
 
-// The same contract for the server panel: unbuilt screens show as "SOON"
-// instead of linking to a 404.
 const BUILT_SERVER_URLS = new Set([
   "/dashboard",
   "/applications",
@@ -85,12 +74,8 @@ export function isNavBuilt(panel, url) {
     : isServerNavBuilt(url);
 }
 
-// Resolves a catalog item for the panel it belongs to: application items get
-// the `/applications/{id}` prefix, server items are already absolute.
 export function resolveNavItems(items, applicationId) {
   return (items || [])
-    // A null `url` is not a screen (e.g. Magic Login). `""` is the Dashboard, so
-    // check for null, not falsiness.
     .filter((item) => item.url !== null && item.url !== undefined)
     .map((item) =>
       item.level === "application" && applicationId
@@ -99,16 +84,11 @@ export function resolveNavItems(items, applicationId) {
     );
 }
 
-// "8G" names the upstream ruleset, not the feature; only the label changes.
 export function navTitle(item, t) {
   if (item.name === "app_firewall") return t("navTitles.app_firewall");
   return item.title;
 }
 
-// Groups named after what a person is trying to do, keyed on the catalog's
-// stable `name`. The catalog only knows `server` and `integration`, which left
-// eighteen items in one list. Anything not listed here keeps its catalog group
-// (Integrations does), so a new backend screen still appears.
 const GROUP_OF = {
   dashboard: "",
   application: "",
@@ -146,13 +126,8 @@ const GROUP_OF = {
   app_worker: "configuration",
 };
 
-// Shut until needed: the screens a newcomer does not start with. Settings lives in
-// "server" (not alone at the bottom, which read as an orphan), so that group stays open.
 export const COLLAPSED_GROUPS = new Set(["software"]);
 
-// Which groups the person opened or closed, as `{ "server:software": true }`. A cookie, not
-// component state: a reload (the restart screen does one) put Software back to shut, and the
-// layout reads it server-side, so the sidebar renders open with no flash.
 export const SIDEBAR_GROUPS_COOKIE = "sidebar_groups";
 
 export function parseSidebarGroups(raw) {
@@ -166,9 +141,6 @@ export function parseSidebarGroups(raw) {
   }
 }
 
-// Ordered by GROUP_ORDER, catalog order inside a group. Catalog groups keep
-// their own translated title; the raw `sub_level` is the fallback for older
-// catalogs. The caller names the rest from `common.navGroups`.
 const GROUP_ORDER = ["", "data", "security", "software", "server", "website", "copies", "protection", "configuration"];
 
 export function groupNavItems(items) {
@@ -182,7 +154,6 @@ export function groupNavItems(items) {
     if (!group) {
       group = {
         key,
-        // Catalog groups carry their own (translated) title; the top group has none.
         title: mapped === null ? item.sub_level_title || item.sub_level || null : null,
         named: mapped !== null && mapped !== "",
         items: [],
@@ -197,7 +168,6 @@ export function groupNavItems(items) {
     const index = GROUP_ORDER.indexOf(group.key);
     return index === -1 ? 500 : index;
   };
-  // The catalog's own `server`/`application` group is the unnamed top group.
   for (const group of groups) {
     if (group.key === "catalog:server" || group.key === "catalog:application") {
       group.title = null;

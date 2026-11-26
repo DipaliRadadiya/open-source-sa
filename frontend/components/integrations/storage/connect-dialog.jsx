@@ -20,15 +20,11 @@ import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive
 
 const DEFAULT_PRESET = "aws";
 
-// The test endpoint needs a saved id, so this saves first, then tests.
-// `initialPreset`: opened from a destination in the empty state, it starts there (and comes back to
-// it after a close); the picker inside still changes it. Callers key the dialog on it.
 export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri, localSettings = null, existingNames = [], initialPreset = null }) {
   const t = useTranslations("storage.connect");
   const { refreshAndWait } = useRefresh();
 
-  // The preset lives in component state because it selects the schema; a
-  // resolver cannot be rebuilt from a value it is validating.
+  // The preset picks the schema, and a resolver can't be rebuilt from a value it's validating.
   const startPreset = initialPreset ?? DEFAULT_PRESET;
   const [preset, setPreset] = useState(startPreset);
   const provider = providerForPreset(preset);
@@ -58,8 +54,6 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
       const created = data?.storage_destination;
       await refreshAndWait();
 
-      // The same credential answers 200 with the destination that already holds it, unchanged (2220e0f4):
-      // nothing new to announce or test.
       if (data?.existing) {
         toast.info(data.message ?? t("alreadyAdded", { name: created?.name ?? "" }));
         onOpenChange?.(false);
@@ -67,24 +61,19 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
         return;
       }
 
-      // "This server": the backend says whether it created the folder or found it, two different pieces of news.
       toast.success(t("added"), data?.folder?.message ? { description: data.folder.message } : undefined);
       onOpenChange?.(false);
       reset(startPreset);
 
-      // Drive consent is keyed to an existing destination, so a new one cannot pass yet.
       if (created && provider === "google_drive_oauth") {
         toast.info(t("addedNeedsConnect"), { duration: 8000 });
         return;
       }
 
-      // The check runs after the dialog closes so it never blocks the save; its
-      // verdict is what the user is told.
       if (created?.id) {
         const verdict = await probeDestination(created.id, t("testFailed"), t("testNotRun"));
         if (verdict.ok) toast.success(t("testPassed"));
         else toast.error(verdict.message, { duration: 10000 });
-        // The test is recorded on the destination; refresh so its card shows the result.
         if (!verdict.notRun) await refreshAndWait();
       }
     } catch (error) {
@@ -94,7 +83,6 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
   }
 
   const submitting = form.formState.isSubmitting;
-  // Not for Drive: its setup guide links each Console page from its own step.
   const keyDocs = provider === "google_drive_oauth" ? null : keyDocsUrl(preset);
 
   function reset(nextPreset) {
@@ -110,8 +98,6 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
     const nextProvider = providerForPreset(next);
     setPreset(next);
 
-    // Switching providers swaps the field set, so old values are cleared (they
-    // would be submitted). Within the S3 family the values are kept.
     if (nextProvider !== provider) {
       form.reset({
         name: form.getValues("name"),
@@ -121,8 +107,6 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
       return;
     }
 
-    // Requiredness moves with the preset, so re-validate errors raised under
-    // the old one.
     if (form.formState.isSubmitted) form.trigger(["config.endpoint", "config.region"]);
   }
 
@@ -166,21 +150,16 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
           disabled={submitting}
         />
 
-        {/* The setup guide comes first: the OAuth client must be created in
-            Google Cloud Console before these fields can be filled. */}
         {provider === "google_drive_oauth" ? (
           <GoogleDriveSetup redirectUri={oauthRedirectUri} defaultOpen />
         ) : null}
 
-        {/* The probe writes and deletes, and backups prune, so read-only credentials fail.
-            Drive's scope is fixed by the panel. */}
         {provider === "google_drive_oauth" || provider === "local" ? null : (
           <div className="rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
             {provider === "s3" ? t("permissionsNote") : t("permissionsNoteRemote")}
           </div>
         )}
 
-        {/* Provider-specific docs: each service names its keys differently. */}
         {keyDocs ? (
           <a
             href={keyDocs}
@@ -193,16 +172,13 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri,
           </a>
         ) : null}
 
-        {/* Credentials are stored encrypted and never returned; replacing is
-            the only way to change them. */}
         {provider === "local" ? null : <p className="text-xs text-muted-foreground">{t("credentialsNote")}</p>}
       </FormModal>
     </Form>
   );
 }
 
-// Drop empty keys: `password: ""` on key-auth SFTP would be stored and used. Keep
-// booleans: stripping `false` would re-enable TLS.
+// Drop empty keys (password: "" would be stored and used) but keep booleans (dropping false re-enables TLS).
 function cleanConfig(config = {}) {
   return Object.fromEntries(
     Object.entries(config).filter(([, value]) =>

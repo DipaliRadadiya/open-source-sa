@@ -24,15 +24,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// EngineBar owns the install lifecycle: closing the confirmation must not hide queued work.
-// Adds the name when the logo lacks one (PostgreSQL's elephant); `size` matches wordmark height.
 function EngineMark({ engine, status, t }) {
   const name = t(`engines.${engine}`);
   const wordmark = engineLogo(engine)?.wordmark;
   return (
     <>
       <EngineLogo engine={engine} className="!h-4 w-auto max-w-16" />
-      {/* One accessible name: logos are `aria-hidden`, so the name is not read twice. */}
       {wordmark ? (
         <span className="sr-only">{status ? `${name} · ${status}` : name}</span>
       ) : (
@@ -49,7 +46,6 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
   const t = useTranslations("databases");
   const router = useRouter();
   const [pending, setPending] = useState(null);
-  // Root password: MySQL/MariaDB only, and only while the engine runs.
   const [rootFor, setRootFor] = useState(null);
   const {
     engines: list,
@@ -66,8 +62,6 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
   const failed = list.filter(
     (engine) => !engine.running && engine.install_status === "failed",
   );
-  // Installed but not answering (stopped service, broken socket): gets a tile
-  // so its listed databases are not presented as reachable.
   const stopped = list.filter(
     (engine) =>
       engine.installed &&
@@ -75,13 +69,10 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
       !["installing", "failed"].includes(engine.install_status),
   );
 
-  // Recovery wins over a fresh choice, so failed engines keep their Retry.
   const rootEngines = running.filter((engine) => engine.engine === "mysql" || engine.engine === "mariadb");
 
   const addable = findInstallCandidates(list);
   const only = addable.length === 1 ? addable[0] : null;
-  // Only one apt install can run. Prefer its live lifecycle; otherwise keep the
-  // newest failed one so diagnostics stay visible beside a healthy engine.
   const progressEngine =
     installing.find((engine) => engine.install_progress) ??
     failed.find((engine) => engine.install_progress) ??
@@ -92,7 +83,6 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-e1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-      {/* Installing and failed keep their words so they stand out. */}
       <div className="flex flex-wrap items-center gap-2">
         {running.map((engine) => (
           <HoverHint key={engine.engine} content={engine.version ?? undefined}><span
@@ -169,7 +159,6 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
           </Link>
         </Button>
 
-        {/* The root password lives with the engine it belongs to; one engine, one button. */}
         {rootEngines.length === 1 ? (
           <ReasonTooltip reason={canManage ? null : DENIED}>
             <Button variant="outline" size="sm" disabled={!canManage} onClick={() => setRootFor(rootEngines[0].engine)}>
@@ -197,8 +186,6 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
           </DropdownMenu>
         ) : null}
 
-        {/* Always named: one candidate gets its own button, several get a menu.
-            The click is the choice, no follow-up dialog asks which. */}
         {only ? (
           <ReasonTooltip reason={canManage ? null : DENIED}>
             <Button
@@ -250,7 +237,6 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
           label={t(`engines.${progressEngine.engine}`)}
           slow={slow && installingEngine === progressEngine.engine}
           pollIssue={pollIssue && installingEngine === progressEngine.engine}
-          // Same confirmation as Install: a retry is the same operation.
           onRetry={canManage ? () => setPending(progressEngine) : undefined}
           className="basis-full"
         />

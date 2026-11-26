@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Opens on hover where it exists, yet stays reachable on touch. A hover-opened
-// panel must not steal focus; a click- or keyboard-opened one must.
 export function useHoverPopover({ openDelay = 0, focusOpens = false } = {}) {
   const [open, setOpen] = useState(false);
   const openTimer = useRef(null);
@@ -32,7 +30,7 @@ export function useHoverPopover({ openDelay = 0, focusOpens = false } = {}) {
     }, openDelay);
   }, [open, openDelay]);
 
-  /* Only hover-opened: Radix focuses the content on open, which blurs the trigger and runs this. */
+  // Radix focuses the content on open, which blurs the trigger and runs this.
   const closeOnLeave = useCallback(() => {
     if (!canHover()) return;
     clearTimeout(openTimer.current);
@@ -40,7 +38,6 @@ export function useHoverPopover({ openDelay = 0, focusOpens = false } = {}) {
     closeTimer.current = setTimeout(() => setOpen(false), 120);
   }, []);
 
-  /* Only a keyboard Tab (`:focus-visible`), never a dialog's initial focus. */
   const openOnKeyboardFocus = useCallback(
     (event) => {
       if (!focusOpens) return;
@@ -50,7 +47,6 @@ export function useHoverPopover({ openDelay = 0, focusOpens = false } = {}) {
     [focusOpens, openOnHover],
   );
 
-  // Radix calls this only for its own interactions, never hover.
   const onOpenChange = useCallback((next) => {
     clearTimeout(openTimer.current);
     clearTimeout(closeTimer.current);
@@ -68,7 +64,6 @@ export function useHoverPopover({ openDelay = 0, focusOpens = false } = {}) {
       onFocus: openOnKeyboardFocus,
       onBlur: closeOnLeave,
     },
-    // Keep the panel open while the pointer moves from the trigger onto it.
     contentProps: {
       onMouseEnter: openOnHover,
       onMouseLeave: closeOnLeave,

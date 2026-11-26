@@ -16,7 +16,6 @@ export default async function SettingsMaintenancePage() {
     getTranslations("settings"),
     getSettings(),
     getRebootPresets(),
-    // Never blocks the page; the card reports the failed read rather than "none".
     getRebootStatus().catch(() => ({ failed: true, data: null })),
   ]);
 
@@ -24,7 +23,6 @@ export default async function SettingsMaintenancePage() {
 
   if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
-  // One card, three sections: six settings that form one decision.
   return (
     <MaintenanceCard
       updates={data.updates}

@@ -9,7 +9,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// `remoteUsers` defaults true so an older API (no such field) keeps the choice.
 export function UserFields({ form, access, lockUsername = false, remoteUsers = true }) {
   const t = useTranslations("databases");
 
@@ -53,7 +52,7 @@ export function UserFields({ form, access, lockUsername = false, remoteUsers = t
                     label: t("access.localhost.label"),
                     hint: t("access.localhost.hint"),
                   },
-                  /* The API refuses `remote`/`anywhere` on PostgreSQL. Read from `supports_remote_users`, never the engine name. */
+                  // The API refuses remote/anywhere on PostgreSQL.
                   ...(remoteUsers
                     ? [
                         {
@@ -62,8 +61,6 @@ export function UserFields({ form, access, lockUsername = false, remoteUsers = t
                           hint: t("access.remote.hint"),
                         },
                         {
-                          // Opens the engine port to the whole internet, so it
-                          // is explained at the moment of choosing.
                           value: "anywhere",
                           label: t("access.anywhere.label"),
                           hint: t("access.anywhere.hint"),

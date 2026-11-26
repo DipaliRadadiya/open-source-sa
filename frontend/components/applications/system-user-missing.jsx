@@ -9,7 +9,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
 
-// The API answers 409 on every app route except open and delete, so this offers delete.
 export function SystemUserMissing({ application, canDelete }) {
   const t = useTranslations("applications.systemUserMissing");
   const ta = useTranslations("applications");

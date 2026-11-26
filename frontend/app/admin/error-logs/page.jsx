@@ -33,12 +33,9 @@ export default async function AdminErrorLogsPage({ searchParams }) {
   const entries = data?.error_logs ?? [];
   const groups = groupErrorLogs(entries);
 
-  /* Empty means healthy only for the whole log; during a reference lookup it
-     means that reference was not found, so the band is suppressed. */
   const healthy = groups.length === 0 && !reference;
   const showSummary = groups.length > 0 || !reference;
 
-  /* One clock for server and client so relative times match across hydration. */
   const now = new Date();
 
   return (
@@ -78,7 +75,6 @@ export default async function AdminErrorLogsPage({ searchParams }) {
                         : t("unknownTime"),
                     })}
               </p>
-              {/* Say what is excluded so an empty log does not look broken. */}
               {healthy ? (
                 <p className="mt-1 text-sm text-muted-foreground">{t("summary.excluded")}</p>
               ) : null}
@@ -86,7 +82,6 @@ export default async function AdminErrorLogsPage({ searchParams }) {
           </div>
           ) : null}
 
-          {/* Always rendered so its Refresh action stays available. */}
           <NavTransitionProvider>
             <ErrorLogPanel
               groups={groups}

@@ -28,7 +28,6 @@ import { backupSubject } from "@/lib/backups/backup-subject";
 import { subjectLine } from "@/components/backups/backups-history-table";
 import { SubjectFilter } from "@/components/backups/subject-filter";
 
-// The key comes from the API and `t()` throws on a miss, so fall back to the raw status.
 function statusLabel(restore, t) {
   if (restore.status_title) return restore.status_title;
   const key = `statuses.${restore.status}`;
@@ -48,7 +47,6 @@ export function RestoresList({ restores, applications = [], databases = [], hasF
     { id: "undo", header: t("columns.undo"), meta: { className: "w-44" }, cell: UndoCell },
   ];
 
-  // Same filters, order and widths as the backup history tab; URL-driven, so a view is a link.
   const toolbar = (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <SubjectFilter
@@ -75,7 +73,6 @@ export function RestoresList({ restores, applications = [], databases = [], hasF
         }))}
         className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
       />
-      {/* Phone: the last filter and Refresh share a row, so Refresh is not left alone on one. */}
       <div className="flex items-center gap-3 sm:contents">
         <FacetSelect
           paramKey="type"
@@ -95,7 +92,6 @@ export function RestoresList({ restores, applications = [], databases = [], hasF
     <div className="space-y-4">
       {running ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
-      {/* The pager hides itself when the list is too short to page. */}
       {restores.length === 0 ? (
         <ListCard toolbar={toolbar}>
           <EmptyState
@@ -103,13 +99,10 @@ export function RestoresList({ restores, applications = [], databases = [], hasF
             title={hasFilters ? t("emptyFiltered.title") : t("empty.title")}
             description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
             badge={hasFilters ? "search" : null}
-            // Only when filters emptied the list.
             action={hasFilters ? <ClearFiltersButton keys={["application", "database", "status", "period", "type", "search"]} /> : null}
           />
         </ListCard>
       ) : (
-        // The table needs 900px of content (a 1280 screen with the sidebar, like the Overview
-        // tab); narrower, the rows are cards and the list has no frame.
         <ListCard from="c900" toolbar={toolbar} footer={pager}>
           <div className="@min-[900px]/page:hidden">
             <RestoreCards restores={restores} canRestore={canRestore} />
@@ -123,7 +116,6 @@ export function RestoresList({ restores, applications = [], databases = [], hasF
   );
 }
 
-// A site, a database on its own (RC-19), or either after it was deleted: as in History.
 function SiteCell({ row }) {
   const t = useTranslations("backups.restores");
   const th = useTranslations("backups.history");
@@ -156,7 +148,6 @@ function StatusCell({ row }) {
         <Icon className={cn("size-3", meta.spin && "animate-spin")} />
         {statusLabel(restore, t)}
       </Badge>
-      {/* A failed restore names the step that failed. */}
       {restore.status === "failed" ? (
         <p className="truncate text-xs text-muted-foreground">
           {reasonText(restore.reason_title, t("unknownReason"))}
@@ -179,7 +170,6 @@ function WhenCell({ row }) {
 
   return (
     <div className="min-w-0">
-      {/* A queued restore has no start time; say "not started" rather than leave it blank. */}
       <p className="truncate text-sm tabular-nums">
         {restore.started_at_human ?? restore.started_at ?? (
           <span className="text-muted-foreground">{t("notStarted")}</span>
@@ -192,7 +182,6 @@ function WhenCell({ row }) {
   );
 }
 
-// Only the newest two safety copies are kept (the API then sends no id).
 function UndoCell({ row, table }) {
   const t = useTranslations("backups.restores");
   const restore = row.original;
@@ -200,7 +189,6 @@ function UndoCell({ row, table }) {
   if (!restore.safety_backup_id) {
     return <span className="text-sm text-muted-foreground">{t("noSafetyCopy")}</span>;
   }
-  // A database's own restore is undone on its Backups tab, which follows it (RC-19).
   if (restore.database_id) {
     return (
       <Link href={`/databases/${restore.database_id}?tab=backups`} className="text-sm underline-offset-4 hover:underline">
@@ -208,7 +196,6 @@ function UndoCell({ row, table }) {
       </Link>
     );
   }
-  // No site: a deleted site's, or a deleted database's.
   if (!restore.application_id) {
     return <span className="text-sm text-muted-foreground">{t("undoUnavailable")}</span>;
   }
@@ -268,7 +255,6 @@ function RestoreCards({ restores, canRestore = false }) {
                 </p>
               ) : null}
 
-              {/* Cards had no way back at all; same action as the table's column. */}
               {restore.safety_backup_id && restore.database_id ? (
                 <Link href={`/databases/${restore.database_id}?tab=backups`} className="block text-sm underline-offset-4 hover:underline">
                   {t("undoOnDatabase")}

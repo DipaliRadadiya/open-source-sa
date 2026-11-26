@@ -1,6 +1,5 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 
-// Optional (`dashboard` permission). Resolves `{ bytes, human }` or null.
 export async function getMemoryTotal() {
   try {
     const res = await serverFetch("/server/facts");

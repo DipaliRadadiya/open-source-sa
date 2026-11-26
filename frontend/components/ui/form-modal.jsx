@@ -8,7 +8,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
-// `asForm` + `onSubmit` wrap body and footer in a <form> so a footer submit works.
 const FOCUSABLE =
   "input:not([type=hidden]), textarea, select, button, a[href], [tabindex]:not([tabindex='-1'])";
 
@@ -30,17 +29,13 @@ export function FormModal({
   asForm = false,
   onSubmit,
   className,
-  // Selector for the control to focus when it is not the first one.
   initialFocus,
   onCloseAutoFocus,
 }) {
-  // Every field can be conditional (e.g. nothing left to ask). An empty body band between
-  // header and footer read as something failing to load, so it goes.
   const hasBody = Children.toArray(children).length > 0;
 
   const inner = (
     <>
-      {/* pe-10 reserves room for the absolutely positioned close button. */}
       <DialogHeader className="shrink-0 space-y-0 border-b py-4 pe-10 ps-6 text-left">
         <div className="flex items-center gap-3">
           {Icon ? (
@@ -53,7 +48,6 @@ export function FormModal({
               <Icon className="size-5" />
             </span>
           ) : null}
-          {/* min-w-0 + break-words: long user-supplied names must not widen the dialog. */}
           <div className="min-w-0 space-y-1">
             <DialogTitle className="break-words">{title}</DialogTitle>
             <DialogDescription className="break-words">{description}</DialogDescription>
@@ -68,7 +62,6 @@ export function FormModal({
       ) : null}
 
       {footer ? (
-        // Without a body the header's own bottom rule already separates the two.
         <div className={cn("flex shrink-0 flex-wrap items-center justify-end gap-2 bg-muted/50 px-6 py-4", hasBody && "border-t")}>
           {footer}
         </div>
@@ -84,7 +77,7 @@ export function FormModal({
           className,
         )}
         onCloseAutoFocus={onCloseAutoFocus}
-        // Never focus a label's "?" hint: Radix would open the note.
+        // Don't focus a label's ? hint, Radix would open it.
         onOpenAutoFocus={(event) => {
           const chosen = initialFocus ? event.currentTarget.querySelector(initialFocus) : null;
           if (chosen) {
@@ -109,7 +102,6 @@ export function FormModal({
         }}
       >
         {asForm ? (
-          // noValidate: native validation bubbles are untranslated; the schema handles it.
           <form noValidate onSubmit={onSubmit} className="contents">
             {inner}
           </form>

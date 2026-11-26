@@ -1,9 +1,5 @@
-// Keyed on the API's stable `name`. Explicit filenames, so an unknown type gets the fallback icon.
 const LOGOS = {
   wordpress: "wordpress.svg",
-  // The container WordPress is the same product and gets the same mark. Keyed
-  // separately because the key IS the type name, and the two types exist because
-  // `name()` has to be unique — see WordPressContainerSiteType.
   wordpress_container: "wordpress.svg",
   nextcloud: "nextcloud.svg",
   joomla: "joomla.svg",
@@ -21,13 +17,10 @@ const LOGOS = {
   nodebb: "nodebb.svg",
   git: "git.svg",
   php: "php.svg",
-  // Not a brand: a static site is plain HTML, CSS and JavaScript.
   static: "html5.svg",
-  // Docker image and Docker compose sites; a known image gets its recipe's logo instead.
   docker: "docker.svg",
 };
 
-/** The public path for a type's logo, or null when it has none. */
 export function siteTypeLogo(name) {
   const file = LOGOS[name];
   return file ? `/site-types/${file}` : null;

@@ -7,8 +7,6 @@ import {
   dbTablesResponseSchema,
 } from "@/lib/schemas/database";
 
-
-// Each part fails independently.
 export const getEngineStatus = cache(async function getEngineStatus(engine) {
   const data = await readOr(
     `/databases/status/${encodeURIComponent(engine)}`,
@@ -36,8 +34,6 @@ export const getProcesses = cache(async function getProcesses(engine) {
   return data.processes;
 });
 
-/** Tables inside one database, biggest first. */
-// `failed` is kept so a failed read never shows as "No tables yet".
 export const getTables = cache(async function getTables(databaseId) {
   const result = await read(`/databases/${databaseId}/tables`, dbTablesResponseSchema);
   const tables = result.failed ? [] : [...(result.data?.tables ?? [])];

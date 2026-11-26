@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
-/** A horizontal scroller that fades only the edges it can still scroll towards. */
 export function ScrollFade({ className, children, ...props }) {
   const ref = useRef(null);
   const [edges, setEdges] = useState({ start: false, end: false });
@@ -17,7 +16,6 @@ export function ScrollFade({ className, children, ...props }) {
     measure();
     const el = ref.current;
     if (!el) return;
-    // Content or size changes after mount affect whether it can scroll.
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     for (const child of el.children) observer.observe(child);

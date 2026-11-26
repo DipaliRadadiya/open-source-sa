@@ -11,8 +11,6 @@ function ReportPending() {
   const { pending } = useLinkStatus();
   const mounted = useRef(true);
 
-  // Declared first so its cleanup runs first on unmount: the effect below can
-  // then tell "the page arrived" from "this link went away while waiting".
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -29,8 +27,6 @@ function ReportPending() {
   return null;
 }
 
-// Tells the top bar a click is waiting: without prefetch, it waits before
-// `loading.jsx` shows. `useLinkStatus` is only readable inside a Link.
 export default function AppLink({ children, ...props }) {
   return (
     <NextLink {...props}>

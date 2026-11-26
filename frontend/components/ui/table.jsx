@@ -10,7 +10,6 @@ function Table({
   ...props
 }) {
   return (
-    /* ScrollFade so wide tables show they scroll; it paints nothing when the table fits. */
     <ScrollFade data-slot="table-container" className="relative w-full">
       <table
         data-slot="table"

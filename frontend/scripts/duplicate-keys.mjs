@@ -1,10 +1,7 @@
-/**
- * Names defined more than once in the same object, with their lines. Scans the raw text,
- * since `JSON.parse` already dropped the repeats; tracks only strings and name/value position.
- */
+// Keys defined twice in one JSON object, with their lines (JSON.parse silently drops the repeats).
 export function duplicateKeys(text) {
   const found = [];
-  const stack = []; // { object: boolean, names: Map<string, line> }
+  const stack = [];
   let expectName = false;
   let line = 1;
 
@@ -34,7 +31,6 @@ export function duplicateKeys(text) {
       stack.pop();
       expectName = false;
     } else if (c === ",") {
-      // In an array a comma separates values, not names.
       expectName = stack.at(-1)?.object === true;
     }
   }

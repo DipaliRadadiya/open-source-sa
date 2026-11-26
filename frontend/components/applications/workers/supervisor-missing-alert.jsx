@@ -7,7 +7,6 @@ import { installSupervisor } from "@/lib/api/workers";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 
-// Shown before the form: Create would otherwise answer 202 and start the install. Not a blocker.
 export function SupervisorMissingAlert({ appId, canManage }) {
   const t = useTranslations("applications.workers");
   const router = useRouter();
@@ -19,8 +18,6 @@ export function SupervisorMissingAlert({ appId, canManage }) {
     try {
       await installSupervisor(appId);
       toast.info(t("supervisor.installing"));
-      // The banner stays (now "installing") until a refresh shows supervisord
-      // present; never claim success here.
       setQueued(true);
       router.refresh();
     } catch (error) {

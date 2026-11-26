@@ -3,8 +3,6 @@ import { getTranslations } from "next-intl/server";
 import { Database, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Warns early, or e.g. WordPress provisions and then fails on a missing driver.
-// Does not block: the API does not say which site types need a database.
 export async function NoDatabaseEngineNotice({ installing = false }) {
   const t = await getTranslations("applications.noDatabase");
 
@@ -28,7 +26,6 @@ export async function NoDatabaseEngineNotice({ installing = false }) {
         </div>
       </div>
 
-      {/* No action while an install is in progress, to avoid a second attempt. */}
       {installing ? null : (
         <Button size="sm" variant="outline" asChild className="shrink-0">
           <Link href="/databases">{t("action")}</Link>

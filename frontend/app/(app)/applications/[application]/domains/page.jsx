@@ -36,7 +36,6 @@ export default async function ApplicationDomainsPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // Site deleted: land on the list and explain why via ?gone=1.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -50,13 +49,9 @@ export default async function ApplicationDomainsPage({ params }) {
   const [domainList, certificate, capabilities] = await Promise.all([
     settled ? getApplicationDomains(id) : Promise.resolve({ domains: [], failed: false }),
     settled ? getApplicationCertificate(id) : Promise.resolve({ certificate: null, availableTypes: [], failed: false }),
-    // A-record target for unverified domains; null (role cannot read it) falls back
-    // to generic guidance.
     settled ? getServerCapabilities().catch(() => null) : Promise.resolve(null),
   ]);
 
-  // What the site can be issued, per the server, not derived from its domains:
-  // a nip.io or internal name cannot get Let's Encrypt but can get self-signed.
   const availableTypes = certificate.availableTypes ?? [];
   const certifiable = availableTypes.length
     ? availableTypes.some((entry) => entry.available)
@@ -64,8 +59,7 @@ export default async function ApplicationDomainsPage({ params }) {
   const serverIp = capabilities?.serverIp ?? null;
 
   const cert = certificate.certificate;
-  /* A failed certificate read is not "no certificate": keep `certificate.failed`
-     apart from `!cert`, or a 500 renders "Not secured" on a site with live HTTPS. */
+  // A failed certificate read is not "no certificate"; a 500 would show Not secured on a live HTTPS site.
   const sslStatus = certificate.failed
     ? "unknown"
     : !cert
@@ -99,8 +93,6 @@ export default async function ApplicationDomainsPage({ params }) {
               serverIp={serverIp}
               secured={sslStatus === "active"}
               siteType={application.site_type}
-              // A new name on an HTTPS site is served by the existing certificate, which does
-              // not cover it; the dialog needs the certificate type to advise correctly.
               certificate={cert}
             />
           }

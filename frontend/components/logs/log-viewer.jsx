@@ -8,10 +8,8 @@ import { LogLine } from "@/components/logs/log-line";
 import { appended } from "@/lib/logs/appended";
 
 const ROW_HEIGHT = 24;
-// Fractional scroll positions and the last row's border defeat an exact bottom check.
 const BOTTOM_SLACK = 12;
 
-// Virtualized; auto-scroll follows only while the reader is already at the newest end.
 export function LogViewer({
   lines,
   group,
@@ -23,13 +21,10 @@ export function LogViewer({
   onCopyLine,
   filtered,
   severity,
-  // The application log API reports whether a filtered read hit the line cap.
   searchCapped = false,
   loadingText = null,
-  // The server's reason for a failed read, when it gave one.
   failedMessage = null,
   searchedLines,
-  /* Every "stick to the end" behaviour anchors on the newest end chosen from this flag. */
   newestFirst = false,
 }) {
   const t = useTranslations("logs");
@@ -37,10 +32,8 @@ export function LogViewer({
   const [atBottom, setAtBottom] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [unseen, setUnseen] = useState(0);
-  // Tells appended lines from a replaced buffer (another filter, another log).
   const previous = useRef({ lines, key: `${group}|${term}|${severity}` });
 
-  // Reversed for rendering only; `lines` stays chronological so append counting works.
   const rows = useMemo(
     () => (newestFirst ? [...lines].reverse() : lines),
     [lines, newestFirst],
@@ -54,7 +47,6 @@ export function LogViewer({
     overscan: 24,
   });
 
-  // "The newest end", whichever end that is.
   const scrollToNewest = useCallback(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = newestFirst ? 0 : el.scrollHeight;
@@ -73,7 +65,7 @@ export function LogViewer({
     if (bottom) setUnseen(0);
   }, [onAtBottomChange, newestFirst]);
 
-  // Counted by what is new, not by length growth: a full tail window never changes length.
+  // A full tail window never changes length, so count new lines, not growth.
   useLayoutEffect(() => {
     const key = `${group}|${term}|${severity}`;
     const before = previous.current;
@@ -86,20 +78,17 @@ export function LogViewer({
       return;
     }
     setUnseen((n) => n + added);
-    // Keep the reader on the line they were reading.
     const el = scrollRef.current;
     if (!el) return;
     if (newestFirst) el.scrollTop += added * ROW_HEIGHT;
     else if (dropped > 0) el.scrollTop = Math.max(0, el.scrollTop - dropped * ROW_HEIGHT);
   }, [lines, group, term, severity, atBottom, newestFirst, scrollToNewest]);
 
-  // A new source (or a new filter) starts at the newest line.
   useEffect(() => {
     scrollToNewest();
     setAtBottom(true);
   }, [group, term, severity, newestFirst, scrollToNewest]);
 
-  // A tab just switched to: never show the previous tab's lines meanwhile.
   if (status === "loading") {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center gap-2 bg-console text-sm text-console-muted" role="status">
@@ -114,12 +103,10 @@ export function LogViewer({
   if (status === "missing") {
     return <Notice icon={FileWarning} title={t("missing.title")} body={t("missing.body")} />;
   }
-  // A failed read must not look like an empty file.
   if (status === "failed") {
     return <Notice icon={TriangleAlert} title={t("readFailed.title")} body={failedMessage ?? t("readFailed.body")} />;
   }
   if (!lines.length) {
-    // A capped search proves nothing about the rest of the file, so the wording differs.
     const noMatchBody =
       searchCapped && searchedLines
         ? t("noMatches.bodyCapped", { count: searchedLines })
@@ -139,7 +126,6 @@ export function LogViewer({
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        // Announce politely only while following, not while the user scrolls.
         role="log"
         aria-live={following ? "polite" : "off"}
         aria-label={t("viewerLabel")}
@@ -166,7 +152,6 @@ export function LogViewer({
                 transform: `translateY(${item.start}px)`,
               }}
             >
-              {/* The line's place in the file, not on screen. */}
               <LogLine
                 index={newestFirst ? rows.length - item.index : item.index + 1}
                 text={rows[item.index]}
@@ -183,7 +168,6 @@ export function LogViewer({
         </div>
       </div>
 
-      {/* Bottom fade only while scrolled up, so a followed tail is not dimmed. */}
       <div
         aria-hidden="true"
         className={cn(
@@ -202,7 +186,6 @@ export function LogViewer({
       {!atBottom ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
           <Button size="sm" className="pointer-events-auto shadow-md" onClick={scrollToNewest}>
-            {/* Towards the newest end, which is the top in newest-first. */}
             {newestFirst ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />}
             {unseen > 0 ? t("jumpWithCount", { count: unseen }) : t("jump")}
           </Button>

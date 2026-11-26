@@ -8,9 +8,6 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-// After a site's PHP version changes, its cron jobs still on another PHP are offered, never
-// moved on their own (#5): one pinned to the old version keeps running it until switched.
-// Not offered to a role that cannot change cron jobs.
 export function useCronPhpReview({ appId, canManageCron }) {
   const [review, setReview] = useState(null);
 
@@ -50,7 +47,6 @@ function CronPhpReviewDialog({ appId, review, onDone }) {
       toast.success(t("switched", { count: ticked.size, version }));
       onDone();
     } catch (err) {
-      // A 422 names the job and why (not this site's, no PHP to swap, too long); nothing moved.
       setError(apiMessage(err, t("failed")));
       setPending(false);
     }

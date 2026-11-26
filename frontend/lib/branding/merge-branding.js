@@ -2,7 +2,6 @@ import { converter } from "culori";
 
 export const DEFAULT_BRANDING = {
   name: "ServerAvatar",
-  // Shipped in public/brand (v8 logo kit): "-light" is for a light background.
   logo: "/brand/serveravatar-horizontal-light.svg",
   logo_dark: "/brand/serveravatar-horizontal-dark.svg",
   icon: "/brand/serveravatar-mark-light.svg",
@@ -21,8 +20,7 @@ export const BRANDING_ASSET_FIELDS = [
 
 const toOklch = converter("oklch");
 
-// Only absolute http(s) URLs or root-relative paths are allowed; data:,
-// javascript: and protocol-relative //host never reach an href or src.
+// Only http(s) URLs or paths starting with "/" (blocks data:, javascript: and //host).
 export function usableAsset(value) {
   const trimmed = typeof value === "string" ? value.trim() : "";
   if (!trimmed) return false;
@@ -37,14 +35,11 @@ export function usableAsset(value) {
   }
 }
 
-// generatePalette returns null for an unreadable colour, which would drop the
-// theme; checking here falls back to the default colour instead.
 export function usableColor(value) {
   const trimmed = typeof value === "string" ? value.trim() : "";
   return Boolean(trimmed) && Boolean(toOklch(trimmed));
 }
 
-// Merged field by field: one unusable field must never discard the others.
 export function mergeBranding(branding) {
   const merged = { ...DEFAULT_BRANDING };
   if (!branding || typeof branding !== "object") return merged;

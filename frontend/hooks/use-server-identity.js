@@ -15,16 +15,13 @@ function cached() {
   }
 }
 
-// Which machine this is: the sidebar card and the breadcrumb's root. `/server/facts` runs
-// commands on the server, so it is asked once per tab every ten minutes, not on every
-// navigation. Null until there is an answer: a guessed name would be worse than none.
+// /server/facts runs commands on the server, so ask once per tab every 10 minutes.
 export function useServerIdentity() {
   const [identity, setIdentity] = useState(null);
 
   useEffect(() => {
     let live = true;
     const hit = cached();
-    // One path for both: a cached answer resolves at once, a miss asks the server.
     (hit ? Promise.resolve(hit) : getServerIdentity())
       .then((value) => {
         if (!live || !value?.hostname) return;
@@ -33,7 +30,7 @@ export function useServerIdentity() {
         try {
           sessionStorage.setItem(KEY, JSON.stringify({ at: Date.now(), value }));
         } catch {
-          // Private mode: it is just asked again next time.
+          // storage blocked; ignore
         }
       })
       .catch(() => {});

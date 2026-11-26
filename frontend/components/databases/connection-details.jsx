@@ -11,7 +11,6 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { ConnectionString } from "@/components/databases/connection-string";
 import { ACCESS_TONE } from "@/components/databases/database-users";
 
-// The string first, then its parts in two groups of three: where to connect, and who as.
 export function ConnectionDetails({ database, canManage = false }) {
   const t = useTranslations("databases.credentials");
   const tAccess = useTranslations("databases.access");
@@ -30,8 +29,6 @@ export function ConnectionDetails({ database, canManage = false }) {
   const credentials = [
     { key: "database", value: database.name },
     { key: "username", value: user.username },
-    // Masked, not hidden: it is meant to be copied. Null without `database`
-    // manage while `password_known` is true: shown as withheld, not dropped.
     {
       key: "password",
       value: user.password,
@@ -47,7 +44,6 @@ export function ConnectionDetails({ database, canManage = false }) {
           <CardIcon icon={Plug} />
           <h2 className="text-[15px] font-semibold tracking-tight">{t("title")}</h2>
         </div>
-        {/* Where this user may connect from: the first thing a remote app needs to know. */}
         <Badge variant={ACCESS_TONE[access] ?? "muted"} className="font-normal">
           {tAccess(`${access}.label`)}
           {access === "remote" && user.host ? ` · ${user.host}` : ""}
@@ -60,7 +56,6 @@ export function ConnectionDetails({ database, canManage = false }) {
         <FieldGroup icon={KeyRound} title={t("credentialsTitle")} fields={credentials} t={t} />
       </div>
 
-      {/* One credential is shown; say when there are others. */}
       {others > 0 ? (
         <div className="border-t bg-muted/30 px-5 py-3">
           <p className="text-xs leading-relaxed text-muted-foreground">
@@ -84,7 +79,6 @@ function FieldGroup({ icon: Icon, title, fields, t }) {
           <div key={field.key} className="flex min-w-0 items-start justify-between gap-2 px-3.5 py-3">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">{t(field.key)}</p>
-              {/* Wraps rather than truncating: a cut-off name still looks valid. */}
               {field.withheld ? (
                 <p className="text-sm text-muted-foreground">{t("passwordWithheld")}</p>
               ) : (

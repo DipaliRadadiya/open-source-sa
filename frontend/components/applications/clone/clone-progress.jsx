@@ -16,16 +16,13 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { FACT_LABEL } from "@/lib/theme/facts";
 import { BreakableDomain } from "@/components/ui/breakable-domain";
 
-/** The endpoint is throttled at 120/min; every 2s sits well inside that. */
 const POLL_MS = 2000;
 
-/** Give up after 20 minutes — a job that has not moved by then is stuck. */
 const POLL_LIMIT_MS = 20 * 60 * 1000;
 
-/** Still `pending` after this, it may never start: the queue can drop a duplicate clone. */
+// The queue can drop a duplicate clone, so give up waiting after this.
 const NOT_STARTING_MS = 2 * 60 * 1000;
 
-/** Not a modal: leaving the page does not abandon the job. */
 export function CloneProgress({ clone: initial, sourceApplication, onDone, onAgain, onRetry }) {
   const t = useTranslations("applications.clone.progress");
   const { refresh, pending: refreshing } = useRefresh();
@@ -48,12 +45,11 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
         if (!next) return;
         setClone(next);
         if (!CLONE_IN_FLIGHT.includes(next.status)) {
-          // A new application exists now; every list showing sites is stale.
           router.refresh();
           onDone?.(next);
         }
       } catch {
-        // Transient poll errors are ignored; the next tick retries.
+        // retry on the next poll
       }
     }
 
@@ -82,14 +78,10 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
   const step = clone.step_number ?? 0;
   const percent = total > 0 ? Math.round((step / total) * 100) : 0;
 
-  // Nothing picked up off the queue yet: say so, rather than show dim rows
-  // indistinguishable from a dead job.
   const queued = clone.status === "pending";
   const neverStarted = queued && notStarting && !stalled;
   const giveUp = stalled || neverStarted;
 
-  // Step labels are local. Draw the list only while the counts match the API;
-  // otherwise the bar and the API's current step title carry it.
   const stepsMatch = total === STEP_KEYS.length;
 
   return (
@@ -116,7 +108,6 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
       <CardContent className="space-y-4 px-5 py-4">
         <Progress value={percent} className="h-1.5" />
 
-        {/* The four stages, with the completed ones kept on screen. */}
         {stepsMatch ? (
         <ol className="space-y-2.5">
           {STEP_KEYS.map((key, index) => {
@@ -163,12 +154,10 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
                 disabled={refreshing}
                 className="w-full sm:w-auto"
               >
-                {/* Spinner only while working; no icon at rest. */}
                 {refreshing ? <Loader2 className="size-4 animate-spin" /> : null}
                 {t("checkAgain")}
               </Button>
             ) : null}
-            {/* Back to the form. Forgets only this browser's pointer; the job carries on. */}
             <Button variant="outline" onClick={onAgain} className="w-full sm:w-auto">
               {t("stopWatching")}
             </Button>
@@ -181,7 +170,6 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
   );
 }
 
-/** Mirrors `CloneResource`'s order so numbering matches `step_number`. */
 const STEP_KEYS = ["provisioning", "copying_files", "cloning_database", "starting_process"];
 
 function Completed({ clone, sourceApplication, onAgain }) {
@@ -304,7 +292,6 @@ function Failed({ clone, onAgain }) {
           </span>
           <div className="min-w-0 space-y-1">
             <p className="font-medium">{t("failedTitle")}</p>
-            {/* A translated failure key, never raw stderr (the backend does not send it). */}
             <p className="text-sm">{cloneFailureTitle(clone) ?? t("failedUnknown")}</p>
             <p className="text-sm text-muted-foreground">{t("failedSafe")}</p>
             {clone.reference ? (
@@ -325,7 +312,6 @@ function Failed({ clone, onAgain }) {
   );
 }
 
-/** The things a fresh copy does not inherit, each linked to its screen. */
 export function CloneNextSteps({ applicationId, sourceProtected, sourceHasRepository = false, webhook = null }) {
   const t = useTranslations("applications.clone.result.next");
 
@@ -333,7 +319,6 @@ export function CloneNextSteps({ applicationId, sourceProtected, sourceHasReposi
     ...(sourceProtected ? [{ key: "password", href: `/applications/${applicationId}/security` }] : []),
     { key: "ssl", href: `/applications/${applicationId}/domains` },
     { key: "backups", href: `/applications/${applicationId}/backups` },
-    // Only a copy with a repository and no webhook of its own.
     ...(sourceHasRepository && !webhook?.url
       ? [{ key: "deploys", href: `/applications/${applicationId}/deployment` }]
       : []),
@@ -346,8 +331,6 @@ export function CloneNextSteps({ applicationId, sourceProtected, sourceHasReposi
         <p className="text-sm text-muted-foreground">{t("subtitle", { count: steps.length + (webhook?.url ? 1 : 0) })}</p>
       </div>
       <CardContent className="min-h-0 flex-1 p-0">
-        {/* A repository webhook posts to one URL, so the copy's generated URL
-            must be added to the repository by hand. */}
         {webhook?.url ? (
           <div className="space-y-2 border-b bg-warning/5 px-5 py-4">
             <p className="text-sm font-medium text-warning">{t("webhook.title")}</p>

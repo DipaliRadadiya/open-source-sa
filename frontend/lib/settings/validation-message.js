@@ -1,5 +1,3 @@
-// Settings schemas emit key tokens, translated here. Anything unrecognised is
-// an already localised API message and is shown as-is.
 const KEYS = [
   "required",
   "tooLong",

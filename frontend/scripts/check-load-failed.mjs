@@ -1,10 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-/*
- * Every `LoadFailed` box gets `status` and `failure`, so it can say what failed instead of a
- * bare "could not be loaded". Checks the props are present, not that they are the right ones.
- */
+// Every LoadFailed box must get status and failure.
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -19,9 +16,6 @@ function walk(dir, out = []) {
   return out;
 }
 
-// Comments masked, not stripped, so line numbers stay true — the same trap
-// that has caught three checks in this repo: a docblock quoting the thing it
-// is explaining, read as a fresh offence.
 const mask = (s) =>
   s
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
@@ -32,7 +26,6 @@ let total = 0;
 
 for (const file of [...walk("app"), ...walk("components")]) {
   const source = mask(fs.readFileSync(file, "utf8"));
-  // Self-closing only: LoadFailed takes no children.
   for (const match of source.matchAll(/<LoadFailed\b[^>]*?\/>/gs)) {
     total += 1;
     const missing = ["status", "failure"].filter((p) => !match[0].includes(`${p}=`));

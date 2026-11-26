@@ -11,14 +11,10 @@ import { pickFeedRows, QUIET_ACTIONS } from "@/lib/activity-log/pick-feed-rows";
 import { isMachineActor, SIGN_IN_ACTIONS } from "@/lib/admin/sign-in-facts";
 import { lowerFirst } from "@/lib/activity-log/lower-first";
 
-// The latest few changes; the full log is one click away.
 const SHOWN = 5;
 
-// `people`: the complete list of people, to recognise the Central integration's machine
-// account (null when the list is incomplete or failed, and the username is shown).
 export async function ActivityFeed({ entries = [], todayCount = 0, failed = false, todayKnown = true, people = null }) {
   const [t, locale] = await Promise.all([getTranslations("admin.feed"), getLocale()]);
-  // Sign-ins have their own card; the feed shows what changed.
   const changes = entries.filter((entry) => !SIGN_IN_ACTIONS.includes(entry.action));
   const rows = pickFeedRows(collapseRepeats(changes, { mergeAcross: QUIET_ACTIONS }), {
     max: SHOWN,
@@ -31,7 +27,6 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
   };
 
   return (
-    // h-full: the card sits inside a col-span wrapper that stretches, not the card.
     <Card className="flex h-full flex-col gap-0 overflow-hidden py-0">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-5 py-3.5">
         <div className="flex items-center gap-3">
@@ -40,7 +35,6 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
             {t("title")}
           </h2>
         </div>
-        {/* A failed stats read shows "—", never "0 today". */}
         <p className="text-sm text-muted-foreground">
           {todayKnown ? t("today", { count: todayCount }) : "—"}
         </p>
@@ -49,7 +43,6 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
       {rows.length ? (
         <ul className="divide-y">
           {rows.map(({ key, newest, oldest, count }) => {
-            // One sentence ("test logged in 50 times") rather than columns.
             const what = lowerFirst(newest.description || humanizeActivity(newest.action), locale);
             const who = actorName(newest);
             return (
@@ -67,8 +60,6 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
                       ? t("sentenceRepeated", { who, what, count })
                       : t("sentenceOnce", { who, what })}
                   </p>
-                  {/* A collapsed run shows its time span, from entries already loaded; one that rounds
-                      to a single moment says it once, not "From 47 minutes ago to 47 minutes ago". */}
                   <p className="text-xs text-muted-foreground">
                     {count > 1 && oldest?.created_at_human && oldest.id !== newest.id && oldest.created_at_human !== newest.created_at_human
                       ? t("between", {
@@ -83,7 +74,6 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
           })}
         </ul>
       ) : (
-        /* A failed read must not render as "nothing has happened". */
         <div className="p-5">
           <EmptyState compact icon={failed ? CircleAlert : History} badge={null} title={failed ? t("failed") : entries.length ? t("onlySignIns") : t("empty")} />
         </div>

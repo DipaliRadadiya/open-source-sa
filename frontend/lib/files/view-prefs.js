@@ -1,5 +1,3 @@
-// A cookie, not localStorage, because the hidden flag filters on the server; an
-// explicit `?hidden=` in the URL still wins.
 export const HIDDEN_COOKIE = "sv_files_hidden";
 export const SORT_COOKIE = "sv_files_sort";
 
@@ -12,7 +10,6 @@ export function resolveShowHidden(param, cookie) {
   return cookie !== "hide";
 }
 
-// "size:desc" → [{ id: "size", desc: true }]; anything else → name ascending.
 export function parseSort(value) {
   const [id, dir] = typeof value === "string" ? value.split(":") : [];
   return SORT_COLUMNS.includes(id) ? [{ id, desc: dir === "desc" }] : [{ id: "name", desc: false }];
@@ -29,6 +26,6 @@ export function writePref(name, value) {
       ? `${name}=${value}; path=/; max-age=${YEAR}; samesite=lax`
       : `${name}=; path=/; max-age=0; samesite=lax`;
   } catch {
-    // A blocked cookie only loses the preference.
+    // storage blocked; ignore
   }
 }

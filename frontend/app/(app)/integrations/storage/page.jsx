@@ -21,7 +21,6 @@ export default async function StorageIntegrationsPage() {
     getPermissions(),
     getTranslations("storage"),
     getStorageDestinations(),
-    // Which applications back up to each destination. A failed read shows nothing, never "unused".
     getBackupDestinationUsage().catch(() => ({ failed: true })),
   ]);
 

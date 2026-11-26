@@ -23,9 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Same cadence as the SSL card's issuance polling.
 const DRY_RUN_POLL_MS = 3000;
-// Ten minutes, as for an issuance; a run still going after that lost its worker.
 const DRY_RUN_POLL_LIMIT = (10 * 60 * 1000) / DRY_RUN_POLL_MS;
 
 const FALLBACK_TYPES = [
@@ -34,16 +32,13 @@ const FALLBACK_TYPES = [
   { type: "custom", available: true },
 ];
 
-// The server decides: `available` gates each method, `recommended` picks the default; never guess from the domain.
 export function IssueCertDialog({
   appId,
   availableTypes = [],
-  // The current certificate, or null; distinguishes "secure" from "replace".
   current = null,
   open,
   onOpenChange,
   onIssued,
-  // Let's Encrypt hit its rate limit; only that method is closed.
   rateLimited = false,
 }) {
   const t = useTranslations("applications.domains");
@@ -52,36 +47,27 @@ export function IssueCertDialog({
       ? { ...entry, available: false, reason: t("ssl.rateLimitedMethod") }
       : entry,
   );
-  // The server's recommendation, else the first available method; never fixed.
   const defaultType =
     types.find((entry) => entry.recommended && entry.available)?.type ??
     types.find((entry) => entry.available)?.type ??
     types[0]?.type;
 
   const [chosen, setType] = useState(defaultType);
-  // A choice that became unavailable falls back to the default.
   const type = types.some((entry) => entry.type === chosen && entry.available !== false)
     ? chosen
     : defaultType;
-  // Not react-hook-form, so labels need explicit ids.
   const fieldId = useId();
   const [pem, setPem] = useState({ certificate: "", private_key: "", chain: "" });
-  // Per-field API errors shown at their field. The backend attaches the
-  // certificate/key mismatch to `private_key`.
   const [pemErrors, setPemErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  // Per-domain reachability refusals (422 errors.domain); they unlock the
-  // "issue anyway" (force) path, never offered up front.
+  // Per-domain refusals unlock the force path; never offered up front.
   const [refusals, setRefusals] = useState([]);
-  // Dry run: reachability, then certbot against Let's Encrypt staging. Null
-  // until requested.
   const [dryRun, setDryRun] = useState(null);
   const [starting, setStarting] = useState(false);
   const [stalled, setStalled] = useState(false);
 
   const selected = types.find((entry) => entry.type === type);
   const dryRunning = starting || (dryRun?.status === "running" && !stalled);
-  // A pass needs only one passing name; list the names left off.
   const leftOff = dryRun?.status === "passed" ? (dryRun.domains ?? []).filter((entry) => !entry.ok) : [];
 
   function reset() {
@@ -100,8 +86,6 @@ export function IssueCertDialog({
     onOpenChange?.(next);
   }
 
-  // Poll only while running; the backend's `failed()` hook always writes a
-  // verdict, so this ends. `live` drops replies landing after close.
   useEffect(() => {
     if (!open || dryRun?.status !== "running" || stalled) return undefined;
     let live = true;
@@ -116,7 +100,7 @@ export function IssueCertDialog({
         const next = await fetchCertificateDryRun(appId);
         if (live) setDryRun(next);
       } catch {
-        // transient — keep polling
+        // retry on the next poll
       }
     }, DRY_RUN_POLL_MS);
     return () => {
@@ -128,7 +112,6 @@ export function IssueCertDialog({
   async function runDryRun() {
     setStarting(true);
     setStalled(false);
-    // Clear the previous verdict so it never sits beside a new run.
     setDryRun(null);
     setRefusals([]);
     try {
@@ -166,7 +149,6 @@ export function IssueCertDialog({
       if (Array.isArray(domainErrors) && domainErrors.length) {
         setRefusals(domainErrors);
       } else if (Object.keys(fieldErrors).length) {
-        // Shown at the fields, not as a toast.
         setPemErrors(fieldErrors);
       } else {
         toast.error(apiMessage(error, t("ssl.issueFailed")));
@@ -176,22 +158,17 @@ export function IssueCertDialog({
     }
   }
 
-  // Why Issue cannot run yet, or null (an upload needs both PEM blocks).
   const issueReason =
     type === "custom" && !(pem.certificate.trim() && pem.private_key.trim())
       ? t("ssl.uploadNeedsBoth")
       : null;
 
-  // Force skips only the reachability check, so it is offered only when that
-  // check failed (on issue or in a dry run), not for CA-stage failures.
   const dryRunBlockedOnReach =
     dryRun?.status === "failed" && dryRun?.stage === "reachability";
   const canForce =
     type === "letsencrypt" && (refusals.length > 0 || dryRunBlockedOnReach);
 
-  // Opened via "Reissue" on a site already served over HTTPS.
   const replacing = Boolean(current);
-  // A different method discards the current certificate; warn before issuing.
   const swapsMethod = replacing && current.type && current.type !== type;
 
   return (
@@ -225,11 +202,9 @@ export function IssueCertDialog({
         </>
       }
     >
-      {/* `grid gap-2` to match FormItem's label spacing. */}
       <div className="grid gap-2">
         <Label htmlFor={`${fieldId}-method`}>{t("ssl.method")}</Label>
         <Select value={type} onValueChange={(v) => { setType(v); setRefusals([]); setDryRun(null); }}>
-          {/* w-full: SelectTrigger defaults to w-fit. */}
           <SelectTrigger id={`${fieldId}-method`} className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -248,7 +223,6 @@ export function IssueCertDialog({
         </Select>
       </div>
 
-      {/* An uploaded certificate cannot be re-issued here, so swapping is lossy. */}
       {swapsMethod ? (
         <Caution size="md">
           {t("ssl.replacesCurrent", {
@@ -257,8 +231,6 @@ export function IssueCertDialog({
         </Caution>
       ) : null}
 
-      {/* Toned by `available`, not by the presence of a reason: an available
-          method can still carry an informational reason. */}
       {selected?.reason ? (
         <Caution size="md" tone={selected.available ? "warning" : "destructive"}>
           {selected.reason}
@@ -267,7 +239,6 @@ export function IssueCertDialog({
         <p className="text-xs text-muted-foreground">{t(`ssl.methodHint_${type}`)}</p>
       )}
 
-      {/* Let's Encrypt dry run, kept out of the footer. */}
       {type === "letsencrypt" ? (
         <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -291,7 +262,6 @@ export function IssueCertDialog({
             </Button>
           </div>
 
-          {/* Names the running stage; the CA stage is much slower. */}
           {dryRunning ? (
             <p className="text-sm text-muted-foreground">
               {t(`ssl.dryRunStage_${dryRun?.stage ?? "reachability"}`)}
@@ -331,7 +301,6 @@ export function IssueCertDialog({
                     : t("ssl.dryRunPassed")}
               </p>
 
-              {/* Every name, passing ones included. */}
               {dryRun.domains?.length ? (
                 <ul className="space-y-1.5">
                   {dryRun.domains.map((entry) => (
@@ -341,7 +310,6 @@ export function IssueCertDialog({
                       ) : (
                         <TriangleAlert className={cn("mt-0.5 size-4 shrink-0", leftOff.length ? "text-warning" : "text-destructive")} />
                       )}
-                      {/* The icon carries the verdict; the text stays neutral. */}
                       <span className={entry.ok ? "text-muted-foreground" : undefined}>
                         {entry.message}
                       </span>
@@ -350,7 +318,6 @@ export function IssueCertDialog({
                 </ul>
               ) : null}
 
-              {/* Set only when the CA stage failed. */}
               {dryRun.message ? <p className="text-sm">{dryRun.message}</p> : null}
               {dryRun.reference ? (
                 <p className="font-mono text-xs text-muted-foreground">
@@ -358,8 +325,7 @@ export function IssueCertDialog({
                 </p>
               ) : null}
 
-              {/* Explains "Issue anyway": a NAT'd server cannot reach its own
-                  public address, though the real challenge may still succeed. */}
+              {/* A NAT'd server can't reach its own public address, but the real challenge may still pass. */}
               {dryRunBlockedOnReach ? (
                 <p className="text-xs text-muted-foreground">{t("ssl.forceHint")}</p>
               ) : null}
@@ -429,11 +395,9 @@ export function IssueCertDialog({
         </div>
       ) : null}
 
-      {/* Reachability refusals — one message per domain, each a distinct fix. */}
       {refusals.length ? (
         <Caution size="md" tone="destructive">
           <p className="font-medium">{t("ssl.refusedTitle")}</p>
-          {/* Plain text, not red: each refusal is the fix to apply. */}
           <ul className="list-disc space-y-1 pl-4">
             {refusals.map((msg, i) => (
               <li key={i}>{msg}</li>

@@ -16,9 +16,6 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// The sidebar's application card opens this: another application without
-// going back to the list. The list is one searched page, not the list page's pagination: in a
-// dropdown you type the name you want. Fetched only when opened, so pages do not pay for it.
 export function ApplicationSwitcher({ application, children, ...triggerProps }) {
   const t = useTranslations("common.applicationContext");
   const pathname = usePathname();
@@ -27,13 +24,11 @@ export function ApplicationSwitcher({ application, children, ...triggerProps }) 
   const { isMobile, setOpenMobile } = useSidebar();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  // `query` is what the list answers, so a result never shows under a search it was not for.
   const [state, setState] = useState({ status: "idle", applications: [], total: 0, query: null });
   const [going, setGoing] = useState(null);
   const listRef = useRef(null);
   const [attempt, setAttempt] = useState(0);
 
-  // A short pause after each key, so typing "shop" is one request, not four.
   useEffect(() => {
     if (!open) return undefined;
     const controller = new AbortController();
@@ -59,12 +54,9 @@ export function ApplicationSwitcher({ application, children, ...triggerProps }) 
   }
 
   async function pick(target) {
-    // One switch at a time: a second click while the first loads is ignored.
     if (going !== null) return;
     if (String(target.id) === String(application.id)) return close();
     setGoing(target.id);
-    // The other site's own menu says whether it has this section; if that cannot be read,
-    // its dashboard is still right.
     const items = await getApplicationNavCatalog(target.id).catch(() => []);
     const href = switchTarget(pathname, application.id, target.id, items);
     setGoing(null);
@@ -76,7 +68,6 @@ export function ApplicationSwitcher({ application, children, ...triggerProps }) 
     }
   }
 
-  // Arrow keys move between rows, from the search box too.
   function onKeyDown(event) {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     const rows = [...(listRef.current?.querySelectorAll("[data-switcher-row]") ?? [])];
@@ -89,14 +80,11 @@ export function ApplicationSwitcher({ application, children, ...triggerProps }) 
 
   const visible = switcherRows(state.applications, application, state.query);
   const shown = visible.length;
-  // From the first key until the answer arrives, the pause included: without it the old list just
-  // sat there and nothing said a search was running.
   const searching = open && (state.status === "loading" || state.query !== query.trim());
 
   return (
     <Popover open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
       <PopoverTrigger asChild>
-        {/* Props from the sidebar's menu button (its look and data attributes) land on the trigger. */}
         <button type="button" {...triggerProps}>
           {children}
         </button>
@@ -116,13 +104,11 @@ export function ApplicationSwitcher({ application, children, ...triggerProps }) 
             aria-label={t("searchPlaceholder")}
             className="h-8 pl-8 text-sm"
           />
-          {/* Said, not only shown, to a screen reader. */}
           <span className="sr-only" role="status" aria-live="polite">
             {searching ? t("searching") : state.status === "ready" ? t("found", { count: shown }) : ""}
           </span>
         </div>
 
-        {/* The previous answer stays while the next loads, dimmed, so the list does not jump. */}
         <div ref={listRef} className={cn("max-h-80 overflow-y-auto p-1 transition-opacity", searching && shown > 0 && "opacity-60")} role="list" aria-busy={searching || undefined}>
           {state.status === "failed" ? (
             <div className="flex flex-col items-start gap-2 px-2 py-3 text-sm">
@@ -172,7 +158,6 @@ export function ApplicationSwitcher({ application, children, ...triggerProps }) 
           )}
         </div>
 
-        {/* Wraps instead of truncating: beside the link, "type to search" was cut to "ty…". */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t px-3 py-2 text-xs text-muted-foreground">
           {state.status === "ready" && state.total > shown ? <span>{t("showingSome", { shown, total: state.total })}</span> : null}
           <Link href="/applications" prefetch={false} onClick={close} className="ml-auto shrink-0 font-medium text-primary hover:underline">

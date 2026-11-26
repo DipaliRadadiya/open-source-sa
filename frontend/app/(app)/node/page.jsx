@@ -38,7 +38,6 @@ export default async function NodePage() {
       getPermissions(),
       getTranslations("node"),
       getNode(),
-      // A failed read shows nothing rather than a guess either way.
       read("/build-tools", buildToolsResponseSchema).catch(() => ({ failed: true })),
     ]);
 
@@ -46,9 +45,6 @@ export default async function NodePage() {
     return <PermissionDenied title={t("title")} feature="node" />;
   const canManage = can(permissions, "node", "manage");
 
-  // A 409 is the honest answer on a Docker box, which runs nothing on the host at
-  // all — not a failure to report. The sidebar already stops offering this screen,
-  // so this is a bookmark or a tab left open across a stack change.
   if (failed && status === 409) {
     return (
       <div className="space-y-6">
@@ -76,10 +72,8 @@ export default async function NodePage() {
   const versions = node?.versions ?? [];
   const lifecycleAvailable = Boolean(node?.lifecycle_available);
 
-  // Newest first: the API lists in-flight installs ahead of installed versions.
   const ordered = [...versions].sort((a, b) => compareVersions(b.version, a.version));
 
-  // Install sits in the table's header, or in the empty state when there is no table.
   const install = (
     <InstallVersionButton
       runtime="node"
@@ -91,7 +85,6 @@ export default async function NodePage() {
     />
   );
 
-  // fnm installs take minutes and finish silently, so in-flight versions are polled.
   const inFlight = anyInFlight(versions);
 
   return (
@@ -105,8 +98,7 @@ export default async function NodePage() {
 
       <PageHeader title={t("title")} />
 
-      {/* Some npm packages compile on install; without a compiler the deploy dies in
-          node-gyp with an error that never says so. The install lives on Setup. */}
+      {/* Some npm packages compile on install and fail in node-gyp without build tools. */}
       {!buildTools.failed && buildTools.data && !buildTools.data.build_tools.installed ? (
         <Note icon={Wrench}>
           {t.rich(
@@ -126,13 +118,11 @@ export default async function NodePage() {
         </Note>
       ) : null}
 
-      {/* No managed Node is a normal state, not an error; the note covers a system Node. */}
       {versions.length === 0 ? (
         <div className="space-y-4">
           <EmptyState
             icon={Hexagon}
             title={t("empty.title")}
-            // With nothing installable there is no install button; explain why instead.
             description={
               (node?.installable ?? []).length === 0
                 ? node?.installable_error
@@ -158,9 +148,7 @@ export default async function NodePage() {
             ]}
             action={install}
           >
-            {/* Newest first: the API lists in-flight installs ahead of installed versions. */}
             {ordered.map((version) => (
-              /* Keyed on version: each row holds its own confirm and running state. */
               <VersionSummary
                 key={version.version}
                 version={version}

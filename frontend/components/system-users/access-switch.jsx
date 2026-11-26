@@ -9,21 +9,16 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
 
-// Enabling sudo (a root grant) asks first; everything else applies immediately.
-// `sshEnforced` is the list's `meta.ssh_access_enforced`: only `false` changes the SSH toast.
 export function AccessSwitch({ user, field, canManage = true, sshEnforced = null }) {
   const t = useTranslations("systemUsers");
   const { refresh, refreshThen } = useRefresh();
   const [busy, setBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  // The requested value, until the server agrees with it.
   const [asked, setAsked] = useState(null);
 
   const checked = field === "sudo" ? user.sudo : user.ssh_access;
   const label = field === "sudo" ? t("access.sudo") : t("access.ssh");
 
-  // Shows the requested value until `router.refresh()` lands. Derived, not cleared in
-  // an effect, so changes made elsewhere show through immediately.
   const shown = asked !== null && asked !== checked ? asked : checked;
 
   async function apply(v) {
@@ -36,16 +31,14 @@ export function AccessSwitch({ user, field, canManage = true, sshEnforced = null
         message = v ? t("toast.sudoOn") : t("toast.sudoOff");
       } else {
         await setSystemUserSsh(user.id, v);
-        // Without an sshd AllowGroups line, "SSH login disabled" would be untrue.
+        // Without an sshd AllowGroups line, SSH login disabled isn't true.
         message = !v && sshEnforced === false ? t("toast.sshOffNotEnforced") : v ? t("toast.sshOn") : t("toast.sshOff");
       }
-      // Toasted once the row shows it, like every other change on this page.
       refreshThen(() => {
         toast.success(message);
         setBusy(false);
       });
     } catch (error) {
-      // Revert the knob: the change did not happen.
       setAsked(null);
       setBusy(false);
       if (error?.response?.status === 404) {
@@ -58,7 +51,6 @@ export function AccessSwitch({ user, field, canManage = true, sshEnforced = null
   }
 
   function onToggle(v) {
-    // Confirm before granting root; everything else is instant.
     if (field === "sudo" && v) {
       setConfirmOpen(true);
       return;
@@ -66,18 +58,14 @@ export function AccessSwitch({ user, field, canManage = true, sshEnforced = null
     apply(v);
   }
 
-  // The server rejects SSH with a shell that refuses login; `shell_allows_login: null`
-  // is an unrecognised shell, so it is not blocked on a guess.
+  // null is an unrecognised shell, so don't block on a guess.
   const sshBlocked =
     field === "ssh" && !checked && user.shell_allows_login === false;
-  // sshd's AllowGroups always admits the sudo group, so for a sudo user this switch
-  // decides nothing: shown on and locked.
   const viaSudo = field === "ssh" && user.sudo && user.shell_allows_login !== false;
   const locked = sshBlocked || viaSudo;
 
   return (
     <>
-      {/* Shell and sudo locks get a sentence; without the permission the switch only shows the value. */}
       <ReasonTooltip
         reason={
           !canManage

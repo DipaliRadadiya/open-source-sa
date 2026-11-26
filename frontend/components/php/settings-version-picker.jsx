@@ -6,8 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 import { Badge } from "@/components/ui/badge";
 
-// Beside the settings heading, so switching version needs no trip back up the table
-// when many are installed. Keeps the open tab; asks before dropping a php.ini edit.
 export function SettingsVersionPicker({ versions, selected }) {
   const t = useTranslations("php");
   const router = useRouter();
@@ -25,7 +23,6 @@ export function SettingsVersionPicker({ versions, selected }) {
 
   return (
     <Select value={selected} onValueChange={pick}>
-      {/* A card surface and its own label: bare on the tinted page it read as text, not a control. */}
       <SelectTrigger
         className="h-9 w-auto min-w-44 gap-2 bg-card shadow-e1 dark:bg-card"
         aria-label={t("versions.pickerLabel")}

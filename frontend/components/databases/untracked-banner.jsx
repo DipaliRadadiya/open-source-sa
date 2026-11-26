@@ -11,13 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-// Adopting never touches the data; it only starts tracking what exists.
 export function UntrackedBanner({ untracked = [], canManage }) {
   const t = useTranslations("databases");
   const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  // Everything ticked to begin with; the usual answer is "all of them".
   const [chosen, setChosen] = useState(() => untracked.map((item) => item.name));
 
   if (untracked.length === 0) return null;
@@ -35,7 +33,6 @@ export function UntrackedBanner({ untracked = [], canManage }) {
   async function onConfirm() {
     setPending(true);
     try {
-  // Adopt is scoped per engine: one request per engine in the selection.
       const byEngine = new Map();
       for (const item of untracked) {
         if (!chosen.includes(item.name)) continue;
@@ -86,8 +83,7 @@ export function UntrackedBanner({ untracked = [], canManage }) {
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}
-        // Wider than a yes/no confirmation: generated names do not fit 384px.
-        // `!` is required — see restore-dialog.jsx.
+        // ! is needed to beat the dialog's own max-width.
         className="w-full sm:!max-w-lg"
         icon={PackageSearch}
         title={t("adopt.confirmTitle")}
@@ -99,7 +95,6 @@ export function UntrackedBanner({ untracked = [], canManage }) {
         onConfirm={onConfirm}
       >
         <div className="space-y-2">
-          {/* The count shows what will be adopted; the toggle restores "all". */}
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground tabular-nums">
               {t("adopt.selectedCount", {
@@ -121,7 +116,6 @@ export function UntrackedBanner({ untracked = [], canManage }) {
             </Button>
           </div>
 
-          {/* Scrolls on its own so a long list cannot push Adopt off screen. */}
           <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border p-1">
             {untracked.map((item) => (
               <label
@@ -134,8 +128,6 @@ export function UntrackedBanner({ untracked = [], canManage }) {
                   disabled={pending}
                   onCheckedChange={() => toggle(item.name)}
                 />
-                {/* Wrapped, never truncated: generated names differ only in
-                    their last characters. */}
                 <span className="min-w-0 flex-1 font-mono text-sm break-all">
                   {item.name}
                 </span>

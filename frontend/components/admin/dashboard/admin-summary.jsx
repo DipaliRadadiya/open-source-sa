@@ -32,8 +32,6 @@ function Tile({ href, icon: Icon, tone, label, value, note, noteTone }) {
   );
 }
 
-// Three one-line answers, each opening the page with the detail (the
-// dashboard shows what matters, not every person and number).
 export async function AdminSummary({ signIns = null, users = null, never = null, impersonation = null }) {
   const [t, tp, ta, format] = await Promise.all([
     getTranslations("admin.signIns"),
@@ -42,7 +40,6 @@ export async function AdminSummary({ signIns = null, users = null, never = null,
     getFormatter(),
   ]);
 
-  // A failed read never says "none".
   const signInTile = !signIns
     ? { tone: "quiet", icon: CircleAlert, value: t("failed") }
     : signIns.week === 0

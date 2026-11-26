@@ -32,7 +32,6 @@ import { useRestoreWatch } from "@/components/backups/restore-watch";
 import { BackupsHistoryTable } from "@/components/backups/backups-history-table";
 import { SubjectFilter } from "@/components/backups/subject-filter";
 
-// Server-paginated: the list grows without bound.
 export function BackupsHistory({
   backups,
   counts,
@@ -43,7 +42,6 @@ export function BackupsHistory({
   database = null,
   databases = [],
   pager = null,
-  // Target key → its newest backup id, read without the list's filters and pages.
   newest = null,
 }) {
   const t = useTranslations("backups.history");
@@ -57,13 +55,9 @@ export function BackupsHistory({
   const [restoring, setRestoring] = useState(null);
   const [clearing, setClearing] = useState(null);
   const [busyId, setBusyId] = useState(null);
-  // Application id → that site's newest backup id at the click. Retry answers 202
-  // with no row yet, so the list alone would not look in flight.
   const [started, setStarted] = useState({});
   const [stalled, setStalled] = useState(false);
 
-  // Retry creates a NEW row, so wait for a newer run for this site. Confirm first:
-  // it starts a full backup and can be mistaken for "retry the restore".
   function askRetry(backup) {
     setRetrying(backup);
   }
@@ -121,8 +115,6 @@ export function BackupsHistory({
     )
     .filter(Boolean);
 
-  // A status filter excluding in-flight runs means the new row can never
-  // appear in this list, so don't promise it will.
   const statusFilter = params.get("status");
   const filterHidesRun = Boolean(statusFilter) && !BACKUP_IN_FLIGHT.includes(statusFilter);
 
@@ -132,16 +124,13 @@ export function BackupsHistory({
     return () => clearTimeout(id);
   }, [queuedIds.length, stalled, filterHidesRun]);
 
-  // Refuse a second restore over the same site up front rather than via a 422.
   const restoreInFlight = RESTORE_IN_FLIGHT.includes(active?.status);
 
   const listProps = {
     backups,
     siteHeader: database ? t("subject.database") : undefined,
     canRestore,
-    // Same permission as restore; deleting also removes the archive from the bucket.
     canDelete: canRestore,
-    // The delete dialog re-reads the list itself before it closes.
     onDeleted: () => {},
     canRun,
     onRestore: setRestoring,
@@ -150,13 +139,8 @@ export function BackupsHistory({
     canClear: canRun,
     busyId,
     restoreInFlight,
-    // Per site: a run for THIS site blocks its rows only. The endpoint refuses
-    // a second run per target with a 422, so refuse it first and say why.
-    // Only a target's newest backup: the list is paged and filtered, so `newest` decides.
     retryable: (backup) => isRetryable(backup, backups, newest),
     retryBlockedFor: (backup) => {
-      // A running restore blocks Retry: its safety backup competes for the
-      // same disk and target.
       if (restoreInFlight) return tr("blocked.alreadyRunning");
 
       return queuedIds.includes(String(backup.application_id)) ||
@@ -170,14 +154,11 @@ export function BackupsHistory({
     },
   };
 
-  // Poll while anything is in flight. A running restore counts too: its safety
-  // copy adds a row partway through, and its own polling only refreshes the banner.
   const busy =
     backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status)) || restoreInFlight;
 
   const toolbar = (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-      {/* Searchable picker: `/backups` has no text search, so this is how a site is found. */}
       <SubjectFilter
         applications={applications}
         databases={databases}
@@ -195,7 +176,6 @@ export function BackupsHistory({
         }))}
         className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
       />
-      {/* Presets rather than a date picker. */}
       <FacetSelect
         paramKey="period"
         label={t("columns.when")}
@@ -206,7 +186,6 @@ export function BackupsHistory({
         }))}
         className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
       />
-      {/* Phone: the last filter and Refresh share a row, so Refresh is not left alone on one. */}
       <div className="flex items-center gap-3 sm:contents">
         <FacetSelect
           paramKey="type"
@@ -226,7 +205,6 @@ export function BackupsHistory({
     <div className="space-y-4">
       {busy || queuedNames.length ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
-      {/* Accepted runs with no row yet, named by site. */}
       {queuedNames.length ? (
         <div
           role="status"
@@ -250,7 +228,6 @@ export function BackupsHistory({
         </div>
       ) : null}
 
-      {/* Counts come from the API so they cover every page, not just this one. */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Tally icon={Archive} label={t("counts.total")} value={counts.total} tone="primary" always />
         <Tally icon={CircleCheck} label={t("counts.complete")} value={counts.verified} tone="success" />
@@ -258,7 +235,6 @@ export function BackupsHistory({
         <Tally icon={Loader2} label={t("counts.running")} value={counts.running} tone="primary" spin />
       </div>
 
-      {/* The pager hides itself when the list is too short to page. */}
       {backups.length === 0 ? (
         <ListCard toolbar={toolbar}>
           <EmptyState
@@ -266,14 +242,10 @@ export function BackupsHistory({
             title={hasFilters ? t("emptyFiltered.title") : t("empty.title")}
             description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
             badge={hasFilters ? "search" : null}
-            // Only when filters emptied the list.
             action={hasFilters ? <ClearFiltersButton keys={["application", "database", "status", "period", "type", "search"]} /> : null}
           />
         </ListCard>
       ) : (
-        // The table needs 900px of content (a 1280 screen with the sidebar, like the Overview
-        // tab); narrower, the rows are cards and the list has no frame.
-        // Named, so the table can fold its Size column on this page only.
         <div className="@container/history">
         <ListCard from="c900" toolbar={toolbar} footer={pager}>
           <div className="@min-[900px]/page:hidden">
@@ -297,7 +269,6 @@ export function BackupsHistory({
             : retrying.size_bytes
               ? t("retryConfirm.description", {
                   name: retrying.application_name ?? t("unknownApplication"),
-                  // The archive size about to be rebuilt and re-uploaded.
                   size: formatBytes(retrying.size_bytes, format),
                 })
               : t("retryConfirm.descriptionNoSize", {
@@ -334,8 +305,6 @@ export function BackupsHistory({
         onOpenChange={(next) => (next ? null : setRestoring(null))}
         onStarted={(started) => {
           setRestoring(null);
-          // Hand it straight to the banner; router.refresh() alone closed the
-          // dialog onto an unchanged list.
           if (started) start(started);
           router.refresh();
         }}
@@ -344,19 +313,12 @@ export function BackupsHistory({
   );
 }
 
-/** The dot colours match the status badges in the table. */
-// Drawn like the panel's other number tiles: a soft tile carrying the colour, then
-// the number over its label.
-// The same tile as Database health's: an icon that says what is counted, the label
-// above the number (a dot in a circle said nothing). Colour only when the count
-// is not zero, so "0 Failed" does not shout in red.
 const TALLY_TONE = {
   primary: "bg-primary/10 text-primary",
   success: "bg-success-soft text-success",
   destructive: "bg-destructive-soft text-destructive",
 };
 
-// `always`: the total keeps its colour at zero; it counts, it does not warn.
 function Tally({ icon: Icon, label, value, tone, spin = false, always = false }) {
   const active = Number(value) > 0;
   return (

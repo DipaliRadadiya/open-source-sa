@@ -30,14 +30,10 @@ export default async function CloneApplicationPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // Site deleted: land on the list, which explains why on arrival.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
-  // Granted per site type: no grant means this screen does not exist for this site.
   if (!can(appPermissions, "app_clone", "view", "application")) {
-    // Admins hold every feature a type offers, so a missing grant means the
-    // type can't be cloned, not that access is lacking.
     if ((await getCurrentUser().catch(() => null))?.is_admin) return <TypeNotSupported application={result.application} t={t} />;
     return <PermissionDenied title={t("pageTitle")} />;
   }
@@ -45,12 +41,9 @@ export default async function CloneApplicationPage({ params }) {
   const application = result.application;
   const canManage = can(appPermissions, "app_clone", "manage", "application");
 
-  // The backend refuses to clone a type that needs a database and has no
-  // recipe; the site type lets the screen say so up front. Cached per request.
   const [{ siteTypes }, { applications }] = await Promise.all([getSiteTypes(), getAllApplications()]);
   const siteType = siteTypes.find((type) => type.name === application.site_type) ?? null;
 
-  // Every application carries the id it was cloned from; this list is cached per request.
   const copies = applications.filter(
     (candidate) => Number(candidate.cloned_from_application_id) === Number(id),
   );

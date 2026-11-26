@@ -27,8 +27,6 @@ import { ScheduleField } from "@/components/cron-jobs/schedule-field";
 import { CommandField } from "@/components/cron-jobs/command-field";
 import { RunAsField } from "@/components/cron-jobs/run-as-field";
 
-// The form's view of who a job runs as: a panel account by id, or "other"
-// plus the raw username (root, www-data, anything the panel doesn't manage).
 function valuesOf(job) {
   return {
     name: job.name,
@@ -51,7 +49,6 @@ export function EditCronjobDialog({
   commandPresets = [],
   applications = [],
   placeholder,
-  // Shown under the schedule so the clock it runs on is stated, as in Create.
   timezone,
 }) {
   const t = useTranslations("cronJobs");
@@ -63,8 +60,6 @@ export function EditCronjobDialog({
     defaultValues: valuesOf(job),
   });
 
-  // The row's props change under us after router.refresh(); re-seed so the form
-  // doesn't reopen holding pre-edit values.
   useEffect(() => {
     if (open) form.reset(valuesOf(job));
     // Depends on the job's own fields, so a reopened form holds what was saved.
@@ -74,7 +69,6 @@ export function EditCronjobDialog({
 
   async function onSubmit(values) {
     const before = valuesOf(job);
-    // Sent only when changed: an unchanged account needs no re-check on disk.
     const runAsChanged =
       values.run_as !== before.run_as ||
       (values.run_as === OTHER_USER && values.username.trim() !== before.username);
@@ -84,7 +78,6 @@ export function EditCronjobDialog({
         command: values.command.trim(),
         expression: values.expression.trim(),
         active: values.active,
-        // Sent when the picked site changed; null unlinks the job (Custom path).
         ...((values.application_id ?? null) !== before.application_id ? { application_id: values.application_id ?? null } : {}),
         ...(runAsChanged
           ? values.run_as === OTHER_USER
@@ -92,26 +85,22 @@ export function EditCronjobDialog({
             : { system_user_id: Number(values.run_as) }
           : {}),
       });
-      // "Saving…" stays until the row shows the change.
       await new Promise((resolve) => refreshThen(resolve));
       toast.success(t("toast.updated"));
       onOpenChange?.(false);
     } catch (error) {
-      // Removed from another tab: nothing left to edit, and the row must go.
       if (error?.response?.status === 404) {
         toast.info(t("toast.alreadyGone", { name: job.name }));
         onOpenChange?.(false);
         refresh();
         return;
       }
-      // Field errors go on the fields; anything else says what failed.
       if (error?.response?.data?.errors) handleValidationError(error, form);
       else toast.error(apiMessage(error, t("toast.updateFailed")));
     }
   }
 
   const isSubmitting = form.formState.isSubmitting;
-  // Nothing changed means nothing to save.
   const isDirty = form.formState.isDirty;
 
   return (
@@ -174,7 +163,6 @@ export function EditCronjobDialog({
             <FormItem className="flex items-center justify-between rounded-lg border px-3 py-2.5">
               <div className="space-y-0.5">
                 <FormLabel hint={t("form.activeHint")}>{t("form.active")}</FormLabel>
-                {/* `active` is always sent, so a 422 on it needs a place to render. */}
                 <FormMessage />
               </div>
               <FormControl>

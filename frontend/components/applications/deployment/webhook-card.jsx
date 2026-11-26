@@ -42,7 +42,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// The backend's `min:16` on a webhook secret.
 const TOKEN_MIN = 16;
 
 function ReadOnlyField({ label, value, hint, secret = false }) {
@@ -54,7 +53,6 @@ function ReadOnlyField({ label, value, hint, secret = false }) {
         {label}
       </Label>
       <div className="flex items-center gap-1.5">
-        {/* Reveal toggle inside the field, matching PasswordInput. */}
         <div className="relative flex-1">
           <Input
             readOnly
@@ -96,17 +94,13 @@ function Instructions({ label, text, placeholder }) {
   );
 }
 
-// Disabling keeps the URL and secret, so re-enabling never invalidates what was pasted at the provider.
 export function WebhookCard({ application, providers, canManage, onChange }) {
   const t = useTranslations("applications.deployment");
   const tc = useTranslations("common");
   const webhook = application.webhook ?? { enabled: false };
   const enabled = Boolean(webhook.enabled);
-  // The provider, not the URL, marks a hook configured: relinking the Git account keeps the URL
-  // but clears the provider, and enabling with `provider: null` is rejected by the API.
   const configured = Boolean(webhook.provider);
 
-  // The stored provider wins, in case the hook was set up before the account moved.
   const [providerName, setProviderName] = useState(
     webhook.provider ?? (providers.length === 1 ? providers[0].name : ""),
   );
@@ -114,15 +108,12 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [rotateOpen, setRotateOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  // Only a save's response carries the reason; after a reload it is gone.
   const [manualReason, setManualReason] = useState(null);
 
   const selectedProvider = providers.find((p) => p.name === providerName) ?? null;
   const activeProvider = providers.find((p) => p.name === webhook.provider) ?? null;
   const wantsToken = selectedProvider?.secret_source === "either";
   const verifiedBySignature = webhook.verification === "signature";
-  // The API refuses a secret under 16 characters; validated beside the field
-  // before sending.
   const typedToken = gitlabToken.trim();
   const tokenTooShort = typedToken.length > 0 && typedToken.length < TOKEN_MIN;
 
@@ -148,8 +139,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
     }
   }
 
-  // Header switch: off→on re-enables with the stored provider (secret retained);
-  // on→off disables. First-ever enable goes through the form below instead.
   async function toggle(next) {
     if (next) {
       await save(
@@ -176,7 +165,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   }
 
   async function rotate() {
-    // `{ rotate: true }` alone returns 422: `enabled` is always required, and `provider` when enabled.
     const ok = await save(
       { enabled: true, provider: webhook.provider, rotate: true },
       { successKey: "webhook.rotated", failKey: "webhook.rotateFailed" },
@@ -199,7 +187,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   return (
     <Card className={PANEL_CARD}>
       <CardHeader>
-        {/* Same tinted icon mark as every other card on this page. */}
         <CardTitle icon={Webhook} className="flex items-center gap-2.5">
           {t("webhook.title")}
         </CardTitle>
@@ -268,7 +255,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
               ) : null}
             </div>
 
-            {/* GitLab-only upgrade: swap a plaintext token for a signing token. */}
             {!verifiedBySignature &&
             canManage &&
             activeProvider?.secret_source === "either" ? (
@@ -320,8 +306,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
               </div>
             ) : null}
 
-            {/* Added to the repository by the panel: nothing to paste, so the paste steps
-                are skipped. */}
             {webhook.registered ? (
               <div className="flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
                 <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" />
@@ -365,7 +349,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                     secret
                   />
                 ) : !canManage ? (
-                  // Only shown to someone who may deploy: with it and the URL, anyone can sign a push.
                   <p className="text-xs text-muted-foreground">{t("webhook.secretWithheld")}</p>
                 ) : null}
                 <p className="text-xs text-muted-foreground">
@@ -417,7 +400,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                   ? t("webhook.disabledBodyNamed", { provider: providers[0].title })
                   : t("webhook.disabledBody")}
               </p>
-              {/* The picker is only for self-hosted hosts the URL cannot identify. */}
               {providers.length === 1 ? null : (
                 <div className="space-y-1.5">
                   <Label className="text-sm" hint={t("webhook.providerHint")}>{t("webhook.provider")}</Label>

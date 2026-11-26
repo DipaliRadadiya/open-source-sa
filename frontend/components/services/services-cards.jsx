@@ -24,7 +24,6 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
         return (
           <CardListItem
             key={service.key}
-            // Same signal as the table's tinted row for a failed unit.
             className={cn(
               service.status === "failed" &&
                 service.state === "installed" &&
@@ -34,8 +33,6 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-medium">{service.label}</p>
-                {/* Same rule as the table's first column: with no unit to name
-                    (installing or failed install), the reason takes its place. */}
                 {service.state !== "installed" ? (
                   (service.install_reason && service.install_reason !== "unknown") ||
                   service.retryable ? (
@@ -70,7 +67,6 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
               />
             </div>
 
-            {/* Both figures on one line. */}
             <div className="mt-3 flex items-center gap-4 border-t pt-3 text-xs">
               <Figure
                 label={t("memoryShort")}
@@ -92,10 +88,7 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
               />
             </div>
 
-            {/* Boot control and actions always on separate lines, so every
-                card has the same shape. */}
             <div className="mt-3 space-y-3 border-t pt-3">
-              {/* Labelled here: cards have no column header. */}
               <div className="flex items-center gap-2">
                 <span className="whitespace-nowrap text-xs text-muted-foreground">
                   {t("columns.boot")}
@@ -128,7 +121,6 @@ function Figure({ label, value, emptyLabel }) {
         {label}
       </span>
       {value == null || value === "" ? (
-        // Words, not a dash: "not measured" differs from zero.
         <span className="text-muted-foreground">{emptyLabel}</span>
       ) : (
         <span className="font-medium tabular-nums">{value}</span>

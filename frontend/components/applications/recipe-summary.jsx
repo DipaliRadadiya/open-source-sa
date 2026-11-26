@@ -6,7 +6,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { FACT_LABEL } from "@/lib/theme/facts";
 import { dockerMemoryText } from "@/lib/docker/memory-text";
 
-// Explicit keys keep every first-run promise visible to check-i18n.
 function firstRunText(kind, t) {
   switch (kind) {
     case "credentials": return t("recipes.firstRunCredentials");
@@ -26,7 +25,6 @@ export function RecipeSummary({ type }) {
   const afterInstall = firstRunText(recipe.first_run?.kind, t);
 
   return (
-    // Framed like the required-services panel that shares this slot, not a card in a card.
     <section className="overflow-hidden rounded-xl border" aria-labelledby="recipe-summary-heading">
       <div className="border-b bg-muted/30 px-4 py-3">
         <h3 id="recipe-summary-heading" className="flex items-center gap-3 text-sm font-medium">
@@ -35,7 +33,6 @@ export function RecipeSummary({ type }) {
         </h3>
       </div>
       <div className="space-y-3 p-4">
-        {/* Label and value on one line from sm, as in the panel's other two-column lists. */}
         <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-[auto_minmax(0,1fr)] sm:items-baseline sm:gap-x-4 sm:gap-y-2">
           <dt className={FACT_LABEL}>{t("recipes.servicesLabel")}</dt>
           <dd className="min-w-0 break-words">{recipe.services.map((service) => service.name).join(", ")}</dd>

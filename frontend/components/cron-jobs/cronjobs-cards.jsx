@@ -12,7 +12,6 @@ import {
 import { CronjobLastRun } from "@/components/cron-jobs/cronjob-last-run";
 import { timezoneLabel } from "@/lib/format/timezone";
 
-// Narrow-screen layout: the command gets the wide line under the name.
 export function CronjobsCards({
   runAs,
   prevPage = null,
@@ -36,8 +35,6 @@ export function CronjobsCards({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <CronjobName job={job} />
-              {/* Wraps rather than truncating so the command is identifiable;
-                  capped so a long one cannot push the actions off screen. */}
               <p className="line-clamp-3 font-mono text-xs break-all text-muted-foreground">
                 {job.command}
               </p>
@@ -61,12 +58,10 @@ export function CronjobsCards({
             </div>
           </div>
 
-          {/* Two columns, label on top: when and how it runs, then who and whether. */}
           <CardFactGrid>
             <CardFactStacked label={t("columns.schedule")}>
               <CronjobSchedule job={job} presets={schedulePresets} />
             </CardFactStacked>
-            {/* The label carries the timezone, like the table's column header. */}
             <CardFactStacked label={timezone ? t("columns.nextRunIn", { timezone: timezoneLabel(timezone) }) : t("columns.nextRun")}>
               <CronjobNextRun job={job} />
             </CardFactStacked>

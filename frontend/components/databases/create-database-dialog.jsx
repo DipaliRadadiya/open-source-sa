@@ -42,19 +42,15 @@ import {
 } from "@/components/ui/form";
 import { CreatedCredentials } from "@/components/databases/created-credentials";
 
-// The user is created in the same step: a database without one cannot be connected to.
-// Charset and collation are collapsed: correct defaults, and the API rejects mismatched pairs.
+// Created with a user: a database without one can't be connected to. The API rejects mismatched charset/collation pairs.
 export function CreateDatabaseDialog({
   engines = [],
   open,
   onOpenChange,
-  // Empty hides the site picker.
   applications = [],
   databaseCounts = null,
   databasesKnown = false,
-  // Only used to mark sites that cannot use the chosen engine. Empty blocks nothing.
   siteTypes = [],
-  // Opened from a site's page: the picker is hidden but the id is still sent.
   applicationId = null,
 }) {
   const t = useTranslations("databases");
@@ -62,7 +58,6 @@ export function CreateDatabaseDialog({
   const restart = useRestartConfirm();
   const { refreshAndWait } = useRefresh();
   const [advanced, setAdvanced] = useState(false);
-  // Set on success: the dialog then shows the credential instead of the form.
   const [created, setCreated] = useState(null);
 
   const usable = engines.filter((engine) => engine.running);
@@ -81,32 +76,25 @@ export function CreateDatabaseDialog({
     host: "",
   };
 
-  /* Memoised on the engine rows: a new resolver on every render resets the form. */
   const schema = useMemo(() => createDatabaseSchema(reservedNames(engines)), [engines]);
 
   const form = useForm({
     resolver: zodResolver(schema),
-    // Not onBlur: errors would fire while tabbing through an unfinished form.
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: defaults,
   });
 
-  // After mount and on every open: in the defaults it would cause a hydration mismatch.
   useEffect(() => {
     if (open) form.setValue("username", randomUsername());
   }, [open, form]);
 
   const values = useWatch({ control: form.control });
   const engine = usable.find((item) => item.engine === values.engine);
-  // Defaults to true so an older API without the field keeps the choice.
   const remoteUsers = engine?.supports_remote_users !== false;
-  /* PostgreSQL uses ENCODING / LC_COLLATE, so the labels follow the driver. */
   const charsetWording = engine?.driver === "pgsql" ? "pgsqlWords" : "sqlWords";
   const charsets = engine?.charsets ?? {};
   const charsetNames = Object.keys(charsets);
-  // A wrong-charset collation is a 422. `_0900_` is MySQL 8 only; the API offers it
-  // for MariaDB too, where it fails with a 500.
   const collations = (values.charset ? (charsets[values.charset] ?? []) : []).filter(
     (collation) => engine?.engine !== "mariadb" || !/_0900_/.test(collation),
   );
@@ -116,7 +104,6 @@ export function CreateDatabaseDialog({
       name: submitted.name,
       engine: submitted.engine,
     };
-    // Sent only when a site was chosen; omitting the key equals null.
     if (submitted.application_id) {
       payload.application_id = Number(submitted.application_id);
     }
@@ -128,7 +115,6 @@ export function CreateDatabaseDialog({
         username: submitted.username,
         connection_preference: submitted.connection_preference,
       };
-      // Omitted means the API generates one.
       if (submitted.password) payload.create_user.password = submitted.password;
       if (submitted.restart_cluster) payload.create_user.restart_cluster = true;
       if (submitted.connection_preference === "remote") {
@@ -143,7 +129,6 @@ export function CreateDatabaseDialog({
       setCreated(data?.database ?? null);
     } catch (error) {
       if (await restart.retry(error, () => onSubmit({ ...submitted, restart_cluster: true }))) return;
-      // With one engine there is no engine field, so its 422 ("MySQL is not running…") is a toast.
       handleValidationError(withUserFieldErrors(error, form), form, {
         fallback: t("createFailed"),
         unrendered: usable.length > 1 ? [] : ["engine"],
@@ -219,7 +204,6 @@ export function CreateDatabaseDialog({
           )}
         />
 
-        {/* A single-option select would read as a required step. */}
         {usable.length > 1 ? (
           <FormField
             control={form.control}
@@ -231,8 +215,7 @@ export function CreateDatabaseDialog({
                   value={field.value}
                   onValueChange={(next) => {
                     field.onChange(next);
-                    /* Clear a host choice the new engine cannot honour, or the API refuses a value no
-                     * control shows. Here, not in an effect, to avoid a cascading render. */
+                    // Clear a host the new engine can't use, or the API refuses a value no control shows.
                     const chosen = usable.find((item) => item.engine === next);
                     if (chosen?.supports_remote_users === false) {
                       form.setValue("connection_preference", "localhost");
@@ -259,7 +242,6 @@ export function CreateDatabaseDialog({
           />
         ) : null}
 
-        {/* Backups dump only databases attached to a site; an unattached one is absent from every backup. */}
         {applications.length > 0 && !applicationId ? (
           <FormField
             control={form.control}
@@ -280,7 +262,6 @@ export function CreateDatabaseDialog({
                         databaseCounts,
                         databasesKnown,
                         t("create.applicationTaken"),
-                        // The API refuses some engine/site pairings.
                         (application) =>
                           engineAccepted({ application, siteTypes, engine: values.engine })
                             ? undefined
@@ -294,7 +275,6 @@ export function CreateDatabaseDialog({
                     className="w-full"
                   />
                 </FormControl>
-                {/* The backend requires this hint: linking does not make the site use the database. */}
                 <FormMessage />
               </FormItem>
             )}
@@ -357,8 +337,7 @@ export function CreateDatabaseDialog({
                           label: t("access.localhost.label"),
                           hint: t("access.localhost.hint"),
                         },
-                        /* A PostgreSQL role has no host, so the API refuses `remote` and `anywhere`.
-                         * Read `supports_remote_users`, never the engine name. */
+                        // PostgreSQL roles have no host; read supports_remote_users, not the engine name.
                         ...(remoteUsers
                           ? [
                               {
@@ -367,7 +346,6 @@ export function CreateDatabaseDialog({
                                 hint: t("access.remote.hint"),
                               },
                               {
-                                // Opens the engine port to the whole internet, so it carries an explanation.
                                 value: "anywhere",
                                 label: t("access.anywhere.label"),
                                 hint: t("access.anywhere.hint"),
@@ -407,7 +385,6 @@ export function CreateDatabaseDialog({
           </>
         ) : null}
 
-        {/* Collapsed by default: the defaults are correct and bad pairs are rejected. */}
         {charsetNames.length > 0 ? (
           <Collapsible open={advanced} onOpenChange={setAdvanced}>
             <CollapsibleTrigger asChild>
@@ -434,7 +411,6 @@ export function CreateDatabaseDialog({
                       value={field.value}
                       onValueChange={(next) => {
                         field.onChange(next);
-                        // The old collation belongs to the old charset; that pair is a 422.
                         form.setValue("collation", "");
                       }}
                     >
@@ -483,7 +459,6 @@ export function CreateDatabaseDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    {/* Under the control: as a placeholder it widened the trigger past the dialog edge. */}
                     {!values.charset ? (
                       <FormDescription>{t(`create.${charsetWording}.chooseFirst`)}</FormDescription>
                     ) : null}
@@ -500,8 +475,6 @@ export function CreateDatabaseDialog({
   );
 }
 
-// The first user is sent nested as `create_user`, so its errors come back as
-// `create_user.username` / `.host`; set them on the fields directly.
 function withUserFieldErrors(error, form) {
   const errors = error?.response?.data?.errors;
   if (!errors) return error;

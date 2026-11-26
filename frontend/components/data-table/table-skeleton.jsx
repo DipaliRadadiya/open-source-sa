@@ -3,11 +3,8 @@ import { cn } from "@/lib/utils";
 
 const BAR_WIDTHS = ["w-32", "w-24", "w-16", "w-28", "w-20"];
 
-// The last column is a narrow actions cell.
-// `toolbar`: the search/filter row, drawn inside the card as on the real list pages.
 export function TableSkeleton({ rows = 6, columns = 5, withAvatar = false, toolbar = null }) {
   return (
-    // A white card like the list it stands in for, so it does not sink into the page.
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1">
       {toolbar ? <div className="border-b p-3">{toolbar}</div> : null}
       <div className="flex h-11 items-center gap-4 border-b px-4">

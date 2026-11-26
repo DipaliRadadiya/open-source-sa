@@ -7,11 +7,9 @@ export const activityEntrySchema = z.object({
   scope: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   user: z
-    // `deleted`: the account is gone and `id` is null (the API keeps the name).
     .object({ id: z.number().nullable(), username: z.string(), deleted: z.boolean().optional() })
     .nullable()
     .optional(),
-  // Distinguishes "a person did this" from "the panel did it on a timer".
   is_system: z.boolean().default(false),
   created_at: z.string().nullable().optional(),
   created_at_human: z.string().nullable().optional(),
@@ -29,21 +27,16 @@ export const activityResponseSchema = z.object({
   meta: activityMetaSchema,
 });
 
-// `actions` is keyed by type (`all` = every verb; `<type>` = that type's verbs)
-// so the action dropdown can depend on the selected type.
-// Unknown values are dropped from the request rather than sent (the API 422s them).
 export const ACTIVITY_KINDS = ["created", "changed", "removed", "failed"];
 
 export const activityFiltersSchema = z.object({
   types: z.array(z.string()).default([]),
-  // created | changed | removed | failed, each with a label the API translates.
-  // `.catch`: a shape change here must not take the type filter down with it.
+  // .catch so a new kind doesn't break the type filter.
   kinds: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .default([])
     .catch([]),
   actions: z.record(z.string(), z.array(z.string())).default({}),
-  // Only scopes the caller has rows in; `label` is localized by the API.
   scopes: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .nullable()
@@ -51,7 +44,6 @@ export const activityFiltersSchema = z.object({
     .default([]),
 });
 
-// GET/PUT /admin/activity-log/retention. `months: null` keeps everything (the default).
 export const activityRetentionSchema = z.object({
   retention: z.object({
     months: z.number().int().positive().nullable(),

@@ -37,7 +37,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { DENIED, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { BanRuleFields } from "@/components/applications/fail2ban/ban-rule-fields";
 
-// CodeMirror is large and only needed here and in the file editor, so it is loaded on demand.
 const CodeEditor = dynamic(
   () => import("@/components/applications/files/code-editor").then((m) => m.CodeEditor),
   {
@@ -50,7 +49,6 @@ const CodeEditor = dynamic(
   },
 );
 
-// fail2ban's output starts with an unrelated `allowipv6` warning; keep only ERROR lines when present.
 function errorLines(output) {
   const errors = output.split("\n").filter((line) => /\bERROR\b/.test(line));
   return errors.length > 0 ? errors.join("\n") : output;
@@ -61,18 +59,12 @@ const FILES = [
   { key: "filter", icon: FileCode2, filename: "filter.conf" },
 ];
 
-/**
- * One status card and one "Ban rules" card: plain fields first, the two raw INI files
- * (written verbatim to `/etc/fail2ban/{jail,filter}.d/`) folded under them. The fields
- * edit the same text the files show (the page was too much at once).
- */
 export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filterTemplate, canManage, loginRuleOffered = false }) {
   const t = useTranslations("applications.fail2ban");
   const tc = useTranslations("common");
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
 
-  // `null` = removed here, object = created here; covers the gap until `router.refresh()` lands.
   const [override, setOverride] = useState(undefined);
   if (override !== undefined && (override === null ? !serverConfig : Boolean(serverConfig))) {
     setOverride(undefined);
@@ -84,9 +76,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  // Copy the jail and filter aside while the reload is checked. On again after each save or turn-off.
   const [safetyCopy, setSafetyCopy] = useState(true);
-  // The config test's output, kept until the next attempt.
   const [testError, setTestError] = useState(null);
   const [fullOutput, setFullOutput] = useState(false);
 
@@ -97,21 +87,17 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
 
   const [draft, setDraft] = useState(saved);
 
-  // Not `saved`: Laravel's TrimStrings strips the trailing newline, so the reloaded config never matches the draft.
+  // Laravel's TrimStrings drops the trailing newline, so the reloaded config never matches the draft.
   const [savedBaseline, setSavedBaseline] = useState(null);
   const baseline = savedBaseline ?? saved;
 
-  // Typed here; it becomes the filter only once it is a usable path.
   const savedRule = parseLoginRule(baseline.filter);
   const [loginPath, setLoginPath] = useState(savedRule?.path ?? "");
   const [loginAnswer, setLoginAnswer] = useState(savedRule?.answer ?? "error");
 
-  // A jail without these keys (hand-written, or kept from v7) is edited as a file only.
   const fieldsReadable = JAIL_FIELDS.every((key) => readJailValue(baseline.jail, key) !== null);
   const [filesOpen, setFilesOpen] = useState(!fieldsReadable);
 
-  // Nothing is saved during setup, so an untouched form must still be
-  // submittable (accepting the defaults is the common case).
   const isSetup = !config;
   const unsavedFiles = FILES.filter(({ key }) => draft[key] !== baseline[key]).length;
   const changed = unsavedFiles > 0;
@@ -119,20 +105,16 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
   const empty = !draft.jail.trim() || !draft.filter.trim();
   useWatchUnsaved("app-fail2ban", canManage && changed);
 
-  // Warned about, not blocked: the backend fills these in when it writes the
-  // files, but a config that names a second logpath outright is legitimate.
   const lostPlaceholders = [
     ...missingPlaceholders(saved.jail, draft.jail),
     ...missingPlaceholders(saved.filter, draft.filter),
   ];
 
-  // Empty is only a problem while the filter is still WordPress's, which bans nobody here.
   const pathProblem = !loginRuleOffered
     ? null
     : loginPath.trim()
       ? validLoginPath(loginPath.trim()) ? null : "invalid"
       : usesWordPressRule(draft.filter) ? "required" : null;
-  // Checked once changed here: a hand-written "10m" that fail2ban accepts must not block Save.
   const badNumber = (key, min, max) => {
     const value = readJailValue(draft.jail, key);
     return value !== readJailValue(baseline.jail, key) && !wholeNumberIn(value, min, max);
@@ -165,8 +147,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
       filter_config_content: draft.filter,
     });
     if (!parsed.success) {
-      // Over-length is the reachable failure (empty is blocked by the disabled
-      // button); show it in the same panel as the daemon's refusal.
       const issue = parsed.error.issues[0];
       setTestError({
         message: t(issue?.message === "max65535" ? "tooLong" : "invalidConfig"),
@@ -178,10 +158,8 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
     setSaving(true);
     setTestError(null);
     try {
-      // A first setup replaces no files, so it keeps the default.
       await saveApplicationFail2ban(appId, draft, { safetyCopy: isSetup || safetyCopy });
       setSafetyCopy(true);
-      // The server accepted it, so this is the saved state (whatever it trimmed).
       setSavedBaseline({ ...draft });
       if (!config) {
         setOverride({ jail_name: null, jail_content: draft.jail, filter_content: draft.filter });
@@ -189,11 +167,8 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
       await refreshAndWait();
       toast.success(t("saved"));
     } catch (error) {
-      // The backend answers 500 for a config the daemon refuses, so the payload
-      // decides whether this was a validation failure.
       const data = error.response?.data;
       if (data?.testOk === false) {
-        // No toast: the panel renders directly above the button.
         setTestError({ message: data.message ?? t("testFailed"), output: data.output ?? "" });
         setFullOutput(false);
       } else {
@@ -210,7 +185,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
       await deleteApplicationFail2ban(appId, { safetyCopy });
       removed();
     } catch (error) {
-      // 422 means "already disabled" (removed elsewhere), which is the goal.
       if (error.response?.status === 422) removed();
       else toast.error(apiMessage(error, t("removeFailed")));
     } finally {
@@ -222,7 +196,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
     setConfirmRemove(false);
     setSafetyCopy(true);
     setTestError(null);
-    // Otherwise the setup form opens with the deleted text; return to the empty state instead.
     setEditing(false);
     setSavedBaseline(null);
     setDraft({ jail: jailTemplate, filter: filterTemplate });
@@ -253,8 +226,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
     );
   }
 
-  // What the saved filter watches, in words. On another site type the WordPress
-  // default bans nobody: the one thing on this page that needs attention.
   const watching = parseLoginRule(baseline.filter);
   const noRule = loginRuleOffered && usesWordPressRule(baseline.filter);
   const stateBody = !config
@@ -283,8 +254,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
           >
             <StateIcon className="size-4.5" />
           </span>
-          {/* min-w-48, not min-w-0: beside the Remove button on a phone the
-              text shrank to one word per line instead of the button wrapping. */}
           <div className="min-w-48 flex-1 space-y-1">
             <p className="flex flex-wrap items-center gap-2 font-semibold">
               {config ? t("state.on") : t("state.setup")}
@@ -301,7 +270,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
               variant="destructive"
               className="shrink-0"
               onClick={() => setConfirmRemove(true)}
-              // Not during a save: concurrent requests race on whether protection ends up on.
+              // Concurrent requests race on whether protection ends up on.
               disabled={removing || saving}
             >
               {removing ? <Loader2 className="size-4 animate-spin" /> : <ShieldOff className="size-4" />}
@@ -334,7 +303,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
           </DisabledReasonProvider>
         ) : null}
 
-        {/* The raw files, for rules the fields cannot express. */}
         <Collapsible open={filesOpen} onOpenChange={setFilesOpen} className="border-t first:border-t-0">
           <CollapsibleTrigger asChild>
             <button
@@ -367,8 +335,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
 
               {FILES.map(({ key, filename }) => (
                 <TabsContent key={key} value={key} forceMount hidden={tab !== key} className="mt-0">
-                  {/* `h-full` on the editor plus `overflow-hidden` on the box, as in
-                      the file editor; otherwise CodeMirror sizes to its content. */}
+                  {/* h-full on the editor with overflow-hidden, otherwise CodeMirror sizes to its content. */}
                   <div className="h-72 overflow-hidden" aria-label={filename}>
                     <CodeEditor
                       filename={filename}
@@ -376,7 +343,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
                       readOnly={!canManage || saving}
                       onChange={(value) => {
                         setDraft((current) => ({ ...current, [key]: value }));
-                        // A hand-edited filter is shown as it is, never re-written by the fields.
                         if (key === "filter") resetLogin(value);
                       }}
                       className="h-full"
@@ -400,7 +366,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
           </p>
         ) : null}
 
-        {/* fail2ban's refusal, kept on screen for the next edit. */}
         {testError ? (
           <div className="flex items-start gap-2.5 border-t border-destructive/30 bg-destructive/5 px-5 py-3.5">
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
@@ -428,7 +393,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
           </div>
         ) : null}
 
-        {/* Asked only once a saved jail would be replaced. */}
         {canManage && !isSetup && changed ? (
           <div className="space-y-2 border-t px-5 py-3">
             <SafetyCopySwitch
@@ -451,7 +415,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
           saving={saving}
           dirty={dirty}
           onSave={save}
-          // During setup, Discard returns to the empty state (there is no saved config to reset to).
           onDiscard={() => {
             setDraft(baseline);
             resetLogin(baseline.filter);
@@ -459,7 +422,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
             if (isSetup) setEditing(false);
           }}
           saveReason={
-            // "Nothing has changed" first: the login field already says what it needs.
             !canManage
               ? DENIED
               : !dirty
@@ -488,7 +450,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
         icon={TriangleAlert}
         tone="destructive"
         title={t("removeTitle")}
-        // Removing also discards unsaved edits, so the dialog says so.
         description={unsavedFiles > 0 ? t("removeBodyDirty", { count: unsavedFiles }) : t("removeBody")}
         confirmLabel={t("removeConfirm")}
         pending={removing}

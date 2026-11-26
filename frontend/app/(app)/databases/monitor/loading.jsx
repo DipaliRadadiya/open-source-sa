@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkCard, SkChart, SkHeader, SkSummary, SkTabs, SkTiles } from "@/components/ui/skeleton-kit";
 
-
-// Database health: engine tabs, verdict banner, four tiles, the day's chart beside running queries.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

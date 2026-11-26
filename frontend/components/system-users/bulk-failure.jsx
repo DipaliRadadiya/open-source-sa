@@ -1,6 +1,5 @@
 import { useTranslations } from "next-intl";
 
-// Why a bulk delete kept this account, next to its name, until the next delete or Clear.
 export function BulkFailure({ failure }) {
   const t = useTranslations("systemUsers.bulk");
   if (!failure) return null;

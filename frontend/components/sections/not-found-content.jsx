@@ -8,21 +8,17 @@ import { Button } from "@/components/ui/button";
 import { NavIcon } from "@/components/nav-icon";
 import { FACT_LABEL } from "@/lib/theme/facts";
 
-// Shared by the root `not-found` and the panel's own. `links` is already permission-filtered.
 export function NotFoundContent({ links = [] }) {
   const t = useTranslations("errors.notFound");
   const router = useRouter();
 
   return (
     <div className="grid w-full max-w-5xl gap-12 lg:grid-cols-2 lg:gap-16">
-      {/* Framed like the dashboard banner — faint grid, green
-          corner brackets — with the number in mono. */}
       <div className="bg-hero relative overflow-hidden rounded-[2px] p-8">
         <div aria-hidden className="bg-hero-grid pointer-events-none absolute inset-0" />
         <span aria-hidden className="pointer-events-none absolute top-1.5 left-1.5 size-4 border-t-2 border-l-2 border-primary" />
         <span aria-hidden className="pointer-events-none absolute right-1.5 bottom-1.5 size-4 border-r-2 border-b-2 border-primary" />
         <div className="relative">
-        {/* Plain foreground; decoration made the number look like a defect. */}
         <p aria-hidden="true" className="flex items-center gap-3 font-mono text-7xl leading-none font-semibold tracking-tight">
           <span className="size-3 shrink-0 bg-primary" />
           404
@@ -40,7 +36,6 @@ export function NotFoundContent({ links = [] }) {
               {t("dashboard")}
             </Link>
           </Button>
-          {/* Back is the likelier intent, but cannot be primary since history may be empty. */}
           <Button variant="ghost" onClick={() => router.back()}>
             <ArrowLeft className="size-4" />
             {t("back")}
@@ -49,7 +44,6 @@ export function NotFoundContent({ links = [] }) {
         </div>
       </div>
 
-      {/* Omitted when signed out or with no permitted links. */}
       {links.length > 0 ? (
         <nav aria-label={t("linksLabel")}>
           <h2 className={FACT_LABEL}>{t("linksLabel")}</h2>

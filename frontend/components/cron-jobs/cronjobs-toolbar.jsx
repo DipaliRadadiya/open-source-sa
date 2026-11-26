@@ -5,19 +5,15 @@ import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { FacetSelect } from "@/components/data-table/facet-select";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
-// No search box: the cron endpoint filters only by system_user_id / username / active.
 export function CronjobsToolbar({
   systemUsers = [],
   cronjobs = [],
-  // `meta.usernames`: every run-as account across all pages. Older APIs omit it.
   usernames = null,
   canManage = false,
   onCreate,
 }) {
   const t = useTranslations("cronJobs");
 
-  // Unmanaged accounts (root, www-data) filter by username. The API's list covers every
-  // page; without it (older APIs) only this page's accounts can be offered.
   const managed = new Set(systemUsers.map((u) => u.username));
   const unmanaged = (
     usernames

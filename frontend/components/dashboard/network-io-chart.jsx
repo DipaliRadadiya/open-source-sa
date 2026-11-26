@@ -10,8 +10,6 @@ import {
   timeSeriesOption,
 } from "@/lib/charts/time-series-option";
 
-
-/** Tokens these charts draw with, resolved from globals.css at runtime. */
 const TOKENS = ["chart-1", "chart-2", "chart-3", "chart-4", "border", "muted-foreground", "popover", "popover-foreground"];
 
 export function NetworkIoChart({ series, metrics, timeZone, stale }) {
@@ -27,15 +25,12 @@ export function NetworkIoChart({ series, metrics, timeZone, stale }) {
   ];
 
   const option = timeSeriesOption({
-    // The header chips name each line.
     legend: false,
     data: series,
     series: lines,
     tokens,
     xLabel: clock,
     value: rate,
-    // Floored at 64 KB/s so idle traffic does not render as dramatic spikes
-    // on an auto-scaled axis.
     axes: [{ max: axisMax(series, ["net_in", "net_out"], { floor: 65536 }), formatter: rate }],
   });
 
@@ -58,7 +53,6 @@ export function NetworkIoChart({ series, metrics, timeZone, stale }) {
       stale={stale}
       badges={
         <>
-          {/* Dots match the line tokens above. */}
           <ChartPill
             dotClassName="bg-chart-2"
             label={t("charts.network.in")}

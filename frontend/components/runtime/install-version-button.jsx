@@ -22,15 +22,12 @@ import { FormModal } from "@/components/ui/form-modal";
 import { apiMessage } from "@/lib/api/error-message";
 import { allInstalled, installOptions, resolveVersion } from "@/lib/runtime/install-options";
 
-// The page is a Server Component and cannot pass a function, so it names the
-// runtime and the installer is picked here.
+// A Server Component can't pass a function, so pick the installer here.
 const INSTALL = { php: installPhpVersion, node: installNodeVersion };
 
-// Queued (202): apt takes minutes and holds a lock, so the message says running, not done.
 export function InstallVersionButton({
   runtime,
   installable = [],
-  // Set when the version catalogue could not be fetched: an empty list is then not "none".
   catalogError = null,
   installed = [],
   canManage,
@@ -42,24 +39,16 @@ export function InstallVersionButton({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
-  // Started here but not in `installed` yet (the refresh is still on its way): counted
-  // as installed so the dialog cannot offer it twice. Dropped once the list has it,
-  // so a failed install is offered again.
+  // Count it as installed until the refresh lands, so it can't be offered twice.
   const [started, setStarted] = useState([]);
   const listed = new Set((Array.isArray(installed) ? installed : []).map((item) => String(typeof item === "string" ? item : item?.version)));
   const justStarted = started.filter((v) => !listed.has(v));
 
-  // Whether installed versions belong in this list is settled here, not by the
-  // page. See lib/runtime/install-options.js.
   const options = installOptions(installable, [...(Array.isArray(installed) ? installed : []), ...justStarted]);
   const everythingInstalled = allInstalled(options);
-  // The raw choice; `version` below is that choice reconciled against what is
-  // still on offer, because the list changes underneath a mounted dialog.
   const [chosen, setChosen] = useState(null);
   const version = resolveVersion(chosen, options);
 
-  // Never hidden: an empty list is stated. "Nothing on offer" and "all
-  // installed" are reported as different facts.
   const unavailable = everythingInstalled
     ? t("install.allInstalled")
     : options.length === 0
@@ -68,7 +57,6 @@ export function InstallVersionButton({
         : t("install.noneAvailable")
       : null;
 
-  // Warn before installing: an end-of-life version gets no security fixes.
   const selected = options.find((option) => option.version === version);
   const dead = lifecycleAvailable && selected?.lifecycle?.status === "eol";
 
@@ -83,8 +71,6 @@ export function InstallVersionButton({
           : t("install.started", { version }),
       );
       setOpen(false);
-      // Land on the requested version's tab, where install progress shows.
-      // `replace`, not `push`, so Back does not step through installed versions.
       router.replace(`${pathname}?version=${encodeURIComponent(version)}`);
       router.refresh();
     } catch (error) {
@@ -97,7 +83,6 @@ export function InstallVersionButton({
   return (
     <>
       <ReasonTooltip reason={unavailable ?? (canManage ? null : DENIED)}>
-        {/* Filled, as every page's main add button is (Create application, Add user…). */}
         <Button
           disabled={!canManage || Boolean(unavailable)}
           onClick={() => setOpen(true)}
@@ -150,8 +135,6 @@ export function InstallVersionButton({
                 >
                   <span className="flex items-center gap-2">
                     {t("versions.name", { version: option.version })}
-                    {/* Says why the row cannot be picked: already installed,
-                        not unavailable. */}
                     {option.installed ? (
                       <span className="rounded bg-muted-foreground/15 px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
                         {t("install.installedTag")}

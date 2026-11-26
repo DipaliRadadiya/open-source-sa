@@ -15,7 +15,6 @@ import { RebootRequiredBanner } from "@/components/sections/reboot-required-bann
 import { getRebootRequired } from "@/lib/server/get-reboot-required";
 import { can } from "@/lib/permissions/can";
 
-// The server-level permissions behind the kinds GET /operations returns.
 const OPERATION_PERMISSIONS = ["backup", "application", "database", "php", "node", "sync", "setting"];
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarAutoCollapse } from "@/components/sections/sidebar-auto-collapse";
@@ -38,7 +37,6 @@ import { RELOAD_PENDING_COOKIE, parseReloadPending, recordsForUser } from "@/lib
 
 export const dynamic = "force-dynamic";
 
-// A throw here reaches Next's unstyled error page; rate-limit errors get their own screen.
 export default async function AppLayout({ children }) {
   let user;
   try {
@@ -69,9 +67,8 @@ export default async function AppLayout({ children }) {
       <TooltipProvider delayDuration={300}>
       <ErrorCopy />
       <RememberPath />
-        {/* Panel-wide: any screen with a Save can lose an edit to a sidebar click. */}
         <UnsavedProvider>
-        {/* Above the shell so the restart curtain covers sidebar and header too. */}
+        {/* Above the shell so the restart overlay covers the sidebar and header too. */}
         <ServerRestartProvider>
         <PanelFocus />
         <PageCrumbProvider>
@@ -79,11 +76,9 @@ export default async function AppLayout({ children }) {
             <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>
               <SidebarAutoCollapse />
               <AppSidebar items={permissions} initialGroups={parseSidebarGroups((await cookies()).get(SIDEBAR_GROUPS_COOKIE)?.value)} />
-              {/* min-w-0: otherwise wide tables/charts push the page into horizontal overflow. */}
+              {/* min-w-0 stops wide tables and charts from overflowing the page. */}
               <SidebarInset className="min-w-0">
-                {/* One sticky cluster so the impersonation banner never scrolls away. */}
                 <div className="sticky top-0 z-20">
-                  {/* Publishes this cluster's height as `--app-chrome` for other sticky elements. */}
                   <AppChromeHeight />
                   {impersonatedBy ? (
                     <ImpersonationBanner
@@ -91,15 +86,11 @@ export default async function AppLayout({ children }) {
                       admin={impersonatedBy.username}
                     />
                   ) : null}
-                  {/* Streamed: answering it runs commands on the server (~0.7 s), and every
-                      page waited on it before showing anything (Krishna, 7 Oct). */}
                   <Suspense fallback={null}>
                     <RebootNotice canManage={can(permissions, "setting", "manage")} />
                   </Suspense>
-                  {/* One bar: the trail sits beside the controls rather than in a second band. */}
                   <AppHeader
                     impersonating={!!impersonatedBy}
-                    // The jobs list holds only kinds the role can see; nothing to show, no icon.
                     operations={
                       user?.is_admin || OPERATION_PERMISSIONS.some((name) => can(permissions, name, "view"))
                         ? { canOpenApplications: can(permissions, "application", "view") }

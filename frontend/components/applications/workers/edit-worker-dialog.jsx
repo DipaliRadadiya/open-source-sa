@@ -40,7 +40,7 @@ function valuesFrom(worker) {
     processes: worker.processes,
     directory: worker.directory ?? "",
     stop_wait_seconds: worker.stop_wait_seconds ?? 30,
-    // `user`, not `effective_user`: never save the resolved fallback as a choice.
+    // user, not effective_user: don't save the fallback as a choice.
     user: worker.user ?? "",
     log_file: worker.log_file ?? "",
     log_level: worker.log_level ?? "",
@@ -62,8 +62,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
     defaultValues: valuesFrom(worker),
   });
 
-  // Keyed on the id, NOT the `worker` object: the list is polled, so the object
-  // changes every tick and a reset would wipe typing and clear `isSubmitting`.
+  // Keyed on the id, not the object: the list is polled, so the object changes every tick.
   useEffect(() => {
     if (open) form.reset(valuesFrom(worker));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,7 +70,6 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
 
   function onPickPreset(preset) {
     form.setValue("kind", preset.kind, { shouldValidate: true });
-    // The custom preset has an empty command; do not flag "required" before typing.
     if (preset.command) {
       form.setValue("command", preset.command, { shouldValidate: true });
     } else {
@@ -81,16 +79,13 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
   }
 
   async function onSubmit(values) {
-    // A root error belongs to no field, so nothing else clears it.
     form.clearErrors("root.server");
     const payload = {
       ...values,
       name: values.name.trim(),
       command: values.command.trim(),
       directory: values.directory?.trim() || undefined,
-      // Never sent: the worker runs as the application's own user.
       user: undefined,
-      // Blank is omitted; "" would store an empty log path.
       log_file: values.log_file?.trim() || undefined,
       log_level: values.log_level || undefined,
       extra_config: values.extra_config?.trim() || undefined,
@@ -99,32 +94,25 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
 
     try {
       await updateWorker(appId, worker.id, payload);
-      // Closed once the list shows the change, not on the API's answer.
       refreshThen(() => {
         toast.success(t("toast.updated"));
         onOpenChange?.(false);
       });
     } catch (error) {
-      // A server fault: its own sentence and reference. Re-read the list in case it changed.
       if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
         form.setError("root.server", { message: apiMessage(error, t("edit.failed")) });
         refresh();
         scrollToFirstError();
         return;
       }
-      // `kind` errors (e.g. a Horizon conflict) are shown at form level.
       handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
-      // The command would not stay running: the edit was rolled back and the worker keeps its
-      // previous command. The field says what is wrong; the message says that, and what it printed.
       if (error.response?.data?.reason === "worker_did_not_start") {
         form.setError("root.server", { message: apiMessage(error, t("edit.failed")) });
       }
-      // The dialog scrolls; the reason can land above or below what is on screen.
       scrollToFirstError();
     }
   }
 
-  // Busy through the list refresh so the button cannot be pressed twice.
   const isSubmitting = form.formState.isSubmitting || refreshing;
   const serverError = form.formState.errors.root?.server?.message;
   const others = workers.filter((w) => w.id !== worker.id);
@@ -209,7 +197,6 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
           />
         </div>
 
-        {/* Both controls set `kind` and must exclude this worker from the conflict check. */}
         <WorkerKindField form={form} presets={presets} workers={others} />
 
         <WorkerCommandField

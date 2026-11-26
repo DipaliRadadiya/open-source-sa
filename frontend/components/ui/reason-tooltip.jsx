@@ -2,14 +2,10 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-// `handled: true`: a parent already shows a tooltip, so nested controls stay silent.
-// `handled: false`: a fallback reason for controls with nothing more specific.
 const DisabledReasonContext = createContext(null);
 
-/** Pass as a reason when the role lacks the permission: the control is hidden, not explained. */
 export const DENIED = "__denied__";
 
-/** Fields and switches stay on screen to show their value; only the tooltip goes. */
 export function readOnlyReason(reason) {
   return reason === DENIED ? null : reason;
 }
@@ -18,10 +14,7 @@ export function useDisabledReason() {
   return useContext(DisabledReasonContext);
 }
 
-/** A control's own `disabledReason` takes precedence over this one.
- * `denied`: the role lacks the permission for this area's actions. Buttons that would be
- * disabled are hidden instead, and other controls show their value without a tooltip
- * (hide what the role cannot do; no "no permission" tooltips). */
+// A control's own disabledReason wins. denied: buttons are hidden, other controls show their value.
 export function DisabledReasonProvider({ reason, denied = false, children }) {
   return (
     <DisabledReasonContext.Provider
@@ -32,8 +25,7 @@ export function DisabledReasonProvider({ reason, denied = false, children }) {
   );
 }
 
-// The span carries pointer and focus events, which a disabled button does not fire.
-// Popover on touch screens: Radix tooltips never open on touch.
+// Disabled buttons don't fire pointer events, so the span carries them. Popover on touch.
 export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
   const coarse = useCoarsePointer();
 
@@ -52,7 +44,6 @@ export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
       </PopoverContent>
     </Popover>
   ) : (
-    /* No delay (the shell default is 300ms): this answers "why can't I press this". */
     <Tooltip delayDuration={0}>
       <TooltipTrigger asChild>
         <span tabIndex={0} className={className}>
@@ -63,8 +54,6 @@ export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
     </Tooltip>
   );
 
-  // A parent may already provide a precise reason. Let nested primitives detect
-  // that context and avoid rendering a second tooltip with the generic fallback.
   return (
     <DisabledReasonContext.Provider value={{ reason, handled: true }}>
       {content}
@@ -72,7 +61,6 @@ export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
   );
 }
 
-/** Resolved after mount to avoid a hydration mismatch; the desktop path renders first. */
 function useCoarsePointer() {
   const [coarse, setCoarse] = useState(false);
 

@@ -1,7 +1,5 @@
 import { api } from "@/lib/api/client";
 
-// Client-side role mutations (admin). Body for create/update:
-// { name, description, permissions: [{ level, name, view, manage }] }.
 export function createRole(values) {
   return api.post("/admin/roles", values);
 }

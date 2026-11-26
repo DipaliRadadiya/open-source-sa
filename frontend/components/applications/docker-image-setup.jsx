@@ -58,17 +58,13 @@ import {
 } from "@/components/ui/form";
 
 const EXAMPLES = ["memos", "uptime-kuma", "nginx"];
-// Main's higher-contrast amber for warning TEXT; plain `text-warning` is faint on white.
 const WARNING_TEXT = "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning";
 const NO_REGISTRY = "__none__";
-// A fact row: label column on wide forms, label above on narrow ones.
 const FACT_ROW = "grid gap-2 p-3 @lg:grid-cols-[12.5rem_minmax(0,1fr)] @lg:gap-4";
 const FACT_LABEL = "flex items-center gap-2 self-start text-sm font-medium @lg:min-h-9";
-// Set by the base image or the build, never a setting of the app itself.
+// Set by the base image, not the app.
 const SYSTEM_ENV = /^(PATH|HOME|HOSTNAME|TERM|LANG|LANGUAGE|LC_[A-Z]+|SHLVL|PWD|GPG_KEYS?|[A-Z0-9_]+_(VERSION|SHA256|SHA512|CHECKSUM|GPG_KEY))$/;
 
-// "unavailable" covers a panel without the discovery endpoints and an error alike:
-// in both cases the honest answer is "type it yourself".
 function requestState(error) {
   if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") return null;
   return "unavailable";
@@ -94,14 +90,6 @@ function volumeRowsFrom(inspection) {
   return [...new Set(declared)].map((path) => ({ path, checked: true }));
 }
 
-/**
- * Simple-mode Docker: find an image, pick its version, and review what the
- * image itself declares (port, folders to keep, settings) instead of typing it.
- *
- * Writes `image`, `container_port` and `registry_id`, plus `docker_volumes`,
- * `docker_env`, `docker_required_env` and `docker_image_state`, which the create
- * form turns into the request.
- */
 export function DockerImageSetup({ form, registryOptions = [], mode = "search", recipes = [], onUseRecipe, initialQuery = "" }) {
   const t = useTranslations("applications.dockerImage");
   const tm = useTranslations("applications.dockerModes");
@@ -119,7 +107,7 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
   const initial = splitImageRef(image);
   const [repository, setRepository] = useState(initial.repository);
   const [query, setQuery] = useState(initial.repository || initialQuery);
-  // Tagged with its query: an answer for an earlier query is never shown for this one.
+  // Tagged with its query so an older answer is never shown for a newer search.
   const [search, setSearch] = useState({ query: "", state: "idle", results: [] });
   const [active, setActive] = useState(-1);
   const [tags, setTags] = useState({ state: "idle", list: [], recommended: "" });
@@ -128,8 +116,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
   const [portEditing, setPortEditing] = useState(false);
   const [registryOpen, setRegistryOpen] = useState(mode === "manual" || Boolean(registryId));
   const [registryMode, setRegistryMode] = useState(mode);
-  // Switching modes keeps the chosen image/settings, but manual entry starts
-  // with saved registry credentials visible. Adjust only on the mode change.
   if (registryMode !== mode) {
     setRegistryMode(mode);
     if (mode === "manual") setRegistryOpen(true);
@@ -146,8 +132,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
     ? recipes.find((recipe) => recipe.name === normalizedQuery || recipe.title.toLowerCase() === normalizedQuery || recipe.title.toLowerCase().startsWith(normalizedQuery))
     : null;
 
-  // Search as the user types, only while nothing is chosen. Manual references
-  // never go to Docker Hub (including while switching away from a pending search).
   useEffect(() => {
     if (mode === "manual") return undefined;
     if (chosen || typed.length < 2) return undefined;
@@ -175,8 +159,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
     };
   }, [mode, chosen, typed]);
 
-  // Versions for the chosen image; the recommended one is preselected unless the
-  // user already named a tag.
   useEffect(() => {
     if (!repository) return undefined;
     const controller = new AbortController();
@@ -190,7 +172,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
             setTag((current) => current || "latest");
             return;
           }
-          // No recommendation (only pre-releases): preselect the newest, but never call it recommended or stable.
           const recommended = parsed.data.recommended ?? "";
           setTags({ state: "ready", list: parsed.data.tags, recommended });
           setTag((current) => current || recommended || parsed.data.tags[0].name);
@@ -209,13 +190,11 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
 
   const reference = repository && tag ? joinImageRef(repository, tag) : "";
 
-  // Keep the form's `image` in step with what is chosen.
   useEffect(() => {
     if (form.getValues("image") === reference) return;
     form.setValue("image", reference, { shouldDirty: true, shouldValidate: Boolean(reference) });
   }, [form, reference]);
 
-  // Read the image's declared port, folders and settings once a version is set.
   useEffect(() => {
     if (!reference) {
       form.setValue("docker_image_state", "", { shouldDirty: false });
@@ -249,8 +228,7 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
           form.setValue("docker_volumes", volumeRowsFrom(result), { shouldDirty: true });
           const rows = envRowsFrom(result);
           form.setValue("docker_env", rows, { shouldDirty: true });
-          // Dirty like `docker_env`: a reset that keeps dirty values must keep the
-          // required keys with their rows, or the required-env gate opens.
+          // Mark dirty like docker_env, or a reset drops the required keys and the gate opens.
           form.setValue(
             "docker_required_env",
             rows.filter((row) => row.required).map((row) => row.key),
@@ -259,7 +237,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
         })
         .catch((error) => {
           if (!requestState(error)) return;
-          // Not a verdict on the image: we could not ask. The user supplies the port.
           setInspection({ state: "unavailable", data: null });
           form.setValue("docker_image_state", "unknown", { shouldDirty: false });
           form.setValue("container_port", "", { shouldDirty: true });
@@ -283,8 +260,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
     form.clearErrors("image");
   }
 
-  // A search result is a repository; the tag typed with it ("nginx:alpine") was dropped and the
-  // newest stable preselected instead. Kept when the result is that image.
   function chooseOption(option) {
     const { repository: typedRepo, tag: typedTag } = splitImageRef(typed);
     const bare = (ref) => ref.replace(/^(docker\.io\/)?(library\/)?/, "");
@@ -318,8 +293,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
-  // A pasted reference is offered as its own row, after the matches: `changedetection.io`
-  // reads as a registry ref, but the user nearly always means dgtlmoon/changedetection.io.
   const showTyped =
     looksLikeImageRef(typed) &&
     typed.length <= DOCKER_LIMITS.image &&
@@ -347,8 +320,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
       setActive((index) => (index <= 0 ? options.length - 1 : index - 1));
     } else if (event.key === "Enter") {
       event.preventDefault();
-      // Unhighlighted, Enter means "the best match": not known until the search answers,
-      // and the literal term is not a stand-in for it.
       const option = active >= 0 ? options[active] : searchState === "loading" ? null : options[0];
       if (option) chooseOption(option);
     }
@@ -361,7 +332,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
     detected?.suggested_port && String(port ?? "") !== "" && Number(port) !== detected.suggested_port;
   const otherPorts = (detected?.exposed_ports ?? []).filter((item) => item !== detected?.suggested_port);
   const beforeDeploy = beforeDeployWarnings(detected);
-  // Server errors placed by the create form (see dockerServerErrors).
   const envListError = errors.docker_env_list?.message;
   const volumeListError = errors.docker_volumes_list?.message;
   const checkedVolumes = volumes.filter((volume) => volume.checked).length;
@@ -373,7 +343,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
     form.clearErrors([`docker_env.${index}`, "docker_env_list"]);
   }
 
-  // A setting the image requires stays: without it the app crash-loops on start.
   function removeEnv(index) {
     const row = envRows[index];
     if (!row || (row.fromImage && row.required)) return;
@@ -382,7 +351,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
       envRows.filter((_, i) => i !== index),
       { shouldDirty: true },
     );
-    // Row errors are by position, which just shifted.
     form.clearErrors(["docker_env", "docker_env_list"]);
   }
 
@@ -404,7 +372,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
 
   return (
     <div className="space-y-5">
-      {/* 1. The image */}
       <FormField
         control={form.control}
         name="image"
@@ -412,8 +379,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
           <FormItem data-field-name="image" className="min-w-0">
             <FormLabel required hint={t("imageHint")}>{mode === "manual" ? tm("manualImageLabel") : t("imageLabel")}</FormLabel>
             {chosen ? (
-              // The type picker's chosen row (tile, name, Change), so a chosen image and a
-              // chosen 1-Click recipe look the same.
               <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-3">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden>
                   <Box className="size-5" />
@@ -470,7 +435,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                       value={query}
                       onChange={(event) => {
                         setQuery(event.target.value);
-                        // The list is about to change under the highlight.
                         setActive(-1);
                       }}
                       onKeyDown={onSearchKeyDown}
@@ -488,9 +452,7 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                   </Note>
                 ) : null}
                 {listOpen ? (
-                  // A flat tinted well under the search box; rows as in the panel's combobox.
                   <div className="rounded-lg bg-muted/40 p-1">
-                    {/* Announced as it changes: a screen reader is otherwise never told results arrived. */}
                     <div role="status" aria-live="polite">
                       {searchState === "loading" ? (
                         <p className="flex items-center gap-2 px-2.5 py-2 text-sm text-muted-foreground">
@@ -533,7 +495,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                             <div className="min-w-0 flex-1 space-y-0.5">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="break-all font-mono text-sm font-medium">{option.image}</span>
-                                {/* Labels, not states: the h-6 tinted pills (`success`, ...) mean a state in this panel. */}
                                 {option.official ? <Badge className="font-normal">{t("official")}</Badge> : null}
                                 {option.verified_publisher ? <Badge className="font-normal">{t("verified")}</Badge> : null}
                               </div>
@@ -581,9 +542,7 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
         )}
       />
 
-      {/* 2. The version */}
       {chosen ? (
-        // One column of the form's two-column grid, the width of every other field.
         <div className="grid gap-4 @2xl:grid-cols-2">
         <div data-field-name="image_tag" className="min-w-0 space-y-2">
           <Label htmlFor={versionId} hint={t("versionHint")}>{t("versionLabel")}</Label>
@@ -595,7 +554,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="max-h-64">
-                {/* A typed tag the registry did not list is still offered. */}
                 {[...(tags.list.some((item) => item.name === tag) || !tag ? [] : [{ name: tag }]), ...tags.list].map((item) => (
                   <SelectItem key={item.name} value={item.name}>
                     <span className="font-mono">{item.name}</span>
@@ -619,7 +577,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
             />
           )}
           <p className="text-sm text-muted-foreground">
-            {/* "We picked…" only when it did: not for a version typed or chosen by hand. */}
             {tag === "latest"
               ? t("latestWarning")
               : tag && tag === tags.recommended
@@ -632,7 +589,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
         </div>
       ) : null}
 
-      {/* 3. What the image declares */}
       {chosen && reference ? (
         <section aria-labelledby="docker-detected-heading" className="space-y-4 border-t pt-5">
           <div>
@@ -646,7 +602,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
           </div>
 
           {inspection.state === "loading" ? (
-            // The panel's in-progress line, then the fields' shape from the skeleton kit.
             <div className="space-y-4" aria-busy="true">
               <p className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
                 <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" aria-hidden />
@@ -665,10 +620,7 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                 <Note title={t("inspectUnavailableTitle")}>{t("inspectUnavailableBody")}</Note>
               ) : null}
 
-              {/* One card, a row per fact: label and icon on the left, what the
-                  image says (and the way to change it) on the right. */}
               <div className="@container divide-y rounded-lg border">
-              {/* Port */}
               <FormField
                 control={form.control}
                 name="container_port"
@@ -739,7 +691,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                 )}
               />
 
-              {/* Storage */}
               {inspection.state === "ready" ? (
                 <div className={FACT_ROW} data-field-name="docker_volumes">
                   <p className={FACT_LABEL}>
@@ -750,7 +701,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                     <ul className="space-y-2">
                       {volumes.map((volume, index) => {
                         const id = `docker-volume-${index}`;
-                        // Named in the same order as the request, so the label is the volume created.
                         const name = volume.checked ? volumeName(volume.path) : null;
                         const rowError = errors.docker_volumes?.[index]?.message;
                         return (
@@ -801,7 +751,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                 </div>
               ) : null}
 
-              {/* Settings (environment variables) */}
               {inspection.state === "ready" || envRows.length ? (
                 <div className={FACT_ROW} data-field-name="docker_env">
                   <p className={FACT_LABEL}>
@@ -822,7 +771,7 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                         const locked = row.fromImage && row.required;
                         return (
                           <li key={row.id} className="space-y-1">
-                            {/* Phone: name and remove on one line, value below. Placed by `order`, not row/column starts, which leak across breakpoints. */}
+                            {/* Placed with order, not row/col starts, which leak across breakpoints. */}
                             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto]">
                               <Input
                                 aria-label={t("envKey")}
@@ -843,22 +792,18 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
                                 spellCheck={false}
                                 maxLength={DOCKER_LIMITS.envValue}
                                 aria-required={row.required ? true : undefined}
-                                // Empty and required is a heads-up (amber, with its note), not an error yet:
-                                // `aria-invalid` brings the red ring, which is for a value that was refused.
                                 aria-invalid={valueError ? true : undefined}
                                 aria-describedby={missing || valueError ? describedBy : undefined}
                                 value={row.value}
                                 onChange={(event) => updateEnv(index, { value: event.target.value })}
                               />
                               {locked ? (
-                                // Keeps the value column the width of its neighbours.
                                 <span className="order-2 size-9 sm:order-3" aria-hidden />
                               ) : (
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  // Red like every other row's delete in the panel.
                                   className="order-2 text-destructive hover:bg-destructive/10 hover:text-destructive sm:order-3"
                                   aria-label={t("envRemove", { key: row.key || "…" })}
                                   onClick={() => removeEnv(index)}
@@ -913,7 +858,6 @@ export function DockerImageSetup({ form, registryOptions = [], mode = "search", 
         </section>
       ) : null}
 
-      {/* Saved registry credentials are optional in search, open first in manual. */}
       <DockerRegistryPicker
         form={form}
         registryOptions={registryOptions}

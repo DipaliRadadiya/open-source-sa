@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useChromeOffset } from "@/hooks/use-chrome-offset";
 
-// Searchable single-select for long or data-driven lists. `options` are `{ value, label, hint? }`.
 export function Combobox({
   options = [],
   value,
@@ -16,7 +15,6 @@ export function Combobox({
   searchPlaceholder,
   empty,
   disabled = false,
-  // Forwarded to the trigger Button, which shows it.
   disabledReason,
   className,
   id,
@@ -24,16 +22,12 @@ export function Combobox({
 }) {
   const t = useTranslations("common");
   const [open, setOpen] = useState(false);
-  // Keeps the popover clear of the sticky header; see hooks/use-chrome-offset.js.
   const [chromeOffset, measureChrome] = useChromeOffset();
   const [query, setQuery] = useState("");
-  // The highlighted row for the keyboard, as an index into `filtered`.
   const [active, setActive] = useState(0);
   const listId = useId();
   const searchRef = useRef(null);
   const triggerRef = useRef(null);
-  // Modal only inside a dialog: the Dialog's scroll lock blocks wheel events in
-  // the portalled popover. On a normal page modal would block the screen.
   const [modal, setModal] = useState(false);
 
   const selected = options.find((option) => String(option.value) === String(value));
@@ -63,7 +57,6 @@ export function Combobox({
     handleOpenChange(false);
   }
 
-  // Enter picks the active (or first choosable) row; arrows skip blocked rows.
   function onSearchKeyDown(event) {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -131,7 +124,6 @@ export function Combobox({
             placeholder={searchPlaceholder ?? t("search")}
             className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
           />
-          {/* Clearing returns focus to the field for retyping. */}
           {query ? (
             <button
               type="button"
@@ -150,7 +142,6 @@ export function Combobox({
           {filtered.length ? (
             filtered.map((option, index) => {
               const isSelected = String(option.value) === String(value);
-              // Blocked options are shown greyed with their reason, not hidden.
               const blocked = Boolean(option.disabledReason);
               return (
                 <button

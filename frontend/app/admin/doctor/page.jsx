@@ -15,7 +15,6 @@ export async function generateMetadata() {
   return { title: t("title") };
 }
 
-// Failures, then warnings, then passing checks, mirroring the setup checklist.
 const RANK = { fail: 0, warn: 1, pass: 2 };
 
 export default async function AdminDoctorPage() {
@@ -30,8 +29,6 @@ export default async function AdminDoctorPage() {
   const attention = sorted.filter((c) => c.status !== "pass");
   const passed = sorted.filter((c) => c.status === "pass");
 
-  // Plain-text report for support: summary, then each check with evidence and,
-  // when not passing, its fix.
   const report = doctor
     ? [
         `${t("title")} — ${doctor.healthy ? t("healthy") : t("unhealthy", { count: doctor.failed })}`,
@@ -61,7 +58,6 @@ export default async function AdminDoctorPage() {
         />
       ) : (
         <>
-          {/* The summary card; status is carried by the icon, and the page's actions sit on it. */}
           <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-e1">
             <span
               className={cn(
@@ -75,8 +71,7 @@ export default async function AdminDoctorPage() {
                 <ShieldAlert className="size-6 text-destructive" aria-hidden />
               )}
             </span>
-            {/* min-w-48, not min-w-0: with min-w-0 the buttons never wrapped and squeezed
-                the summary to one word per line on a phone in Hindi (steel audit, 15 Oct). */}
+            {/* min-w-48: with min-w-0 the summary got squeezed to one word per line on phones. */}
             <div className="min-w-48 flex-1">
               <p className="font-medium">
                 {!doctor.healthy
@@ -96,8 +91,6 @@ export default async function AdminDoctorPage() {
                 <p className="mt-1 text-sm text-muted-foreground">{t("blockingNote")}</p>
               ) : null}
             </div>
-            {/* flex-wrap, not shrink-0: both labels grow in other locales and would
-                overflow a 320px screen. */}
             <div className="flex flex-wrap gap-2">
               <CopyReportButton text={report} />
               <RecheckButton />

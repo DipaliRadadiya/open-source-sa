@@ -20,11 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/**
- * Attach a site to a network or a volume from the Docker page, through the same endpoint as
- * the site's Container card. The container is recreated at once. A volume also needs a path
- * inside the container.
- */
 export function AttachSiteDialog({
   open,
   onOpenChange,
@@ -46,16 +41,11 @@ export function AttachSiteDialog({
 
   const isVolume = kind === "volume";
   const chosen = sites.find((candidate) => String(candidate.id) === site);
-  // A network move off the site's own network: ask whether that network goes (default) or stays.
   const keepChoice =
     !isVolume &&
     Boolean(chosen) &&
     offersKeepChoice({ applicationId: chosen.id, current: chosen.docker_network ?? null, next: name, networks });
 
-  // Already attached: for a network that is the site's single network; for a
-  // volume, this same volume at any path. Offered anyway rather than filtered
-  // out, because a volume at a second path is legitimate — the label says so
-  // instead of the option vanishing.
   const attached = (candidate) =>
     isVolume
       ? (candidate.volume_mounts ?? []).some((mount) => mount.volume === name)
@@ -85,15 +75,12 @@ export function AttachSiteDialog({
       setPath("");
       setRemovePrevious(true);
     } catch (requestError) {
-      // The server's sentence: it is the only thing that can say "that path is
-      // where the site's own files are".
       setError(apiMessage(requestError, t("failed")));
     } finally {
       setPending(false);
     }
   }
 
-  // Read from the networks after the save: the server keeps the old one while something uses it.
   async function movedMessage(applicationId) {
     try {
       const networksAfter = await listDockerNetworks();
@@ -191,9 +178,6 @@ export function AttachSiteDialog({
           </div>
         ) : null}
 
-        {/* Said before the click. Attaching rewrites the site's compose file and
-            brings the container up again, which is a few seconds of downtime for
-            a site the person doing this may not have been thinking about. */}
         <Caution>
           {t("restartWarning", { site: chosen?.name ?? t("theSite") })}
         </Caution>

@@ -32,27 +32,22 @@ export default async function ApplicationStagingPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone: back to the list, which explains why.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
   if (!can(appPermissions, "app_staging", "view", "application")) {
-    // The grant exists only for WordPress; for an administrator a missing
-    // grant means "not this site type", not a permission problem.
     if ((await getCurrentUser().catch(() => null))?.is_admin) return <TypeNotSupported application={application} t={t} />;
     return <PermissionDenied title={t("pageTitle")} />;
   }
 
   const canManage = can(appPermissions, "app_staging", "manage", "application");
-  // Removing the copy is an application delete, gated as the API gates it.
   const canDelete = can(permissions, "application", "manage");
   const settled = isSettled(application);
 
   const staging = settled ? await getApplicationStaging(id) : null;
   if (staging?.status === 403) return <PermissionDenied title={t("pageTitle")} />;
 
-  // Backing up as part of the push is the backup feature's power, and needs a target.
   const canBackUp = can(appPermissions, "app_backup", "manage", "application");
   const hasCopy = Boolean(staging?.staging);
   const [{ target }, safety] = await Promise.all([
@@ -69,7 +64,6 @@ export default async function ApplicationStagingPage({ params }) {
           {t("provisioning")}
         </div>
       ) : staging.status === 404 ? (
-        // Staging is WordPress-only; other site types answer 404, which is not an error.
         <Unsupported>{t("unsupported")}</Unsupported>
       ) : staging.failed ? (
         <LoadFailed description={t("loadFailed")} status={staging.status} failure={staging.failure} message={staging.message} debug={staging.debug} />

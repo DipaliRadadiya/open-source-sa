@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// No stats means the jail is not enabled, not zero activity.
 const jailStatsSchema = z.object({
   currently_failed: z.number().nullable().optional(),
   total_failed: z.number().nullable().optional(),
@@ -11,7 +10,6 @@ const jailStatsSchema = z.object({
 export const jailSchema = z.object({
   name: z.string(),
   label: z.string(),
-  // This jail can lock the admin out of their own server (i.e. sshd).
   lockout_risk: z.boolean().optional(),
   enabled: z.boolean(),
   banned: z.array(z.string()).default([]),
@@ -22,7 +20,6 @@ export const banSchema = z.object({
   ip: z.string(),
   jail: z.string(),
   banned_at: z.string().nullable().optional(),
-  // Null means permanent or an old fail2ban; never "expires now".
   expires_at: z.string().nullable().optional(),
   seconds_left: z.number().nullable().optional(),
 });
@@ -36,31 +33,24 @@ export const fail2banSettingsSchema = z.object({
 
 export const bantimePresetSchema = z.object({
   key: z.string(),
-  // -1 is permanent.
   seconds: z.number(),
   label: z.string(),
 });
 
-// `null` once fail2ban is on disk; apt may take minutes, so `installed` alone cannot show progress.
 export const fail2banInstallSchema = z.object({
-  // installing | failed
   status: z.string(),
-  // Show the localized title, never local wording.
   reason: z.string().nullable().optional(),
   reason_title: z.string().nullable().optional(),
-  // Locates the server-ops log entry for support.
   reference: z.string().nullable().optional(),
   started_at: z.string().nullable().optional(),
   finished_at: z.string().nullable().optional(),
 });
 
 export const fail2banSchema = z.object({
-  // `false` is a normal state on a new server, not an error.
   installed: z.boolean(),
   install: fail2banInstallSchema.nullable().optional(),
   running: z.boolean().optional(),
   version: z.string().nullable().optional(),
-  // The caller's own address, for a one-click "don't ban me".
   your_ip: z.string().nullable().optional(),
   settings: fail2banSettingsSchema.nullable().optional(),
   jails: z.array(jailSchema).default([]),

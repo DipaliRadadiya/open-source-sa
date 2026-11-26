@@ -1,18 +1,14 @@
-// The panel account manages every database; never point an application at it.
+// The panel's own account manages every database; never point an app at it.
 const PANEL_PREFIX = "panel_";
 
-/** The application's database user for a connection card, never the panel's own. */
 export function primaryUser(database) {
   const users = database?.users ?? [];
-  // The oldest (the API list is unordered): on PostgreSQL that is the owner of existing tables.
   const own = users
     .filter((user) => !user.username.startsWith(PANEL_PREFIX))
     .sort((a, b) => a.id - b.id);
   return own[0] ?? users[0] ?? null;
 }
 
-// Host, port and protocol; the other parts have their own authoritative fields.
-// `connection` reaches view-only roles too; the string only adds the protocol.
 export function connectionAddress(user) {
   const fromString = addressFromString(user);
   if (!user?.connection) return fromString;
@@ -37,7 +33,6 @@ function addressFromString(user) {
   }
 }
 
-/** The string split for display, password left out; null when it is not a URL. */
 export function connectionStringParts(value) {
   if (!value) return null;
   try {
@@ -47,7 +42,6 @@ export function connectionStringParts(value) {
       username: decodeURIComponent(url.username),
       host: url.hostname,
       port: url.port,
-      // Path and query: the database name, plus Mongo's options.
       rest: `${url.pathname}${url.search}`.replace(/^\//, ""),
     };
   } catch {

@@ -9,7 +9,6 @@ import {
   subscribeNavigation,
 } from "@/lib/browser/navigation-pending";
 
-// A fast page change should not flash a bar or make a screen reader speak.
 const SHOW_AFTER_MS = 150;
 
 function PageChangeWatcher() {
@@ -21,7 +20,6 @@ function PageChangeWatcher() {
   return null;
 }
 
-// Links report into it (components/ui/app-link.jsx); it clears when the page has changed.
 export function NavigationProgress() {
   const t = useTranslations("common");
   const navigation = useSyncExternalStore(
@@ -29,8 +27,6 @@ export function NavigationProgress() {
     currentNavigation,
     () => null,
   );
-  // Which wait has outlasted the delay. Each wait has a new number, so nothing
-  // needs resetting when one ends.
   const [slowNavigation, setSlowNavigation] = useState(null);
 
   useEffect(() => {

@@ -1,7 +1,5 @@
-// A deleted account has no id, only its name.
 const actor = (entry) => entry.user?.id ?? entry.user?.username ?? null;
 
-// Only CONSECUTIVE identical entries merge, so the feed keeps its order.
 const sameEvent = (a, b) =>
   a.action === b.action &&
   a.type === b.type &&
@@ -11,7 +9,6 @@ const sameEvent = (a, b) =>
 const identity = (entry) =>
   [entry.type, entry.action, actor(entry) ?? "", Boolean(entry.is_system)].join("|");
 
-// `mergeAcross` actions merge per actor even when not adjacent, at that actor's latest position.
 export function collapseRepeats(entries = [], { max = Infinity, mergeAcross = [] } = {}) {
   const groups = [];
   const merged = new Map();
@@ -33,7 +30,6 @@ export function collapseRepeats(entries = [], { max = Infinity, mergeAcross = []
     const last = groups[groups.length - 1];
     if (last && sameEvent(last.newest, entry)) {
       last.count += 1;
-      // Entries arrive newest first, so each further match is older.
       last.oldest = entry;
       continue;
     }

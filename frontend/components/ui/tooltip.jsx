@@ -18,7 +18,6 @@ function Tooltip({
   return (
     <TooltipPrimitive.Root
       data-slot="tooltip"
-      // Stops a Dialog's auto-focus from opening the tooltip; hover only.
       onOpenAutoFocus={(e) => e.preventDefault()}
       {...props}
     />

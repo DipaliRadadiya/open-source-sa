@@ -31,10 +31,7 @@ export default async function DockerPage() {
   const { networks, volumes, failed, status, failure, message } =
     await getDockerResources();
 
-  // Container sites that are serving, for attaching one here (attaching rewrites the
-  // compose file and restarts the site). Gated on `application` manage, not `docker`.
   const canManageSites = can(permissions, "application", "manage");
-  // Names for the "belongs to" badges; anyone who can see applications gets them.
   const allApplications = can(permissions, "application", "view")
     ? (await getAllApplications()).applications
     : [];
@@ -46,8 +43,7 @@ export default async function DockerPage() {
           application.status === "active",
       )
     : [];
-  // Not one that runs its own compose file (a 1-Click Recipe, or one taken over):
-  // the mount would be stored and answered 200, and the container never gets it.
+  // The API would accept a mount for a site running its own compose file, but the container never gets it.
   const composes = await Promise.all(serving.map((application) => getApplicationCompose(application.id)));
   const sites = serving.filter((_, index) => !(composes[index].failed === false && composes[index].generated === false));
 
@@ -56,7 +52,6 @@ export default async function DockerPage() {
       <PageHeader title={t("title")} />
 
       {failed ? (
-        /* A failed read is not an empty table. 409: this server doesn't host containers. */
         status === 409 ? (
           <EmptyState
             icon={Container}
@@ -72,7 +67,6 @@ export default async function DockerPage() {
           />
         )
       ) : (
-        /* Networks and volumes only; registry credentials live under Integrations. */
         <DockerResourcesPanel
           initialNetworks={networks}
           initialVolumes={volumes}

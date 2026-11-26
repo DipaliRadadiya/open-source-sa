@@ -76,22 +76,15 @@ export default async function DatabasePage({ params, searchParams }) {
     getPermissions(),
     getTranslations("databases"),
     getDatabase(id),
-    // Exports are global (they outlive their database); the card filters them.
     getExports(),
     getTables(id),
     getPhpmyadminSite(),
     getAdminerSite(),
     getImports(id),
-    // `DatabaseResource` has only `application_id`, so sites are joined here.
-    // The counts drive the picker's "already has one".
     getAllApplications(),
     getDatabaseCounts(),
-    // Lets the site picker grey out sites that cannot use this engine.
-    // A failure only loses the greying.
     getSiteTypes().catch(() => ({ siteTypes: [] })),
-    // A failure only loses the narrowing. Returns `{ engines, failed }`, NOT an array.
     getEngines().catch(() => ({ engines: [] })),
-    // Its own backup schedule (a database on its own) and the newest five runs.
     getDatabaseBackupTarget(id),
     getDatabaseBackups(id, { per_page: 5 }),
     getStorageDestinations(),
@@ -101,10 +94,8 @@ export default async function DatabasePage({ params, searchParams }) {
 
   if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
-  // Downloading and deleting an archive stay under the server's Backups permission.
   const canHandleArchives = can(permissions, "backup", "manage");
 
-  // Deleted elsewhere: show the 404 page, not a load error.
   if (status === 404) notFound();
   if (failed || !data)
     return (
@@ -115,15 +106,9 @@ export default async function DatabasePage({ params, searchParams }) {
       />
     );
 
-  // The API answers 200 with no tables and size 0 when the engine is down,
-  // so the engine's own state is the reliable signal.
   const engineRow = (engines.engines ?? []).find((row) => row.engine === data.engine);
   const engineDown = Boolean(engineRow?.installed) && !engineRow.running;
   const engineName = t(`engines.${data.engine}`);
-  // Backups of deleted databases of this engine can be restored into this one. The
-  // server-wide list needs `backup` view; without it the section is not offered.
-  // Seeded from the server so a reload still shows a running restore (RC-19); the
-  // list of restores needs `backup` view, like the archives below.
   const activeRestore =
     canManage && !backupRead.backedUpWith && !backupRead.failed && can(permissions, "backup", "view")
       ? await getActiveRestore(undefined, {
@@ -136,7 +121,6 @@ export default async function DatabasePage({ params, searchParams }) {
       ? (await getArchivedDatabaseBackups(data.engine)).backups
       : [];
 
-  // The newest restorable dump: completed and its file still on disk, as on the list.
   const ownExports = exportList.exports.filter((row) => row.database_id === data.id);
   const lastExport = exportList.failed
     ? undefined
@@ -149,7 +133,6 @@ export default async function DatabasePage({ params, searchParams }) {
     <div className="space-y-6">
       <PageCrumb mono>{data.name}</PageCrumb>
 
-      {/* As wide as the cards below it. */}
       <div className="space-y-3">
         <BackLink href="/databases">{t("backToList")}</BackLink>
         <DetailHeader
@@ -158,13 +141,9 @@ export default async function DatabasePage({ params, searchParams }) {
           mono
           badges={<Badge variant="muted">{engineName}</Badge>}
           facts={[
-            // The API reports 0 B while the engine is down, which would read as empty.
             engineDown ? null : <span className="font-mono"><SizeText value={data.size_human} fallback={null} /></span>,
             data.created_at_human ? t("detail.createdWhen", { when: data.created_at_human }) : null,
           ]}
-          // The one thing people open a database page to do, so it is the filled button.
-          // PostgreSQL has only Adminer, so it takes the filled look there; beside
-          // phpMyAdmin it is the second, quieter client.
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <PhpmyadminButton
@@ -207,7 +186,6 @@ export default async function DatabasePage({ params, searchParams }) {
               <DatabaseDetailsCard
                 database={data}
                 engineName={engineName}
-                // "10.11.14", not the build string "10.11.14-MariaDB-0ubuntu0.24.04.1".
                 engineVersion={engineRow?.version?.match(/^\d+(?:\.\d+)*/)?.[0] ?? engineRow?.version ?? null}
                 engineDown={engineDown}
                 lastExport={lastExport === undefined ? undefined : (lastExport?.finished_at_human ?? lastExport?.created_at_human ?? null)}
@@ -217,7 +195,6 @@ export default async function DatabasePage({ params, searchParams }) {
                 databasesKnown={dbCounts.known}
                 siteTypes={catalogue.siteTypes}
               />
-              {/* In the Overview, not under every tab: it is the page's last word, not a footer. */}
               <DeleteDatabaseCard
                 database={data}
                 application={applicationById(appList.applications, data.application_id)}
@@ -227,17 +204,14 @@ export default async function DatabasePage({ params, searchParams }) {
           }
           counts={{
             users: data.users?.length ?? 0,
-            // Null, not 0, when the list could not be read.
             tables: tables.failed || engineDown ? null : tables.tables.length,
-            // No count: the tab holds imports and exports, and one number read as both.
             exports: null,
           }}
           users={
             <DatabaseUsers
               database={data}
               canManage={canManage}
-              /* PostgreSQL roles carry no host, so `remote` and `anywhere` are
-                 refused by the API. Read from the engine row, never the name. */
+              // PostgreSQL roles have no host, so the API refuses remote and anywhere.
               remoteUsers={supportsRemoteUsers(engines, data.engine)}
             />
           }
@@ -250,8 +224,6 @@ export default async function DatabasePage({ params, searchParams }) {
             />
           }
           exports={
-            // Exports first: the everyday, safe action. Import replaces the data, so it
-            // sits below, as Delete does at the foot of Overview.
             <div className="space-y-4">
               <DatabaseExports
                 database={data}
@@ -262,7 +234,6 @@ export default async function DatabasePage({ params, searchParams }) {
               <DatabaseImport
                 database={data}
                 imports={importList.imports}
-                // Each import links to the backup it took first.
                 exports={exportList.exports}
                 canManage={canManage}
                 unavailable={engineDown ? engineName : null}

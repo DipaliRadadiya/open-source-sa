@@ -2,8 +2,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SK_CARD, SkCompactTile, SkHeader } from "@/components/ui/skeleton-kit";
 import { cn } from "@/lib/utils";
 
-// Disk cleaner, in the page's own shape: three compact tiles, then the list card with
-// its header buttons, select-all band, item tiles two across, and the footer band.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

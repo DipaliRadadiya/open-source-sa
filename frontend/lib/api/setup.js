@@ -2,13 +2,10 @@ import { api } from "@/lib/api/client";
 import { setupResponseSchema } from "@/lib/schemas/setup";
 import { RETRY_RESTART } from "@/lib/api/restart-blip";
 
-// The axios client already bakes in the `/api` prefix, so strip it from the
-// endpoint the API hands back (`/api/databases/engines/mariadb`).
 function toClientPath(endpoint) {
   return endpoint.replace(/^\/api/, "");
 }
 
-// `action` is the `{method, endpoint}` object from the setup payload.
 export function runSetupAction(action, body) {
   return api.request({
     method: action.method ?? "POST",
@@ -18,7 +15,6 @@ export function runSetupAction(action, body) {
   });
 }
 
-/** Client-side poll of the setup state while something is installing. */
 export async function fetchSetup() {
   const { data } = await api.get("/setup");
   const parsed = setupResponseSchema.safeParse(data);

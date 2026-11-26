@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 function Progress({
   className,
   value,
-  // For work of unknown length; Radix treats `value={null}` as indeterminate.
+  // Radix treats value={null} as indeterminate.
   indeterminate = false,
   ...props
 }) {

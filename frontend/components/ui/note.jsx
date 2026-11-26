@@ -1,7 +1,6 @@
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// The calm sibling of `Caution`, with the same shape.
 export function Note({ icon: Icon = Info, title, children, className }) {
   return (
     <div
@@ -13,7 +12,6 @@ export function Note({ icon: Icon = Info, title, children, className }) {
       <Icon className="mt-0.5 size-4 shrink-0 text-primary" />
       <div className="min-w-0 space-y-1">
         {title ? <p className="font-medium text-foreground">{title}</p> : null}
-        {/* A <div>, not a <p>: callers may pass lists or block content. */}
         <div className="text-muted-foreground">{children}</div>
       </div>
     </div>

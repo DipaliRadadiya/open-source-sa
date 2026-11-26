@@ -6,17 +6,14 @@ import { useTranslations } from "next-intl";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Refreshes only while visible. After `stopAfterMs` it offers "Check again", so a stale "Installing…" never looks live.
-// `quiet`: a background freshness tick with nothing pending, so stopping says nothing.
 export function AutoRefresh({ intervalMs = 10000, stopAfterMs = null, quiet = false }) {
   const router = useRouter();
   const t = useTranslations("common.autoRefresh");
-  // Bumped by "Check again" to restart the effect.
   const [round, setRound] = useState(0);
   const [stopped, setStopped] = useState(false);
 
   useEffect(() => {
-    // No setState in the effect body; `stopped` is cleared by the button below.
+    // No setState in the effect body.
     const tick = () => {
       if (!document.hidden) router.refresh();
     };
@@ -24,7 +21,6 @@ export function AutoRefresh({ intervalMs = 10000, stopAfterMs = null, quiet = fa
     const id = setInterval(tick, intervalMs);
     document.addEventListener("visibilitychange", tick);
 
-    // Stops polling for a job that never finishes.
     const stop = stopAfterMs
       ? setTimeout(() => {
           clearInterval(id);

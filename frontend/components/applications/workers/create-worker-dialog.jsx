@@ -33,11 +33,9 @@ import { WorkerCommandField } from "@/components/applications/workers/worker-com
 import { WorkerKindField } from "@/components/applications/workers/worker-kind-field";
 import { useWorkerSite } from "@/components/applications/workers/worker-site-context";
 
-// Presets prefill name and command as an editable starting point.
 export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], workers = [], seed, siteUser = null }) {
   const t = useTranslations("applications.workers");
   const { pending: refreshing, refreshThen } = useRefresh();
-  // The server's "installing supervisor" message, kept until the next attempt.
   const [installing, setInstalling] = useState(null);
 
   const { appRoot } = useWorkerSite();
@@ -61,7 +59,6 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
 
   function onPickPreset(preset) {
     form.setValue("kind", preset.kind, { shouldValidate: true });
-    // The custom preset has an empty command; do not flag "required" before typing.
     if (preset.command) {
       form.setValue("command", preset.command, { shouldValidate: true });
     } else {
@@ -74,7 +71,6 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
   }
 
   async function onSubmit(values) {
-    // Both describe the last attempt only; a root error is cleared by nothing else.
     setInstalling(null);
     form.clearErrors("root.server");
 
@@ -83,9 +79,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
       name: values.name.trim(),
       command: values.command.trim(),
       directory: values.directory?.trim() || undefined,
-      // Never sent: the worker runs as the application's own user.
       user: undefined,
-      // Blank is omitted; "" would store an empty log path.
       log_file: values.log_file?.trim() || undefined,
       log_level: values.log_level || undefined,
       extra_config: values.extra_config?.trim() || undefined,
@@ -95,42 +89,31 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
     try {
       const response = await createWorker(appId, payload);
 
-      // 202: supervisord is being installed and no worker exists yet. The dialog
-      // stays open with the form intact so it can be resubmitted afterwards.
       if (response?.status === 202) {
-        // Toast plus a persistent notice, since the toast fades.
         toast.info(response.data?.message ?? t("toast.installingSupervisor"));
         setInstalling(response.data?.message ?? t("toast.installingSupervisor"));
 
         return;
       }
 
-      // Closed once the list shows the change, not on the API's answer.
       refreshThen(() => {
         toast.success(t("toast.created"));
         onOpenChange?.(false);
       });
     } catch (error) {
-      // A command that will not start answers 500 without field errors (the
-      // server has removed the worker); show it on the form.
       if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
         form.setError("root.server", { message: apiMessage(error, t("create.failed")) });
         scrollToFirstError();
         return;
       }
-      // `kind` errors (e.g. a Horizon conflict) are shown at form level.
       handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
-      // The command would not stay running, so nothing was added. The field says what is
-      // wrong; the message adds what the program printed and the reference.
       if (error.response?.data?.reason === "worker_did_not_start") {
         form.setError("root.server", { message: apiMessage(error, t("create.failed")) });
       }
-      // The dialog scrolls; the reason can land above or below what is on screen.
       scrollToFirstError();
     }
   }
 
-  // Busy through the list refresh so the button cannot be pressed twice.
   const isSubmitting = form.formState.isSubmitting || refreshing;
   const serverError = form.formState.errors.root?.server?.message;
 
@@ -219,7 +202,6 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
           />
         </div>
 
-        {/* Unfiltered: every existing worker counts against the choice. */}
         <WorkerKindField form={form} presets={presets} workers={workers} />
 
         <WorkerCommandField form={form} presets={presets} workers={workers} onPick={onPickPreset} />
@@ -269,8 +251,6 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
           )}
         />
 
-        {/* Keyed on `open` so it remounts collapsed every time the dialog
-            opens, instead of tracking its own reset-on-open state. */}
         <Collapsible key={String(open)}>
           <CollapsibleTrigger asChild>
             <Button

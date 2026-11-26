@@ -7,11 +7,6 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Caution } from "@/components/ui/caution";
 
-/**
- * The credentials the panel generated when it installed a one-click app. Values are fetched
- * only on Reveal (the server records it). Read-only: rotating one means changing the compose
- * file and the running database together.
- */
 export function ContainerCredentials({ application }) {
   const t = useTranslations("applications.container.credentials");
 
@@ -56,8 +51,6 @@ export function ContainerCredentials({ application }) {
                 <CopyButton value={secrets[key] ?? ""} />
               </span>
             ) : (
-              // A fixed number of dots, not the real length — a masked value whose
-              // width leaks the password's length is a masked value that helps.
               <span className="font-mono text-xs text-muted-foreground">
                 ••••••••••••
               </span>

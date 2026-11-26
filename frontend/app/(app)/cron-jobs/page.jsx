@@ -34,24 +34,19 @@ export default async function CronjobsPage({ searchParams }) {
 
   if (!can(permissions, "cronjob", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "cronjob", "manage");
-  // Output lives in the Logs registry, gated on `logs`, not `cronjob`.
   const canViewLogs = can(permissions, "logs", "view");
   const [{ cronjobs, meta, failed, status, failure, message }, runAs, schedulePresets, commandPresets, facts, sites] =
     await Promise.all([
       getCronjobs(sp),
-      // Not gated on `canManage`. Keep `failed`: this needs the `system_user` permission,
-      // so a 403 must not read as "no system users".
       getSystemUserOptions(),
       getSchedulePresets(),
       canManage ? getCommandPresets() : Promise.resolve({ presets: [] }),
-      // Only for the timezone; /server/facts shells out, so it must never hold up the page.
+      // /server/facts runs shell commands, so never let it hold up the page.
       withTimeout(getServerFacts(), 2000),
-      // For the command form's path picker; on failure the user types a path.
       canManage ? getAllApplications() : Promise.resolve({ applications: [] }),
     ]);
 
   const timezone = facts?.timezone;
-
 
   redirectOutOfRange("/cron-jobs", sp, meta, failed);
   return (
@@ -71,7 +66,6 @@ export default async function CronjobsPage({ searchParams }) {
             canManage={canManage}
             canViewLogs={canViewLogs}
             schedulePresets={schedulePresets}
-            // Only templates some application here can run; all when the list is unknown.
             commandPresets={availablePresets(commandPresets.presets, sites.applications, canManage && !sites.failed)}
             placeholder={commandPresets.placeholder}
             timezone={timezone}

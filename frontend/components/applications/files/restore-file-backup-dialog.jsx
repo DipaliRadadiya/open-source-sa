@@ -11,13 +11,11 @@ import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// Restoring first backs up the current version, so a wrong pick is undoable.
 export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpenChange, onRestored }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
   const format = useFormatter();
   const [selected, setSelected] = useState(null);
-  // On by default and on again every time the dialog closes.
   const [safetyCopy, setSafetyCopy] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -36,7 +34,6 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
     try {
       await restoreFileContent(appId, path, selected, { safetyCopy });
       toast.success(t("restore.done"));
-      // The editor re-reads the file itself; this endpoint returns no content.
       onRestored?.();
       handleOpenChange(false);
     } catch (error) {
@@ -58,10 +55,8 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
       confirmDisabled={!selected}
       pending={busy}
       onConfirm={onRestore}
-      // Wider than a yes/no confirmation: the body is a list to pick from.
       className="sm:!max-w-lg"
     >
-      {/* Bounded so a long list keeps the buttons in view. */}
       <div
         role="radiogroup"
         aria-label={t("restore.title")}
@@ -82,7 +77,6 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
                 active ? "border-primary bg-primary/5" : "hover:bg-muted/50",
               )}
             >
-              {/* The saved time distinguishes versions; the `.bak-…` file name is kept for hover. */}
               <HoverHint content={backup.name}><span className="min-w-0 text-sm">
                 {when ? format.dateTime(when, { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" }) : backup.name}
               </span></HoverHint>

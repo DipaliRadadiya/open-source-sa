@@ -42,18 +42,9 @@ import { applicationIconDataUri } from "@/lib/applications/application-icon";
 import { HoverHint } from "@/components/ui/hover-hint";
 import { shownSizeBytes } from "@/lib/applications/size-measurement";
 
+// Cells live outside the component so polling doesn't remount them and close open dialogs.
 
-// Cells at module level: an inline cell remounts on every poll and resets open dialogs.
-
-/* `block` before `truncate`: an inline span never shows the ellipsis. The title
- * carries the full value. */
-/* Version only (the header says PHP); an em dash where it does not apply, the
- * same as OwnerCell. */
-// PHP or Node.js with its version, a container, or plain files; the logo first so
-// the column scans by shape.
-// One plain line, no logo: the Application column already shows the logo.
-// Under the status badge: its own column left Application 211px at 1280,
-// cutting every domain short. Nothing at all where it does not apply.
+// `block` is needed for truncate to show the ellipsis.
 function RunsOnCell({ row }) {
   const t = useTranslations("applications");
   const tDocker = useTranslations("docker");
@@ -68,20 +59,14 @@ function RunsOnCell({ row }) {
   );
 }
 
-// From the backup targets list: one line with an icon. Red only when
-// there is something to fix; the detail behind "Failed" / "Manual only" is in the title.
 function LastBackupCell({ row, table }) {
   const t = useTranslations("applications");
   const standing = table.options.meta?.backupStanding?.[row.original.id];
   if (!standing || standing.state === "unprotected") {
-    // "Not set up" is itself the way out, to the Backups tab and its "Set up backups"
-    // button. A second line for the link made every row three or four lines tall.
     return (
       <HoverHint content={t("backups.setUp")}><Link
         href={`/applications/${row.original.id}/backups`}
         prefetch={false}
-        // The title doubles as the description a screen reader adds; a hidden ": Set up
-        // backups" span leaked into the tooltip as ": Set up backups".
         className="flex min-w-0 items-start gap-1.5 text-sm text-destructive"
       >
         <ArchiveRestore className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -127,7 +112,6 @@ function CreatedCell({ row }) {
   );
 }
 
-/* Sizes come from a scheduled sweep; unmeasured sites show "Not measured", which re-measures on click. */
 function SizeCell({ row }) {
   const t = useTranslations("applications");
   const format = useFormatter();
@@ -141,16 +125,13 @@ function SizeCell({ row }) {
       await measureApplicationSize(row.original.id);
       router.refresh();
     } catch (error) {
-      // Throttled at 10/min and refused when the site has no directory; pass the
-      // API's message on.
+      // Rate-limited to 10/min by the API, so show its message.
       toast.error(apiMessage(error, t("size.measureFailed")));
     } finally {
       setMeasuring(false);
     }
   }
 
-  // Never measured: the words themselves are the trigger. They may wrap: "Nicht gemessen" is
-  // 24px wider than the column in German, and only a site the sweep has not reached shows it.
   if (size === null) {
     return (
       <Tooltip>
@@ -187,9 +168,8 @@ function ActionsCell({ row, table }) {
 
 function NameCell({ row, missingDatabase = false, gitProvider = null, iconDataUri, canOpen = true }) {
   const t = useTranslations("applications");
-  return <div className="flex min-w-0 items-center gap-3">{/* On its own tile, so marks of every shape line up. */}<span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-card shadow-e1"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} label={row.original.site_type_title ?? row.original.site_type} iconDataUri={iconDataUri} size="h-5 w-5" /></span><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">{/* A role with no screen inside an application gets the name, not a link to an empty page (23 Nov). */}{canOpen ? <Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"><HoverHint content={row.original.name}><span className="truncate">{row.original.name}</span></HoverHint><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link> : <HoverHint content={row.original.name}><span className="min-w-0 truncate font-medium text-foreground">{row.original.name}</span></HoverHint>}{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}<ApplicationOriginBadge origin={row.original.origin} compact />{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1">{/* The padlock goes beside the DOMAIN, not in a column of its own: TLS is a property of the address, which is the convention every browser already taught people, and `url` only ever describes this one domain. It also costs no width in a table that is already at 100%. */}<TlsMark application={row.original} label={isServedOverTls(row.original) ? t("domains.secured") : t("domains.noCertificate")} /><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
+  return <div className="flex min-w-0 items-center gap-3"><span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-card shadow-e1"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} label={row.original.site_type_title ?? row.original.site_type} iconDataUri={iconDataUri} size="h-5 w-5" /></span><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">{canOpen ? <Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"><HoverHint content={row.original.name}><span className="truncate">{row.original.name}</span></HoverHint><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link> : <HoverHint content={row.original.name}><span className="min-w-0 truncate font-medium text-foreground">{row.original.name}</span></HoverHint>}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}<ApplicationOriginBadge origin={row.original.origin} compact />{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1"><TlsMark application={row.original} label={isServedOverTls(row.original) ? t("domains.secured") : t("domains.noCertificate")} /><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
 }
-
 
 function StatusCell({ row }) {
   return (
@@ -201,13 +181,9 @@ function StatusCell({ row }) {
   );
 }
 
-
-/* `FacetSelect`, like every other list filter: "All statuses"-style clear
- * option, and a guard against an unknown `?status=` value. */
 function Filters({ statusOptions, typeOptions, t }) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row">
-      {/* Server-side and debounced: the list is paged. */}
       <SearchInput placeholder={t("searchPlaceholder")} />
       <FacetSelect
         paramKey="status"
@@ -227,10 +203,7 @@ function Filters({ statusOptions, typeOptions, t }) {
   );
 }
 
-// `siteTypes` comes from `GET /site-types`, not the visible rows, so every type stays filterable.
-// Percentages plus `fixedLayout` bound the columns so `truncate` works; each set totals 100.
-// Sized from the widest locale's cell at the narrowest table of each breakpoint, so every
-// fact column stays on one line. System user and Size join from xl, Created from 2xl.
+// Column widths in %, per breakpoint. Each set must add up to 100.
 const COLUMN_WIDTHS = {
   withBackups: {
     name: "w-[50%] xl:w-[35%] 2xl:w-[35%]",
@@ -252,8 +225,6 @@ const COLUMN_WIDTHS = {
 };
 
 export function ApplicationsTable(props) {
-  // One transition shared by search, filters and pager, so the table shows
-  // pending state while the server answers.
   return (
     <NavTransitionProvider>
       <ApplicationsList {...props} />
@@ -266,19 +237,13 @@ function ApplicationsList({
   meta,
   siteTypes = [],
   canManage = false,
-  // False when the role can open no screen inside an application: names are not links.
   canOpen = true,
   canMagicLogin = false,
   canRemoveSystemUser = false,
   canManageDocker = false,
-  // Ids of sites whose type needs a database and that have none. Empty when
-  // the reader cannot see databases, or when the count could not be read.
   missingDatabase = new Set(),
-  // `git_account_id` → provider, resolved on the server. Empty (generic git mark)
-  // when not needed, not permitted, or the fetch failed.
   gitProviders = new Map(),
-  // Application id → backup standing; null when the reader cannot see backups or the
-  // list could not be read, and then the column is left out.
+  // null hides the Backups column.
   backupStanding = null,
 }) {
   const t = useTranslations("applications");
@@ -307,21 +272,17 @@ function ApplicationsList({
 
   const columns = useMemo(
     () => [
-      // `col` must be on the API's sort whitelist (else 422). Status sits right after
-      // the name: beside it, PHP's short value read as part of the domain.
+      // `col` must be in the API's sort whitelist, otherwise it returns 422.
       { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: widths.name, sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} iconDataUri={applicationIconDataUri(row.original, siteTypes)} canOpen={canOpen} /> },
       { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: widths.status, sortKey: "status" }, cell: StatusCell },
       ...(withBackups ? [{ id: "lastBackup", header: t("columns.lastBackup"), meta: { className: `${widths.lastBackup} h-auto min-h-10 whitespace-normal` }, cell: LastBackupCell }] : []),
-      // Sized for the widest locale's header (ru). Wraps below xl; `h-auto min-h-11`
-      // because TableHead fixes 44px.
+      // h-auto because TableHead has a fixed 44px height and this header can wrap.
       { id: "owner", header: t("columns.owner"), meta: { className: `${widths.owner} h-auto min-h-11 whitespace-normal` }, cell: OwnerCell },
-      // descFirst: largest and newest first is what people look for.
       { id: "size", header: () => <SortHeader col="directory_size_bytes" descFirst>{t("columns.size")}</SortHeader>, meta: { className: widths.size, sortKey: "directory_size_bytes" }, cell: SizeCell },
       { id: "created", header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>, meta: { className: widths.created, sortKey: "created_at" }, cell: CreatedCell },
       { id: "actions", header: "", meta: { className: widths.actions }, cell: ActionsCell },
     ],
-    // `missingDatabase` is a dependency: attaching a database refreshes the route,
-    // and a stale closure would keep the badge.
+    // Keep missingDatabase here, or the badge stays after a database is attached.
     [t, missingDatabase, withBackups, widths, gitProviders, siteTypes, canOpen],
   );
 
@@ -329,12 +290,10 @@ function ApplicationsList({
   const toolbar = (
     <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
       {filters}
-      {/* Create sits with Refresh in the table's own toolbar. */}
       <div className="flex flex-wrap items-center gap-2"><RefreshButton /><CreateApplicationButton canManage={canManage} /></div>
     </div>
   );
 
-  // No rows and no filters: the server has no sites.
   if (!applications.length && !filtering) return <ApplicationEmptyState canManage={canManage} />;
 
   if (!applications.length) {
@@ -349,7 +308,6 @@ function ApplicationsList({
               variant="outline"
               onClick={() => setQuery({ search: undefined, status: undefined, site_type: undefined }, { resetPage: true })}
             >
-              {/* Clears search and both filters, hence "Clear filters". */}
               {tCommon("clearFilters")}
             </Button>
           }
@@ -359,11 +317,8 @@ function ApplicationsList({
   }
 
   return (
-    // Below lg the rows are cards of their own, so the list drops its frame there.
     <ListCard from="c900" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
-      {/* Cards below lg, the table from lg up. */}
       <div className="@min-[900px]/page:hidden"><ApplicationsCards applications={applications} canManage={canManage} canOpen={canOpen} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} canManageDocker={canManageDocker} gitProviders={gitProviders} siteTypes={siteTypes} /></div>
-      {/* fixedLayout so the column percentages are obeyed, not treated as hints. */}
       <div className="hidden @min-[900px]/page:block"><DataTable columns={columns} data={applications} meta={{ canManage, canOpen, canMagicLogin, canRemoveSystemUser, canManageDocker, backupStanding }} fixedLayout bare roomy /></div>
     </ListCard>
   );

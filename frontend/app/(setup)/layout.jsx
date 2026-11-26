@@ -11,14 +11,12 @@ import { ErrorCopy } from "@/components/sections/error-copy";
 
 export const dynamic = "force-dynamic";
 
-// First-run setup shell without the sidebar. No session → login; no `setting` → home.
 export default async function SetupLayout({ children }) {
   const user = await getCurrentUser();
   if (!user) redirect(await signedOutPath());
 
   const permissions = await getPermissions();
-  // A layout cannot render an in-place refusal; "/" resolves home from permissions
-  // (/dashboard is not open to every role).
+  // A layout can't render an in-place refusal, so redirect.
   if (!can(permissions, "setting", "view")) redirect("/");
 
   return (
@@ -33,8 +31,6 @@ export default async function SetupLayout({ children }) {
           </div>
         </header>
         <main className="flex flex-1 justify-center px-4 pb-16 pt-2 sm:pt-6">
-          {/* 840px: narrower feels like a lost dialog; wider strands the
-              one-line descriptions. */}
           <div className="w-full max-w-[840px]">{children}</div>
         </main>
       </div>

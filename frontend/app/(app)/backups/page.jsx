@@ -18,25 +18,17 @@ export const dynamic = "force-dynamic";
 export default async function BackupsPage({ searchParams }) {
   const sp = await searchParams;
   const [coverage, { destinations }, databases, appPermissions, t, { options: backupOptions }, { siteTypes }, databaseCoverage, permissions, destinationUsage] = await Promise.all([
-    // One page, searched and filtered by the server (RC-42).
     getBackupCoverage(sp),
     getStorageDestinations(),
-    // Lets the setup form warn when the chosen site has no database.
     getDatabaseCounts(),
-    // Application-level catalog (no site): whether the user may configure
-    // backups at all. Per-site filtering happens on the application page.
     getPermissions("application").catch(() => []),
     getTranslations("backups"),
-    // A failure is carried as null; it never blocks the coverage list.
     getBackupTargetOptions(),
-    // Which site types never have a database, so their setup offers Files only.
     getSiteTypes().catch(() => ({ siteTypes: [] })),
     getDatabaseBackupCoverage(),
     getPermissions(),
-    // Every configured site, for the storage warning: one page would miss destinations.
     getBackupDestinationUsage(),
   ]);
-  // Databases that are not part of an application have schedules of their own (RC-23).
   const databasesCard = (
     <DatabaseCoverageCard
       coverage={databaseCoverage}
@@ -51,8 +43,6 @@ export default async function BackupsPage({ searchParams }) {
 
   const canManage = can(appPermissions, "app_backup", "manage", "application");
 
-  // Nothing configured: show an introduction instead of a list of red rows. From the server's
-  // count, not this page's rows, which a filter can empty.
   const nothingConfigured = coverage.configured === 0;
 
   if (nothingConfigured && coverage.total > 0) {

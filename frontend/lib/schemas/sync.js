@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-// Shapes follow the migrations and SyncItem casts, not API_REFERENCE.md.
-
-// ServerSync's dependency order, which is also the reading order.
 export const SYNC_RESOURCE_TYPES = [
   "system_user",
   "ssh_key",
@@ -16,15 +13,13 @@ export const SYNC_RESOURCE_TYPES = [
   "firewall_rule",
 ];
 
-// Adopting firewall rules can lock you out, so the backend excludes them unless `include_firewall` is sent.
+// Adopting firewall rules can lock you out, so the backend skips them unless asked.
 export const FIREWALL_RESOURCE_TYPE = "firewall_rule";
 
-/** What became of one discovered thing. `found` is every preview row. */
 export const SYNC_ACTIONS = ["found", "adopted", "skipped", "failed"];
 
 export const SYNC_MODES = ["preview", "apply"];
 
-// Poll on `finished` (SyncStatus::finished()), never on a local list of terminal statuses.
 export const syncItemSchema = z
   .object({
     id: z.number().int(),
@@ -32,13 +27,10 @@ export const syncItemSchema = z
     resource_key: z.string(),
     action: z.enum(SYNC_ACTIONS).catch("found"),
     confidence: z.number().int().min(0).max(100).nullish(),
-    // Keys vary per type (e.g. application {path, document_root, owner}).
-    // An empty json array is normalized to {} rather than rejecting the item.
     evidence: z
       .union([z.record(z.string(), z.unknown()), z.array(z.never())])
       .nullish()
       .transform((evidence) => (Array.isArray(evidence) ? {} : evidence)),
-    // Already localized by the backend; rendered verbatim. Keep no local reason list.
     reason: z.string().nullish(),
     model_id: z.number().int().nullish(),
   })
@@ -58,8 +50,7 @@ export const syncRunSchema = z
       })
       .passthrough()
       .default({}),
-    // Per type: { application: { found, adopted, skipped, failed }, ... }
-    // A new run sends `[]` (PHP's empty array), which must not fail parsing.
+    // A new run sends [] (PHP empty array).
     totals: z
       .union([
         z.record(
@@ -76,12 +67,9 @@ export const syncRunSchema = z
         z.array(z.never()),
       ])
       .default({})
-      // Normalized so consumers only ever see an object.
       .transform((totals) => (Array.isArray(totals) ? {} : totals)),
     started_at: z.string().nullish(),
     finished_at: z.string().nullish(),
-    // Absent unless loaded (GET /server/sync/{run} loads it, /latest does not).
-    // Absent means "not asked for", NOT "found nothing".
     items: z.array(syncItemSchema).optional(),
   })
   .passthrough();
@@ -104,8 +92,6 @@ export const syncIgnoresResponseSchema = z
   .object({ ignores: z.array(syncIgnoreSchema).default([]) })
   .passthrough();
 
-// Thresholds follow ApplicationDiscoverer::inferType(). 10 means nothing matched, a warning:
-// serving a PHP app as static publishes its source.
 export function confidenceBand(confidence) {
   if (confidence == null) return "unknown";
   if (confidence >= 90) return "high";
@@ -113,7 +99,6 @@ export function confidenceBand(confidence) {
   return "low";
 }
 
-// Whether moving off the old pm2 agent still has work left (FS-C26).
 export const syncHandoverSchema = z.object({
   needed: z.boolean().default(false),
   agent: z.object({ unit: z.string().nullish(), running: z.boolean().default(false) }).nullish(),

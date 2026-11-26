@@ -11,12 +11,10 @@ import { completeSyncHandover } from "@/lib/api/sync";
 import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
 
-// Shown only while the server says the move off the old agent is unfinished (FS-C26).
 export function HandoverCard({ status, canManage }) {
   const t = useTranslations("sync.handover");
   const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(false);
-  // Steps that failed in the last attempt, from the 500's own results.
   const [failed, setFailed] = useState([]);
 
   const left = [

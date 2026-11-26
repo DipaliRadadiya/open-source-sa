@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkCard, SkFooter, SkHeader, SkNote } from "@/components/ui/skeleton-kit";
 
-
-// Password protection: the switch, the note, Save.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

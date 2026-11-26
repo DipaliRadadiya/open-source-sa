@@ -8,11 +8,8 @@ import { getApplicationStatus, getContainerRedeploy } from "@/lib/api/applicatio
 import { containerRedeployFailure } from "@/lib/applications/settled";
 
 const POLL_MS = 5000;
-// The deploy watcher's cap: past it the job is stuck, and polling would only
-// spend the rate budget.
 const LIMIT_MS = 30 * 60 * 1000;
 
-// Refreshes the application's pages when its setup, deploy or container redeploy ends.
 export function ApplicationStatusWatcher({ id, status, redeploy = null }) {
   const router = useRouter();
   const t = useTranslations("applications.redeploy");
@@ -37,7 +34,7 @@ export function ApplicationStatusWatcher({ id, status, redeploy = null }) {
           router.refresh();
         }
       } catch {
-        // A missed poll is retried on the next tick.
+        // retry on the next poll
       }
     }, POLL_MS);
     return () => {
@@ -46,8 +43,6 @@ export function ApplicationStatusWatcher({ id, status, redeploy = null }) {
     };
   }, [inFlight, id, status, router]);
 
-  // Pull and redeploy answers at once and runs on the queue; this page learns the outcome here,
-  // so the toast comes only from a run this page saw in flight.
   useEffect(() => {
     if (redeployId == null) return;
     const started = Date.now();
@@ -72,7 +67,7 @@ export function ApplicationStatusWatcher({ id, status, redeploy = null }) {
           toast.success(t("succeeded"));
         }
       } catch {
-        // A missed poll is retried on the next tick.
+        // retry on the next poll
       }
     }, POLL_MS);
     return () => {

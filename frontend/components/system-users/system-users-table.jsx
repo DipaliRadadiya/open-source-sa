@@ -30,22 +30,16 @@ import { BulkFailure } from "@/components/system-users/bulk-failure";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BULK_FIXES } from "@/lib/system-users/bulk-delete";
 
-// Cells are module-level on purpose: an inline cell gets a new identity each
-// render, so every keystroke would remount every cell.
+// Cells at module level: inline cells remount on every keystroke.
 
-// Headers may wrap: in French and Russian a one-line "NOM D'UTILISATEUR" pushed
-// the row menu off the edge.
 function Head({ children }) {
   return <span className="block whitespace-nowrap">{children}</span>;
 }
 
 function UsernameCell({ row, table }) {
   const t = useTranslations("systemUsers");
-  // Managers see "Not set" in the password column; viewers have no column, so the
-  // badge is their only signal that the account cannot be logged into.
   const showBadge = !table.options.meta.canManage && !(row.original.password_known ?? row.original.password);
 
-  // Home sits under the name rather than in its own column, to save width.
   return (
     <div className="min-w-0 max-w-56 space-y-0.5 whitespace-normal">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -88,8 +82,6 @@ function SelectCell({ row }) {
   );
 }
 
-// Managers only: a viewer's row carries a redacted placeholder, not the password.
-// Masked until asked for.
 function PasswordCell({ row }) {
   return (
     <div className="w-36">
@@ -100,8 +92,6 @@ function PasswordCell({ row }) {
 
 function ShellCell({ row, table }) {
   return (
-    // Fixed width, wrapping long titles: sized to its text, the Russian title pushed
-    // the table past the edge; truncated, it lost its end.
     <ShellSelect
       user={row.original}
       shells={table.options.meta.shells}
@@ -154,7 +144,6 @@ function RowActionsCell({ row, table }) {
 }
 
 export function SystemUsersTable(props) {
-  // Shared transition: search box spinner and table dim while the server answers.
   return (
     <NavTransitionProvider>
       <SystemUsersList {...props} />
@@ -174,13 +163,11 @@ function SystemUsersList({
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
   const [createOpen, setCreateOpen] = useState(false);
-  // Keyed by id, so a re-read that reorders the list cannot change who is deleted.
+  // Keyed by id so a reorder can't change who gets deleted.
   const [selection, setSelection] = useState({});
   const [bulkOpen, setBulkOpen] = useState(false);
-  // Why each kept account was kept, shown next to it.
   const [bulkResult, setBulkResult] = useState(null);
 
-  // Filtered and paged by the API; filtering here would only search this page.
   const filtered = data;
   const selected = filtered.filter((user) => selection[String(user.id)]);
   const failures = bulkResult?.failures ?? {};
@@ -198,20 +185,15 @@ function SystemUsersList({
       ? [{ id: "password", header: () => <Head>{t("columns.password")}</Head>, cell: PasswordCell }]
       : []),
     { accessorKey: "shell", header: () => <Head>{t("columns.shell")}</Head>, cell: ShellCell },
-    // Tighter padding on the narrow control columns gives German and Russian the room
-    // they need at 1280.
     { id: "sudo", header: () => <Head>{t("sudo")}</Head>, meta: { className: "px-2" }, cell: SudoCell },
     { id: "ssh", header: () => <Head>{t("ssh")}</Head>, meta: { className: "px-2" }, cell: SshCell },
     { id: "applications", header: () => <Head>{t("columns.applications")}</Head>, cell: ApplicationsCell },
-    // Hidden below 2xl, where nine columns push Actions off screen. Home stays:
-    // adopted accounts can live anywhere.
     {
       accessorKey: "created_at_human",
       header: () => <Head>{t("columns.created")}</Head>,
       meta: { className: "hidden 2xl:table-cell" },
       cell: CreatedCell,
     },
-    // For viewers too: the menu is how SSH keys are reached.
     {
       id: "actions",
       header: () => <span className="sr-only">{t("actions.label")}</span>,
@@ -220,7 +202,6 @@ function SystemUsersList({
     },
   ];
 
-  // The page's only row: deleting it leaves the page, so go to the one before.
   const prevPage = data.length === 1 && meta?.current_page > 1 ? meta.current_page - 1 : null;
   const sshEnforced = meta?.ssh_access_enforced ?? null;
 
@@ -230,7 +211,6 @@ function SystemUsersList({
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <SearchInput placeholder={t("searchPlaceholder")} />
       <div className="flex flex-wrap items-center gap-2">
-        {/* Beside Add while something is selected: the list keeps its toolbar. */}
         {canManage && selected.length > 0 ? (
           <>
             <span className="text-sm text-muted-foreground">{t("bulk.selected", { count: selected.length })}</span>
@@ -256,10 +236,7 @@ function SystemUsersList({
 
   return (
     <div className="space-y-4">
-      {/* Until Access & security is saved, sshd has no AllowGroups line, so "SSH
-          login: off" keeps nobody out. Only `false`: `null` means sshd was not asked. */}
-      {/* Managers only: the fix is theirs; a viewer can neither change the switches nor
-          save the setting. */}
+      {/* Until Access & security is saved, sshd has no AllowGroups line. null means not checked. */}
       {canManage && sshEnforced === false && data.length ? (
         <Caution
           size="md"
@@ -277,11 +254,9 @@ function SystemUsersList({
         </Caution>
       ) : null}
 
-      {/* What the last bulk delete did, until the next one or Clear; the reasons sit on the rows. */}
       {bulkResult && keptCount > 0 ? (
         <Caution size="md" tone="destructive">
           <p>{t("bulk.partial", { deleted: bulkResult.succeeded.length, kept: keptCount })}</p>
-          {/* The rows say why in a few words; what to do about it is said once, here. */}
           {BULK_FIXES.filter((reason) => Object.values(failures).some((failure) => failure.reason === reason)).map((reason) => (
             <p key={reason}>{t(`bulk.fix.${reason}`)}</p>
           ))}
@@ -300,7 +275,6 @@ function SystemUsersList({
                   variant="outline"
                   onClick={() => {
                     setQuery({ search: undefined }, { resetPage: true });
-                    // The button disappears with the empty state; focus the search box instead.
                     document.querySelector("[data-search-input]")?.focus();
                   }}
                 >
@@ -314,7 +288,6 @@ function SystemUsersList({
               title={t("empty.title")}
               description={t("empty.desc")}
               action={
-                // Even on the empty state: a disabled button explains why the user can't act.
                 <ReasonTooltip reason={canManage ? null : DENIED}>
                   <Button disabled={!canManage} onClick={() => setCreateOpen(true)}>
                     <Plus className="size-4" />
@@ -326,10 +299,7 @@ function SystemUsersList({
           )}
         </ListCard>
       ) : (
-        // Below xl the rows are cards of their own, so the list drops its frame there.
         <ListCard from="c900" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
-          {/* Cards below xl (1280), the table from there up, as in Cron Jobs: seven columns
-              need ~950px, available at 1280 with the sidebar open. */}
           <div className="@min-[900px]/page:hidden">
             <SystemUsersCards
               users={filtered}
@@ -365,7 +335,6 @@ function SystemUsersList({
           open={bulkOpen}
           onOpenChange={setBulkOpen}
           onDone={(outcome) => {
-            // The refused stay selected, so fixing the cause and pressing Delete again works.
             setSelection(Object.fromEntries(Object.keys(outcome.failures).map((id) => [String(id), true])));
             setBulkResult(outcome);
           }}

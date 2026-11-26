@@ -21,8 +21,6 @@ export async function generateMetadata({ params }) {
   return { title: `${t("title")} — ${result.application?.name ?? ""}` };
 }
 
-// A container site's compose file. A full page, not a dialog, so Save is never below the
-// fold; it takes Environment's place, since a container's variables live in this file.
 export default async function ApplicationComposePage({ params }) {
   const { application: id } = await params;
 
@@ -36,8 +34,6 @@ export default async function ApplicationComposePage({ params }) {
   if (!can(permissions, "application", "view"))
     return <PermissionDenied title={t("title")} />;
 
-  // The site is gone. Land on the list — the only place left to go — and say why
-  // on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
 
   if (result.failed || !result.application) {
@@ -51,9 +47,6 @@ export default async function ApplicationComposePage({ params }) {
     );
   }
 
-  // Granted only for site types that HAVE a compose file, so a missing grant here
-  // means this screen should not exist for this site — a PHP site reaching it by
-  // URL is told no rather than shown an empty editor.
   if (!can(appPermissions, "app_compose", "view", "application")) {
     return <PermissionDenied title={t("title")} typeFeature />;
   }

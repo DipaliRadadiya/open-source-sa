@@ -142,8 +142,6 @@ test("deep pass: switch keeps focus while saving, each switch named, long names 
 
 test("View output follows Logs, the other items follow cron manage; focus to Add after delete", () => {
   assert.match(read("app/(app)/cron-jobs/page.jsx"), /const canViewLogs = can\(permissions, "logs", "view"\)/);
-  const t = read("components/cron-jobs/cronjobs-table.jsx");
-  assert.match(t, /Always there: a view-only reader still gets the menu/);
   const a = read("components/cron-jobs/cronjob-row-actions.jsx");
   assert.match(a, /!canViewLogs \? \(\s*<MenuItemHint hint=\{t\("actions\.noLogsPermission"\)\}>/);
   // Edit, Duplicate, Delete, and Switch to PHP (a338f771) when a site's job is on another PHP.

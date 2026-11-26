@@ -9,10 +9,7 @@ import { containerState, describeWarnings, healthWarnings } from "@/lib/applicat
 import { Badge } from "@/components/ui/badge";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-/* Kept out of `applications-table.jsx` so the sidebar does not pull DataTable into the shell bundle. */
-// The statuses `filter[status]` accepts, in API order. Fixed rather than derived
-// from the current page's rows, which would only offer statuses on that page.
-// `paused` is a filter value, not a stored status: a paused site stays `active` (is_disabled).
+// Kept out of applications-table.jsx so the sidebar doesn't pull DataTable into the shell bundle.
 export const APPLICATION_STATUSES = ["pending", "provisioning", "active", "paused", "failed"];
 
 export const STATUS_VARIANTS = {
@@ -20,12 +17,10 @@ export const STATUS_VARIANTS = {
   failed: "destructive",
   provisioning: "warning",
   pending: "muted",
-  // Same amber as the Paused badge.
   paused: "warning",
 };
 
-// `status` is setup state ("active" = set up), not whether the app runs. An app with a
-// process (Node, git) that is stopped or crashed must not read "Running".
+// status is setup state; a stopped or crashed process must not read Running.
 export function isProcessDown(application) {
   return (
     application.status === "active" &&
@@ -37,7 +32,6 @@ export function isProcessDown(application) {
   );
 }
 
-// The pill's leading dot; it pulses only for a live state.
 function PillDot({ tone, live = false }) {
   return (
     <span className="relative flex size-1.5 shrink-0" aria-hidden>
@@ -49,7 +43,6 @@ function PillDot({ tone, live = false }) {
   );
 }
 
-// Container states that differ from `status`; `running` reads the same as `active`.
 const CONTAINER_BADGES = {
   starting: { variant: "warning", key: "containerState.starting" },
   degraded: { variant: "warning", key: "containerState.degraded" },
@@ -57,13 +50,9 @@ const CONTAINER_BADGES = {
   failed: { variant: "destructive", key: "status.failed" },
 };
 
-// Badge and notes are split because the card and table place them differently.
-// `deploying`: the page knows a deploy is queued, which the application payload alone cannot say.
 export function ApplicationStatusBadge({ application, deploying = false }) {
   const t = useTranslations("applications");
 
-  // Paused outranks status: `disable()` serves a placeholder page but `status`
-  // stays `active`. Amber, not destructive: deliberate, but worth noticing.
   if (application.is_disabled) {
     return (
       <Badge variant="warning" className="gap-1.5 font-normal">
@@ -73,8 +62,6 @@ export function ApplicationStatusBadge({ application, deploying = false }) {
     );
   }
 
-  // The API reports `provisioning` for a redeploy too, while the site keeps
-  // serving its old code.
   if (isRedeploying(application) || deploying) {
     return (
       <Badge variant="warning" className="gap-1.5 font-normal">
@@ -84,8 +71,6 @@ export function ApplicationStatusBadge({ application, deploying = false }) {
     );
   }
 
-  // An `active` container site can still be down: a failed PUT /container or
-  // Pull leaves `status` alone and records the failure beside it.
   const container = containerState(application);
   if (CONTAINER_BADGES[container]) {
     const { variant, key } = CONTAINER_BADGES[container];
@@ -118,7 +103,6 @@ export function ApplicationStatusBadge({ application, deploying = false }) {
   );
 }
 
-// One tone per badge variant, so the dot cannot drift from STATUS_VARIANTS.
 const DOT_TONES = {
   success: "bg-success",
   destructive: "bg-destructive",
@@ -127,7 +111,6 @@ const DOT_TONES = {
   muted: "bg-muted-foreground/50",
 };
 
-// Sidebar variant; shares `STATUS_VARIANTS` and the `is_disabled` precedence above.
 export function ApplicationStatusDot({ application, className, labelClassName }) {
   const t = useTranslations("applications");
   const paused = Boolean(application.is_disabled);
@@ -153,22 +136,16 @@ export function ApplicationStatusDot({ application, className, labelClassName })
   );
 }
 
-// overflow-wrap:anywhere: if a long word still meets a narrower column it breaks instead of spilling over the next one.
 const NOTE_TAG = "flex w-fit max-w-full min-w-0 items-start gap-1 whitespace-normal [overflow-wrap:anywhere] rounded-md px-1.5 py-0.5 text-xs leading-4";
 
 export function ApplicationStatusNotes({ application, className }) {
   const t = useTranslations("applications");
-  // The badge already says "Stopped"; the note adds only that it crashed.
   const processDown = isProcessDown(application) && application.process.state === "failed";
-  // Deploy is git-only, so this marker is too.
   const isGit = Boolean(application.repository || application.repository_url);
   const deployFailed = isGit && application.status === "active" && Boolean(application.failed_step);
   const provisioning =
     (application.status === "pending" || application.status === "provisioning") && application.steps?.length;
-  // Containers that need attention: a helper while the main part works (yellow), or the main
-  // container that made it red, named first. Raw service names, worded states.
   const container = containerState(application);
-  // The badge already says "Restarting", and the API's sentence for it is a paragraph.
   const reference = application.status === "failed" && application.reference && container !== "restarting";
   const warnings = healthWarnings(application);
   const helperNote = (container === "degraded" || container === "starting") && warnings.length > 0;
@@ -176,26 +153,17 @@ export function ApplicationStatusNotes({ application, className }) {
   if (!provisioning && !reference && !processDown && !deployFailed && !helperNote && !mainNote) return null;
   return (
     <div className={cn("space-y-1", className)}>
-      {/* The API sends raw step identifiers; show labels. Wraps rather than
-          truncates so a failure reason is never cut off. */}
       {provisioning ? (
         <p className="max-w-40 text-xs text-pretty text-muted-foreground">
           {provisionStepLabel(application.steps.at(-1), t, "details.")}
         </p>
       ) : null}
-      {/* Shows where it stopped rather than the bare support id; falls back to the
-          reference when the API sends no failed_step. */}
       {reference ? (
-        // Prefer the server's localized cause. Show the step only when `provisionStepLabel`
-        // can name it; its fallback reads as nonsense here.
         application.last_failure?.message ? (
-          // A container's own one-line reason; the paragraph is on the application's page.
           <p className="max-w-52 text-xs text-pretty text-destructive">
             {application.last_failure.message}
           </p>
         ) : application.failed_reason_title ? (
-          // The API's cause is a paragraph: two lines here, the whole of it on hover and on
-          // the application's page (the full text made one row huge).
           <HoverHint content={application.failed_reason_title}>
             <p className="line-clamp-2 max-w-52 text-xs text-pretty text-destructive">
               {application.failed_reason_title}
@@ -203,21 +171,16 @@ export function ApplicationStatusNotes({ application, className }) {
           </HoverHint>
         ) : PROVISION_STEPS.has(application.failed_step) ? (
           <p className="max-w-52 text-xs text-pretty text-destructive">
-            {/* Same string as the detail page: both describe one failure. */}
             {t("details.failedAt", {
               step: provisionStepLabel(application.failed_step, t, "details."),
             })}
           </p>
         ) : (
-          /* Truncated, not wrapped: the column is fixed-width and a partial UUID is still
-             recognisable; the detail page shows it in full. */
           <p className="max-w-52 truncate font-mono text-xs text-destructive">
             {application.reference}
           </p>
         )
       ) : null}
-      {/* Small tinted tags, not loose coloured text: an icon over two ragged lines read as
-          messy under the pill (Krishna, 7 Oct). They may wrap inside the tag in long locales. */}
       {processDown ? (
         <p className={cn(NOTE_TAG, "bg-destructive-soft text-destructive")}>
           <CircleAlert className="mt-0.5 size-3 shrink-0" />

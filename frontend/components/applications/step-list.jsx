@@ -1,7 +1,6 @@
 import { Check, CircleAlert, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Only completed steps get a row: the API reports what finished, never what started.
 function Marker({ tone, children }) {
   return (
     <span
@@ -26,12 +25,10 @@ export function StepList({
   label,
   className,
 }) {
-  // The API's list ends with the failed step; drop it so it is not drawn twice.
   const done =
     failedStep && steps[steps.length - 1] === failedStep ? steps.slice(0, -1) : steps;
 
   return (
-    // Rows appear one at a time, so announce additions to screen readers.
     <ol className={cn("space-y-2.5", className)} aria-live="polite">
       {done.map((step, index) => (
         <li key={`${step}-${index}`} className="flex items-center gap-3 text-sm">

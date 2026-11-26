@@ -12,13 +12,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Via the preview endpoint: download sends octet-stream + nosniff. The API decides previewability
-// from the bytes; SVG and oversized files are refused but still downloadable.
+// The download endpoint sends nosniff, so use the preview endpoint.
 export function ImagePreviewDialog({ appId, file, open, onOpenChange }) {
   const t = useTranslations("applications.files");
   const [state, setState] = useState({ status: "loading" });
 
-  // Reset during render, not in the effect, so the previous image never paints for a frame.
+  // Reset during render so the previous image never paints for a frame.
   const [seenPath, setSeenPath] = useState(file?.path);
   if (seenPath !== file?.path) {
     setSeenPath(file?.path);
@@ -33,7 +32,6 @@ export function ImagePreviewDialog({ appId, file, open, onOpenChange }) {
     fetchFilePreview(appId, file.path, { signal: controller.signal })
       .then((result) => {
         if (controller.signal.aborted) {
-          // Resolved after the dialog closed: revoke now, or it leaks for the document's life.
           if (result.url) URL.revokeObjectURL(result.url);
           return;
         }
@@ -82,7 +80,6 @@ export function ImagePreviewDialog({ appId, file, open, onOpenChange }) {
 
           {state.status === "error" ? (
             <div className="flex h-56 flex-col items-center justify-center gap-2 px-6 text-center">
-              {/* The API's message says which refusal it is; our copy covers a failure with none. */}
               <p className="max-w-sm text-sm text-muted-foreground">
                 {state.message ?? t("imagePreview.loadFailed")}
               </p>

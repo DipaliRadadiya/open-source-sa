@@ -2,8 +2,6 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-// Shared by PHP and Node: tone is mapped here, wording comes from the caller.
-// Absent data shows nothing: firewalled servers never reach the upstream schedule.
 const TONE = {
   active: "success",
   current: "success",
@@ -22,7 +20,6 @@ export function LifecycleBadge({ lifecycle, namespace, available = true, classNa
 
   return (
     <Badge variant={TONE[key] ?? "muted"} className={cn("font-normal", className)}>
-      {/* Node's LTS codename ("Iron", "Jod"), when the API sends one. */}
       {key === "lts" && lifecycle.lts_name
         ? t("ltsNamed", { name: lifecycle.lts_name })
         : t(key)}

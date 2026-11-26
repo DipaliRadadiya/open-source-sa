@@ -12,7 +12,6 @@ const TOOLBAR = (
         </div>
 );
 
-// Server sync: the scan summary with its buttons, then the results list.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

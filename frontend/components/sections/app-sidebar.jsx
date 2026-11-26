@@ -44,8 +44,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-// Every nav item funnels through here: a sidebar click is a client-side route change
-// that `beforeunload` never sees, so unsaved edits are held here.
+// beforeunload doesn't see client-side navigation, so unsaved edits are guarded here.
 function MobileNavLink({ item, built, active, children, className }) {
   const { isMobile, setOpenMobile } = useSidebar()
   const t = useTranslations("common")
@@ -69,8 +68,6 @@ function MobileNavLink({ item, built, active, children, className }) {
   }
 
   const handleClick = (event) => {
-    // `asChild` merges this onto the anchor, so preventing the click holds the route
-    // while the provider asks about unsaved work.
     if (
       !active &&
       item.href &&
@@ -95,7 +92,6 @@ function MobileNavLink({ item, built, active, children, className }) {
   )
 }
 
-// Shows the wait at the click point as well as in the top bar.
 function PendingNavIcon({ name }) {
   const { pending } = useLinkStatus();
 
@@ -113,32 +109,20 @@ export function AppSidebar({ items, initialGroups = {} }) {
   const applicationId = params?.application;
   const iconOnly = state === "collapsed" && !isMobile;
 
-  // Inside an application, prefer its layout's catalog (filtered by site type);
-  // until it arrives the shared catalog renders the same items unfiltered.
   const { items: applicationItems, resolved, application, gitProvider, iconDataUri } = useApplicationNav();
-  // Once the layout answers "no menu", the site does not exist: fall back to the
-  // SERVER panel rather than a site menu whose links all 404.
   const insideApplication = Boolean(applicationId) && (applicationItems !== null || !resolved);
-  // Until the application's own menu arrives, placeholders: the shared catalog is
-  // unfiltered, so a Docker app showed PHP, Staging and Deployments for a moment.
   const pendingApplication = Boolean(applicationId) && !resolved;
   const currentPanel = insideApplication ? "application" : "server";
   const source = insideApplication ? (applicationItems ?? items) : items;
 
-  // Every application screen in the catalog is shown; routes not yet built render
-  // as non-clickable "Soon" rows rather than being hidden or 404ing.
   const visible = resolveNavItems(source, applicationId)
     .filter((item) => item?.permissions?.view)
     .filter((item) => item.level === currentPanel);
 
   const groups = groupNavItems(visible);
 
-  // Longest match wins: the application Dashboard's href (`/applications/{id}`)
-  // prefixes every sub-page, so pick the single deepest match.
   const activeItem = findActiveNavItem(visible, pathname);
 
-  // Only what the person toggled; everything else follows the default. Keyed by panel too:
-  // the server and an application both have a "security" group.
   const [toggled, setToggled] = useState(initialGroups);
   function toggle(key, open) {
     const next = { ...toggled, [key]: open };
@@ -151,7 +135,6 @@ export function AppSidebar({ items, initialGroups = {} }) {
   return (
     <Sidebar collapsible="icon" label={t("serverNavigation")}>
       <SidebarHeader className="h-16 justify-center border-b px-3">
-        {/* Home is the first screen the role can open, not /dashboard for everyone. */}
         <Link
           href={home}
           className="flex items-center"
@@ -166,7 +149,6 @@ export function AppSidebar({ items, initialGroups = {} }) {
           )}
         </Link>
       </SidebarHeader>
-      {/* Which machine this is; only someone who may read the dashboard is asked. */}
       {!insideApplication && can(items, "dashboard", "view") ? (
         <SidebarGroup className="px-2 pt-3 pb-0 group-data-[collapsible=icon]:hidden">
           <SidebarServerCard />
@@ -194,28 +176,21 @@ export function AppSidebar({ items, initialGroups = {} }) {
               </MobileNavLink>
             </SidebarMenuItem>
             <SidebarMenuItem className="relative">
-              {/* The card is the application switcher: it opens a searched list of the
-                  server's applications. The Dashboard is the first link below it. */}
               <SidebarMenuButton
                 asChild
                 tooltip={t("applicationContext.switch")}
-                /* The same green-edged plate as the server card. */
                 className={cn(NAV_ITEM_CLASS, "relative h-auto min-h-20 items-start overflow-hidden rounded-[2px] border border-primary/70 bg-card p-3 shadow-none transition-colors hover:border-primary hover:bg-card active:bg-card data-[active=true]:bg-card data-[state=open]:border-primary group-data-[collapsible=icon]:min-h-8! group-data-[collapsible=icon]:p-2!")}
               >
                 <ApplicationSwitcher application={application} aria-label={t("applicationContext.switchNamed", { name: application.name })}>
                   <span className="flex w-full min-w-0 flex-col items-stretch gap-0 text-left">
                     <span className="relative flex w-full min-w-0 items-center gap-2.5">
-                      {/* On its own tile so the brand mark has a surface against the tint. */}
                       <span className="flex size-9 shrink-0 items-center justify-center rounded-[2px] border border-primary/60 group-data-[collapsible=icon]:size-5! group-data-[collapsible=icon]:border-0!">
                         <SiteTypeLogo name={application.site_type} provider={gitProvider} iconDataUri={iconDataUri} size="h-5 w-5" />
                       </span>
-                      {/* Hidden explicitly when the rail collapses to icons: the sidebar only hides a
-                          button's LAST span (the domain line), and the rest would overflow. */}
                       <span className="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
                         <HoverHint content={application.name}><span className="block truncate font-mono text-sm font-semibold text-foreground">
                           {application.name}
                         </span></HoverHint>
-                        {/* Status, then what it is: "Running · WordPress". */}
                         <span className="mt-1 flex min-w-0 items-center gap-1 font-mono text-xs text-muted-foreground">
                           <ApplicationStatusDot application={application} className="shrink-0 [&>span:first-child]:rounded-none" labelClassName="text-xs" />
                           {application.site_type_title ? (
@@ -225,22 +200,17 @@ export function AppSidebar({ items, initialGroups = {} }) {
                       </span>
                       <ChevronsUpDown className="size-4 shrink-0 self-start text-muted-foreground group-data-[collapsible=icon]:hidden" aria-hidden />
                     </span>
-                    {/* Its own full-width line, in a box: the domain is often the longest string and
-                        would truncate mid-host beside the name. */}
-                    {/* Right padding keeps the domain clear of the open-site icon drawn over this row. */}
                     <span className="mt-2.5 block w-full truncate rounded-[2px] border bg-background py-1.5 pr-8 pl-2.5 font-mono text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
                       {application.domain}
                     </span>
                   </span>
                 </ApplicationSwitcher>
               </SidebarMenuButton>
-              {/* Sibling, not child: anchors cannot nest. Only while the site is served
-                  (a provisioning site would show a connection error). */}
+              {/* Sibling, not child: anchors can't nest. */}
               {application.status === "active" && application.url ? (
                 <VisitSiteLink
                   href={application.url}
                   label={t("applicationContext.visit", { domain: application.domain })}
-                  // On the domain row's right end, not over the name.
                   className="absolute right-3.5 bottom-3.5 group-data-[collapsible=icon]:hidden"
                 />
               ) : null}
@@ -248,15 +218,11 @@ export function AppSidebar({ items, initialGroups = {} }) {
           </SidebarMenu>
         </SidebarGroup>
       ) : null}
-      {/* pt-4: room between the server/application card above and the first link. */}
       <SidebarContent className="gap-0 pt-4 pb-2">
-        {/* Keyed on level AND application id: switching sites is also a level change,
-            though `currentPanel` stays "application". */}
         <SidebarLevelTransition level={insideApplication ? `application:${applicationId}` : "server"}>
         {pendingApplication ? <PendingMenu /> : null}
         {pendingApplication ? null : groups.map((group) => {
           const title = groupTitle(group);
-          // Icon-only rail has no labels, so nothing in it may be hidden.
           const open =
             iconOnly ||
             !title ||
@@ -297,8 +263,6 @@ export function AppSidebar({ items, initialGroups = {} }) {
                 return (
                   <SidebarMenuItem key={`${item.name}-${item.href}`}>
                     <MobileNavLink item={item} built active={active}>
-                      {/* No prefetch: each one is a full server render against the API's rate
-                          limit, and the whole menu is always on screen. */}
                       <Link href={item.href} prefetch={false}>
                         <PendingNavIcon name={item.icon} />
                         <span>{navTitle(item, t)}</span>
@@ -319,8 +283,6 @@ export function AppSidebar({ items, initialGroups = {} }) {
   );
 }
 
-// Fixed widths: random ones (as shadcn's menu skeleton uses) differ between the server
-// and the browser and break hydration.
 const PENDING_ROWS = ["w-24", "w-28", "w-20", "w-16", "w-12", "w-24", "w-32", "w-28"];
 
 function PendingMenu() {

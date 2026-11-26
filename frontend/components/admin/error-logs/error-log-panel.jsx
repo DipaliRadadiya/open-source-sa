@@ -25,15 +25,12 @@ import { SELECT_WELL } from "@/components/data-table/toolbar-well";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FILTER_TOGGLE_ITEM } from "@/lib/theme/filter-toggle";
 
-// Two searches on purpose: the text box filters what is loaded; the reference
-// lookup queries the server, since the entry may be older than the loaded lines.
 export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
   const t = useTranslations("errorLogs");
   const tc = useTranslations("common");
   const setQuery = useSetQuery();
   const [search, setSearch] = useState("");
   const [referenceOpen, setReferenceOpen] = useState(false);
-  // API failures and failed server commands are different problems for different people.
   const [kind, setKind] = useState("all");
   const kindOf = (group) => (group.kind === "operation" ? "operation" : "api");
   const counts = useMemo(
@@ -45,7 +42,6 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
     [groups],
   );
 
-  /* With no entries, search and size have nothing to act on; Refresh stays. */
   const hasEntries = groups.length > 0;
 
   const visible = useMemo(
@@ -55,9 +51,6 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
 
   return (
     <div className="space-y-4">
-      {/* The everyday search first (the same width as every list's), the kind filter beside it; a reference is a
-          rare support step, so it waits behind its own button (Krishna, 17 Oct: two
-          look-alike search boxes side by side). */}
       <div className="flex flex-wrap items-center gap-2">
         {hasEntries ? (
           <LocalSearchInput value={search} onChange={setSearch} placeholder={t("searchPlaceholder")} />
@@ -80,7 +73,6 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
         ) : null}
 
         <div className="ml-auto flex items-center gap-2">
-          {/* Kept even with an empty list: a reference may point at an older failure. */}
           <Popover open={referenceOpen} onOpenChange={setReferenceOpen}>
             <PopoverTrigger asChild>
               <Button variant={reference ? "secondary" : "outline"}>
@@ -105,7 +97,6 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
 
           {hasEntries ? (
             <Select value={String(lines)} onValueChange={(value) => setQuery({ lines: value })}>
-              {/* "Last 100" says what the number is; a bare "Show 100" did not. */}
               <SelectTrigger className={cn(SELECT_WELL, "w-auto min-w-28")} aria-label={t("linesLabel")}>
                 <SelectValue />
               </SelectTrigger>
@@ -122,14 +113,12 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
         </div>
       </div>
 
-      {/* Say the list is cut short, or the oldest entry reads as the first. */}
       {truncated ? (
         <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
           {t("truncated", { lines })}
         </p>
       ) : null}
 
-      {/* Own wording: "no failures recorded" would misread as a clean log. */}
       {!hasEntries && reference ? (
         <EmptyState
           icon={SearchX}

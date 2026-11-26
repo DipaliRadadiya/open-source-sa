@@ -75,5 +75,5 @@ test("on a PHP server the PHP version is shown, and sent, only for a PHP applica
   const form = fs.readFileSync(new URL("../components/applications/create-application-form.jsx", import.meta.url), "utf8");
   assert.match(form, /const asksRendering = typeFields\.some\(\(config\) => config\.name === "rendering_type"\);/);
   assert.match(form, /\(config\.source !== "php_versions" \|\| !asksRendering \|\| renderingType === "php"\)/);
-  assert.match(form, /\/\/ Only visible fields are sent\.\n\s+for \(const config of visibleFields\)/);
+  assert.match(form, /for \(const config of visibleFields\)/);
 });

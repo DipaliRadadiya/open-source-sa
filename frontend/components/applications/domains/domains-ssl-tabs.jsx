@@ -8,12 +8,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 
 const TABS = ["domains", "ssl"];
-// !h-auto overrides shadcn TabsList's hard-coded height so the py padding lands.
 const TRIGGER = "!h-auto gap-2 px-4 py-2";
 
-// The SSL tab icon shows the security status without opening the tab.
 function SslIcon({ status, label }) {
-  // Certificate read failed: show "unknown", never "not secured".
   if (status === "unknown")
     return <ShieldQuestion className="size-4 text-muted-foreground" aria-label={label} />;
   if (status === "active") return <Lock className="size-4 text-success" aria-label={label} />;
@@ -24,8 +21,6 @@ function SslIcon({ status, label }) {
   return <ShieldOff className="size-4 text-muted-foreground" aria-label={label} />;
 }
 
-// Both panels stay mounted (`forceMount`) so an in-flight certificate issue
-// keeps polling across tab switches.
 export function DomainsSslTabs({ domains, ssl, sslStatus = "none" }) {
   const t = useTranslations("applications.domains");
   const searchParams = useSearchParams();
@@ -48,7 +43,6 @@ export function DomainsSslTabs({ domains, ssl, sslStatus = "none" }) {
 
   return (
     <Tabs value={tab} onValueChange={onChange} className="gap-4">
-      {/* Scrolls rather than wraps, like the Settings tab bar. */}
       <ScrollFade className="-mx-1 px-1 pb-1">
         <TabsList className="!h-auto w-fit gap-1 p-1">
           <TabsTrigger value="domains" className={TRIGGER}>

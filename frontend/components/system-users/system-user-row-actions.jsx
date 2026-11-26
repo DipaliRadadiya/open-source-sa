@@ -15,8 +15,6 @@ import { SshKeysDialog } from "@/components/system-users/ssh-keys-dialog";
 import { DeleteSystemUserDialog } from "@/components/system-users/delete-system-user-dialog";
 import { DENIED } from "@/components/ui/reason-tooltip";
 
-// Shown to viewers too: the menu is the only way to view a user's SSH keys.
-// Actions they cannot take stay visible, disabled with the reason.
 export function SystemUserRowActions({
   user,
   canManage = true,
@@ -28,14 +26,11 @@ export function SystemUserRowActions({
   const [pwOpen, setPwOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
-  // Only an item that opens a dialog keeps focus off the ⋯ button (the dialog takes
-  // it, then hands it back); Escape or a click away returns it there.
   const openingDialog = useRef(false);
   const open = (setter) => () => {
     openingDialog.current = true;
     setter(true);
   };
-  // Backend blocks deleting a user that still owns applications (422).
   const ownsApps = (user.applications?.length ?? 0) > 0;
 
   return (

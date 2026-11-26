@@ -1,7 +1,6 @@
 import { domainsResponseSchema, certificateResponseSchema } from "@/lib/schemas/domain";
 import { read } from "@/lib/api/read";
 
-
 export async function getApplicationDomains(id) {
   const result = await read(`/applications/${id}/domains`, domainsResponseSchema);
   return { domains: result.data?.domains ?? [], failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
@@ -9,7 +8,6 @@ export async function getApplicationDomains(id) {
 
 export async function getApplicationCertificate(id) {
   const result = await read(`/applications/${id}/certificate`, certificateResponseSchema);
-  // Keep `failed` distinct from "no certificate": a failed read is not plain HTTP.
   return {
     certificate: result.data?.certificate ?? null,
     availableTypes: result.data?.available_types ?? [],

@@ -21,12 +21,7 @@ import {
 import { HoverHint } from "@/components/ui/hover-hint";
 import { COVERAGE_WIDTHS } from "@/components/backups/coverage-widths";
 
-// Cells are module-level components: flexRender treats a cell function's identity
-// as the component type, so one defined in render remounts every time.
-
-// Failing first, as it needs attention today; unprotected last, since its
-// placeholders keep it legible anywhere in the list.
-// Rows arrive in the server's order (`sort=state`: failing first), so none is applied here.
+// Cells at module level: inline cells remount every render.
 
 function SiteCell({ row }) {
   const t = useTranslations("backups.coverage");
@@ -34,8 +29,6 @@ function SiteCell({ row }) {
 
   return (
     <div className="min-w-0">
-      {/* The badges wrap under the name rather than squeeze it: "wpsc (Staging)" lost its end
-          beside a long French "PRÉPRODUCTION" (4 Nov). Only a name longer than the cell truncates. */}
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
         <HoverHint content={application.name}><Link
           prefetch={false}
@@ -49,9 +42,6 @@ function SiteCell({ row }) {
             {t("staging")}
           </Badge>
         ) : null}
-        {/* Status beside the name, at every width. Not where the row already says it
-            (Krishna, 8 Oct): "Manual only" is in the Schedule column, and "None" is the
-            "Not set up" line across the row. */}
         {row.original.state === "paused" || row.original.state === "unprotected" ? null : (
           <span className="shrink-0">
             <StatusCell row={row} />
@@ -76,7 +66,6 @@ export function StatusCell({ row }) {
   );
 }
 
-/** A site with no schedule states that in every column, so it does not look like missing data. */
 function Placeholder({ children }) {
   return <span className="text-sm text-muted-foreground">{children}</span>;
 }
@@ -105,12 +94,9 @@ export function ScheduleCell({ row, options }) {
   const { target } = row.original;
   if (!target) return <Placeholder>{t("placeholders.schedule")}</Placeholder>;
 
-  // The hour on its own line: the column is too narrow for "Daily · 2:00 AM".
-  // A manual target has no hour and gets no line.
   const when = scheduleWhen(target, options, format);
   const time = when?.minute ? t("minutePast", { minute: when.minute }) : (when?.time ?? null);
 
-  // Amber when paused: this is the row's only "Manual only", since it has no badge.
   const paused = row.original.state === "paused";
 
   return (
@@ -126,7 +112,6 @@ export function ScheduleCell({ row, options }) {
   );
 }
 
-/** `next_run_at_human` comes from the backend, never computed here. */
 export function RunsCell({ row }) {
   const t = useTranslations("backups.coverage");
   const { target, lastBackup } = row.original;
@@ -141,15 +126,11 @@ export function RunsCell({ row }) {
             label={lastBackup.status_title ?? lastBackup.status}
           />
         ) : null}
-        {/* Falls back to the backup's own timestamp, not "Never": the runner's
-            crash path does not write `last_run_at`. */}
+        {/* Fall back to the backup's own time: a crashed run doesn't write last_run_at. */}
         <span className="text-sm whitespace-normal tabular-nums">
           {lastBackup?.created_at_human ?? target.last_backup_at_human ?? t("neverRunShort")}
         </span>
       </div>
-      {/* `is_due` outranks the timestamp: a new target's first backup runs on
-          the next tick while `next_run_at` still names tomorrow. */}
-      {/* Wraps, not cut: in a fixed-width column "Próxima: en 11 horas" lost its end. */}
       {target.is_due ? (
         <p className="text-xs whitespace-normal text-muted-foreground">{t("runsShortly")}</p>
       ) : target.next_run_at_human ? (
@@ -161,7 +142,6 @@ export function RunsCell({ row }) {
   );
 }
 
-/** Outcome of the last run: coloured and named, so it is not colour-only. */
 function BackupStatusDot({ status, label }) {
   const tone =
     status === "verified"
@@ -178,7 +158,6 @@ function BackupStatusDot({ status, label }) {
   );
 }
 
-/** One shape of action per state, so the column has a single rhythm. */
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
@@ -186,7 +165,6 @@ function ActionsCell({ row, table }) {
   const { canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null } = table.options.meta;
   const { application, target, state } = row.original;
 
-  // Run and Set up are hidden from roles that cannot change backups.
   if (state === "unprotected") {
     return (
       <div className="flex items-center justify-end gap-1">
@@ -200,13 +178,11 @@ function ActionsCell({ row, table }) {
           <ShieldCheck className="size-4" />
           {t("setUpShort")}
         </Button>
-        {/* Reserves the ⋯ space so all rows share one right edge. */}
         <span className="size-8 shrink-0" aria-hidden />
       </div>
     );
   }
 
-  // One button plus a menu for the occasional actions.
   return (
     <div className="flex items-center justify-end gap-1">
       <ReasonTooltip
@@ -264,18 +240,10 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
     {
       accessorKey: "application.name",
       header: t("columns.site"),
-      // Takes what the fixed columns leave; max-w-0 lets the name and domain truncate.
       meta: { className: "max-w-0" },
       cell: SiteCell,
     },
-    // Headers may wrap so long translations don't widen the columns.
-    // Own columns again (the stacked "Backup type / Storage" header read
-    // as cramped); dropping the Status column made the room.
-    // "Type", not "Backup type": on this page it can only mean that, and the long
-    // form wrapped to two lines at 1280.
     { id: "type", header: wrapping(t("columns.typeShort")), meta: { className: COVERAGE_WIDTHS.kind }, cell: TypeCell },
-    // The time zone is named in the header of the one column with clock times, as Cron Jobs does
-    // ("Next run · UTC"); a footer line under the pager read as detached.
     { id: "schedule", header: wrapping(scheduleTimezone ? t("columns.scheduleIn", { timezone: wrappableTimezoneLabel(scheduleTimezone) }) : t("columns.schedule")), meta: { className: COVERAGE_WIDTHS.schedule }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
     { id: "storage", header: wrapping(t("columns.storage")), meta: { className: COVERAGE_WIDTHS.storage }, cell: StorageCell },
     { id: "runs", header: wrapping(t("columns.lastRun")), meta: { className: COVERAGE_WIDTHS.runs }, cell: RunsCell },
@@ -290,12 +258,10 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
   return (
     <DataTable
       bare={bare}
-      // Binding widths: the databases table below uses the same ones and must line up.
       fixedLayout
       columns={columns}
       data={rows}
       emptyMessage={t("noMatches")}
-      // A site with no target gets one sentence across the four columns.
       spanCells={{
         columns: ["type", "schedule", "storage", "runs"],
         render: (row) => (row.target ? null : <NotSetUp />),
@@ -311,7 +277,5 @@ const wrapping = (label) => function WrappingHeader() {
 
 function NotSetUp() {
   const t = useTranslations("backups.coverage");
-  // Wraps, or this sentence sets the width of the columns it spans and pushes
-  // the Run button off-screen.
   return <span className="text-sm whitespace-normal text-muted-foreground/80">{t("notSetUpLine")}</span>;
 }

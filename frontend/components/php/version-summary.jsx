@@ -23,11 +23,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { apiMessage } from "@/lib/api/error-message";
 import { cronjobsOnDefaultSchema } from "@/lib/schemas/cronjob-php";
 
-// Long states ("Installation fehlgeschlagen") wrap instead of spilling.
 const WRAP = "h-auto text-left whitespace-normal";
 
-// One row of the Installed versions table. Clicking it shows its settings below; the
-// selection lives in the URL, keeping whichever settings tab is open.
 export function VersionSummary({
   version,
   canManage,
@@ -45,28 +42,20 @@ export function VersionSummary({
   const href = selectable ? `${pathname}?${params.toString()}` : null;
   const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(false);
-  // WHICH action is running, so only that button spins. They still disable
-  // together, because both act on one version.
   const [running, setRunning] = useState(null);
   const pending = running !== null;
 
   const usedBy = version.in_use_by ?? 0;
 
-  // The API omits `status` on older responses; absent means ready.
   const installState = versionState(version);
 
-  // Present but not set up by the panel (e.g. `lsphp83` from OpenLiteSpeed).
-  // Hidden mid-install, when the list is legitimately incomplete.
   const missingPackages = version.missing_packages ?? [];
   const incomplete = missingPackages.length > 0 && !installState;
 
-  // Nothing is on disk, so anything that reads or writes this install fails.
-  // Removing is the exception: clearing a failed install is the next step.
   const notReadyReason = installState
     ? installState === "installing"
       ? t("versions.stillInstalling")
-      : // Removing is in flight too, so reads and writes are refused,
-        // including a second Remove.
+      :
         installState === "removing"
         ? t("versions.stillRemoving")
         : t("versions.installFailedShort")
@@ -74,11 +63,10 @@ export function VersionSummary({
 
   const removeReason = !canManage
     ? DENIED
-    : // Already removing: a second DELETE answers 404 once apt finishes.
+    :
       installState === "removing"
       ? t("versions.stillRemoving")
-      : // Not while apt is installing it (it would race the install). A FAILED
-        // install stays removable, so this is not folded into `notReadyReason`.
+      : // Not while apt is installing it; it would race the install.
         installState === "installing"
         ? t("versions.stillInstalling")
         : version.in_use_by_panel
@@ -94,7 +82,6 @@ export function VersionSummary({
     try {
       const { data } = await setDefaultPhpVersion(version.version);
       await refreshAndWait();
-      // Plain `php` cron jobs follow the default, so they already run the new version: say which.
       const moved = cronjobsOnDefaultSchema.parse(data?.cronjobs_on_default_php ?? []);
       const names = moved.slice(0, 3).map((job) => job.name);
       if (moved.length > 3) names.push(t("versions.moreCronjobs", { count: moved.length - 3 }));
@@ -111,7 +98,6 @@ export function VersionSummary({
     }
   }
 
-  // A failed install with nothing on disk: DELETE clears the entry (204) instead of 404ing.
   async function dismiss() {
     setRunning("dismiss");
     try {
@@ -156,25 +142,19 @@ export function VersionSummary({
     try {
       await removePhpVersion(version.version);
       await refreshAndWait();
-      // "Removing", not "removed": a 202, apt has minutes of work ahead.
       toast.success(t("versions.removing", { version: version.version }));
       setConfirming(false);
     } catch (error) {
-      // The API names the blocking sites in its message.
       toast.error(apiMessage(error, t("versions.removeFailed")));
     } finally {
       setRunning(null);
     }
   }
 
-  // Each action appears only when it applies: the default cannot be made
-  // default again, and the panel's own version cannot be removed.
   const showMakeDefault = !version.is_default;
-  // `destroy()` refuses a version not installed, so a failed install offers reinstall.
   const nothingToRemove = failedWithNothingInstalled(version);
   const showRemove = !version.in_use_by_panel && !nothingToRemove;
 
-  // The exact release when the server could read it; otherwise the minor line.
   const name = t("versions.name", { version: version.full_version ?? version.version });
 
   return (
@@ -183,14 +163,11 @@ export function VersionSummary({
         "relative px-4 py-3 transition-colors",
         SUBGRID,
         href && "hover:bg-muted/40",
-        // A tint and an edge, so the selected row reads as the one the settings below belong to.
         selected && "bg-primary/[0.04] shadow-[inset_3px_0_0_var(--primary)]",
       )}
     >
       <div className={cn("grid gap-y-2 @3xl/versions:items-center", SUBGRID)}>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          {/* The whole row selects the version: the link's ::after covers it, and the
-              controls sit above it (z-10). */}
           {href ? (
             <Link
               href={href}
@@ -209,13 +186,11 @@ export function VersionSummary({
           ) : (
             <span className="font-medium">{name}</span>
           )}
-          {/* Filled, not outlined: "Default" is a state, not a plain label. */}
           {version.is_default ? (
             <Badge variant="muted" className="font-normal">
               {t("versions.default")}
             </Badge>
           ) : null}
-          {/* Not folded into the status badge: a version can be both incomplete AND end-of-life. */}
           {incomplete ? (
             <Badge variant="warning" className="font-normal">
               {t("versions.incomplete")}
@@ -236,9 +211,7 @@ export function VersionSummary({
 
         <UsedByCell version={version} namespace="php" label={t("table.colUsedBy")} />
 
-        {/* Clicks between the buttons fall through to the row link. */}
         <div className="pointer-events-none relative z-10 flex flex-wrap items-center gap-2 @3xl/versions:justify-end [&>*]:pointer-events-auto">
-          {/* The API allows an incomplete version as default; the UI does not. */}
           {!showMakeDefault ? null : (
             <ReasonTooltip
               reason={
@@ -259,7 +232,6 @@ export function VersionSummary({
             </ReasonTooltip>
           )}
 
-          {/* `PhpController::store` falls through to an idempotent apt install when incomplete. */}
           {!incomplete ? null : (
             <ReasonTooltip reason={canManage ? null : DENIED}>
               <Button
@@ -296,7 +268,6 @@ export function VersionSummary({
             </>
           )}
 
-          {/* Hidden on the panel's own version, which the API refuses. */}
           {!showRemove ? null : (
             <ReasonTooltip reason={removeReason}>
               <Button
@@ -313,12 +284,10 @@ export function VersionSummary({
         </div>
       </div>
 
-      {/* Why something stopped, as visible text (a `title` is not shown on touch or keyboard). */}
       {removeFailed(version) || incomplete || (installState && (version.started_at_human || version.output)) ? (
         <div className="relative z-10 mt-2 space-y-1 text-xs @3xl/versions:col-span-full">
           {removeFailed(version) ? (
             <p className="text-destructive">
-              {/* The job records no message for this, so ours stands in. */}
               {version.message ?? t("versions.removeFailed")}
               {version.reference ? (
                 <span className="ml-1.5 font-mono whitespace-nowrap text-muted-foreground">
@@ -339,8 +308,6 @@ export function VersionSummary({
               })}
             </p>
           ) : null}
-          {/* apt's output while installing and after a failure: the badge gives
-              the phase, only this says why it stopped. */}
           {installState && version.output ? (
             <InstallOutput text={version.output.trimEnd()} />
           ) : null}

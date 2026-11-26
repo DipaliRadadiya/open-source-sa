@@ -5,7 +5,6 @@ import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
 import { BanAge } from "@/components/fail2ban/banned-card";
 
-// Cards for narrow screens, where the table would push Unban off the edge.
 export function BannedCards({ data, canManage, onRequestUnban, unbanning, t, renderExpiry }) {
   return (
     <CardList>

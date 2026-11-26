@@ -32,24 +32,18 @@ export default async function ApplicationWorkersPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone: back to the list, which explains why.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
     return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
-  // Granted only for site types with something to supervise; same contract
-  // as Environment/Deployment.
   if (!can(appPermissions, "app_worker", "view", "application")) {
-    // 404: site type has nothing to supervise; 403: missing grant.
     if ((await getWorkers(id)).status === 404) return <PermissionDenied title={t("pageTitle")} notForType />;
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_worker", "manage", "application");
   const settled = isSettled(application);
 
-  // supervisord absent from services means not installed; `POST /workers` would then
-  // start an apt install. A failed read means unknown.
   const [workersResult, services] = settled
     ? await Promise.all([getWorkers(id), getServices().catch(() => ({ services: [], failed: true }))])
     : [{ workers: [], presets: [], checks: [], failed: false }, { services: [], failed: true }];

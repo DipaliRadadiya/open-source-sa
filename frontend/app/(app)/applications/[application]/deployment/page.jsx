@@ -34,49 +34,37 @@ export default async function ApplicationDeploymentPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // Site deleted: land on the list, which explains why on arrival.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
     return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
-  // Git sites only: the deploy endpoint 404s for anything else. Checked before
-  // the grant because the API drops `app_deployment` for non-git sites.
   const isGit = Boolean(application.repository || application.repository_url);
   if (!isGit) return <PermissionDenied title={t("pageTitle")} notForType />;
-  // Deployment is its own grant, separate from the server-level `application`.
   if (!can(appPermissions, "app_deployment", "view", "application")) {
     return <PermissionDenied title={t("pageTitle")} />;
   }
 
   const canManage = can(appPermissions, "app_deployment", "manage", "application");
-  // Logs is a separate grant; without it the failure banner offers no log link.
   const canViewLogs = can(appPermissions, "app_log", "view", "application");
   const [{ providers }, history, gitAccounts] = await Promise.all([
     getWebhookProviders(),
-    // A failure here must not hide the Deploy button; the panel renders without history.
     getDeployments(id),
-    // The application payload has no provider name. Also fetched when the
-    // account is gone, so re-linking can offer the remaining providers.
     application.git_account_id || application.git_account_missing
       ? getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
       : Promise.resolve([]),
   ]);
 
-  // Linked account first, then the repository URL (github.com, gitlab.com,
-  // bitbucket.org). Null when neither can tell: the full picker is shown.
   const gitProvider =
     gitAccounts.find((a) => a.id === application.git_account_id)?.provider ??
     gitProviderFromUrl(application.repository_url) ??
     null;
 
-  // Only the provider this site deploys from; the full list when it is unknown.
   const webhookProviders =
     gitProvider && providers.some((p) => p.name === gitProvider)
       ? providers.filter((p) => p.name === gitProvider)
       : providers;
 
-  // A site with recorded (even failed) deploys has run, so skip the waiting message.
   const settled = isSettled(application) || history.deployments.length > 0;
 
   return (

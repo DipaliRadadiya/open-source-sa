@@ -1,14 +1,9 @@
-// Permission helpers over the caller's granted catalog (from getPermissions()).
-// Each catalog item is { level, name, ..., permissions: { view, manage } }.
-
 export function findPermission(catalog, name, level = "server") {
   return (catalog ?? []).find(
     (p) => p.name === name && (!level || p.level === level),
   );
 }
 
-// True when the caller holds `action` (view | manage) on the named feature.
-// `manage` implies `view`. Pass `level: "application"` for app_* features.
 export function can(catalog, name, action = "view", level = "server") {
   const p = findPermission(catalog, name, level);
   if (!p) return false;

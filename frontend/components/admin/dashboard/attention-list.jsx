@@ -7,8 +7,6 @@ import { updateAttention } from "@/lib/admin/dashboard-facts";
 import { FAILED_SIGN_IN_ALERT } from "@/lib/admin/sign-in-facts";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// One slim line per kind of problem (at most three), linking to its detail page: the
-// same rows as the server dashboard's attention panel.
 function Row({ tone, icon: Icon, title, summary, action, href }) {
   return (
     <li>
@@ -25,12 +23,7 @@ function Row({ tone, icon: Icon, title, summary, action, href }) {
         >
           <Icon className="size-4" aria-hidden />
         </span>
-        {/* min-w-48 lets the action drop to its own line on a phone instead of squeezing
-            the title to two words a line (French, Russian; steel audit, 15 Oct). */}
         <p className="flex min-w-48 flex-1 items-center gap-1.5 text-sm leading-snug">
-          {/* The names give way first, so the problem itself stays readable. From md the
-              title keeps one line and only the summary truncates: shrinking both broke
-              "4 recent command failures" onto two lines (Krishna, 13 Oct). */}
           <span className={cn("min-w-0 font-medium break-words md:shrink-0 md:whitespace-nowrap", tone === "fail" && "text-destructive")}>{title}</span>
           {summary ? (
             <span className="hidden min-w-0 shrink-[6] truncate text-muted-foreground md:inline">· {summary}</span>
@@ -55,11 +48,9 @@ export async function AttentionList({ checks = [], errorGroups = [], update = nu
 
   const { failed, warnings, failures } = summarizeAttention({ checks, errorGroups });
 
-  // The API's localised titles, with the remainder counted.
   const nameList = (names) => {
     const shown = names.slice(0, MAX_NAMES);
     const rest = names.length - shown.length;
-    // "A, B and C" when complete; a plain comma list before "and N more".
     const joined = format.list(shown, { type: rest > 0 ? "unit" : "conjunction" });
     return rest > 0 ? t("namesMore", { names: joined, count: rest }) : joined;
   };
@@ -68,7 +59,6 @@ export async function AttentionList({ checks = [], errorGroups = [], update = nu
 
   const updateRows = updateAttention(update);
 
-  // A failed update leads: the panel may be half on the new version.
   if (updateRows.failed) {
     rows.push({
       key: "update-failed",
@@ -93,7 +83,6 @@ export async function AttentionList({ checks = [], errorGroups = [], update = nu
     });
   }
 
-  // Many failed attempts in a day: someone may be guessing passwords.
   if (signIns && signIns.day >= FAILED_SIGN_IN_ALERT) {
     rows.push({
       key: "sign-ins",
@@ -111,9 +100,7 @@ export async function AttentionList({ checks = [], errorGroups = [], update = nu
       key: "failures",
       tone: "warn",
       icon: Terminal,
-      // Distinct problems, matching the Failures tile.
       title: t("rowFailures", { count: failures.distinct }),
-      // A reason only when one stderr accounts for most; otherwise the count.
       summary: failures.reason
         ? t("failuresReason", { reason: failures.reason })
         : t("failuresOccurrences", { count: failures.count }),
@@ -134,7 +121,6 @@ export async function AttentionList({ checks = [], errorGroups = [], update = nu
     });
   }
 
-  // An update exists but cannot be installed: the four tiles said so, the banner does not.
   if (updateRows.blocked) {
     const { version, keys } = updateRows.blocked;
     rows.push({
@@ -153,15 +139,8 @@ export async function AttentionList({ checks = [], errorGroups = [], update = nu
   if (!rows.length) return null;
 
   return (
-    // No card or heading of its own, as on the server dashboard: the tiles above already
-    // say something is wrong; these lines say what, and where to fix it.
     <section aria-label={t("title")}>
-      {/* One per line: at most three rows, and the reason after each title needs the width. */}
-      {/* grid-cols-1 (minmax(0, 1fr)), not a bare grid: an auto track grew to the long error
-          summary, so on a tablet each row ran 230-340px off screen with its link (steel audit). */}
-      {/* The count heads the list it counts, as on the server dashboard. */}
       <h2 className="mb-2 font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">
-        {/* Kinds of problem (the rows), not every failure behind them. */}
         {t("heading", { count: rows.length })}
       </h2>
       <ul className="grid grid-cols-1 gap-2">

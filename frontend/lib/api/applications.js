@@ -15,41 +15,30 @@ export function getBranches(accountId, repository) {
   });
 }
 
-// Needs `app_deployment,manage`, not the server-level `application` permission.
-// Git sites only; anything else 404s.
 export function deployApplication(id) {
   return api.post(`/applications/${id}/deploy`);
 }
 
-// action: start | stop | restart. Only meaningful when `has_process`.
 export function controlApplicationProcess(id, action) {
   return api.post(`/applications/${id}/process/${action}`);
 }
 
-// Its own endpoint rather than a field on update: it restarts the application, and
-// one supervisor has to release the port before the other can bind it. The API rolls
-// back to PM2 if the unit will not serve, so a failure leaves the site up.
 export function convertApplicationSupervisor(id) {
   return api.post(`/applications/${id}/supervisor/convert`);
 }
 
-// Nothing else measures a site untouched by the panel. Throttled 10/min (cost scales with file count).
 export function measureApplicationSize(id) {
   return api.post(`/applications/${id}/directory-size`);
 }
 
-// Returns `{ site_type_detection }`, not an application. Throttled 10/min; git sites are not probed.
 export function detectApplicationSiteType(id) {
   return api.post(`/applications/${id}/detect-type`);
 }
 
-// Changes which screens the panel offers, not what is on disk. Refusals are worth showing verbatim.
 export function changeApplicationSiteType(id, siteType) {
   return api.put(`/applications/${id}/site-type`, { site_type: siteType });
 }
 
-// Holding page; nothing else is touched. Throttled 10/min (reloads the web server).
-// This and enable 422 when already in that state; show the API's sentence and re-read.
 export function disableApplication(id) {
   return api.post(`/applications/${id}/disable`);
 }
@@ -62,20 +51,12 @@ export function retryProvisioning(id) {
   return api.post(`/applications/${id}/provision`);
 }
 
-// Files are kept unless `remove_files` is sent; removing them is always the user's choice.
-// `removeDockerImages`: true/false for a Docker site and a `docker` manager; null leaves it to the API
-// (on for docker managers, off for everyone else).
 export function deleteApplication(id, { removeFiles = false, removeDatabases = false, removeDockerResources = false, removeDockerImages = null, removeSystemUser = false } = {}) {
-  // Flags are omitted when false; the API resolves the site's databases itself.
   const params = {};
   if (removeFiles) params.remove_files = true;
   if (removeDatabases) params.remove_databases = true;
-  // Named for what it removes rather than "docker": a site's own network and the
-  // volumes it mounts — and only the ones nothing else uses, which the server
-  // decides at the moment it deletes, not this call.
   if (removeDockerResources) params.remove_docker_resources = true;
   if (removeDockerImages !== null) params.remove_docker_images = removeDockerImages;
-  // Kept by the server when another application still uses it, or it is signed in.
   if (removeSystemUser) params.remove_system_user = true;
 
   return api.delete(`/applications/${id}`, {
@@ -91,24 +72,18 @@ export function checkApplicationPort(port) {
   return api.get("/applications/port-check", { params: { port } });
 }
 
-// Moves the ticked cron jobs of a site onto `version` (#5). Only the PHP word in each command
-// changes; a 422 switches none of them.
 export function switchApplicationCronjobsPhp(id, { version, cronjobIds }) {
   return api.post(`/applications/${id}/cronjobs/switch-php`, { version, cronjob_ids: cronjobIds });
 }
 
-// One call covers enable, credential change and disable; `enabled: false`
-// ignores username/password. The API always takes both credentials together.
 export function updateApplicationSecurity(id, payload) {
   return api.put(`/applications/${id}/security`, payload);
 }
 
-// Every write tests and reloads FPM for every PHP site: throttled 10/min, and the UI saves explicitly.
 export function updateApplicationPhp(id, payload) {
   return api.put(`/applications/${id}/php`, payload);
 }
 
-// Partial payload on purpose: the controller only `fill()`s what it is sent.
 export function resetApplicationPhpFields(id, names) {
   return api.put(
     `/applications/${id}/php`,
@@ -116,27 +91,19 @@ export function resetApplicationPhpFields(id, names) {
   );
 }
 
-/** Move this site onto its own FPM pool, running as its own user. */
 export function isolateApplicationPhp(id) {
   return api.post(`/applications/${id}/php/isolate`);
 }
 
-// There is no un-isolate (the DELETE route returns 405): on the shared pool one
-// compromised site could read every other site's .env.
-
-// `policy` is required; each list is replaced when sent and left alone when omitted.
 export function updateApplicationBotBlocker(id, { policy, blocked, allowed }) {
   return api.put(`/applications/${id}/bot-blocker`, { policy, blocked, allowed });
 }
 
-// One atomic save for the whole firewall screen. `categories: []` means ALL six
-// on the backend, so never send an empty array to mean "none".
+// An empty categories array means ALL categories on the backend.
 export function updateApplicationWaf(id, payload) {
   return api.put(`/applications/${id}/waf`, payload);
 }
 
-// Jail and filter go together. A failed config test answers 500 `{testOk: false, output}`: read the body.
-// `safetyCopy: false`: the replaced jail and filter are held in memory, not copied aside.
 export function saveApplicationFail2ban(id, { jail, filter }, { safetyCopy = true } = {}) {
   return api.post(`/applications/${id}/fail2ban`, {
     jail_config_content: jail,
@@ -145,43 +112,34 @@ export function saveApplicationFail2ban(id, { jail, filter }, { safetyCopy = tru
   });
 }
 
-// The choice rides in the DELETE's body.
 export function deleteApplicationFail2ban(id, { safetyCopy = true } = {}) {
   return api.delete(`/applications/${id}/fail2ban`, { data: { safety_copy: safetyCopy } });
 }
 
-// Synchronous and slow (300s timeout) with no job to poll; the caller holds a pending state.
 export function createApplicationStaging(id, domain) {
   return api.post(`/applications/${id}/staging`, { domain });
 }
 
-// `backup`: back the live application up first; the push only runs if that backup verifies.
-// `safetyCopy: false` skips the dump of the database being replaced (database/full only).
 export function pushApplicationStaging(id, mode, { backup = false, safetyCopy = true } = {}) {
   return api.post(`/applications/${id}/staging/push`, { mode, safety_copy: safetyCopy, ...(backup ? { backup: true } : {}) });
 }
 
-// Called on the live application; synchronous, like a push. Live is only read.
 export function pullApplicationStaging(id, mode, { safetyCopy = true } = {}) {
   return api.post(`/applications/${id}/staging/pull`, { mode, safety_copy: safetyCopy });
 }
 
-// Puts a pre-push database copy back; the current database is saved first.
 export function restoreStagingSafetyCopy(id, name) {
   return api.post(`/applications/${id}/staging/safety-copies/${encodeURIComponent(name)}/restore`);
 }
 
-// Rewrites the vhost and reloads: a wrong value takes the site down until corrected.
 export function updateWebRoot(id, webRoot) {
   return api.put(`/applications/${id}/web-root`, { web_root: webRoot });
 }
 
-// 422 with a translated message when the folder is not safe to lock. Throttled 10/min.
 export function lockApplicationRoot(id) {
   return api.post(`/applications/${id}/root-lock`);
 }
 
-// Only the status word is read, to notice a deploy or first setup ending.
 export async function getApplicationStatus(id) {
   const res = await api.get(`/applications/${id}`);
   return res.data?.application?.status ?? null;
@@ -193,19 +151,16 @@ export async function getContainerRedeploy(id) {
   return parsed.success ? (parsed.data ?? null) : null;
 }
 
-// No process-only endpoint: the application read is the one that asks systemd.
 export async function getApplicationProcess(id, { signal } = {}) {
   const res = await api.get(`/applications/${id}`, { signal });
   const parsed = processSchema.nullish().safeParse(res.data?.application?.process);
   return parsed.success ? (parsed.data ?? null) : null;
 }
 
-/** 202 while it switches (follow `node_version_change`), 200 if already on that version. */
 export function updateNodeVersion(id, nodeVersion) {
   return api.put(`/applications/${id}/node-version`, { node_version: nodeVersion });
 }
 
-// This application's jail only; the server and the caller's own address are refused.
 export function banApplicationIp(id, ip) {
   return api.post(`/applications/${id}/fail2ban/bans`, { ip });
 }
@@ -214,12 +169,10 @@ export function unbanApplicationIp(id, ip) {
   return api.delete(`/applications/${id}/fail2ban/bans/${encodeURIComponent(ip)}`);
 }
 
-// The application switcher's list: one page, searched on the server by name and domain.
 export function searchApplications(search, { signal } = {}) {
   return api.get("/applications", { params: { per_page: 20, sort: "name", ...(search ? { search } : {}) }, signal });
 }
 
-// Another application's own nav catalog (filtered by its site type), to keep the section on a switch.
 export async function getApplicationNavCatalog(id) {
   const res = await api.get("/permissions", { params: { level: "application", application_id: id } });
   return Array.isArray(res.data?.permissions) ? res.data.permissions : [];

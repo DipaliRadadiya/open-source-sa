@@ -31,7 +31,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 
-// When `enabled` is true the API requires username and password together.
 export function SecuritySection({ appId, application, domain, canManage }) {
   const t = useTranslations("applications.security");
   const tPending = useTranslations("applications.reloadPending");
@@ -39,7 +38,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   const { refreshAndWait } = useRefresh();
   const pending = useReloadPending(appId);
   const { mark, stillPending } = useReloadPendingActions();
-  // Shown once for copying: the API never returns the password on reads.
+  // Shown once: the API never returns the password on reads.
   const [justSaved, setJustSaved] = useState(null);
 
   const defaults = {
@@ -57,8 +56,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   const enabled = useWatch({ control: form.control, name: "enabled" });
   const passwordValue = useWatch({ control: form.control, name: "password" });
 
-  // A user edit after a save hides the saved-credentials panel. Only
-  // type "change" counts: the save's own form.reset() also notifies watchers.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/incompatible-library -- react-hook-form's watch() is a known false positive for the React Compiler lint
     const subscription = form.watch((_values, { type }) => {
@@ -68,7 +65,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The new credentials stay in memory for copying and never reach the cookie.
+  // New credentials stay in memory only, never in the cookie.
   function keepSaved(values) {
     setSavedProtected(values.enabled);
     setJustSaved(values.enabled ? { username: values.username.trim(), password: values.password } : null);
@@ -86,7 +83,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
       if (stillPending(appId)) toast.warning(tPending("stillPendingToast"));
       else toast.success(values.enabled ? t("enabledToast") : t("disabledToast"));
     } catch (error) {
-      // Saved but not live: the old setting is still served, so no success toast.
       if (isReloadFailed(error)) {
         mark(appId, error);
         keepSaved(values);
@@ -107,12 +103,9 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   const isDirty = form.formState.isDirty;
   useWatchUnsaved("app-security", isDirty);
 
-  // Apps that use the Authorization header cannot take Basic Auth (one header
-  // per request); the API refuses it. Turning protection off stays available.
+  // Apps that use the Authorization header can't take Basic Auth; the API refuses it.
   const conflicts = application.basic_auth_supported === false;
-  // Our last save's state until the refreshed server value agrees.
   const serverProtected = application.basic_auth_enabled ?? false;
-  // The server's word once saved; before that, about to turn it on over plain http.
   const unencrypted =
     application.basic_auth_unencrypted ||
     (enabled && Boolean(application.url?.startsWith("http://")));
@@ -135,7 +128,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                 name="enabled"
                 render={({ field }) => (
                   <FormItem className="!mt-0">
-                    {/* A real <label>: clicking anywhere in the row toggles the Switch once. */}
                     <label
                       className={cn(
                         "flex flex-col gap-3 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
@@ -163,7 +155,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{t("enable")}</span>
-                            {/* The saved state, not the switch position; unknown while a reload is owed. */}
                             <Badge variant={pending ? "warning" : alreadyProtected ? "success" : "muted"}>
                               {pending
                                 ? tPending("badge")
@@ -183,7 +174,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                           </p>
                         </div>
                       </div>
-                      {/* The badge beside the title already says the state. */}
                       {canManage ? (
                         <div className="flex h-5 shrink-0 items-center">
                           <FormControl>
@@ -197,7 +187,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         </div>
                       ) : null}
                     </label>
-                    {/* Shows a 422 on `enabled` (the Authorization-header rule). */}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -222,7 +211,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                 </div>
               ) : null}
 
-              {/* Already protected despite the conflict: explains why to turn it off. */}
               {conflicts && alreadyProtected ? (
                 <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
                   <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -239,8 +227,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
               </Collapsible>
   
               <Collapsible open={enabled}>
-                {/* overflow-hidden (needed for the animation) clips focus rings;
-                    negative margin plus padding gives them room without shifting layout. */}
                 <CollapsibleContent className="-mx-1 -mb-1 overflow-hidden px-1 pb-1 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
                   <div className="space-y-4 border-t pt-5">
                     <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
@@ -248,7 +234,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                       <p>{t("warning")}</p>
                     </div>
   
-                    {/* Clarifies these are new credentials, not a panel login. */}
                     <p className="text-sm text-muted-foreground">{t("credentialsNote", { brand })}</p>
   
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -276,8 +261,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         control={form.control}
                         name="password"
                         render={({ field }) => (
-                          // Generate is positioned top-right but comes after the
-                          // input in markup, so Tab reaches the field first.
                           <FormItem className="relative">
                             <FormLabel required hint={t("passwordHint")}>{t("password")}</FormLabel>
                             <FormControl>
@@ -288,7 +271,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                                 {...field}
                               />
                             </FormControl>
-                            {/* The API needs both fields together and never returns the password. */}
                             {alreadyProtected && isDirty && !passwordValue ? (
                               <p className="text-xs text-muted-foreground">{t("passwordAgainHint")}</p>
                             ) : null}
@@ -322,7 +304,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                           <SavedValue label={t("password")} value={justSaved.password} secret />
                         </div>
                         <Button asChild variant="outline" size="sm">
-                          {/* The API's `url` is http:// until a certificate is servable. */}
                           <a
                             href={application?.url ?? `https://${domain}`}
                             target="_blank"
@@ -339,7 +320,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
               </Collapsible>
             </CardContent>
   
-            {/* `submit`: this card is a react-hook-form, unlike siblings that save local state. */}
             <CardSaveFooter
               submit
               saving={submitting}
@@ -355,7 +335,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   );
 }
 
-// Masked if secret; copy works while masked.
 function SavedValue({ label, value, secret = false }) {
   const t = useTranslations("applications.security");
   const [revealed, setRevealed] = useState(false);
@@ -368,7 +347,7 @@ function SavedValue({ label, value, secret = false }) {
         <code
           className={cn(
             "min-w-0 flex-1 truncate font-mono text-xs",
-            // select-none so the mask dots cannot be copied as if they were the password.
+            // select-none so the mask dots can't be copied as the password.
             hidden && "select-none tracking-[0.2em] text-muted-foreground",
           )}
         >
@@ -379,7 +358,6 @@ function SavedValue({ label, value, secret = false }) {
             type="button"
             variant="ghost"
             size="icon-sm"
-            // 28px to match CopyButton; `icon-sm` is 32px.
             className="size-7"
             onClick={() => setRevealed((shown) => !shown)}
             aria-pressed={revealed}

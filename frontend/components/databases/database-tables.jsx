@@ -13,19 +13,14 @@ import { RefreshButton } from "@/components/data-table/refresh-button";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// A filter only once the list is long enough to need one.
 const FILTER_FROM = 8;
 
-// Names, row estimates and sizes only: the API returns nothing more. Read-only by
-// design (Optimize/Repair are unreliable on InnoDB).
 export function DatabaseTables({ database, tables = [], read = null, unavailable = null }) {
   const t = useTranslations("databases.tables");
   const format = useFormatter();
   const [query, setQuery] = useState("");
-  // Largest first, as the API sends them: the big tables are what people look for.
   const [sort, setSort] = useState({ key: "size", desc: true });
 
-  // Mongo has collections, not tables, and uses its own wording.
   const isMongo = database?.driver === "mongo";
 
   const totalRows = tables.reduce((sum, table) => sum + (table.rows ?? 0), 0);
@@ -57,7 +52,6 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
       >
         <button
           type="button"
-          // Text columns start A→Z, number columns largest first.
           onClick={() => setSort({ key, desc: active ? !sort.desc : key !== "name" })}
           className={cn(
             "inline-flex items-center gap-1 rounded hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring",
@@ -125,14 +119,10 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
           <EmptyState compact icon={SearchX} badge="search" title={t("noMatches")} />
         </div>
       ) : (
-        /* Bounded: apps like Nextcloud ship ~150 tables. */
         <div className="max-h-[28rem] overflow-auto">
           <table className="w-full text-sm">
-            {/* Sticky, so opaque: the shade every table header has (bg-muted/40 over the card). */}
             <thead className="sticky top-0 z-10 bg-[color-mix(in_srgb,var(--muted)_40%,var(--card))] text-left text-sm text-muted-foreground">
               <tr className="border-b">
-                {/* Shares of the width, not "the name takes what is left": that pushed Rows
-                    and Size together at the right edge with the middle empty (Krishna, 8 Oct). */}
                 {header("name", isMongo ? t("columns.collection") : t("columns.table"), "sm:w-[40%]")}
                 {header("rows", isMongo ? t("columns.documents") : t("columns.rows"), "text-right sm:w-[20%]")}
                 {header("size", t("columns.size"), "text-right sm:w-[40%]")}
@@ -141,14 +131,12 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
             <tbody className="divide-y">
               {shown.map((table) => (
                 <tr key={table.name} className="hover:bg-muted/30">
-                  {/* Phone: no icon, no "rows" word, tighter padding, so names are not cut to three letters. */}
                   <td className="max-w-0 px-3 py-2.5 sm:px-5">
                     <span className="flex min-w-0 items-center gap-2">
                       <Table2 className="hidden size-4 shrink-0 text-muted-foreground sm:block" aria-hidden />
                       <HoverHint content={table.name}><span className="truncate font-mono font-medium">{table.name}</span></HoverHint>
                     </span>
                   </td>
-                  {/* InnoDB row counts are estimates; labelled as such below. */}
                   <td className="px-3 py-2.5 text-right whitespace-nowrap text-muted-foreground tabular-nums sm:px-5">
                     <span className="font-medium text-foreground">{format.number(table.rows ?? 0)}</span>
                     <span className="hidden sm:inline">
@@ -158,8 +146,6 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
                   </td>
                   <td className="px-3 py-2.5 sm:px-5">
                     <span className="flex items-center justify-end gap-3">
-                      {/* Share of the largest table, so the heavy ones stand out. A short,
-                          fixed bar beside the size (Krishna, 8 Oct: not a long one). */}
                       <span aria-hidden className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-muted sm:block">
                         <span
                           className="block h-full rounded-full bg-primary/70"

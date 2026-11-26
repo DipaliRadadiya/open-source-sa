@@ -3,8 +3,6 @@ import { ListCard } from "@/components/data-table/list-card";
 import { COVERAGE_WIDTHS } from "@/components/backups/coverage-widths";
 import { cn } from "@/lib/utils";
 
-// Backups overview, shaped like the page: the coverage notice, then one list card whose
-// rows are a table from 900px of content and cards below (the same c900 switch).
 const CONFIGURED = 2;
 const NOT_SET_UP = 4;
 
@@ -36,7 +34,6 @@ const PAGER = (
 );
 
 function TableRows() {
-  // Cells padded like TableHead/TableCell (px-4, py-2.5), so the bars sit where the columns will.
   const cell = (key, extra) => cn("shrink-0 px-4", COVERAGE_WIDTHS[key], extra);
   const actions = cell("actions", "flex items-center justify-end gap-1");
   return (
@@ -75,7 +72,6 @@ function TableRows() {
       {Array.from({ length: NOT_SET_UP }).map((_, i) => (
         <div key={`n${i}`} className="flex items-center border-b py-2.5 last:border-b-0">
           <div className="min-w-0 flex-1 px-4"><Lines first="w-24" second="w-36" /></div>
-          {/* One sentence across Type to Last run, as in the table. */}
           <div className="relative flex shrink-0 self-stretch">
             {["kind", "schedule", "storage", "runs"].map((key) => (
               <div key={key} className={cn("shrink-0", COVERAGE_WIDTHS[key])} />

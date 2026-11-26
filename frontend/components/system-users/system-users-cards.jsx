@@ -10,7 +10,6 @@ import { SystemUserRowActions } from "@/components/system-users/system-user-row-
 import { BulkFailure } from "@/components/system-users/bulk-failure";
 import { Checkbox } from "@/components/ui/checkbox";
 
-// The shell picker takes the full width underneath so shell names fit.
 export function SystemUsersCards({
   users,
   shells = [],
@@ -19,7 +18,6 @@ export function SystemUsersCards({
   sshEnforced = null,
   sshPasswordOff = false,
   canOpenSecurity = false,
-  // Null for viewers: no checkboxes.
   selection = null,
   onSelectionChange,
   failures = {},
@@ -41,11 +39,7 @@ export function SystemUsersCards({
             ) : null}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                {/* break-all, not truncate: the username is the identifier being read, and a long
-                    one would push the row menu off the card. */}
                 <span className="min-w-0 font-medium break-all">{user.username}</span>
-                {/* Same rule as the table: managers see "Not set" in the Password fact; only
-                    viewers need the badge. */}
                 {!canManage && !(user.password_known ?? user.password) ? (
                   <Badge variant="warning" className="font-normal">
                     {t("noPassword")}
@@ -58,7 +52,6 @@ export function SystemUsersCards({
               </p>
               <BulkFailure failure={failures[user.id]} />
             </div>
-            {/* For viewers too: the menu is how SSH keys are reached. */}
             <div className="-me-2 -mt-1 shrink-0">
               <SystemUserRowActions
                 user={user}
@@ -84,11 +77,8 @@ export function SystemUsersCards({
             <CardFact label={t("columns.shell")}>
               <ShellSelect user={user} shells={shells} canManage={canManage} className="w-full" />
             </CardFact>
-            {/* Last and full width: the longest value. Managers only; viewers get a redacted
-                placeholder, not the password. */}
             {canManage ? (
               <CardFact label={t("columns.password")}>
-                {/* CardFact right-aligns values; a credential reads left-to-right. */}
                 <PasswordReveal password={user.password} className="text-left" />
               </CardFact>
             ) : null}

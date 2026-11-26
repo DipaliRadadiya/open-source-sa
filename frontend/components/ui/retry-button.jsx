@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { Loader2, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// `reset()` alone re-renders the cached failed payload; `router.refresh()` refetches.
 export function RetryButton({ reset }) {
   const t = useTranslations("errors");
   const router = useRouter();

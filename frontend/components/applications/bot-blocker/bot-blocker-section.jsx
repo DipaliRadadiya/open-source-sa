@@ -29,15 +29,10 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-// Least restrictive first. Only keys the API returned render; unknown new
-// keys appear after these.
 const ORDER = ["allow_all", "block_training", "block_agents", "block_all"];
 
-// v7 compatibility: its own broad list, not a step on the ladder above. Offered only to
-// an application already on it (a migrated v7 site); new sites have no use for it.
 const LEGACY = "legacy_v7";
 
-// Unknown policies fall back to the generic bot icon.
 const ICONS = {
   allow_all: Globe,
   block_training: ShieldCheck,
@@ -46,25 +41,20 @@ const ICONS = {
   legacy_v7: History,
 };
 
-// Blocking every AI bot also blocks ones that send visitors, so it is tinted.
 const TONES = { block_all: "warning" };
 
-// Policies with a translated group name in the expanded bot list.
 const GROUP_LABELS = new Set(["block_training", "block_agents", "block_all"]);
 
-/** Order-independent, case-insensitive list comparison. */
 function sameList(a, b) {
   if (a.length !== b.length) return false;
   const key = (list) => list.map((v) => String(v).toLowerCase()).sort().join("|");
   return key(a) === key(b);
 }
 
-// robots.txt product tokens, not crawlers: no request carries them, so they are not counted as blocked.
 const ROBOTS_TXT_ONLY = new Set(["google-extended", "applebot-extended"]);
 const isRobotsTxtOnly = (bot) => ROBOTS_TXT_ONLY.has(String(bot).toLowerCase());
 const enforceableCount = (bots) => bots.filter((bot) => !isRobotsTxtOnly(bot)).length;
 
-// The vhost matches bot names case-insensitively, so case variants are one bot.
 function dedupedPolicies(policies) {
   return Object.fromEntries(
     Object.entries(policies).map(([key, option]) => {
@@ -80,8 +70,6 @@ function orderedKeys(policies, showLegacy) {
   return [...known, ...rest, ...(showLegacy && LEGACY in policies ? [LEGACY] : [])];
 }
 
-// What each option blocks on top of the previous one, derived from the API's
-// lists by order, so new policies need no change here.
 function additionsByPolicy(keys, policies) {
   const additions = {};
   let previous = null;
@@ -97,10 +85,7 @@ function additionsByPolicy(keys, policies) {
   return additions;
 }
 
-// Bots grouped by the policy that first blocks them; same derivation as the
-// card counts, so they always agree.
 function botGroups(keys, policies, selected) {
-  // The v7 list stands alone: it is everything that policy blocks.
   if (selected === LEGACY) {
     const bots = policies[LEGACY]?.blocked_bots ?? [];
     return bots.length ? [{ key: LEGACY, bots }] : [];
@@ -117,7 +102,6 @@ function botGroups(keys, policies, selected) {
   return groups;
 }
 
-// Sorted alphabetically (case-insensitive); display order only.
 function BotList({ bots }) {
   const t = useTranslations("applications.botBlocker");
   const sorted = [...bots].sort((a, b) =>
@@ -142,7 +126,6 @@ function BotList({ bots }) {
             <Badge
               key={bot}
               variant="outline"
-              /* Accent tint for visible edges; reference data, not a status. */
               className="h-auto max-w-full border-primary/20 bg-primary/5 font-mono font-normal break-all whitespace-normal text-primary"
             >
               {bot}
@@ -157,8 +140,6 @@ function BotList({ bots }) {
   );
 }
 
-// Names are checked against the backend's rules before adding (`bot` would match Googlebot).
-// `readOnly`: the list only, without the add field or the remove buttons.
 function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, readOnly = false, onAdd, onRemove }) {
   const t = useTranslations("applications.botBlocker.exceptions");
   const [draft, setDraft] = useState("");
@@ -166,7 +147,6 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, readOnly =
   const listRef = useRef(null);
   const inputRef = useRef(null);
 
-  // The removed chip's button is gone, so focus is moved explicitly.
   function remove(bot, index) {
     onRemove(bot);
     requestAnimationFrame(() => {
@@ -229,7 +209,6 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, readOnly =
         <p className="pt-0.5 text-xs text-muted-foreground">{t("none")}</p>
       )}
 
-      {/* Server refusals, shown next to the entry they name. */}
       {Object.entries(refused).map(([bot, message]) => (
         <p key={bot} className="text-xs break-all text-destructive">
           {bot}: {message}
@@ -247,7 +226,6 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, readOnly =
           }}
           onKeyDown={(event) => {
             if (event.key !== "Enter") return;
-            // Guards against a stray submit.
             event.preventDefault();
             add();
           }}
@@ -258,7 +236,6 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, readOnly =
           aria-invalid={Boolean(error)}
           className="h-8 font-mono text-xs"
         />
-        {/* Disabled when empty, matching the firewall's control. */}
         <Button
           type="button"
           variant="outline"
@@ -277,8 +254,6 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, readOnly =
   );
 }
 
-// Google and Apple train on what their search crawlers fetch, so blocking by name
-// cannot stop it; robots.txt can. Text and lines come from the API.
 function RobotsTxtLines({ note, lines }) {
   const t = useTranslations("applications.botBlocker.robotsTxt");
   return (
@@ -299,7 +274,6 @@ function RobotsTxtLines({ note, lines }) {
 function BotGroup({ label, bots }) {
   return (
     <div className="space-y-2">
-      {/* Strong heading with a count so groups stand out from the chips. */}
       <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
         {label}
         <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
@@ -311,7 +285,6 @@ function BotGroup({ label, bots }) {
   );
 }
 
-// Labels, counts and bot names all come from GET /ai-bot-policies.
 export function BotBlockerSection({
   appId,
   policies: sentPolicies,
@@ -327,8 +300,6 @@ export function BotBlockerSection({
   const pending = useReloadPending(appId);
   const { mark, stillPending } = useReloadPendingActions();
   const policies = dedupedPolicies(sentPolicies);
-  // What the last save wrote, held until the refreshed props agree, so the
-  // card is not "unsaved" in between.
   const [justSaved, setJustSaved] = useState(null);
   if (
     justSaved &&
@@ -340,7 +311,6 @@ export function BotBlockerSection({
   }
   const base = justSaved ?? { policy: currentPolicy, blocked: currentBlocked, allowed: currentAllowed };
   const [refused, setRefused] = useState({ blocked: {}, allowed: {} });
-  // Remounts both editors on Discard to clear half-typed names and errors.
   const [editorKey, setEditorKey] = useState(0);
   const [policy, setPolicy] = useState(currentPolicy);
   const [blocked, setBlocked] = useState(currentBlocked);
@@ -349,7 +319,6 @@ export function BotBlockerSection({
   const [showBots, setShowBots] = useState(false);
 
   const keys = orderedKeys(policies, base.policy === LEGACY || policy === LEGACY);
-  // On v7 blocking an allowed name exempts every bot containing it (see isAllowedBot).
   const contains = policy === LEGACY;
   const allows = (bot) => isAllowedBot(allowed, bot, { contains });
   const selected = policies[policy] ?? null;
@@ -361,7 +330,6 @@ export function BotBlockerSection({
   const additions = additionsByPolicy(keys, policies);
   const groups = botGroups(keys, policies, policy);
 
-  // What the vhost will enforce once saved, including this site's own rules.
   const effective = effectiveBlockedBots(selected?.blocked_bots ?? [], blocked, allowed, { contains });
   const savedEffective = effectiveBlockedBots(
     savedPolicy?.blocked_bots ?? [],
@@ -370,8 +338,6 @@ export function BotBlockerSection({
     { contains: base.policy === LEGACY },
   );
 
-  // Must agree with the count on the button: exemptions are removed from the
-  // policy groups and site additions get their own group.
   const shownGroups = [
     ...groups
       .map((group) => ({ ...group, bots: group.bots.filter((bot) => !allows(bot)) }))
@@ -381,21 +347,17 @@ export function BotBlockerSection({
       : []),
   ];
 
-  // Allows that nothing would block anyway.
   const idleAllows = allowed.filter((allow) =>
     contains
       ? ![...(selected?.blocked_bots ?? []), ...blocked].some((bot) => isAllowedBot([allow], bot, { contains }))
       : !hasBot(selected?.blocked_bots ?? [], allow) && !hasBot(blocked, allow),
   );
 
-  // Nothing blocked is the default, not a protected state.
   const isProtected = savedEffective.length > 0;
-  // Warns before a client-side navigation drops the edit (components/ui/unsaved-guard.jsx).
   useWatchUnsaved("app-bot-blocker", isDirty);
 
   const saveReason = !canManage ? DENIED : !isDirty ? t("nothingToSave") : null;
 
-  // A bot lives in one list only: the backend lets an allow win over a block.
   function addRule(kind, value) {
     const [list, setList, other, setOther] =
       kind === "blocked" ? [blocked, setBlocked, allowed, setAllowed] : [allowed, setAllowed, blocked, setBlocked];
@@ -430,7 +392,6 @@ export function BotBlockerSection({
       if (stillPending(appId)) toast.warning(tPending("stillPendingToast"));
       else toast.success(t("saved"));
     } catch (error) {
-      // Saved but not live: it becomes the saved state, with no success toast.
       if (isReloadFailed(error)) {
         mark(appId, error);
         setJustSaved({ policy, blocked, allowed });
@@ -457,8 +418,6 @@ export function BotBlockerSection({
       <div className="space-y-4">
         <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="space-y-5 p-5">
-            {/* Selectable cards over a real RadioGroup, keeping keyboard and
-                screen-reader semantics. */}
             <div className="space-y-3">
               <p className="text-sm font-medium">{t("chooseLabel")}</p>
               <RadioGroup
@@ -485,7 +444,6 @@ export function BotBlockerSection({
                         !checked && "hover:bg-muted/40",
                       )}
                     >
-                      {/* One `items-center` row keeps radio and icon aligned. */}
                       <span className="flex shrink-0 items-center gap-3">
                         <RadioGroupItem value={key} id={`ai-bot-${key}`} />
                         <span
@@ -501,15 +459,12 @@ export function BotBlockerSection({
                       </span>
                       <span className="min-w-0 flex-1 space-y-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          {/* From the API, never a local copy. */}
                           <span className={cn("text-sm", checked ? "font-semibold" : "font-medium")}>
                             {option.title}
                           </span>
-                          {/* Count on every option so they can be compared. */}
                           <Badge variant={option.blocked_count ? (warn ? "warning" : "muted") : "outline"}>
                             {t("blockedCount", { count: option.blocked_count })}
                           </Badge>
-                          {/* Marks the option currently in force; not known while a reload is owed. */}
                           {key === base.policy ? (
                             <Badge variant={pending ? "warning" : isProtected ? "success" : "muted"}>
                               {pending ? tPending("badge") : t("activeNow")}
@@ -522,7 +477,6 @@ export function BotBlockerSection({
                         <span className="block text-xs leading-relaxed text-muted-foreground">
                           {option.description}
                         </span>
-                        {/* Names the bots this option adds over the previous one. */}
                         {additions[key]?.length > 0 ? (
                           <span
                             className={cn(
@@ -540,14 +494,10 @@ export function BotBlockerSection({
               </RadioGroup>
             </div>
   
-            {/* Follows the chosen option, not the saved one: it is advice for the
-                owner's robots.txt, independent of Save. */}
             {selected?.robots_txt_recommended && robotsTxt?.lines ? (
               <RobotsTxtLines note={robotsTxt.note} lines={robotsTxt.lines} />
             ) : null}
 
-            {/* Per-site exceptions share the policy's Save: the backend resolves
-                all three in one request. */}
             <div className="space-y-3 border-t pt-5">
               <p className="text-sm font-medium">{t("exceptions.title")}</p>
   
@@ -580,7 +530,6 @@ export function BotBlockerSection({
                 <p className="text-xs text-muted-foreground">{t("exceptions.legacyContains")}</p>
               ) : null}
 
-              {/* Flags allows that have no effect. */}
               {idleAllows.length > 0 ? (
                 <p className="text-xs text-muted-foreground">
                   {t("exceptions.noEffect", { bots: idleAllows.join(", ") })}
@@ -588,7 +537,6 @@ export function BotBlockerSection({
               ) : null}
             </div>
   
-            {/* The blocked bots, collapsed by default. */}
             {effective.length > 0 ? (
               <Collapsible open={showBots} onOpenChange={setShowBots}>
                 <CollapsibleTrigger asChild>
@@ -608,7 +556,6 @@ export function BotBlockerSection({
                       shownGroups.map((group) => (
                         <BotGroup
                           key={group.key}
-                          // Falls back to the policy's own title for unknown keys.
                           label={
                             group.key === "custom" || GROUP_LABELS.has(group.key)
                               ? t(`groupLabels.${group.key}`)
@@ -625,12 +572,9 @@ export function BotBlockerSection({
               </Collapsible>
             ) : null}
   
-            {/* Clarifies this is enforced by the server, not a robots.txt request. */}
             <p className="text-xs text-muted-foreground">{t("howItWorks")}</p>
           </CardContent>
   
-          {/* The unsaved marker is on the chosen card; `dirty` here only gates
-              the buttons. */}
           <CardSaveFooter
             saving={saving}
             dirty={isDirty}

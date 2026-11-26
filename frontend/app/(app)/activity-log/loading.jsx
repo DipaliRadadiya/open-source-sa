@@ -14,7 +14,6 @@ const TOOLBAR = (
         </div>
 );
 
-// Activity log: one list card with search and type filter.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

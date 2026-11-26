@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// Drive the progress bar from step_number/total_steps; never hardcode the step list.
 export const panelUpdateRunSchema = z
   .object({
     id: z.union([z.string(), z.number()]).transform(String),
@@ -10,22 +9,16 @@ export const panelUpdateRunSchema = z
     current_step_title: z.string().nullish(),
     step_number: z.number().int().nonnegative().catch(0),
     total_steps: z.number().int().nonnegative().catch(0),
-    // A dry run changes nothing and has no to_version; it survives a reload, unlike local state.
     dry_run: z.boolean().nullish(),
     from_version: z.string().nullish(),
     to_version: z.string().nullish(),
     from_commit: z.string().nullish(),
     to_commit: z.string().nullish(),
-    // On failure `reason` is the step that failed (stable key); reason_title is
-    // the localized explanation. rolled_back means the previous version was restored.
     reason: z.string().nullish(),
     reason_title: z.string().nullish(),
-    // NOT `.default(false)`: the API sends `null` until a run finishes, and a throw here
-    // breaks the start response and every poll.
+    // Must stay nullish: the API sends null until the run finishes.
     rolled_back: z.boolean().nullish().transform((value) => value ?? false),
     reference: z.string().nullish(),
-    // Sanitized, bounded tail of the detached runner log. The backend never
-    // returns the raw file; absent on older panel versions during an upgrade.
     output: z.string().catch(""),
     output_truncated: z.boolean().catch(false),
     started_at: z.string().nullish(),
@@ -40,7 +33,6 @@ const installedSchema = z
     version: z.string().nullish(),
     commit_hash: z.string().nullish(),
     commit_short: z.string().nullish(),
-    // null on an updated panel (checked out at a tag = detached HEAD): expected.
     branch: z.string().nullish(),
     source: z.string().nullish(),
     is_git_checkout: z.boolean().default(false),
@@ -54,7 +46,6 @@ const availableSchema = z
     published_at: z.string().nullish(),
     notes: z.string().nullish(),
     url: z.string().nullish(),
-    // false means the release host could not be reached: informational, NOT an error.
     checked: z.boolean().default(false),
   })
   .passthrough();
@@ -63,12 +54,9 @@ const preflightCheckSchema = z
   .object({
     key: z.string(),
     passed: z.boolean().default(false),
-    // English, for logs; show `message` (translated) and read numbers from `values`.
     detail: z.string().nullish(),
     message: z.string().nullish(),
     values: z.record(z.string(), z.number().nullish()).nullish(),
-    // Reported but never gates the update button — see UpdatePreflight::run().
-    // Defaults false so a check from an older backend stays blocking.
     advisory: z.boolean().default(false),
   })
   .passthrough();
@@ -77,7 +65,6 @@ export const panelUpdateStateSchema = z
   .object({
     installed: installedSchema.default({}),
     available: availableSchema.default({}),
-    // false whenever either version is unknown: never prompt on a guess.
     update_available: z.boolean().default(false),
     preflight: z
       .object({

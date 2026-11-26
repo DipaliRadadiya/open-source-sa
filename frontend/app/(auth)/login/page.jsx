@@ -24,8 +24,7 @@ import {
 } from "@/components/ui/card";
 
 export default async function LoginPage() {
-  // 503/429/request failures are handled HERE, not in error.jsx: production
-  // boundaries only receive a digest and cannot tell them from a crash.
+  // Handled here, not in error.jsx: production error boundaries only get a digest.
   let user, basicInfo, t;
   try {
     [user, basicInfo, t] = await Promise.all([
@@ -49,7 +48,6 @@ export default async function LoginPage() {
         <CardTitle className="text-xl">{t("loginTitle")}</CardTitle>
         <CardDescription>{t("loginSubtitle")}</CardDescription>
       </CardHeader>
-      {/* pt: the card has no gap, and the header band ends in a line the first label sat on. */}
       <CardContent className="grid gap-6 pt-6">
         <SessionExpiredNote />
         <LoginForm />

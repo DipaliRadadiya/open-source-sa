@@ -13,7 +13,6 @@ export function useNavPending() {
   return useContext(NavContext)?.isPending ?? false;
 }
 
-// One transition shared by search, filters and pagination; `useSetQuery` routes through it automatically.
 export function NavTransitionProvider({ children }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -32,7 +31,6 @@ export function NavTransitionProvider({ children }) {
       }
       if (resetPage) params.delete("page");
       const qs = params.toString();
-      // `push` the first time the URL gains a query, `replace` after, so Back clears filters in one step.
       const hadQuery = searchParams.toString() !== "";
       const navigate = hadQuery || !qs ? router.replace : router.push;
       startTransition(() =>
@@ -42,7 +40,6 @@ export function NavTransitionProvider({ children }) {
     [router, pathname, searchParams],
   );
 
-  // Re-fetch via the server component, sharing the same pending signal.
   const refresh = useCallback(
     () => startTransition(() => router.refresh()),
     [router],

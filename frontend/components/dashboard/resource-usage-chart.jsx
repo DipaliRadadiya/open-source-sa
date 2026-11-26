@@ -8,8 +8,6 @@ import {
   timeSeriesOption,
 } from "@/lib/charts/time-series-option";
 
-// Load is a queue depth, not a percentage, so it has its own card.
-/** Resolved from globals.css at runtime; never restated as literals here. */
 const TOKENS = [
   "chart-1",
   "chart-2",
@@ -25,15 +23,13 @@ export function ResourceUsageChart({ history = [], timeZone }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
   const tokens = useChartTokens(TOKENS);
-  // No seconds — five minutes between samples.
   const clock = clockFormatter(format, timeZone);
   const percentTick = (value) =>
     format.number(Number(value) / 100, { style: "percent", maximumFractionDigits: 0 });
   const percentValue = (value) =>
     format.number(Number(value) / 100, { style: "percent", maximumFractionDigits: 1 });
 
-  // Disk joins only when measured: a collector that cannot read the filesystem
-  // stores 0, not null, and a flat 0 % line would read as an empty disk.
+  // A collector that can't read the disk stores 0, not null, which would look like an empty disk.
   const hasDisk = history.some((point) => Number(point.disk) > 0);
   const latest = history.at(-1);
   const series = [
@@ -43,14 +39,12 @@ export function ResourceUsageChart({ history = [], timeZone }) {
   ];
 
   const option = timeSeriesOption({
-    // The header chips name each line.
     legend: false,
     data: history,
     series,
     tokens,
     xLabel: clock,
     value: percentValue,
-    // Fixed 0-100 with explicit ticks; an auto axis lands on -2%.
     axes: [{ max: 100, interval: 25, formatter: percentTick }],
   });
   const table = seriesDataTable({
@@ -73,7 +67,6 @@ export function ResourceUsageChart({ history = [], timeZone }) {
       compactEmpty
       emptyTitle={t("charts.noHistoryTitle")}
       emptyMessage={t("charts.noHistory")}
-      // Read off the newest collected sample so the header and the line agree.
       summary={
         latest
           ? `${t("cpu")} ${percentValue(latest.cpu)} · ${t("memory")} ${percentValue(latest.memory)}`

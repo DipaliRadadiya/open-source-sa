@@ -11,17 +11,13 @@ import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { PrepareDownloadDialog } from "@/components/backups/prepare-download-dialog";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// The presigned link expires in five minutes, so fetch on click; never render it, as
-// the URL is the credential.
+// The presigned link expires in 5 minutes and is itself the credential, so fetch on click.
 export function DownloadBackupButton({ backup, canDownload, label = false }) {
   const t = useTranslations("backups.download");
   const format = useFormatter();
   const [pending, setPending] = useState(false);
-  // The first POST's outcome; set means the preparation dialog is open.
   const [preparing, setPreparing] = useState(null);
 
-  // Only a verified run has an archive (others get 422 download_no_artifact). Use the
-  // shared predicate: the success state is `verified`, not "completed".
   const blocker = !canDownload
     ? DENIED
     : BACKUP_IN_FLIGHT.includes(backup.status)
@@ -37,10 +33,7 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
       const url = response.data?.download?.url;
       if (!url) throw new Error("missing");
       toast.success(t("started"));
-      // Not fetch(): our headers break the signature. Not `location.href`: an expired
-      // link's S3 error page would replace the panel.
       const link = document.createElement("a");
-      // "This server" sends a relative signed link (/api/…), which lives on the API's host, not the panel's.
       link.href = new URL(url, process.env.NEXT_PUBLIC_API_URL).href;
       link.rel = "noopener";
       link.target = "_blank";
@@ -49,7 +42,6 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
       link.click();
       link.remove();
     } catch (error) {
-      // SFTP/FTP: no direct link; the panel copies the archive first.
       if (error?.response?.status === 409 && error.response.data?.reason === "prepare_required") {
         try {
           const { data } = await prepareBackupDownload(backup.id);
@@ -73,10 +65,7 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
 
   return (
     <>
-    {/* Only the blocked state gets the wrapper: `ReasonTooltip` makes its span
-        focusable, which would add a second tab stop to an enabled button. */}
     <ReasonTooltip reason={blocker}>
-      {/* Plain as an icon in a table row, like every list's row buttons; framed with its label on a card. */}
       <HoverHint content={blocker ? undefined : size ? t("hintWithSize", { size }) : t("hint")}><Button
         variant={label ? "outline" : "ghost"}
         size={label ? "sm" : "icon-sm"}

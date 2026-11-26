@@ -1,24 +1,18 @@
-/** Colour of a series, or a readable fallback if the token has not resolved. */
 function colourOf(series, tokens) {
   return tokens[series.token] ?? "currentColor";
 }
 
-// Tokens arrive as `rgb(r, g, b)` (ECharts cannot handle `oklch()`); anything else is returned unchanged.
 function withAlpha(colour, alpha) {
   const m = /^rgb\((\s*\d+\s*,\s*\d+\s*,\s*\d+\s*)\)$/.exec(colour ?? "");
   return m ? `rgba(${m[1]}, ${alpha})` : colour;
 }
 
-// The page's mono face for axis labels. ECharts draws on a canvas, so it
-// needs the resolved family name, not the CSS variable.
 function monoFamily() {
   if (typeof document === "undefined") return undefined;
   const family = getComputedStyle(document.documentElement).getPropertyValue("--font-geist-mono").trim();
   return family || undefined;
 }
 
-// `data` points carry `t` plus one field per series; `markLine` is a capacity reference.
-// `legend: false` when the card header already names each series (the dashboard).
 export function timeSeriesOption({
   data = [],
   series = [],
@@ -42,15 +36,13 @@ export function timeSeriesOption({
       yAxisIndex: s.axis ?? 0,
       showSymbol: false,
       smooth: true,
-      // Never join across a missing sample; it would draw an outage as data.
+      // Don't join across a missing sample, it would draw an outage as data.
       connectNulls: false,
       lineStyle: { width: s.width ?? 2, color: colour },
       itemStyle: { color: colour },
       data: data.map((point) => [point.t, point[s.key] ?? null]),
     };
 
-    // A fade to nothing; a flat tint (plus the aria decal
-    // stripes) read as a hatched block.
     if (s.kind === "area") {
       line.areaStyle = {
         color: {
@@ -70,7 +62,6 @@ export function timeSeriesOption({
     return line;
   });
 
-  // Attached to the first series so the capacity line stays out of the legend.
   if (markLine && built[0]) {
     built[0].markLine = {
       silent: true,
@@ -79,7 +70,6 @@ export function timeSeriesOption({
         type: "dashed",
         color: tokens[markLine.token] ?? muted,
       },
-      // Without a legend the header chip names the line, so no label on the plot.
       label: legend
         ? { formatter: markLine.label, color: muted, position: "insideEndTop" }
         : { show: false },
@@ -88,13 +78,8 @@ export function timeSeriesOption({
   }
 
   const option = {
-    // Pairs with the hidden data table the wrapper renders for screen readers.
-    // No decal patterns: the legend, tooltip and data table already name each series.
     aria: { enabled: true, decal: { show: false } },
-    // Charts redraw on a poll; re-animating each time is unreadable.
     animation: false,
-    /* ECharts does not lay out these bands relative to each other; keep in step: slider 4–34,
-     * legend 42–56, labels 68–80 (ECharts: gridBottom-20..-8), grid bottom 88. */
     grid: {
       left: 56,
       right: 20,
@@ -104,11 +89,9 @@ export function timeSeriesOption({
     },
     legend: {
       show: legend,
-      // Declaration order.
       data: series.map((s) => s.label),
       bottom: zoom ? 42 : 4,
       icon: "roundRect",
-      // Wider gap between entries than swatch-to-label, so each swatch pairs with its label.
       itemWidth: 8,
       itemHeight: 8,
       itemGap: 22,
@@ -141,7 +124,6 @@ export function timeSeriesOption({
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { show: false },
-      // 11px to match the legend and stay below body text.
       axisLabel: { color: muted, fontSize: 11, fontFamily: mono, hideOverlap: true, formatter: xLabel },
     },
     yAxis: axes.map((axis, index) => ({
@@ -153,7 +135,6 @@ export function timeSeriesOption({
       position: axis.position ?? (index === 0 ? "left" : "right"),
       axisLine: { show: false },
       axisTick: { show: false },
-      // Opacity because `--border` is already the faintest token.
       splitLine:
         index === 0
           ? { lineStyle: { color: border, type: "solid", width: 1, opacity: 0.7 } }
@@ -162,7 +143,6 @@ export function timeSeriesOption({
         color: muted,
         fontSize: 11,
         fontFamily: mono,
-        // A forced `max` gets its own label, which can collide with a tick.
         hideOverlap: true,
         ...(axis.formatter ? { formatter: axis.formatter } : {}),
       },
@@ -177,12 +157,10 @@ export function timeSeriesOption({
       { type: "inside", throttle: 50 },
       {
         type: "slider",
-        // Tall and tinted so it reads as a zoom control, not a divider.
         height: 30,
         bottom: 4,
         borderColor: border,
         backgroundColor: "transparent",
-        // Muted unselected span so the selection reads as a window.
         dataBackground: {
           lineStyle: { color: muted, opacity: 0.35 },
           areaStyle: { color: muted, opacity: 0.12 },
@@ -192,7 +170,6 @@ export function timeSeriesOption({
           areaStyle: { color: withAlpha(tint, 0.22) },
         },
         fillerColor: withAlpha(tint, 0.12),
-        // Grabbable: a filled handle with a border, not the hairline default.
         handleSize: "120%",
         handleStyle: { color: tint, borderColor: border, borderWidth: 1 },
         moveHandleSize: 5,
@@ -206,7 +183,6 @@ export function timeSeriesOption({
   return option;
 }
 
-// Screen-reader table built from the same data and formatters, so the two cannot diverge.
 export function seriesDataTable({ caption, timeLabel, data = [], series = [], xLabel, value }) {
   return {
     caption,
@@ -222,7 +198,6 @@ export function seriesDataTable({ caption, timeLabel, data = [], series = [], xL
   };
 }
 
-// `floor` (e.g. 64 KB/s, core count) keeps an idle series from being scaled to look busy.
 export function axisMax(data, keys, { floor = 0, headroom = 1.2 } = {}) {
   let peak = 0;
   for (const point of data) {
@@ -235,8 +210,6 @@ export function axisMax(data, keys, { floor = 0, headroom = 1.2 } = {}) {
   return Math.max(floor, peak * headroom, 1);
 }
 
-// Rounds to 1, 2, 2.5 or 5 x 10^n so a forced `max` label does not sit beside a tick.
-// Not inside `axisMax`: the I/O 65536 floor would become "97.7 KB/s".
 export function niceCeiling(value) {
   if (!Number.isFinite(value) || value <= 0) return 1;
   const magnitude = 10 ** Math.floor(Math.log10(value));

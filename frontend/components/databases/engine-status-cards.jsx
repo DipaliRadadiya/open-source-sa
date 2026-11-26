@@ -12,22 +12,18 @@ import {
   STUCK_SECONDS,
 } from "@/lib/databases/health";
 
-// Muted when fine, alarm colour when not.
 const VERDICT_TONE = {
   normal: "text-muted-foreground",
   high: "text-warning",
   review: "text-destructive",
 };
 
-// Client component: the tiles take icon components, which cannot cross the server/client boundary.
-// Mongo returns nulls for SQL-only fields; those are omitted, not shown as zero.
+// Client component: icon components can't cross the server/client boundary.
 export function EngineStatusCards({ status, processes = [] }) {
   const t = useTranslations("databases.monitor");
   const format = useFormatter();
   if (!status) return null;
 
-  // "Normal / High / Needs review" under each number, coloured by its verdict
-  // so it reads as the card's conclusion.
   const verdict = (tone) => (
     <span className={cn("font-medium", VERDICT_TONE[tone])}>{t(`verdict.${tone}`)}</span>
   );
@@ -48,8 +44,6 @@ export function EngineStatusCards({ status, processes = [] }) {
     });
   }
 
-  // Running queries for every engine: MongoDB has no thread counter, so it comes from the
-  // live process list instead (Mongo showed one card and an empty row).
   {
     const running = activeQueries(processes);
     const longRunning = running.filter((p) => (p?.time ?? 0) >= STUCK_SECONDS).length;
@@ -58,15 +52,12 @@ export function EngineStatusCards({ status, processes = [] }) {
       icon: Activity,
       label: t("runningQueries"),
       value: format.number(status.threads_running ?? running.length),
-      // The long-running count beats a verdict word. Judged by the longest
-      // query, not the total thread count.
       sub: longRunning
         ? note(t("longRunningCount", { count: longRunning }))
         : verdict(activityTone(processes)),
     });
   }
 
-  // Average queries per second since the last restart: every engine reports the total.
   if (status.queries != null && status.uptime_seconds) {
     cards.push({
       key: "qps",
@@ -84,20 +75,14 @@ export function EngineStatusCards({ status, processes = [] }) {
       icon: Timer,
       label: t("slowQueries"),
       value: format.number(status.slow_queries),
-      // A cumulative counter; shown as a per-hour rate against uptime.
       hint: rate != null ? t("perHour", { rate: format.number(rate, { maximumFractionDigits: 1 }) }) : null,
       sub: verdict(slowQueriesTone(status)),
     });
   }
 
-  // No uptime card: the health summary above already says "Up 17 hours" and flags a
-  // recent restart (the tiles repeated it).
-
   if (cards.length === 0) return null;
 
   return (
-    // Compact tiles (tall cards were mostly empty). Three or four per engine; never a
-    // lone tile on its own row: four go 2×2 until there is room for one row.
     <div className={cn("grid gap-3 sm:grid-cols-2", cards.length === 4 ? "xl:grid-cols-4" : "lg:grid-cols-3")}>
       {cards.map(({ key, icon: Icon, label, value, hint, percent, sub }) => (
         <div key={key} className="rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-e1">
@@ -106,7 +91,6 @@ export function EngineStatusCards({ status, processes = [] }) {
               <Icon className="size-[18px]" aria-hidden />
             </span>
             <div className="min-w-0 flex-1">
-              {/* Wraps, never truncates: three tiles at 1024 cut "Running qu…" and "of 25,…". */}
               <p className="text-xs leading-tight text-muted-foreground">{label}</p>
               <p className="flex flex-wrap items-baseline gap-x-1.5">
                 <span className="text-lg font-semibold tabular-nums">{value}</span>

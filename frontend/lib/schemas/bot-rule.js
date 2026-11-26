@@ -1,25 +1,18 @@
-// Mirrors `App\Rules\BotUserAgent`; keep in step, or the client accepts what the server refuses.
-// Ends up in a web-server regex written by an elevated process, hence an allowlist, not escaping.
-
-// Exported for `tests/backend-mirror.test.mjs`.
 export const SHAPE = /^[A-Za-z0-9._\-/]{2,100}$/;
 
-/** Values that match a legitimate crawler, or everything. */
 export const CATCH_ALLS = new Set([
   "bot", "bots", "crawler", "crawl", "spider", "agent", "search",
   "*", ".*", ".", "a", "mozilla", "http", "www",
 ]);
 
-/** Blocking these is never what anyone meant by "block AI bots". */
 export const SEARCH_ENGINES = new Set([
   "googlebot", "google", "bingbot", "bing", "duckduckbot",
   "yandexbot", "baiduspider", "slurp", "applebot",
 ]);
 
-/** The backend's own cap on each list. */
 export const BOT_RULE_LIMIT = 50;
 
-// A message key, or null. Whole value, never a prefix: `Applebot-Extended` is a legitimate opt-out token.
+// Match the whole value; Applebot-Extended is a valid opt-out token.
 export function botRuleError(value) {
   const trimmed = String(value ?? "").trim();
 
@@ -30,14 +23,12 @@ export function botRuleError(value) {
 
   if (CATCH_ALLS.has(lower)) return "tooBroad";
   if (SEARCH_ENGINES.has(lower)) return "searchEngine";
-  // The web server matches any part of the user agent, so this would block browsers or search engines.
   if (BROWSER_USER_AGENTS.some((agent) => agent.includes(lower))) return "browserWord";
   if (SEARCH_USER_AGENTS.some((agent) => agent.includes(lower))) return "searchEngine";
 
   return null;
 }
 
-// Real visitors' user agents, lower-cased; any part of one would block people.
 const BROWSER_USER_AGENTS = [
   "mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/129.0.0.0 safari/537.36 edg/129.0.0.0",
   "mozilla/5.0 (macintosh; intel mac os x 10_15_7) applewebkit/605.1.15 (khtml, like gecko) version/18.0 safari/605.1.15",
@@ -54,18 +45,11 @@ const SEARCH_USER_AGENTS = [
   "mozilla/5.0 (macintosh; intel mac os x 10_15_5) applewebkit/605.1.15 (khtml, like gecko) version/13.1.1 safari/605.1.15 (applebot/0.1; +http://www.apple.com/go/applebot)",
 ];
 
-
-/** Case-insensitive membership, matching how the vhost compares these. */
 export function hasBot(list, value) {
   const lower = String(value ?? "").trim().toLowerCase();
   return list.some((entry) => String(entry).toLowerCase() === lower);
 }
 
-/**
- * Whether an allow exempts this bot. Exact name on the v8 policies; on `legacy_v7`
- * an allowed name exempts every agent that contains it (the v7 list has short
- * tokens like "GPT" inside longer names), so a contained name is exempt too.
- */
 export function isAllowedBot(allowed, bot, { contains = false } = {}) {
   const lower = String(bot ?? "").trim().toLowerCase();
   return allowed.some((entry) => {
@@ -74,7 +58,6 @@ export function isAllowedBot(allowed, bot, { contains = false } = {}) {
   });
 }
 
-// Policy list plus additions, minus exemptions; mirrors `botBlockPattern()`, where allow beats block.
 export function effectiveBlockedBots(policyBots = [], blocked = [], allowed = [], { contains = false } = {}) {
   const seen = new Set();
 

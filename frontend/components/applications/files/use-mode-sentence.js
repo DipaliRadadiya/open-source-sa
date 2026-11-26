@@ -1,7 +1,6 @@
 import { useLocale, useTranslations } from "next-intl";
 import { describeMode } from "@/lib/files/describe-mode";
 
-// "Owner: read and write. Everyone else: read." Null for an unparseable mode.
 export function useModeSentence() {
   const t = useTranslations("applications.files");
   const locale = useLocale();
@@ -21,7 +20,6 @@ export function useModeSentence() {
     const parts = describeMode(mode);
     if (!parts) return null;
 
-    // Group and others usually agree; one clause instead of two identical ones.
     return parts.group.join() === parts.other.join()
       ? t("permissionsDialog.describeSimple", {
           owner: describe(parts.owner),

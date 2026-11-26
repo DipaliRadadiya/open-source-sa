@@ -25,10 +25,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// The API verifies the new token first, so a rejected one leaves the working credential in place.
 export function ReplaceTokenDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.replace");
-  // Reuses the connect form's per-provider token strings.
   const tConnect = useTranslations("git.connect");
   const { name: brand } = useBranding();
   const { refreshAndWait } = useRefresh();
@@ -54,7 +52,6 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
         return;
       }
       const rejected = t("rejected", { provider: account.provider_title });
-      // Same as connecting: a 422 is a refused token named by lowercase id.
       setFailure(
         error.response?.status === 422 ? rejected : apiMessage(error, t("failed")),
       );
@@ -108,7 +105,6 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
               <FormControl>
                 <PasswordInput
                   autoComplete="off"
-                  /* Names the token the way each provider does. */
                   placeholder={
                     tConnect.has(`placeholders.token_${account?.provider}`)
                       ? tConnect(`placeholders.token_${account?.provider}`)

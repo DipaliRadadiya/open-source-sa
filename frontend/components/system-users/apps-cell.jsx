@@ -3,14 +3,12 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { SystemUserAppsDialog } from "@/components/system-users/system-user-apps-dialog";
 
-// The Apps count in the table; clickable (opens a modal) when the user owns any.
 export function AppsCell({ user }) {
   const t = useTranslations("systemUsers");
   const [open, setOpen] = useState(false);
   const count = user.applications?.length ?? 0;
 
   if (count === 0) {
-    // Plain text: an outlined badge would look like the clickable count.
     return <span className="text-xs text-muted-foreground">{t("appsCount", { count: 0 })}</span>;
   }
 

@@ -37,15 +37,11 @@ import { localizeSizeText } from "@/lib/format/bytes";
 
 const POLL_MS = 3000;
 
-// Above this a dump can take minutes and lands on the database's own disk, so it is confirmed first.
 const CONFIRM_ABOVE_BYTES = 512 * 1024 * 1024;
 const IN_FLIGHT = ["queued", "running"];
 
-// The newest few stay in view; the rest fold away so a long list cannot push the
-// Import card below it out of reach. Newest first, so a running one shows.
 const ROWS_SHOWN = 5;
 
-// Past this a dump is flagged as slow; well under the server's abandonment window.
 const SLOW_AFTER_MS = 120_000;
 
 const TONE = {
@@ -55,14 +51,11 @@ const TONE = {
   queued: "muted",
 };
 
-// Polling stops as soon as nothing is in flight.
 export function DatabaseExports({ database, exports: initial = [], canManage, read = null }) {
   const t = useTranslations("databases.exports");
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
   const [polled, setPolled] = useState(null);
-  // Polled rows override the server render until it changes (e.g. after `router.refresh()`).
-  // Reacts to the prop change during render, not in an effect.
   const [seenInitial, setSeenInitial] = useState(initial);
   if (seenInitial !== initial) {
     setSeenInitial(initial);
@@ -71,23 +64,16 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
   const [starting, setStarting] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(false);
-  // Asked only for large dumps; free space is fetched only then.
   const [confirming, setConfirming] = useState(false);
-  // Past SLOW_AFTER_MS a hint shows. The server closes the row once its queue
-  // lock has expired; until then a large dump may legitimately still run.
   const [slow, setSlow] = useState(false);
   const [freeBytes, setFreeBytes] = useState(null);
   const [showAll, setShowAll] = useState(false);
   const format = useFormatter();
 
   const all = polled ?? initial;
-  // Rows keep a copied database name, so a dump outlives its database. Match on
-  // id while the database exists.
   const rows = all.filter((row) => row.database_id === database.id);
   const inFlight = rows.some((row) => IN_FLIGHT.includes(row.status));
 
-  // Only files still on disk: failed runs wrote nothing, and hand-deleted files
-  // are `available: false`.
   const kept = rows.reduce(
     (total, row) =>
       row.status === "completed" && row.available
@@ -111,7 +97,6 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
         const still = parsed.data.exports.some(
           (row) => row.database_id === database.id && IN_FLIGHT.includes(row.status),
         );
-        // Kept even when finished: falling back to `initial` reverted a completed export to "Waiting".
         setPolled(parsed.data.exports);
 
         if (!still) {
@@ -119,7 +104,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
           router.refresh();
         }
       } catch {
-        // A dropped poll isn't worth reporting; the next one runs in 3s.
+        // retry on the next poll
       }
     }, POLL_MS);
 
@@ -138,7 +123,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
       const metrics = await getLiveMetrics();
       setFreeBytes(metrics?.disk?.free ?? null);
     } catch {
-      // The dialog omits the free-space line rather than guessing or blocking.
+      // retry on the next poll
     }
   }
 
@@ -146,8 +131,6 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
     setConfirming(false);
     setStarting(true);
     try {
-      // The 202 carries the queued row; show it immediately rather than waiting
-      // for the refresh round trip.
       const { data } = await createExport(database.id);
       const created = exportSchema.safeParse(data?.export);
       if (created.success) setPolled((current) => [created.data, ...(current ?? initial)]);
@@ -177,8 +160,6 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
   return (
     <>
       <Card className="gap-0 overflow-hidden py-0">
-        {/* flex-wrap plus a minimum width on the text, so the button drops to
-            its own row instead of squeezing the sentence. */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
           <div className="flex min-w-40 flex-1 items-center gap-3">
             <CardIcon icon={FileArchive} />
@@ -197,7 +178,6 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
                 !canManage ? DENIED : inFlight ? t("alreadyRunning") : null
               }
             >
-              {/* The button shows progress itself, since that is where the user looks. */}
               <Button
                 disabled={!canManage || inFlight || starting}
                 onClick={big ? ask : start}
@@ -214,7 +194,6 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
         </div>
 
         <CardContent className="px-5 py-0">
-          {/* Until a poll succeeds, a failed page read is the only answer. */}
           {read?.failed && polled === null ? (
             <div className="py-5">
               <LoadFailed
@@ -250,9 +229,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
           )}
         </CardContent>
 
-        {/* Exports sit on the same disk as the database, so they are not a backup. */}
         <div className="border-t bg-muted/30 px-5 py-3">
-          {/* Nothing prunes exports, so the disk usage is shown once files exist. */}
           {kept.count > 0 ? (
             <p className="mb-1 text-xs font-medium">
               {t("diskUsed", {
@@ -309,7 +286,6 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
   const running = IN_FLIGHT.includes(row.status);
 
   return (
-    // No wrap: on a phone the actions would drop onto their own line.
     <div className="flex items-start justify-between gap-3 py-3.5">
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -317,7 +293,6 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
             {running ? <Loader2 className="size-3 animate-spin" /> : null}
             {t(`status.${row.status}`)}
           </Badge>
-          {/* Exact date on hover; relative time cannot be compared. */}
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="cursor-help text-sm text-muted-foreground underline decoration-dotted underline-offset-4">
@@ -331,7 +306,6 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
               <SizeText value={row.size_human} />
             </span>
           ) : null}
-          {/* Taken by an import before it replaced the database. */}
           {row.purpose === "import_safety" ? (
             <Badge variant="outline" className="font-normal">
               {t("importSafety")}
@@ -339,12 +313,10 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
           ) : null}
         </div>
 
-        {/* Only after SLOW_AFTER_MS, so normal large dumps do not look troubled. */}
         {running && slow ? (
           <p className="text-xs text-muted-foreground">{t("takingLonger")}</p>
         ) : null}
 
-        {/* The server's failure wording plus the id support asks for. */}
         {row.status === "failed" ? (
           <p className="text-xs leading-relaxed text-destructive">
             {row.message ?? t("failedFallback")}
@@ -356,19 +328,16 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
           </p>
         ) : null}
 
-        {/* The row survives a hand-deleted file; say so instead of a 404 link. */}
         {row.status === "completed" && !row.available ? (
           <p className="text-xs text-muted-foreground">{t("fileGone")}</p>
         ) : null}
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        {/* Manage only: the download route requires `database,manage`. */}
         {canManage && row.download_url && row.available ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button asChild variant="ghost" size="icon" className="size-8">
-                {/* A plain anchor: this is a file stream from the API, not an app page. */}
                 <a href={row.download_url} download aria-label={t("download")}>
                   <Download className="size-4" />
                 </a>

@@ -1,13 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-/*
- * A card's vertical padding is set once. `Card` has its own `py`; a `CardContent` with `py-*`
- * adds to it. Exactly one of the pair may set it, as in:
- *
- *     <Card className="gap-0 overflow-hidden py-0 shadow-sm">
- *       <CardContent className="px-5 py-4">
- */
+// A card's vertical padding is set once: either Card or CardContent, not both.
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -22,18 +16,14 @@ function walk(dir, out = []) {
   return out;
 }
 
-// Comments masked, not stripped, so line numbers stay true — this file's own
-// docblock contains the exact markup it is looking for.
 const mask = (s) =>
   s
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
     .replace(/^[ \t]*\/\/.*$/gm, (m) => " ".repeat(m.length));
 
-// `py-0` cancels; any other py-* applies. `p-4` sets all four sides, so it
-// counts as applying vertical padding too.
 const appliesY = (cls) => {
   const py = [...cls.matchAll(/(?<![\w:-])p(?:y)?-([\w.[\]]+)/g)].map((m) => m[1]);
-  if (py.length === 0) return null; // says nothing — inherits
+  if (py.length === 0) return null;
   return py[py.length - 1] !== "0";
 };
 
@@ -47,14 +37,12 @@ for (const file of walk("components")) {
     const contentSetsY = appliesY(match[1]);
     if (contentSetsY !== true) continue;
 
-    // The Card that opens above it.
     const before = source.slice(0, match.index);
     const cards = [...before.matchAll(/<Card\b[^>]*?>/gs)];
     if (cards.length === 0) continue;
 
     pairs += 1;
     const card = cards[cards.length - 1][0];
-    // The Card must have handed its padding over.
     if (!/(?<![\w:-])py-0(?![\w.])/.test(card)) {
       offenders.push({ file, line: before.split("\n").length });
     }

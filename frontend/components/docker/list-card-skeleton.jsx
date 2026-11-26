@@ -1,7 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-// One list card as on the Docker and Registries pages: title and line with a button,
-// then rows — two lines on the left, something in the middle, ⋯ on the right.
 export function ListCardSkeleton({ rows = 3, columns = 1, test = false }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1" aria-hidden>

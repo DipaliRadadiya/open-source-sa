@@ -42,7 +42,6 @@ function PopoverAnchor({
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
 }
 
-// Unstyled on purpose so callers colour it to their own background.
 function PopoverArrow({
   className,
   ...props

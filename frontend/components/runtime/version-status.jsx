@@ -5,11 +5,7 @@ import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// `ready`, or a missing `status` (older responses), renders nothing.
-
 export function versionState(version) {
-  // A failed REMOVAL leaves the version installed and working, so it is not
-  // treated as a failed install.
   if (removeFailed(version)) return null;
   return version?.status && version.status !== "ready" ? version.status : null;
 }
@@ -18,7 +14,6 @@ export function removeFailed(version) {
   return version?.status === "failed" && version?.reason === "remove_failed";
 }
 
-// `useTranslations`, not `getTranslations`: renders in both a server and a client component.
 export function RuntimeStatusBadge({ version, namespace, className }) {
   const t = useTranslations(namespace);
   const state = versionState(version);
@@ -46,7 +41,7 @@ export function RuntimeStatusBadge({ version, namespace, className }) {
         ? t("versions.statusRemoving")
         : version.queued
           ? t("versions.statusQueued")
-        : // The apt phase, not a percentage: the total is unknown until apt finishes.
+        :
           version.current_step
           ? t(`versions.steps.${version.current_step}`)
           : t("versions.statusInstalling")}
@@ -65,8 +60,6 @@ export function RuntimeStatusNotice({ version, versionLabel, namespace }) {
         icon={TriangleAlert}
         title={t("versions.installFailedTitle", { version: versionLabel })}
         description={
-          // The server's explanation when it has one; the reference gets its
-          // own line because it is meant to be copied.
           <>
             {version.message || t("versions.installFailedBody")}
             {version.reference ? (
@@ -79,7 +72,6 @@ export function RuntimeStatusNotice({ version, versionLabel, namespace }) {
   }
 
   const removing = state === "removing";
-  // No worker has picked it up yet: "installing since 3 minutes ago" would read as stuck.
   const queued = !removing && version.queued;
 
   return (
@@ -95,8 +87,7 @@ export function RuntimeStatusNotice({ version, versionLabel, namespace }) {
       description={
         queued
           ? t("versions.queuedBody")
-          : // "Started 17 minutes ago" shows whether it is progressing or stuck.
-            // Removing has its own sentence (the install one promises extensions).
+          :
             version.started_at_human
             ? t(removing ? "versions.removingSince" : "versions.installingSince", {
                 when: version.started_at_human,

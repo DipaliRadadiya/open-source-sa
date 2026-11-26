@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import { splitDomain } from "@/lib/format/domain";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// Truncates the subdomain, keeping the registrable domain visible; `title` holds the full value.
 export function DomainText({ domain, className }) {
   const value = String(domain ?? "");
   const { head, tail } = splitDomain(value);
@@ -18,16 +17,12 @@ export function DomainText({ domain, className }) {
 
   return (
     <HoverHint content={value}><span className={cn("flex min-w-0 items-baseline", className)}>
-      {/* min-w-0 lets the head shrink below its content width. */}
       <span className="min-w-0 truncate">{head}</span>
-      {/* shrink-0: the tail never gives up space. */}
       <span className="shrink-0">{tail}</span>
     </span></HoverHint>
   );
 }
 
-// The whole name, wrapping only before a dot ("…-111.nip" / ".io", not "…nip.i" / "o"); a
-// single part too long for the line still breaks anywhere rather than overflowing.
 export function WrappedDomain({ domain, className }) {
   const parts = String(domain ?? "").split(".");
   return (

@@ -6,7 +6,6 @@ import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-t
 import { UserRowActions } from "@/components/admin/users/user-row-actions";
 import { initials } from "@/lib/format/initials";
 
-// Roles are not capped here: a card wraps, so "+2" would only hide names.
 export function UsersCards({ users, roles = [], currentUserId }) {
   const t = useTranslations("users");
   const tr = useTranslations("roles");

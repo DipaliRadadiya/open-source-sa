@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { failureReason } from "@/lib/files/bulk-result";
 
-// Not a toast: a partial result is a list to read and must not vanish on a timer.
 export function BulkResultPanel({ result, onDismiss }) {
   const t = useTranslations("applications.files");
   if (!result?.failed?.length) return null;
@@ -38,8 +37,6 @@ export function BulkResultPanel({ result, onDismiss }) {
         </IconTooltip>
       </div>
 
-      {/* Bounded so a large failure list cannot push the file list off the page. Each row
-          names the path and the reason. */}
       <ul className="max-h-48 space-y-1 overflow-y-auto">
         {failed.map((entry) => (
           <li

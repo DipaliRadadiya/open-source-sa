@@ -17,7 +17,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// The worker's kind as an explicit control; templates also set it.
 export function WorkerKindField({ form, presets = [], workers = [], disabled = false }) {
   const t = useTranslations("applications.workers");
 
@@ -36,13 +35,10 @@ export function WorkerKindField({ form, presets = [], workers = [], disabled = f
             </FormControl>
             <SelectContent>
               {workerKinds(presets, field.value).map((kind) => {
-                // Same conflict rule as the template menu, but never for the
-                // current value (Server Sync can adopt a pair the API would refuse).
                 const conflict = kind === field.value ? null : conflictingKind(kind, workers);
                 const disabledReason = conflict ? t(`form.conflict.${conflict}`) : null;
 
-                // Reason shown in the row: a disabled SelectItem has
-                // `pointer-events-none`, so a tooltip on it never opens.
+                // A disabled SelectItem has pointer-events-none, so a tooltip on it never opens.
                 return (
                   <SelectItem key={kind} value={kind} disabled={Boolean(disabledReason)}>
                     <span className="flex flex-col items-start gap-0.5">

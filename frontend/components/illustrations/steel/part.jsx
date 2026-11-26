@@ -1,14 +1,5 @@
-/* Copied from the ServerAvatar Central site (sv-central/site components/steel/part.jsx).
-   Changed here: each gradient stop carries a class, so the light theme can re-cut the metal
-   as brushed aluminium in globals.css (the site is dark-only). */
-
 import { rounded } from "@/lib/geometry/cuboid";
 
-/**
- * A machined block with rounded vertical edges, lit like a studio product shot: a soft key
- * light from above, a highlight down the front corner, darker falloff toward the floor, a rim
- * light along the top edge and a contact shadow beneath it.
- */
 export function Part({ box, r = 10, shadow = true, children }) {
   const g = rounded(box, r);
   const { x0, x1, y1 } = g.bounds;

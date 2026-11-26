@@ -26,10 +26,6 @@ function validPort(value) {
   return Number.isInteger(port) && port >= 1 && port <= 65535 ? port : null;
 }
 
-/**
- * Why a container site is down and the fixes for it (`last_failure`). After a failed first
- * deploy a save only stores the port and Retry follows; on a running site a save recreates it.
- */
 export function ContainerFailurePanel({
   application,
   canManageContainer = false,
@@ -65,12 +61,10 @@ export function ContainerFailurePanel({
       return;
     }
     try {
-      // 202: queued, and the layout's watcher reports how it ended. An older API answers 200, done.
       const res = await pullContainerImage(application.id);
       await refreshAndWait();
       toast.success(res.status === 202 ? t("queued") : t("fixed"));
     } catch (error) {
-      // The new reason is on the site now; show it, not the old one.
       await refreshAndWait();
       throw error;
     }
@@ -80,7 +74,6 @@ export function ContainerFailurePanel({
     try {
       await updateContainerSettings(application.id, { container_port: port });
     } catch (error) {
-      // `saved: true` — the port is stored, only the restart on it failed.
       if (error.response?.data?.saved) await refreshAndWait();
       throw error;
     }
@@ -123,21 +116,16 @@ export function ContainerFailurePanel({
     if (await run("dialog", () => applyPort(port))) setDialogOpen(false);
   }
 
-  // A Pull and redeploy on the queue holds every fix here: the API answers 409 to each.
   const redeploying = containerRedeployInFlight(application);
   const working = busy !== null || redeploying;
   const title = application.container_status === "restarting" ? t("titleRestarting") : t("title");
   const usePort = fixPort && canManageContainer;
   const hasActions = canManageContainer || canEditEnv || canSeeLogs || canRedeploy;
-  // The readiness wait of this page's own click; a queued redeploy shows on its button.
   const waiting = busy !== null && !firstDeploy;
-  // No empty body under the header band when there is no log to show.
   const hasBody = canSeeLogs || waiting;
 
   return (
-    // The card is the problem; the red is in its edge and icon, never the title.
     <Card className={cn("@container/failure border-destructive/30", className)}>
-      {/* Several fixes, so they stack under the title until the card is wide (as Source). */}
       <CardHeader
         className={cn(
           "flex flex-col gap-3 @3xl/failure:flex-row @3xl/failure:items-start @3xl/failure:justify-between",
@@ -150,7 +138,6 @@ export function ContainerFailurePanel({
             <CardTitle as="h2">{title}</CardTitle>
             <CardDescription>{t("lead")}</CardDescription>
             {checkedAt ? (
-              // Server and browser clocks render "N seconds ago" differently.
               <p className="text-xs text-muted-foreground" suppressHydrationWarning>
                 {t("checkedAt", { time: format.relativeTime(Math.min(checkedAt, now.getTime()), now) })}
               </p>
@@ -205,7 +192,6 @@ export function ContainerFailurePanel({
       {hasBody ? (
         <CardContent className="space-y-3">
           {waiting ? <WaitNote>{t("waitNote")}</WaitNote> : null}
-          {/* Raw output on the console surface, like a deploy's build log. */}
           {canSeeLogs ? (
             <div className="overflow-hidden rounded-lg border border-console-border bg-console">
               <div className="flex items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
@@ -287,7 +273,6 @@ export function ContainerFailurePanel({
   );
 }
 
-// The panel's in-progress line (as Update and Source while they run).
 function WaitNote({ children }) {
   return (
     <p role="status" className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">

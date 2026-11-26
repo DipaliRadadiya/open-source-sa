@@ -1,5 +1,3 @@
-// What a backup is of: a site, a database on its own, or either of them after
-// it was deleted (`archived`: the id is gone, the name is kept).
 export function backupSubject(backup) {
   if (backup.database_id) {
     return { kind: "database", name: backup.database_name, href: `/databases/${backup.database_id}?tab=backups`, archived: false };

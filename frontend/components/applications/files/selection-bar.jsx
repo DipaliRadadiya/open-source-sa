@@ -5,15 +5,12 @@ import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { BULK_PATH_LIMIT } from "@/lib/api/files";
 import { dirname } from "@/lib/files/path-helpers";
 
-// Inapplicable actions are disabled with a reason, not hidden. Rename and Edit are
-// absent: they must not silently apply to the first selected file.
 export function SelectionBar({ selected, onClear, onAction, canManage }) {
   const t = useTranslations("applications.files");
   if (selected.length === 0) return null;
 
   const overLimit = selected.length > BULK_PATH_LIMIT;
-  // `zip` runs from the sources' folder, so a selection spanning folders cannot be
-  // compressed; checked here so the button explains before the server returns 422.
+  // zip runs from the sources' folder, so files from several folders can't be compressed.
   const spansFolders = new Set(selected.map((path) => dirname(path))).size > 1;
 
   const blocked = !canManage

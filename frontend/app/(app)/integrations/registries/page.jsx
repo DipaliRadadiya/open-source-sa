@@ -16,7 +16,6 @@ export async function generateMetadata() {
   return { title: t("title") };
 }
 
-// Registry credentials: held elsewhere and used by features, like git accounts and storage.
 export default async function RegistriesPage() {
   const [permissions, t, list] = await Promise.all([
     getPermissions(),
@@ -24,9 +23,6 @@ export default async function RegistriesPage() {
     getRegistriesPage(),
   ]);
 
-  // A 409 is the honest answer on a server that hosts no containers, not a failure
-  // to report: a credential for pulling images is nothing without something to pull
-  // them for. The sidebar already hides this there, so this is a bookmark.
   if (list.failed && list.status === 409) {
     return (
       <div className="space-y-6">
@@ -39,8 +35,6 @@ export default async function RegistriesPage() {
       </div>
     );
   }
-  // After the 409: on a server without Docker the backend leaves `registry` out of
-  // everyone's permissions, so checking it first told an admin "no access".
   if (!can(permissions, "registry", "view"))
     return <PermissionDenied title={t("title")} feature="registry" />;
   const canManage = can(permissions, "registry", "manage");

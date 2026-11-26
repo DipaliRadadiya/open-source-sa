@@ -15,14 +15,11 @@ import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Radix Select cannot hold null, which is how the API says "keep everything".
+// Radix Select can't hold null, which the API uses for keep everything.
 const NEVER = "never";
 const RECOMMENDED = 12;
 const toValue = (months) => (months == null ? NEVER : String(months));
 
-// How long the activity log is kept, for every user, so admin only (the page is). A header
-// button showing the setting, not a card above the log: it is changed once, read daily
-//.
 export function RetentionButton({ retention }) {
   const t = useTranslations("activity.retention");
   const tc = useTranslations("common");
@@ -32,7 +29,6 @@ export function RetentionButton({ retention }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(toValue(retention.months));
   const [pending, setPending] = useState(false);
-  // Read when the window opens, so the preview's date stays put while it is open.
   const [now, setNow] = useState(null);
 
   const savedValue = toValue(saved.months);
@@ -67,7 +63,6 @@ export function RetentionButton({ retention }) {
     }
   }
 
-  // What the choice would do, before it is saved.
   const cutoff = value === NEVER || now === null ? null : retentionCutoff(now, Number(value));
   const preview =
     value === NEVER
@@ -113,7 +108,6 @@ export function RetentionButton({ retention }) {
         }
       >
         <div className="space-y-2">
-          {/* A plain label, not FormLabel: this window has no react-hook-form. */}
           <label htmlFor="activity-retention" className="text-sm font-medium">
             {t("label")}
           </label>

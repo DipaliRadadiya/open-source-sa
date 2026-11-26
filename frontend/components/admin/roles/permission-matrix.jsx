@@ -19,8 +19,6 @@ export function permKey(level, name) {
   return `${level}:${name}`;
 }
 
-// Two checkboxes over one access level (`none`/`view`/`manage`). Manage implies View,
-// so no state the server would rewrite is reachable.
 function viewOf(access) {
   return access === ACCESS_VIEW || access === ACCESS_MANAGE;
 }
@@ -38,8 +36,6 @@ function withManage(access, next) {
   return next ? ACCESS_MANAGE : viewOf(access) ? ACCESS_VIEW : ACCESS_NONE;
 }
 
-// `checked` may be true, false, or "indeterminate" for a header covering rows
-// that disagree.
 function AccessCheck({ id, checked, onChange, label }) {
   return (
     <label
@@ -76,7 +72,6 @@ export function PermissionMatrix({ groups = [], value, onChange }) {
 
   const accessFor = (item) => value[permKey(item.level, item.name)] ?? ACCESS_NONE;
 
-  // Panel vocabulary, not the API's catalog titles ("Read only" / "Read & write").
   const labels = { view: t("view"), manage: t("manage") };
 
   const allItems = groups.flatMap((group) => group.permissions);
@@ -87,8 +82,6 @@ export function PermissionMatrix({ groups = [], value, onChange }) {
     onChange({ ...value, ...updates });
   }
 
-  // `t.has()`: next-intl returns the key path for a missing key, and permission names
-  // come from the API, so new ones may have no copy yet.
   const permDesc = (name) => {
     const key = `permDesc.${name}`;
     return t.has(key) ? t(key) : "";
@@ -100,7 +93,6 @@ export function PermissionMatrix({ groups = [], value, onChange }) {
 
   return (
     <div className="space-y-4">
-      {/* Grant-all control above the sections it governs. */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-3 py-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold">{t("selectAll")}</p>
@@ -122,13 +114,9 @@ export function PermissionMatrix({ groups = [], value, onChange }) {
         const items = group.permissions;
         if (!items.length) return null;
         const LevelIcon = levelIcon(group.level);
-        // Keyed on both, as the server groups them: `logs` exists at server and
-        // application level as two unrelated permissions.
         const sectionKey = `${group.level}|${group.sub_level}`;
 
         return (
-          // Folded, each with its own count: open, the 38 rows made the page three screens
-          // long. Set all works without opening.
           <Collapsible key={sectionKey} className="group/section overflow-hidden rounded-lg border">
             <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/40 px-3 py-2 group-data-[state=open]/section:border-b">
               <CollapsibleTrigger className="flex min-w-0 items-center gap-2 rounded text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">

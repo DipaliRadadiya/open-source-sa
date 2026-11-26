@@ -16,11 +16,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Caution } from "@/components/ui/caution";
 
-/**
- * Edit a container site's compose file (its variables live here; there is no Environment
- * screen). The server validates the file and rolls back if the new one won't start, so the
- * acknowledgement is asked only when taking over the panel's generated file, which is one-way.
- */
 export function ComposeEditor({
   application,
   canManage,
@@ -34,17 +29,12 @@ export function ComposeEditor({
   const [contents, setContents] = useState(initialCompose);
   const [saving, setSaving] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
-  // Field errors from the validator — read line by line and acted on, unlike a
-  // toast that clears itself in four seconds.
   const [errors, setErrors] = useState([]);
 
-  // Whether what is on screen came from the panel's template rather than a stored
-  // file. Read from the server on load and held, because once a save succeeds the
-  // site has a stored file and the warning must stop.
+  // Once a save succeeds the site has a stored file, so hold this value.
   const [generated, setGenerated] = useState(initialGenerated);
 
   const dirty = contents !== initialCompose;
-  // The API answers 409 to a save while a Pull and redeploy runs.
   const redeploying = containerRedeployInFlight(application);
   const tr = useTranslations("applications.redeploy");
 
@@ -53,16 +43,12 @@ export function ComposeEditor({
     setErrors([]);
     try {
       await saveContainerCompose(application.id, contents);
-      // Before the toast: the image and published port are server-rendered and a
-      // compose save can move either, so a toast first uncovers stale state.
+      // Refresh before the toast: a compose save can change the image and port shown above.
       await refreshAndWait();
       toast.success(t("saved"));
       setGenerated(false);
       setAcknowledged(false);
     } catch (error) {
-      // A 422 carries either field errors from the validator or one message from a
-      // failed apply. Both belong on the page, where the text can be fixed without
-      // being retyped.
       const fieldErrors = error.response?.data?.errors?.compose;
 
       setErrors(
@@ -78,7 +64,6 @@ export function ComposeEditor({
   const lineCount = contents.split("\n").length;
   const gutter = useRef(null);
 
-  // What the server checks, one short line each instead of a paragraph.
   const rules = [
     { key: "parser", icon: ShieldCheck },
     { key: "ports", icon: Network },
@@ -111,14 +96,9 @@ export function ComposeEditor({
         </ul>
 
         {generated ? (
-          /* One-way, so a Caution. After this save the stored file is what runs and the
-             Container page's settings stop driving it. */
           <Caution size="md">{t("takeover")}</Caution>
         ) : null}
 
-        {/* An editor well: line numbers in a gutter, the file beside them. Full width
-            and not wrapped -- a compose file's lines are long and wrapped YAML is
-            unreadable. `font-mono` because indentation is syntax here. */}
         <div className="flex overflow-hidden rounded-lg border bg-muted/30 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30">
           <div
             ref={gutter}
@@ -132,7 +112,6 @@ export function ComposeEditor({
           <Textarea
             value={contents}
             onChange={(event) => setContents(event.target.value)}
-            // Browsers without field-sizing scroll the box; keep the numbers level.
             onScroll={(event) => {
               if (gutter.current) gutter.current.scrollTop = event.currentTarget.scrollTop;
             }}
@@ -172,7 +151,6 @@ export function ComposeEditor({
         ) : null}
       </CardContent>
 
-      {/* What saving does, beside the button that does it. */}
       {canManage ? (
         <CardFooter className="flex-wrap items-center justify-between gap-3 border-t">
           <p className="flex max-w-prose items-start gap-2 text-xs leading-5 text-muted-foreground">
@@ -186,8 +164,6 @@ export function ComposeEditor({
               </span>
             ) : null}
 
-            {/* Back to what the page loaded with. Cheap to offer and the obvious
-                thing to want after an edit that will not validate. */}
             <Button
               type="button"
               size="sm"
@@ -213,7 +189,6 @@ export function ComposeEditor({
                 contents.trim() === "" ||
                 (generated && !acknowledged)
               }
-              // Said on hover, like every other disabled control.
               disabledReason={
                 saving
                   ? null

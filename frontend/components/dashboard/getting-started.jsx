@@ -14,9 +14,6 @@ const STEPS = [
   { key: "backups", icon: ArchiveRestore },
 ];
 
-// Only on a server with no applications. Step 1 is done by definition; step 2
-// is the one thing to do now; 3–5 need an application, so they say what comes
-// next rather than offering buttons that would lead nowhere yet.
 export async function GettingStarted({ canCreate = false, ip = null }) {
   const [t, tApplications] = await Promise.all([
     getTranslations("serverDashboard.start"),

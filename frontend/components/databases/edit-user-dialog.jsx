@@ -24,8 +24,6 @@ import {
 } from "@/components/ui/form";
 import { UserFields } from "@/components/databases/user-fields";
 
-// SQL engines use `RENAME USER`, so grants survive. Mongo drops and recreates
-// the user, so a rename there needs a password.
 export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers = true }) {
   const t = useTranslations("databases.users");
   const restart = useRestartConfirm();
@@ -49,7 +47,6 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
   const values = useWatch({ control: form.control });
 
   async function onSubmit(submitted) {
-    // PATCH: send only changed fields.
     const payload = {};
     if (submitted.username !== defaults.username) {
       payload.username = submitted.username;
@@ -84,7 +81,6 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
 
   const isSubmitting = form.formState.isSubmitting;
   const renaming = values.username !== defaults.username;
-  // Mongo cannot rename without one, so the button says so before the request.
   const needsPassword = isMongo && renaming && !values.password;
 
   return (
@@ -107,7 +103,6 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
             >
               {t("cancel")}
             </Button>
-            {/* Two reasons; a Mongo rename drops and recreates the user. */}
             <ReasonTooltip
               reason={
                 isSubmitting
@@ -132,15 +127,13 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
       >
         <UserFields form={form} access={values.connection_preference} remoteUsers={remoteUsers} />
 
-        {/* Only Mongo loses the credential on a rename, so only Mongo is warned. */}
         {isMongo && renaming ? (
           <>
             <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-relaxed">
               {t("mongoRenameWarning")}
             </p>
 
-            {/* Required only here: Mongo recreates the user on rename and needs
-                a password (otherwise the API returns 422). */}
+            {/* Mongo recreates the user on rename, so a password is required (422 otherwise). */}
             <FormField
               control={form.control}
               name="password"

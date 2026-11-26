@@ -48,10 +48,9 @@ import {
 } from "@/components/ui/form";
 import { timezoneLabel } from "@/lib/format/timezone";
 
-// Offered, not applied: excluding `vendor` breaks apps that need it at runtime.
+// Suggested only: excluding vendor breaks apps that need it at runtime.
 const SUGGESTED_FILE_EXCLUDES = ["node_modules", ".git", "vendor", "storage/logs", "*.log"];
 
-// Which half a type change drops, or null: `full` → `filesystem` drops databases.
 function droppedByNarrowing(current, next) {
   if (!current || !next || current === next) return null;
   if (current === "full" && next === "filesystem") return "narrower";
@@ -75,42 +74,28 @@ export function BackupSettingsFields({
   form,
   applications,
   destinations = [],
-  // Re-reads the storage list without a page reload; when omitted, no refresh button.
   onRefreshDestinations = null,
   refreshingDestinations = false,
   disabled = false,
-  // The saved configuration; only used to warn about changes that take something away.
   target = null,
   keptCount = null,
-  // How many databases each site has, and whether that answer is trustworthy.
-  // Absent means unknown, which reads the same as "say nothing".
   databaseCounts = null,
   databasesKnown = false,
-  // `GET /backup-targets/options`: the frequencies, types and retention bounds
-  // this form offers. Null when it could not be read, with a way to ask again.
   options = null,
   onRetryOptions = null,
   retryingOptions = false,
-  // The site type catalogue, and the type of the one site when the form is
-  // fixed to it. Together they say which sites never have a database at all.
   siteTypes = null,
   siteType = null,
   servingProfile = null,
-  // A container site's `has_volumes`: "Volumes" alone is blocked when false, and
-  // null (unknown, or not fixed to one site) says nothing — the save refuses it.
   hasVolumes = null,
-  // A database's own schedule: always a database backup, nothing to exclude.
   databaseOnly = false,
 }) {
   const t = useTranslations("backups.form");
   const tv = useTranslations("validation");
-  // Only the API knows the scheduler's clock. A new target has none yet, so the
-  // timezone line is omitted rather than guessing UTC.
   const scheduleTimezone = target?.timezone ?? options?.timezone ?? null;
   const automatic = useWatch({ control: form.control, name: "enabled" });
   const frequency = useWatch({ control: form.control, name: "frequency" });
   const retention = useWatch({ control: form.control, name: "retention_count" });
-  // The form validates on Save, so while typing "-1" the hint would say "Keeps the newest -1 backup".
   const retentionBounds = options?.retention ?? { min: 1, max: Number.MAX_SAFE_INTEGER };
   const retentionInRange =
     Number.isInteger(Number(retention)) &&
@@ -118,8 +103,6 @@ export function BackupSettingsFields({
     Number(retention) <= retentionBounds.max;
   const type = useWatch({ control: form.control, name: "type" });
   const applicationId = useWatch({ control: form.control, name: "application_id" });
-  // List field errors are per line (`file_excludes.3`) with no field-level
-  // message, so name the first bad line.
   const lineError = (error) => {
     if (!error) return undefined;
     if (error.message) return tv.has(error.message) ? tv(error.message) : error.message;
@@ -139,12 +122,9 @@ export function BackupSettingsFields({
   const hasDestinations = destinations.length > 0;
   const onlyDestination = destinations.length === 1 ? destinations[0] : null;
 
-  // The destination this form will write to, including `onlyDestination`
-  // (the single-destination case has no picker).
   const chosenDestination =
     onlyDestination ?? destinations.find((d) => String(d.id) === String(destinationId)) ?? null;
-  // A never-connected Google Drive is not probed on creation, so
-  // `last_test_success` stays null; `config.connected` catches it.
+  // A never-connected Google Drive isn't tested on create, so check config.connected.
   const notConnected =
     chosenDestination?.provider === "google_drive_oauth" &&
     chosenDestination?.config?.connected === false;
@@ -153,24 +133,16 @@ export function BackupSettingsFields({
       ? chosenDestination
       : null;
 
-  // Narrowing what gets copied silently drops data from every future run, so warn.
   const dropping = droppedByNarrowing(target?.type, type);
 
-  // Which exclusions this type will honour. The backend gates its steps on the
-  // same `wantsFiles`/`wantsDatabase` checks; anything else would be silently ignored.
   const wantsFiles = type === "filesystem" || type === "full";
   const wantsDatabase = type === "database" || type === "full";
 
-  // `true` no databases, `false` some, `null` unknown — and `null` must stay
-  // silent. See `hasNoDatabase`.
   const noDatabase = hasNoDatabase(databaseCounts, databasesKnown, applicationId);
 
-  // Site types with no database ever (n8n, static, ...): "Database only" fails
-  // with a misleading disk-space error, and "Full" is really files only.
   const chosenType =
     siteType ?? (applications ?? []).find((application) => String(application.id) === String(applicationId))?.site_type;
   const knownType = Boolean(chosenType) && (siteTypes ?? []).some((entry) => entry.name === chosenType);
-  // A Docker site backs up volumes and its compose file; the hosted types do not apply.
   const chosenApplication = (applications ?? []).find((application) => String(application.id) === String(applicationId));
   const container =
     (servingProfile ?? chosenApplication?.serving_profile) === "docker" ||
@@ -179,14 +151,11 @@ export function BackupSettingsFields({
   const noVolumes = container && blocksVolumesOnly(hasVolumes);
   const filesOnly = !container && noDatabase === true && knownType && !siteNeedsDatabase(siteTypes, chosenType);
 
-  // A database-less site cannot keep "Database only" (empty backup), but a type
-  // the user picked is left alone.
   const typePicked = Boolean(form.formState.dirtyFields?.type);
   useEffect(() => {
     if (typeOptions.length && !typeOptions.some((option) => option.value === type)) {
       form.setValue("type", typeOptions[0].value, { shouldDirty: Boolean(target) });
     } else if (container) {
-      // A saved "Volumes" target of a site with none fails every run (S-02).
       const working = withoutVolumesOnly(type, hasVolumes);
       if (working !== type) form.setValue("type", working, { shouldDirty: true });
       return;
@@ -198,16 +167,11 @@ export function BackupSettingsFields({
       form.setValue("type", "filesystem");
     }
   }, [typeOptions, container, hasVolumes, filesOnly, noDatabase, type, form, target, typePicked]);
-  // Lowering retention prunes when the settings are SAVED (SaveBackupTarget
-  // applies it in the same request), not on the next run.
-  // From the backups actually kept: "keep 3 → 1" with only 2 kept deletes one, not two.
   const lowering = target && Number(retention) > 0 && Number(retention) < target.retention_count;
   const pruning = !lowering ? 0 : keptCount === null ? null : Math.max(0, keptCount - Number(retention));
 
   return (
     <div className="space-y-6">
-      {/* `applications?.length`: an empty array is truthy and would render an
-          empty site picker where the site is fixed. */}
       {applications?.length ? (
         <Group icon={Layers} title={t("groups.site")}>
           <FormField
@@ -271,8 +235,6 @@ export function BackupSettingsFields({
                     value: option,
                     label,
                     hint: t.has(`types.${option}.hint`) ? t(`types.${option}.hint`) : undefined,
-                    // Blocked, not just warned: this would produce an empty
-                    // archive that reports success.
                     disabledReason:
                       filesOnly && option !== "filesystem"
                         ? t("noDatabase.typeHasNone")
@@ -284,8 +246,6 @@ export function BackupSettingsFields({
                   }))}
                 />
               </FormControl>
-              {/* Still allowed (a site can gain a database later), but today it
-                  copies files only, so say so. */}
               {filesOnly ? null : noDatabase && type === "full" ? (
                 <Caution className="mt-2">{t("noDatabase.filesOnly")}</Caution>
               ) : null}
@@ -298,8 +258,6 @@ export function BackupSettingsFields({
       )}
 
       <Group icon={CalendarClock} title={t("groups.schedule")}>
-        {/* One switch instead of a "manual" frequency: the backend treats
-            `enabled: false` and `frequency: manual` identically. */}
         <FormField
           control={form.control}
           name="enabled"
@@ -310,7 +268,6 @@ export function BackupSettingsFields({
                 <FormDescription>
                   {automatic ? t("automaticOn") : t("automaticOff")}
                 </FormDescription>
-                {/* `enabled` is always sent, so a 422 on it needs a place to render. */}
                 <FormMessage />
               </div>
               <FormControl>
@@ -357,14 +314,13 @@ export function BackupSettingsFields({
               )}
             />
 
-            {/* Native time input: it returns exactly the "HH:MM" the API validates. */}
             {usage ? (
             <FormField
               control={form.control}
               name="schedule_time"
               render={({ field }) => (
                 <FormItem>
-                  {/* Hourly reads only the minute; an hour field would be silently ignored. */}
+                  {/* Hourly only reads the minute. */}
                   {usage === "minute" ? (
                     <>
                       <FormLabel required hint={t("scheduleMinuteHint")}>{t("scheduleMinute")}</FormLabel>
@@ -398,8 +354,6 @@ export function BackupSettingsFields({
                       </FormControl>
                     </>
                   )}
-                  {/* The app timezone, NOT server time: the scheduler resolves
-                      the slot against it, unlike Linux cron. */}
                   {scheduleTimezone ? (
                     <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock className="size-3.5 shrink-0" />
@@ -428,8 +382,6 @@ export function BackupSettingsFields({
                       {...field}
                     />
                   </FormControl>
-                  {/* Counts backups, not days; the hint says so on hourly schedules.
-                      Hidden while the value is invalid. */}
                   {form.formState.errors.retention_count || !retentionInRange ? null : (
                     <FormDescription>
                       {span?.unit === "hours"
@@ -464,8 +416,6 @@ export function BackupSettingsFields({
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
             <div className="space-y-2">
               <p>{t("noDestinations")}</p>
-              {/* "Add destination" opens a new tab, so a refresh action is needed
-                  here to avoid reloading and losing the form. */}
               <div className="flex flex-wrap gap-2">
                 <Button asChild size="sm" variant="outline">
                   <Link href="/integrations/storage" target="_blank" rel="noreferrer" prefetch={false}>
@@ -499,7 +449,6 @@ export function BackupSettingsFields({
             name="storage_destination_id"
             render={({ field }) => (
               <FormItem>
-                {/* A single destination is shown as a row, not a one-option dropdown. */}
                 {onlyDestination ? (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-muted/30 px-3 py-2.5 text-sm">
                     <HardDrive className="size-4 shrink-0 text-muted-foreground" />
@@ -528,13 +477,10 @@ export function BackupSettingsFields({
                       placeholder={t("destinationPlaceholder")}
                       searchPlaceholder={t("destinationSearch")}
                       empty={t("destinationEmpty")}
-                      // The group heading is not a <label>; without this the picker had no name.
                       ariaLabel={t("groups.storage")}
                     />
                   </FormControl>
                 )}
-                {/* The chosen destination fails its own connection test. A
-                    warning, not a blocker, so credentials can be fixed mid-setup. */}
                 {failingDestination ? (
                   <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs">
                     <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />
@@ -567,11 +513,8 @@ export function BackupSettingsFields({
           {t("excludeTitle")}
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-3 pt-3 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-          {/* One shared hint for both fields. */}
           <p className="text-xs text-muted-foreground">{t("excludeHint")}</p>
 
-          {/* `items-start` keeps one textarea from stretching the other. One
-              column when only one box applies. */}
           <div
             className={cn(
               "grid items-start gap-4",
@@ -587,8 +530,6 @@ export function BackupSettingsFields({
                   <FormLabel hint={t("fileExcludesHint")}>{t("fileExcludes")}</FormLabel>
                   <FormControl>
                     <Textarea
-                      // `field-sizing-fixed`: the base Textarea grows with its
-                      // content and ignores `rows`; fixed height keeps the pair even.
                       className="h-24 resize-none overflow-y-auto font-mono text-xs field-sizing-fixed"
                       disabled={disabled}
                       placeholder={t("fileExcludesPlaceholder")}
@@ -611,8 +552,6 @@ export function BackupSettingsFields({
                   <FormLabel hint={t("databaseExcludesHint")}>{t("databaseExcludes")}</FormLabel>
                   <FormControl>
                     <Textarea
-                      // `field-sizing-fixed`: the base Textarea grows with its
-                      // content and ignores `rows`; fixed height keeps the pair even.
                       className="h-24 resize-none overflow-y-auto font-mono text-xs field-sizing-fixed"
                       disabled={disabled}
                       placeholder={t("databaseExcludesPlaceholder")}
@@ -627,13 +566,11 @@ export function BackupSettingsFields({
             ) : null}
           </div>
 
-          {/* The chips add file patterns, so they follow the file box. */}
           {wantsFiles ? (
           <FormField
             control={form.control}
             name="file_excludes"
             render={({ field }) => {
-              // Added patterns leave the row; the row disappears when none are left.
               const remaining = SUGGESTED_FILE_EXCLUDES.filter(
                 (pattern) => !(field.value ?? []).includes(pattern),
               );
@@ -667,7 +604,6 @@ export function BackupSettingsFields({
   );
 }
 
-/** One pattern per line; blank lines are typing, not intent. */
 function toLines(value) {
   return value
     .split("\n")

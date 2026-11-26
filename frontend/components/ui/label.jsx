@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
 import { InfoHint } from "@/components/ui/info-hint"
 
-// A Popover, not a tooltip: Radix tooltips never open on touch.
+// Popover, not tooltip: Radix tooltips don't open on touch.
 function Label({
   className,
   hint,
@@ -26,10 +26,8 @@ function Label({
   );
 }
 
-/** The icon trigger gets a short accessible name, not the full explanation. */
 function LabelHint({ children }) {
   const t = useTranslations("common")
-  // Negative margin keeps the 20px target without making the label taller.
   return (
     <InfoHint label={t("whatIsThis")} className="-my-[3px]">
       {children}
@@ -37,5 +35,4 @@ function LabelHint({ children }) {
   )
 }
 
-/* LabelHint is for labels that must place the ⓘ themselves. */
 export { Label, LabelHint }

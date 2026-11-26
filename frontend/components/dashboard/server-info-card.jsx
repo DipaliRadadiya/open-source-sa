@@ -9,10 +9,8 @@ import { shortVersion } from "@/lib/databases/short-version";
 import { HoverHint } from "@/components/ui/hover-hint";
 import { SizeText } from "@/components/ui/size-text";
 
-// Listed from `/databases/engines` instead, so filtered out of `/server/facts` runtimes.
 const DATABASE_ENGINES = new Set(["mysql", "mariadb", "mongodb", "postgresql"]);
 
-// Product names, shown as-is in every language.
 const RUNTIMES = {
   nginx: { name: "Nginx", mark: "NGX", web: true },
   apache: { name: "Apache", mark: "APA", web: true },
@@ -22,30 +20,19 @@ const RUNTIMES = {
   redis: { name: "Redis", mark: "RDS" },
 };
 
-// What a site depends on: the web server, PHP, Node.js and one database. The
-// rest (Redis, a second engine) fills the row while there is room, then "+N more".
 const MAIN_RUNTIMES = new Set(["nginx", "apache", "openlitespeed", "php", "node"]);
 const MAIN_ENGINE_ORDER = ["mariadb", "mysql", "postgresql", "mongodb"];
-// Tiles in one row of the strip at its widest (`lg:grid-cols-5` below).
 const ROW_TILES = 5;
-// A short mono code in a square instead of the
-// logo on a white tile, which looked odd on the dark theme (and the MariaDB seal is
-// dark blue, so a dark tile would hide it).
 const ENGINE_MARKS = { mariadb: "MDB", mysql: "MYSQL", postgresql: "PG", mongodb: "MGO" };
 
-// Facts are cells in one hairline grid. Each
-// cell draws its right and bottom edge inside itself; the grid's -1px margins push
-// the outermost ones under the card's clipped edge or the next section's border.
 const CELL = "min-w-0 bg-card shadow-[inset_-1px_0_0_var(--border),inset_0_-1px_0_var(--border)]";
 
 function Fact({ label, value, mono }) {
   return (
     <div className={cn(CELL, "px-4 py-3")}>
-      {/* Normal-case labels; mono only for values like kernels and versions. */}
       <dt className="text-[13px] font-medium text-muted-foreground">{label}</dt>
       <dd className="mt-1 flex min-w-0 items-center gap-1">
         {value ? (
-          // Wraps rather than cuts: the CPU model lost its end ("Gold 6138 CPU …").
           <span className={cn("text-sm font-medium break-words", mono && "font-mono tracking-tight")}>{value}</span>
         ) : (
           <span className="text-sm font-medium">—</span>
@@ -74,8 +61,6 @@ function SoftwareChip({ mark, name, version, title }) {
   );
 }
 
-// One full-width card: the machine's facts, then the software its sites run on.
-// No IP or uptime here: the banner above shows both.
 export async function ServerInfoCard({ facts, health, engines = [], enginesFailed = false, canViewServices = false }) {
   const t = await getTranslations("serverDashboard");
 
@@ -105,7 +90,6 @@ export async function ServerInfoCard({ facts, health, engines = [], enginesFaile
         <CardTitle icon={Server} as="h2">{t("info.title")}</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        {/* Eight facts so the four-across rows are always full. */}
         <dl className="-mr-px -mb-px grid sm:grid-cols-2 xl:grid-cols-4">
           <Fact label={t("info.hostname")} value={facts.hostname} mono />
           <Fact label={t("info.os")} value={facts.os} />
@@ -128,29 +112,22 @@ export async function ServerInfoCard({ facts, health, engines = [], enginesFaile
   );
 }
 
-// The software sites depend on, as equal tiles across the card's full width.
 async function MainSoftware({ facts, health, engines, enginesFailed, canViewServices }) {
   const t = await getTranslations("serverDashboard");
   const tDatabases = await getTranslations("databases");
-  // `mysql` is dropped: `/server/facts` builds it from `mysql --version`, which on
-  // MariaDB reports the client under the wrong name.
   const runtimes = Object.entries(facts.runtimes ?? {}).filter(
     ([name, version]) => version && !DATABASE_ENGINES.has(name),
   );
-  // Installed, not running; whether services are up is the services badge's job.
   const installedEngines = engines.filter((engine) => engine.installed);
   const down = health?.down ?? [];
   const mainRuntimes = runtimes
     .filter(([name]) => MAIN_RUNTIMES.has(name))
-    // Web server first, then the languages.
     .sort(([a], [b]) => Number(Boolean(RUNTIMES[b]?.web)) - Number(Boolean(RUNTIMES[a]?.web)));
   const engineRank = (engine) => {
     const rank = MAIN_ENGINE_ORDER.indexOf(engine.engine);
     return rank === -1 ? MAIN_ENGINE_ORDER.length : rank;
   };
   const [mainEngine, ...otherEngines] = [...installedEngines].sort((a, b) => engineRank(a) - engineRank(b));
-  // The rest go straight into the row while it has room (five tiles on a wide
-  // screen); "+N more" only when they do not fit, and it then takes the last tile.
   const extraRuntimes = runtimes.filter(([name]) => !MAIN_RUNTIMES.has(name));
   const extras = [
     ...extraRuntimes.map(([name, version]) => ({ kind: "runtime", name, version })),
@@ -159,7 +136,6 @@ async function MainSoftware({ facts, health, engines, enginesFailed, canViewServ
   const room = ROW_TILES - mainRuntimes.length - (mainEngine ? 1 : 0) - (enginesFailed ? 1 : 0);
   const inline = extras.length <= room ? extras : extras.slice(0, Math.max(0, room - 1));
   const more = extras.length - inline.length;
-
 
   return (
     <section className="border-t">
@@ -185,8 +161,6 @@ async function MainSoftware({ facts, health, engines, enginesFailed, canViewServ
             {mainEngine ? (
               <SoftwareChip
                 name={tDatabases(`engines.${mainEngine.engine}`)}
-                // The packaged string, for anyone who needs the build:
-                // "10.11.14-MariaDB-0ubuntu0.24.04.1".
                 title={mainEngine.version ?? undefined}
                 version={shortVersion(mainEngine.version)}
                 mark={ENGINE_MARKS[mainEngine.engine]}
@@ -212,8 +186,6 @@ async function MainSoftware({ facts, health, engines, enginesFailed, canViewServ
               ),
             )}
 
-            {/* Stated, not omitted, so the row never contradicts the databases
-                page. Muted: nothing is broken on the server. */}
             {enginesFailed ? (
               <li className={cn(CELL, "flex items-center px-4 py-3")}>
                 <Badge
@@ -254,7 +226,6 @@ async function MainSoftware({ facts, health, engines, enginesFailed, canViewServ
 }
 
 function ServiceHealthLine({ health, down, t }) {
-  // No permission, or the request failed: there is no verdict to give.
   if (!health) return null;
 
   if (down.length) {
@@ -266,7 +237,6 @@ function ServiceHealthLine({ health, down, t }) {
     );
   }
 
-  // The server reported no services: say so, neutrally, not "All 0 running".
   if (!health.total) {
     return (
       <Badge variant="secondary" className="py-1 font-normal text-muted-foreground">
@@ -275,11 +245,7 @@ function ServiceHealthLine({ health, down, t }) {
     );
   }
 
-  // A user counted the software tiles (4) against "All 5 services running": the count is
-  // services, so it opens the Services page and names them on hover.
   return (
-    // The hint outside the badge: inside, the badge's classes landed on the hint component and
-    // were dropped, so it rendered as bare text whose arrow fell onto a line of its own.
     <HoverHint content={(health.names ?? []).join(", ")}>
       <Badge asChild variant="success" className="gap-1.5 py-1 font-medium whitespace-nowrap hover:underline">
         <Link href="/services" prefetch={false}>

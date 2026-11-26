@@ -15,13 +15,11 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// The backend owns stage and failure wording; this owns the controls and a11y text.
 export function DatabaseInstallProgress({
   progress,
   label,
   slow = false,
   pollIssue = false,
-  // Passed in: each screen already owns the install action.
   onRetry,
   retrying = false,
   className,
@@ -38,7 +36,6 @@ export function DatabaseInstallProgress({
         ? t("queued")
         : t("working"));
 
-  // Server step wording never names the engine, and this <p> is the aria-live region.
   const title = label ? t("titleWithEngine", { name: label, step }) : step;
 
   return (
@@ -96,7 +93,6 @@ export function DatabaseInstallProgress({
               {t("reference", { reference: progress.reference })}
             </p>
           ) : null}
-          {/* Only when the server says the failure is retryable. */}
           {onRetry && progress.retryable !== false ? (
             <Button
               type="button"

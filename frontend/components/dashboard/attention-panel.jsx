@@ -13,27 +13,19 @@ const KIND_STYLE = {
   git: { icon: GitBranch, tone: "warning" },
 };
 
-
 const TONE = {
   destructive: "bg-destructive-soft text-destructive ring-destructive/20",
   warning: "bg-warning-soft text-warning ring-warning/25",
 };
 
-// One line per problem (the two-line cards pushed the server's
-// details down the page). The longer explanation is one hover away; the link
-// leads to the page that explains it in full.
 function Row({ icon: Icon, tone, title, detail, names, href, action }) {
   return (
     <HoverHint content={detail}><li
-      // Wraps: when the text would get under 16rem the link drops below it, instead of
-      // squeezing the title to three lines (German, phones).
       className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl bg-card px-3 py-2.5 ring-1 ring-border/70"
     >
       <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset", TONE[tone])}>
         <Icon className="size-4" aria-hidden />
       </span>
-      {/* Title, then the names on a line of their own (beside the title they were cut to
-          "QA G…"). No small mark before the title: the tile already says the tone (7 Oct). */}
       <div className="min-w-0 flex-1 basis-64">
         <p className="text-sm leading-snug font-medium break-words">{title}</p>
         {names ? (
@@ -57,8 +49,6 @@ function Row({ icon: Icon, tone, title, detail, names, href, action }) {
   );
 }
 
-// One row per KIND of problem, not per application, with a way in: the
-// dashboard summarises, the applications page enumerates.
 export async function AttentionPanel({ findings = [], health, applicationsKnown = true, canViewServices = false }) {
   const t = await getTranslations("serverDashboard");
   const down = health?.down ?? [];
@@ -74,17 +64,13 @@ export async function AttentionPanel({ findings = [], health, applicationsKnown 
   }
 
   const count = kinds.length + (down.length ? 1 : 0);
-  // An unanswered applications read is not "nothing to fix".
   const verdictKnown = applicationsKnown;
 
-  // All clear: the banner says "Everything is running", so the panel steps aside.
   if (!count && verdictKnown) return null;
 
   return (
-    // The count heads the rows it counts.
     <section aria-labelledby={count ? "attention-heading" : undefined} aria-label={count ? undefined : t("attention.title")} className="space-y-2.5">
       {count ? (
-        // A mono caps section label with an amber square.
         <h2 id="attention-heading" className="flex items-center gap-2 font-mono text-xs font-medium tracking-[0.12em] text-warning uppercase">
           <span aria-hidden className="size-1.5 shrink-0 bg-warning" />
           {t("hero.attention", { count })}
@@ -112,7 +98,6 @@ export async function AttentionPanel({ findings = [], health, applicationsKnown 
                   tone={style.tone}
                   title={one ? t(`attention.${kind}.chip`, { site: items[0].site }) : t(`attention.${kind}.many`, { count: items.length })}
                   names={one ? null : items.map((item) => item.site).join(", ")}
-                  // The API's own reason when it has one; it knows which step failed.
                   detail={`${t(`attention.${kind}.detail`)}${one && items[0].detail ? ` — ${items[0].detail}` : ""}`}
                   href={one ? items[0].href : "/applications"}
                   action={one ? t(`attention.${kind}.action`) : t("attention.viewApplications")}

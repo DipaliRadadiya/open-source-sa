@@ -19,10 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/**
- * The volumes a container site mounts, each at a path inside the container. Add and remove
- * save at once: each change recreates the container, so nothing is batched.
- */
 export function ContainerVolumes({
   application,
   volumes = [],
@@ -47,9 +43,6 @@ export function ContainerVolumes({
       toast.success(done);
       return true;
     } catch (requestError) {
-      // The server's own sentence. It is the only one that can say "that path is
-      // where the site's own files are" — the rule needs to know what the
-      // compose file mounts, which the browser does not.
       const message = apiMessage(requestError, t("failed"));
       setError(message);
       toast.error(message);
@@ -138,19 +131,13 @@ export function ContainerVolumes({
             </Link>
           </Note>
         ) : (
-          // Not a form element: this sits inside the container settings form, and a nested
-          // form is invalid HTML that broke hydration of the whole page. Enter in the
-          // path adds the mount instead of submitting the outer settings form.
+          // Not a form element: a nested form is invalid HTML and broke hydration. Enter adds the mount.
           <div className="flex flex-wrap items-start gap-2">
             <Select value={volume} onValueChange={setVolume} disabled={pending}>
               <SelectTrigger className="h-9 w-48">
                 <SelectValue placeholder={t("choose")} />
               </SelectTrigger>
               <SelectContent>
-                {/* Already-mounted volumes are still offered: one volume at two
-                    paths is legal Docker, and the server rejects only a repeated
-                    PATH. Filtering them out here would forbid something that
-                    works. */}
                 {unused.map((candidate) => (
                   <SelectItem key={candidate.name} value={candidate.name}>
                     {candidate.name}
@@ -192,8 +179,6 @@ export function ContainerVolumes({
         )
       ) : null}
 
-      {/* Persistent, not a toast: "that path is where the site's own files are"
-          is a thing to read twice, and it arrives after the row has been typed. */}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
     </div>

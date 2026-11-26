@@ -26,7 +26,6 @@ import {
 export function RegisterForm({ policy }) {
   const router = useRouter();
   const t = useTranslations("auth");
-  // As on sign-in: keeps the button busy until /setup has rendered.
   const [navigating, startNavigation] = useTransition();
   const form = useForm({
     resolver: zodResolver(registerSchema),
@@ -41,7 +40,6 @@ export function RegisterForm({ policy }) {
   async function onSubmit(values) {
     try {
       await registerUser(values);
-      // First admin lands on the setup checklist, not straight on the dashboard.
       startNavigation(() => router.push("/setup"));
     } catch (error) {
       handleValidationError(error, form, { fallback: t("registerFailed") });

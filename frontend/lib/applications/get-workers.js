@@ -3,7 +3,6 @@ import { workersResponseSchema } from "@/lib/schemas/worker";
 
 const EMPTY = { workers: [], presets: [], checks: [] };
 
-// Returns the failure details so the error box can tell a refusal from a crash.
 export async function getWorkers(appId) {
   const result = await read(`/applications/${appId}/workers`, workersResponseSchema);
 

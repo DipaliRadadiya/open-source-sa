@@ -41,7 +41,6 @@ import { AddDomainDialog } from "@/components/applications/domains/add-domain-di
 import { EditDomainDialog } from "@/components/applications/domains/edit-domain-dialog";
 import { FACT_LABEL } from "@/lib/theme/facts";
 
-// Site types whose installer rewrites the stored address on a primary change (backend `syncUrl`).
 const ADDRESS_SYNCED_TYPES = new Set([
   "wordpress", "akaunting", "craftcms", "mautic", "moodle",
   "n8n", "nextcloud", "nodebb", "prestashop", "statamic",
@@ -53,17 +52,13 @@ const TYPE_VARIANT = {
   redirect: "outline",
 };
 
-// "covered" | "uncovered" | "unknown" for an ACTIVE certificate. "unknown" is explicit:
-// callers want opposite defaults (visit link keeps https, confirm dialogs stay quiet).
 function certificateCoverage(certificate, domain) {
   if (certificate?.status !== "active") return "unknown";
-  // The certificate's own list first: `missing_domains` can be stale.
   if (certificate.domains?.length) {
     const name = String(domain ?? "").toLowerCase();
     const covered = certificate.domains.some((entry) => {
       const on = String(entry).toLowerCase();
       if (on === name) return true;
-      // *.example.com covers one label, not the apex and not deeper names.
       return on.startsWith("*.") && name.endsWith(on.slice(1)) && !name.slice(0, -on.length + 1).includes(".");
     });
     return covered ? "covered" : "uncovered";
@@ -74,9 +69,6 @@ function certificateCoverage(certificate, domain) {
   return "unknown";
 }
 
-// Null while a certificate is issuing or failed; the SSL tab reports that once.
-// "Secured" only when visitors actually reach this server: a covered name whose DNS points
-// elsewhere is not served by this certificate (a Cloudflare-proxied name still is).
 function sslRowState(certificate, coverage, domain) {
   if (!certificate) return { key: "none", tone: "text-muted-foreground", icon: ShieldOff };
   if (certificate.status !== "active") return null;
@@ -88,12 +80,6 @@ function sslRowState(certificate, coverage, domain) {
   return null;
 }
 
-// Domain | DNS | HTTPS | actions, shared by the heading row and every domain row.
-// The actions column is fixed, not `auto`: header and rows are separate grids, and `auto`
-// sized each to its own content, so the headings drifted off their columns.
-// Top-aligned, with every column's first line on the 32px icon's centre line: the
-// status cells pad down 8px, the name centres on its icon (the name
-// sat 5px above the statuses and the row read "unaligned and messy").
 const ROW_GRID = "md:grid-cols-[minmax(0,1fr)_10rem_10rem_13rem] md:items-start";
 
 export function DomainsSection({
@@ -103,7 +89,6 @@ export function DomainsSection({
   serverIp = null,
   secured = false,
   siteType = null,
-  // The current certificate, or null; the Add dialog's advice depends on its type.
   certificate = null,
 }) {
   const t = useTranslations("applications.domains");
@@ -111,18 +96,15 @@ export function DomainsSection({
 
   const [addOpen, setAddOpen] = useState(false);
   const [promoteTarget, setPromoteTarget] = useState(null);
-  // Copied onto the target when the dialog opens; the list changes during the re-read.
   const currentPrimary = domains.find((domain) => domain.type === "primary");
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [pending, setPending] = useState(false);
   const [verifying, setVerifying] = useState({});
-  // The removed row's ⋯ button is gone, so focus goes to Add domain instead.
   const removed = useRef(false);
 
   const coverageOf = (domain) => certificateCoverage(certificate, domain);
 
-  // Shared by the header and the empty state.
   const addButton = canManage ? (
     <Button onClick={() => setAddOpen(true)} data-domains-add>
       <Plus className="size-4" />
@@ -133,7 +115,6 @@ export function DomainsSection({
   async function onVerify(domain) {
     setVerifying((v) => ({ ...v, [domain.domain]: true }));
     try {
-      // Report the outcome: an unchanged row would look like nothing happened.
       const result = await verifyDomain(appId, domain.domain);
       await refreshAndWait();
       if (result?.dns_verified) {
@@ -156,7 +137,6 @@ export function DomainsSection({
     setPending(true);
     try {
       await makePrimaryDomain(appId, promoteTarget.domain);
-      // Closes after the list re-reads, so the new primary is already shown.
       refreshThen(() => {
         toast.success(t("toast.promoted", { domain: promoteTarget.domain }));
         setPromoteTarget(null);
@@ -179,7 +159,6 @@ export function DomainsSection({
         setDeleteTarget(null);
       });
     } catch (error) {
-      // Already removed elsewhere: treat as success.
       if (error?.response?.status === 404) {
         refreshThen(() => {
           removed.current = true;
@@ -215,10 +194,7 @@ export function DomainsSection({
             action={addButton}
           />
         ) : (
-          /* Edge to edge in the card, as a list: one row per name, the same columns on
-             every row so several domains scan like a table. */
           <div className="-mx-(--card-spacing) -mb-(--card-spacing) border-t">
-            {/* data-slot: typed like every table header (globals.css), so they cannot drift. */}
             <div
               aria-hidden
               data-slot="table-head"
@@ -236,9 +212,6 @@ export function DomainsSection({
               const ssl = sslRowState(certificate, coverageOf(domain.domain), domain);
               const SslIcon = ssl?.icon;
               return (
-                // Phone: the name across the full width, then the two states as pills with the
-                // buttons at the end of that line.
-                // From md: the four columns of the heading row.
                 <div
                   key={domain.id}
                   className={cn("grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2.5 px-4 py-3.5 md:gap-x-4 md:px-5", ROW_GRID)}
@@ -252,8 +225,6 @@ export function DomainsSection({
                     </span>
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        {/* Inline, so the copy button follows the last character of the name
-                            however the name wraps. */}
                         <span className="min-w-0 font-mono text-sm">
                           <WrappedDomain domain={domain.domain} />
                           <CopyButton
@@ -287,7 +258,6 @@ export function DomainsSection({
                         </p>
                       ) : null}
 
-                      {/* Behind Cloudflare: a common support question. */}
                       {domain.behind_proxy ? (
                         <p className="flex items-start gap-1.5 text-xs text-warning">
                           <ShieldAlert className="mt-0.5 size-3.5 shrink-0" />
@@ -295,7 +265,6 @@ export function DomainsSection({
                         </p>
                       ) : null}
 
-                      {/* The A-record target as a next step. Skipped for proxied names and test domains (nip.io). */}
                       {!domain.dns_verified && !domain.behind_proxy && !domain.is_test ? (
                         serverIp ? (
                           <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
@@ -310,8 +279,6 @@ export function DomainsSection({
                     </div>
                   </div>
 
-                  {/* Both states on one line under the name on a phone (as pills); from md
-                      `contents` makes each its own column. */}
                   <div className="row-start-2 flex flex-wrap items-center gap-1.5 md:contents">
                   <p
                     className={cn(
@@ -332,7 +299,6 @@ export function DomainsSection({
                     </span>
                   </p>
 
-                  {/* HTTPS status for this name. */}
                   <p
                     className={cn(
                       "flex items-start gap-1.5 text-xs max-md:rounded-full max-md:px-2 max-md:py-0.5 md:pt-2",
@@ -353,7 +319,6 @@ export function DomainsSection({
                   </div>
 
                   <div className="col-start-2 row-start-2 flex shrink-0 items-center gap-0.5 self-center md:col-auto md:row-auto md:justify-end md:gap-1 md:self-start">
-                    {/* https only when the certificate covers this name. The slot is always held so buttons align. */}
                     <span className="inline-flex size-8 shrink-0 items-center justify-center">
                       {domain.dns_verified && domain.type !== "redirect" ? (
                         <Tooltip>
@@ -378,7 +343,6 @@ export function DomainsSection({
                         </Tooltip>
                       ) : null}
                     </span>
-                    {/* Not behind `canManage`: the verify route is view-level and changes nothing. */}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -386,7 +350,6 @@ export function DomainsSection({
                       onClick={() => onVerify(domain)}
                     >
                       <RotateCw className={isVerifying ? "size-3.5 animate-spin" : "size-3.5"} />
-                      {/* Icon only on a phone, so the name keeps the width. */}
                       <span className="max-md:sr-only">{t("dns.verify")}</span>
                     </Button>
                     {canManage ? (
@@ -404,7 +367,6 @@ export function DomainsSection({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="min-w-44">
-                            {/* Not offered on the primary (the server refuses). */}
                             <DropdownMenuItem onSelect={() => setEditTarget(domain)}>
                               <Pencil className="size-4" />
                               {t("edit.action")}
@@ -447,7 +409,6 @@ export function DomainsSection({
             serverIp={serverIp}
             certificate={certificate}
           />
-          {/* One instance for the list; re-seeds from `editTarget` on each open. */}
           <EditDomainDialog
             appId={appId}
             domain={editTarget}
@@ -468,7 +429,6 @@ export function DomainsSection({
         pending={pending || refreshing}
         onConfirm={confirmPromote}
       >
-        {/* Shows the swap; the title cannot show the name being replaced. */}
         {promoteTarget?.from ? (
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1.5 rounded-lg border p-3">
             <dt className={FACT_LABEL}>
@@ -486,20 +446,17 @@ export function DomainsSection({
           </dl>
         ) : null}
 
-        {/* One line per consequence. */}
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
           {promoteTarget?.from ? (
             <li>
               {t("promote.keepsServing", { domain: promoteTarget.from })}
             </li>
           ) : null}
-          {/* The installer's syncUrl rewrites the stored address (e.g. WordPress siteurl). No files are renamed. */}
           {promoteTarget && ADDRESS_SYNCED_TYPES.has(siteType) ? (
             <li>{t("promote.updatesAddress", { domain: promoteTarget.domain })}</li>
           ) : null}
         </ul>
 
-        {/* Not on the certificate, so browsers will refuse it over HTTPS. */}
         {promoteTarget && coverageOf(promoteTarget.domain) === "uncovered" ? (
           <Caution>
             {t("promote.notOnCertificate", { domain: promoteTarget.domain })}
@@ -525,7 +482,6 @@ export function DomainsSection({
           document.querySelector("[data-domains-add]")?.focus();
         }}
       >
-        {/* certbot fails the whole renewal if any name is unreachable; nothing renews an uploaded one. */}
         {deleteTarget && certificate?.renewable && coverageOf(deleteTarget.domain) === "covered" ? (
           <Caution>
             {t("removeConfirm.onCertificate", { domain: deleteTarget.domain })}

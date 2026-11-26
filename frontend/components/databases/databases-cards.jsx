@@ -8,7 +8,6 @@ import { DatabaseRowActions } from "@/components/databases/database-row-actions"
 import { userCount } from "@/lib/databases/phpmyadmin-state";
 import { SizeText } from "@/components/ui/size-text";
 
-// Engine shows only when the server has more than one.
 export function DatabasesCards({
   databases = [],
   canManage = false,
@@ -19,7 +18,6 @@ export function DatabasesCards({
   phpmyadminSites = null,
   adminerSites = null,
   onDelete,
-  // The site each database belongs to; it decides what gets backed up.
   applications = [],
   canOpenApplications = false,
   onAttach = null,
@@ -30,10 +28,7 @@ export function DatabasesCards({
     <CardList>
       {databases.map((database) => {
         const backup = lastBackup?.[database.id];
-        // NOT `?? 0`: a missing count means unknown, not "no users".
         const users = userCount(database);
-        // Attached to a site this reader cannot see is not "not linked": an
-        // attach there would be refused.
         const attached = attachedApplication(database, applications);
         const ownedBy = attached?.name ? attached : null;
         const orphanUnknown = Boolean(attached) && !ownedBy;
@@ -45,8 +40,6 @@ export function DatabasesCards({
                 href={`/databases/${database.id}`}
                 className="group flex items-center gap-1.5 font-mono text-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
               >
-                {/* Truncates: generated names are long, and the full name is
-                    on the page this opens. */}
                 <span className="truncate">{database.name}</span>
                 <ChevronRight className="size-3.5 shrink-0 opacity-60" />
               </Link>
@@ -55,10 +48,8 @@ export function DatabasesCards({
                 <p className="mt-1 text-xs text-muted-foreground">{engineName(database.engine)}</p>
               ) : null}
 
-              {/* The three states, before the numbers. */}
               {users === 0 || (!backupsUnknown && !backup) || (!ownedBy && !orphanUnknown) ? (
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {/* Grey, not yellow; the same fix button as the table. */}
                   {!ownedBy && !orphanUnknown ? (
                     onAttach ? (
                       <button
@@ -84,7 +75,6 @@ export function DatabasesCards({
                   ) : null}
                   {!backupsUnknown && !backup ? (
                     <Badge variant="muted" className="font-normal">
-                      {/* Standing alone, "Never" read as "never backed up". */}
                       {t("columns.neverExportedBadge")}
                     </Badge>
                   ) : null}
@@ -139,9 +129,7 @@ export function DatabasesCards({
               </dl>
             </div>
 
-            {/* mt-auto keeps the action row at the bottom of stretched cards. */}
             <div className="mt-auto border-t pt-3">
-              {/* Keep every footer to one row, even with both database clients available. */}
               <DatabaseRowActions
                 menu
                 database={database}

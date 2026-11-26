@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// `detail` is raw evidence and deliberately NOT translated. `fix` is null when the check passed.
 const checkSchema = z
   .object({
     key: z.string(),
@@ -11,7 +10,6 @@ const checkSchema = z
   })
   .passthrough();
 
-// `healthy` is false only when something FAILED; warnings never make it false.
 export const doctorSchema = z
   .object({
     healthy: z.boolean().default(false),

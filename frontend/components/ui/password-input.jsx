@@ -4,11 +4,9 @@ import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-// The toggle is a tab stop for keyboard users.
 export function PasswordInput({ className, show: showProp, onShowChange, ...props }) {
   const t = useTranslations("common");
   const [showState, setShowState] = useState(false);
-  // Controlled when a parent passes `show`, otherwise self-managed.
   const show = showProp ?? showState;
   const setShow = (next) => {
     const value = typeof next === "function" ? next(show) : next;

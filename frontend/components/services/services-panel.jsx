@@ -14,22 +14,18 @@ import { ServicesCards } from "@/components/services/services-cards";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { Tile } from "@/components/applications/app-status-tiles";
 
-// Fast enough that CPU reads as live, light enough on the server.
 const POLL_MS = 3000;
 
-// Polls because `cpu_percent` is a delta between samples. "Checked at" updates only
-// on success, so a stalled backend shows as a stopped clock, not stale numbers.
+// Polls because cpu_percent is a delta between samples.
 export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, canManage }) {
   const t = useTranslations("services");
   const format = useFormatter();
   const [services, setServices] = useState(initialServices);
   const [checkedAt, setCheckedAt] = useState(initialCheckedAt);
-  // key → the action running on that service. Shared by both layouts.
   const [busy, setBusy] = useState({});
 
   const setRowBusy = (key, action) => setBusy((prev) => ({ ...prev, [key]: action }));
 
-  // A fresh server render is newer than anything the poll holds.
   const [renderedWith, setRenderedWith] = useState(initialServices);
   if (renderedWith !== initialServices) {
     setRenderedWith(initialServices);
@@ -41,7 +37,6 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
     let active = true;
 
     async function tick() {
-      // Skip while the tab is hidden, to avoid needless systemd calls.
       if (document.hidden) return;
       try {
         const { data } = await listServices();
@@ -50,8 +45,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
         setServices(parsed.data.services);
         setCheckedAt(format.dateTime(new Date(), { timeStyle: "short" }));
       } catch {
-        // Keep the last measured rows and timestamp; the stopped clock shows
-        // the failure.
+        // retry on the next poll
       }
     }
 
@@ -64,8 +58,6 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
     };
   }, [format]);
 
-  // attention: never installed, or not running. running: the only rows where
-  // Memory, CPU and boot mean anything. installing: in progress.
   const attention = services.filter(
     (s) => s.state === "install_failed" || (s.state !== "installing" && s.status === "failed"),
   );
@@ -73,15 +65,10 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
   const running = services.filter(
     (s) => (s.state ?? "installed") === "installed" && s.status !== "failed",
   );
-  // The table lists stopped units with running ones; the counts must not.
   const active = running.filter((s) => s.status !== "inactive");
   const stopped = running.length - active.length;
   const showRunning = running.length > 0 || services.length === 0;
-  // Refresh sits in the Installed services header; when that card is hidden, in the
-  // first card that is shown, so the page never loses it.
   const refreshIn = showRunning ? "running" : attention.length > 0 ? "attention" : "installing";
-  // All well: one line in the list's head instead of two big tiles holding a few words.
-  // The tiles come back when something is stopped or failed, so trouble still stands out.
   const healthy = stopped === 0 && attention.length === 0 && showRunning;
   const healthyLine = (
     <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
@@ -95,13 +82,8 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
 
   return (
     <div className="space-y-6">
-      {/* Colour only when something is wrong: amber for stopped, red for failed.
-          2 / 4 across by the page's own width (auto-fit split them 3 + 1). Two on a phone
-          too: one per row filled the first screen with four short facts (Krishna, 13 Oct). */}
       {healthy ? null : (
       <div className="@container/tiles">
-      {/* Stopped and Needs attention only when they count something; the
-          row takes as many columns as it has tiles, and a lone last tile spans a phone row. */}
       <div className={cn("grid grid-cols-2 gap-3 sm:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 @min-[52rem]/tiles:[&>*:last-child:nth-child(odd)]:col-span-1", TILE_COLUMNS[2 + (stopped > 0) + (attention.length > 0)])}>
         <Tile
           compact
@@ -133,7 +115,6 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
             tone="destructive"
           />
         ) : null}
-        {/* Moves only on a successful poll, so a stalled backend shows as a stopped clock. */}
         <Tile
           compact
           icon={Clock}
@@ -183,8 +164,6 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
         </Section>
       ) : null}
 
-      {/* Hidden when nothing is running (the summary already says so). Kept
-          when there are no services at all, to explain an otherwise blank page. */}
       {showRunning ? (
       <Section
         icon={Blocks}
@@ -192,7 +171,6 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
         hint={healthy ? healthyLine : null}
         action={<RefreshButton />}
       >
-        {/* Container query, not lg: 900px is where the widest locale's headers fit. */}
         <div className="@container/svc">
         <div className="px-4 pb-4 @min-[900px]/page:hidden">
           <ServicesCards
@@ -219,8 +197,6 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
   );
 }
 
-// A card with the panel's card head; tables inside run edge to edge.
-// Literal classes for Tailwind: one column per tile on a wide card.
 const TILE_COLUMNS = {
   2: "@min-[52rem]/tiles:grid-cols-2",
   3: "@min-[52rem]/tiles:grid-cols-3",

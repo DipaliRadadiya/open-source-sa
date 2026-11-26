@@ -1,4 +1,3 @@
-/** Avatar fallback letters for a name; shared so every place shows the same. */
 export function initials(name) {
   if (!name) return "?";
   return name

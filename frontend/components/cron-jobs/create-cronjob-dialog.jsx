@@ -46,8 +46,7 @@ export function CreateCronjobDialog({
   applications = [],
   placeholder,
   timezone,
-  // Prefill from a duplicated job or a quick-start template. Re-seeded on open
-  // so opening the dialog twice with different sources can't show stale values.
+  // Re-seeded on open so a second open with another source can't show old values.
   initialValues,
   starterKey,
 }) {
@@ -66,15 +65,13 @@ export function CreateCronjobDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialValues]);
 
-
   async function onSubmit(values) {
-    // The API takes system_user_id XOR username — never both.
+    // The API takes system_user_id or username, never both.
     const payload = {
       name: values.name.trim(),
       command: values.command.trim(),
       expression: values.expression.trim(),
       active: values.active,
-      // Links the job to its site: listed under it, offered on its PHP switch, removed with it.
       ...(values.application_id ? { application_id: values.application_id } : {}),
       ...(values.run_as === OTHER_USER
         ? { username: values.username.trim() }
@@ -83,13 +80,11 @@ export function CreateCronjobDialog({
 
     try {
       await createCronjob(payload);
-      // The dialog keeps "Saving…" until the new row is on screen.
       await new Promise((resolve) => refreshThen(resolve));
       toast.success(t("toast.created"));
       onOpenChange?.(false);
       form.reset(DEFAULTS);
     } catch (error) {
-      // Field errors go on the fields; anything else says what failed.
       if (error?.response?.data?.errors) handleValidationError(error, form);
       else toast.error(apiMessage(error, t("toast.createFailed")));
     }
@@ -165,7 +160,6 @@ export function CreateCronjobDialog({
             <FormItem className="flex items-center justify-between rounded-lg border px-3 py-2.5">
               <div className="space-y-0.5">
                 <FormLabel hint={t("form.activeHint")}>{t("form.active")}</FormLabel>
-                {/* `active` is always sent, so a 422 on it needs a place to render. */}
                 <FormMessage />
               </div>
               <FormControl>

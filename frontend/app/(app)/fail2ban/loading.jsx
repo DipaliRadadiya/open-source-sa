@@ -1,7 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkCard, SkHeader, SkTabs } from "@/components/ui/skeleton-kit";
 
-// Same shape and breakpoints as Protection: two comfortable jail items, then bans.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

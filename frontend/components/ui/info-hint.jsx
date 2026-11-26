@@ -3,12 +3,9 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useHoverPopover } from "@/lib/hooks/use-hover-popover";
 
-// Opens on hover, tap or Tab, not from focus a dialog handed over. A Popover
-// because Radix tooltips never open on touch.
 const TOOLTIP_SKIN =
   "w-auto max-w-xs gap-0 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-none ring-0";
 export function InfoHint({ label, children, className }) {
-  // Shared with the dashboard's site-health chip; do not copy the logic.
   const { open, onOpenChange, triggerProps, contentProps } = useHoverPopover({
     focusOpens: true,
   });
@@ -23,8 +20,7 @@ export function InfoHint({ label, children, className }) {
           "flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
           className,
         )}
-        // Often inside a row-wide <label>; stopPropagation keeps it from toggling
-        // the row's control. Not preventDefault: Radix then skips its own handler.
+        // stopPropagation so a row-wide <label> doesn't toggle; not preventDefault, or Radix skips its handler.
         onClick={(event) => event.stopPropagation()}
         {...triggerProps}
       >
@@ -32,16 +28,13 @@ export function InfoHint({ label, children, className }) {
       </PopoverTrigger>
       <PopoverContent
         className={TOOLTIP_SKIN}
-        // Keeps it open while the pointer moves from the icon to the panel.
         {...contentProps}
         // Hover-opened content must not steal focus.
         onOpenAutoFocus={(event) => event.preventDefault()}
-        // Radix restores focus to the trigger on close, and the trigger's onFocus
-        // would reopen it.
+        // Radix refocuses the trigger on close, and its onFocus would reopen this.
         onCloseAutoFocus={(event) => event.preventDefault()}
       >
         {children}
-        {/* Matches the tooltip skin; `bg-popover` would leave a white pip. */}
         <PopoverArrow className="bg-foreground fill-foreground" />
       </PopoverContent>
     </Popover>

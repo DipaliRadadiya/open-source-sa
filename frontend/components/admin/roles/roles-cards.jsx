@@ -5,7 +5,6 @@ import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-t
 import { RoleRowActions } from "@/components/admin/roles/role-row-actions";
 import { accessCounts } from "@/lib/roles/granted-count";
 
-/** Roles on a narrow screen, where the table's count, date and menu would be cut off. */
 export function RolesCards({ roles }) {
   const t = useTranslations("roles");
 

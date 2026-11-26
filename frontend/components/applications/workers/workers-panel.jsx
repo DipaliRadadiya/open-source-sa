@@ -17,10 +17,8 @@ import { WorkersCards } from "@/components/applications/workers/workers-cards";
 import { CreateWorkerDialog } from "@/components/applications/workers/create-worker-dialog";
 import { WorkerSiteProvider } from "@/components/applications/workers/worker-site-context";
 
-// Actions apply their own response; the poll only catches a worker dying on its own.
 const POLL_MS = 15000;
 
-// Keep in step with WorkerStatusBadge's state colours.
 const STATE_DOT = {
   running: "bg-success",
   degraded: "bg-warning",
@@ -36,7 +34,6 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
   const [createOpen, setCreateOpen] = useState(false);
   const [seed, setSeed] = useState(undefined);
 
-  // A fresh server render (after router.refresh()) is newer than the poll's data.
   const [renderedWith, setRenderedWith] = useState(initialWorkers);
   if (renderedWith !== initialWorkers) {
     setRenderedWith(initialWorkers);
@@ -47,8 +44,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
 
   const setRowBusy = (id, action) => setBusy((prev) => ({ ...prev, [id]: action }));
 
-  // start/stop/restart answer with the worker's post-action state. Replaced,
-  // not merged: merging could keep a stale `state_title` beside a new `state`.
+  // Replace, don't merge, or a stale state_title stays beside the new state.
   const applyWorker = (next) =>
     setWorkers((prev) => prev.map((w) => (w.id === next.id ? next : w)));
 
@@ -57,7 +53,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
     setCreateOpen(true);
   }
 
-  // Paused while an action runs, so a poll cannot race the action's newer response.
+  // Paused while an action runs so a poll can't overwrite its newer response.
   const anyBusy = Object.values(busy).some(Boolean);
 
   useEffect(() => {
@@ -74,7 +70,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
         setPresets(parsed.data.presets);
         setChecks(parsed.data.checks);
       } catch {
-        // Transient poll error — keep the last known state.
+        // retry on the next poll
       }
     }
 
@@ -96,7 +92,6 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
     </ReasonTooltip>
   );
 
-  // State summary only for three or more workers.
   let summaryParts = null;
   if (workers.length > 2) {
     const counts = workers.reduce((acc, w) => {
@@ -126,7 +121,6 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
       )}
       <div className="flex flex-wrap items-center gap-2">
         <RefreshButton />
-        {/* Empty, the add button sits in the empty state instead of twice. */}
         {workers.length ? addButton : null}
       </div>
     </div>
@@ -135,7 +129,6 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
   return (
     <WorkerSiteProvider value={{ appRoot }}>
     <div className="space-y-4">
-      {/* First: nothing below matters if no worker can run. */}
       {supervisorMissing ? (
         <SupervisorMissingAlert appId={appId} canManage={canManage} />
       ) : null}
@@ -143,7 +136,6 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
       <WorkerChecksAlert checks={checks} />
 
       {workers.length === 0 ? (
-        // No toolbar while empty: it held only a refresh button over the empty state.
         <ListCard>
           <EmptyState
             icon={Cog}
@@ -156,8 +148,6 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
             action={
               <div className="flex flex-col items-center gap-4">
                 {addButton}
-                {/* A blank custom template is the Add worker form again, so only templates
-                    that fill something in are offered (a Node app had just that one). */}
                 {canManage && starters.length > 0 ? (
                   <div className="flex flex-col items-center gap-2">
                     <span className="text-xs text-muted-foreground">{t("empty.starters")}</span>
@@ -181,7 +171,6 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
           />
         </ListCard>
       ) : (
-        // Below lg the rows are cards of their own, so the list drops its frame there.
         <ListCard from="c900" toolbar={toolbar}>
           <div className="@min-[900px]/page:hidden">
             <WorkersCards

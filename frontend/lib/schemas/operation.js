@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-// GET /operations (RC-20). `state` is the one word every kind shares; the kind's own
-// `status` stays for display. Unknown kinds and states are kept, not dropped, so a
-// job type added later still shows up.
 export const operationSchema = z.object({
   kind: z.string(),
   id: z.union([z.number(), z.string()]),

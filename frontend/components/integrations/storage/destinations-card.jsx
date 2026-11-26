@@ -22,32 +22,23 @@ import { ConnectDestinationDialog } from "@/components/integrations/storage/conn
 import { EditDestinationDialog } from "@/components/integrations/storage/edit-dialog";
 import { ReplaceCredentialsDialog } from "@/components/integrations/storage/replace-credentials-dialog";
 
-// Every choice the Add destination picker offers, in its order. "Other" alone says nothing
-// out of the picker, so it gets its own words.
 const EMPTY_STATE_PROVIDERS = PRESETS.filter((preset) => !preset.legacy).map((preset) => preset.value);
 
-// A plain card of rows rather than a DataTable: the list is always short.
 export function DestinationsCard({ destinations = [], canManage, oauthRedirectUri = null, localSettings = null, usage = null }) {
   const t = useTranslations("storage");
   const { refreshAndWait } = useRefresh();
   const [connecting, setConnecting] = useState(false);
-  // The destination picked from the empty state; null opens the form on its usual default.
   const [connectPreset, setConnectPreset] = useState(null);
   const [editing, setEditing] = useState(null);
   const [replacing, setReplacing] = useState(null);
-  // A refused delete keeps the dialog open with the reason: the backend refuses
-  // while a backup target still points here.
   const removal = useConfirmAction();
-  // Tests can run side by side, one spinner each.
   const testing = usePendingKeys();
-  // Keyed by id, cleared on a fresh test; the stored verdict is in DestinationRow.
   const [results, setResults] = useState({});
 
   async function test(destination) {
     if (testing.isPending(destination.id)) return;
     testing.start(destination.id);
     setResults((prev) => ({ ...prev, [destination.id]: null }));
-    // 200 does NOT mean the connection works — the verdict is in the body.
     const verdict = await probeDestination(
       destination.id,
       t("row.testFailed"),
@@ -67,7 +58,6 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
     });
   }
 
-  // Shared by the header and the empty state so the two cannot differ.
   const addButton = (
     <ReasonTooltip reason={canManage ? null : DENIED}>
       <Button
@@ -86,16 +76,12 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
 
   return (
     <Card className="gap-0 overflow-hidden py-0">
-      {/* Same header shape as the Git integration card. The add button only
-          shows once there is a list; the empty state carries its own. */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
         <div className="flex items-start gap-3">
           <HeadIcon icon={HardDrive} />
           <div>
             <div className="flex items-center gap-1.5">
               <h2 className="text-[15px] font-semibold tracking-tight">{t("card.title")}</h2>
-              {/* Test writes, reads back and deletes a file, so a read-only key never
-                  passes. Popover, not tooltip, so it works on touch. */}
               <InfoHint label={t("card.whatTestDoes")}>
                 <p className="text-xs leading-relaxed">{t("card.testExplained")}</p>
               </InfoHint>
@@ -108,9 +94,6 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
 
       <CardContent className="px-5 py-0">
         {destinations.length === 0 ? (
-          // Two columns from md (the stacked version was too long): what this is and
-          // the action on the left, the steps on the right, with the destinations inside step 1
-          // rather than a second list above it. One column on a phone.
           <div className="grid gap-6 py-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:items-center md:gap-10">
             <div className="flex flex-col items-center gap-4 text-center md:items-start md:text-left">
               <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
@@ -119,7 +102,6 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
               <div className="space-y-2">
                 <p className="text-[15px] font-semibold tracking-tight">{t("empty.title")}</p>
                 <p className="text-sm leading-6 text-muted-foreground">{t("empty.body")}</p>
-                {/* Keys are encrypted at rest and only used for this server's backups. */}
                 <p className="text-xs leading-5 text-muted-foreground">{t("empty.reassurance")}</p>
               </div>
               {addButton}
@@ -135,7 +117,6 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
                     </span>
                     <div className="min-w-0 space-y-2">
                       <span className="block leading-5">{step}</span>
-                      {/* Every destination type, each opening the form already on it. */}
                       {index === 0 ? (
                         <div className="flex flex-wrap gap-1.5">
                           {EMPTY_STATE_PROVIDERS.map((provider) => {
@@ -187,7 +168,6 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
         )}
       </CardContent>
 
-      {/* Keyed on the starting destination: a new one starts a fresh form. */}
       <ConnectDestinationDialog
         key={connectPreset ?? "default"}
         initialPreset={connectPreset}
@@ -229,8 +209,6 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
         error={removal.error}
         onConfirm={remove}
       >
-        {/* The API refuses while anything backs up or is stored here, and names it in
-            the error; said up front as a note, not grey small print. */}
         <Note>{t("delete.warning")}</Note>
       </ConfirmDialog>
     </Card>

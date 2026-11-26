@@ -3,7 +3,6 @@ import { filesResponseSchema } from "@/lib/schemas/file";
 
 const FAILED = { path: "", files: [], hiddenCount: 0, failed: true, notFound: false };
 
-// `showHidden` is filtered by the API so the hidden count agrees with the rows.
 export async function getFiles(appId, path = "", showHidden = true) {
   try {
     const res = await serverFetch(`/applications/${appId}/files`, {

@@ -37,8 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// rsync `--delete` overwrites production and the snapshot only restores on a failed
-// push, so a typed domain is required. Callers MUST pass a `key` that changes on open.
+// rsync --delete overwrites production, so the domain must be typed. Callers must pass a key that changes on open.
 export function PushStagingDialog({ appId, production, staging, open, onOpenChange, canBackUp = false }) {
   const t = useTranslations("applications.staging.pushDialog");
   const router = useRouter();
@@ -46,9 +45,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
   const [mode, setMode] = useState("files");
   const [confirm, setConfirm] = useState("");
   const [pending, setPending] = useState(false);
-  // On by default when it is possible: the push cannot be undone otherwise.
   const [backup, setBackup] = useState(canBackUp);
-  // Only a push that replaces the database takes the copy; files are always saved for the swap.
   const [safetyCopy, setSafetyCopy] = useState(true);
   const replacesDatabase = mode === "database" || mode === "full";
 
@@ -59,14 +56,11 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
   async function push() {
     setPending(true);
     try {
-      // 202 with a run (RC-16): it has only started. The page shows its progress
-      // and the result; saying "pushed" here was a guess that could be wrong.
       await pushApplicationStaging(appId, mode, { backup: canBackUp && backup, safetyCopy: !replacesDatabase || safetyCopy });
       await refreshAndWait();
       onOpenChange(false);
       toast.info(t("started", { domain }));
     } catch (error) {
-      // A retry would only be refused as "already running"; close and let the page catch up.
       if (mayStillBeRunning(error)) {
         onOpenChange(false);
         toast.warning(t("stillRunning", { domain }), { duration: 20000 });
@@ -74,7 +68,6 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
         return;
       }
       toast.error(apiMessage(error, t("failed")));
-      // Usually the copy was deleted elsewhere; refresh so the page shows it.
       router.refresh();
     } finally {
       setPending(false);
@@ -102,7 +95,6 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
         </AlertDialogHeader>
 
         <div className="space-y-4">
-          {/* No option can be undone, so a backup is offered first when it can be taken. */}
           {canBackUp ? (
             <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
               <Checkbox
@@ -138,7 +130,6 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
           </p>
           )}
 
-          {/* One line per option; the consequence is shown for the chosen one. */}
           <div className="space-y-2">
             <Label>{t("whatToPush")}</Label>
             <ChoiceField
@@ -178,7 +169,6 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
             </Caution>
           ) : null}
 
-          {/* Without the copy only the files are put back on a failure. */}
           <p className="text-xs leading-5 text-muted-foreground">
             {t(replacesDatabase && !safetyCopy ? "whileRunningNoCopy" : "whileRunning")}
           </p>
@@ -199,7 +189,6 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
           <ReasonTooltip reason={blocker}>
             <AlertDialogAction
               onClick={(event) => {
-                // Stays open until the request returns; the push takes minutes.
                 event.preventDefault();
                 push();
               }}

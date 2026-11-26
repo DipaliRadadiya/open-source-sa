@@ -53,8 +53,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Registry credentials for private images, laid out like Git integrations. A token is never
-// shown; on edit an empty token box keeps the stored one.
 export function RegistriesCard({ initialRegistries, canManage }) {
   const t = useTranslations("docker.registries");
   const { refreshAndWait } = useRefresh();
@@ -112,13 +110,11 @@ export function RegistriesCard({ initialRegistries, canManage }) {
               <p className="text-sm text-muted-foreground">{t("hint")}</p>
             </div>
           </div>
-          {/* Empty, Add sits in the empty state instead of twice. */}
           {initialRegistries.length > 0 ? addButton : null}
         </div>
 
         <CardContent className="px-5 py-0">
           {initialRegistries.length === 0 ? (
-            /* What to have ready, and that public images need none of this. */
             <div className="mx-auto flex max-w-lg flex-col items-center gap-5 py-10 text-center sm:py-12">
               <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
                 <KeyRound className="size-6" aria-hidden />
@@ -158,7 +154,6 @@ export function RegistriesCard({ initialRegistries, canManage }) {
         </CardContent>
       </Card>
 
-      {/* Mounted only while open, so the last credential's values never flash. */}
       {dialog ? (
         <RegistryDialog
           key={dialog.registry?.id ?? "new"}
@@ -174,8 +169,7 @@ export function RegistriesCard({ initialRegistries, canManage }) {
         icon={Trash2}
         tone="destructive"
         title={t("confirm.title", { name: confirm?.name ?? "" })}
-        /* The applications are NOT deleted and the delete is NOT blocked by them: a
-           credential that cannot be revoked while in use cannot be revoked at all. */
+        // Deleting doesn't touch the apps; a credential that couldn't be revoked while in use couldn't be revoked at all.
         description={
           confirm?.applications_count
             ? t("confirm.bodyInUse", { count: confirm.applications_count })
@@ -190,7 +184,6 @@ export function RegistriesCard({ initialRegistries, canManage }) {
   );
 }
 
-/** Docker Hub's whale, GitHub and GitLab marks; a server for anything else. */
 function RegistryLogo({ provider, className = "size-4" }) {
   if (provider === "dockerhub") {
     // eslint-disable-next-line @next/next/no-img-element
@@ -221,7 +214,6 @@ function RegistryStatus({ registry }) {
       </p>
     );
   }
-  // Not tested yet is not a fault in the credential, so muted rather than amber.
   return (
     <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
       <Clock className="size-3.5" />
@@ -247,8 +239,6 @@ function RegistryRow({ registry, canManage, testing, onTest, onEdit, onDelete })
               <Badge variant="secondary" className="font-normal">
                 {t(`providers.${provider}.label`)}
               </Badge>
-              {/* Hub's credential is keyed on the legacy index URL, not what was typed;
-                  the address shown is the stored one. */}
               <span className="truncate font-mono text-xs text-muted-foreground">{registry.registry}</span>
               <span className="truncate font-mono text-xs text-muted-foreground">· {registry.username}</span>
             </div>
@@ -299,7 +289,6 @@ function RegistryRow({ registry, canManage, testing, onTest, onEdit, onDelete })
   );
 }
 
-// Empty gets the panel's "X is required"; anything else names the actual mistake.
 function fieldError(error, invalid) {
   if (!error) return null;
   return error.type === "too_small" ? "requiredField" : invalid;
@@ -312,10 +301,6 @@ function focusAddButton(event) {
   opener.focus();
 }
 
-/**
- * Add: choose where the image is hosted, then that host's fields. Edit opens on the
- * fields for the stored host.
- */
 function RegistryDialog({ registry, onOpenChange, onTest }) {
   const t = useTranslations("docker.registries");
   const tc = useTranslations("common");
@@ -368,8 +353,6 @@ function RegistryDialog({ registry, onOpenChange, onTest }) {
         await refreshAndWait();
         toast.success(creating ? t("created", { name }) : t("updated", { name }));
         onOpenChange(false);
-        // Test the token now, like Storage, instead of at the first failed pull.
-        // After the close, so the save never waits on the registry.
         if (saved?.id && credentialChanged) onTest?.(saved);
       }}
       tc={tc}
@@ -383,8 +366,6 @@ function RegistryForm({ registry, provider, onBack, onOpenChange, onSaved, tc })
   const preset = registryProvider(provider);
   const [failure, setFailure] = useState(null);
 
-  // On edit the token is optional: empty keeps the stored one. On create it is
-  // required, since a credential with no token cannot do the one thing it is for.
   const schema = creating
     ? registryFormSchema
     : registryFormSchema.extend({ token: z.literal("").or(registryFormSchema.shape.token) });
@@ -397,7 +378,7 @@ function RegistryForm({ registry, provider, onBack, onOpenChange, onSaved, tc })
       name: registry?.name ?? (provider === "other" ? "" : t(`providers.${provider}.label`)),
       registry: registry?.registry ?? preset.address,
       username: registry?.username ?? "",
-      // Always empty, never a mask standing in for a stored value.
+      // Always empty, never a mask.
       token: "",
     },
   });
@@ -407,11 +388,9 @@ function RegistryForm({ registry, provider, onBack, onOpenChange, onSaved, tc })
   async function onSubmit(values) {
     setFailure(null);
     const payload = { ...values };
-    // An absent token means "keep"; an empty string is not "clear it".
     if (!payload.token) delete payload.token;
     try {
       const { data } = creating ? await createRegistry(payload) : await updateRegistry(registry.id, payload);
-      // A rename alone leaves the stored verdict true; anything the login uses makes it stale.
       const credentialChanged =
         creating ||
         Boolean(payload.token) ||
@@ -450,7 +429,6 @@ function RegistryForm({ registry, provider, onBack, onOpenChange, onSaved, tc })
           </>
         }
       >
-        {/* Where the image is hosted, with Change while adding. */}
         <div className="flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/[0.06] p-3 shadow-e1">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-card shadow-e1">
             <RegistryLogo provider={provider} className="size-6" />
@@ -488,8 +466,6 @@ function RegistryForm({ registry, provider, onBack, onOpenChange, onSaved, tc })
           )}
         />
 
-        {/* Fixed for the hosted providers: Docker ignores a credential stored under an
-            address it does not recognise, so a typo here fails like no credential. */}
         {preset.addressFixed ? null : (
           <FormField
             control={form.control}
@@ -501,9 +477,7 @@ function RegistryForm({ registry, provider, onBack, onOpenChange, onSaved, tc })
                   <Input placeholder={t("placeholders.registry")} autoComplete="off" spellCheck={false} className="font-mono text-sm" {...field} />
                 </FormControl>
                 <FormDescription>{t("registryHint")}</FormDescription>
-                {/* Named, not "invalid": a namespace is the common mistake. */}
                 <FormMessage field={t("fields.registry")}>{fieldError(form.formState.errors.registry, t("invalid.registry"))}</FormMessage>
-                {/* ECR, Artifact Registry and ACR tokens expire within hours. */}
                 {issuesTemporaryTokens(address) ? <Caution size="md">{t("temporaryToken")}</Caution> : null}
               </FormItem>
             )}
@@ -530,7 +504,6 @@ function RegistryForm({ registry, provider, onBack, onOpenChange, onSaved, tc })
           name="token"
           render={({ field }) => (
             <FormItem>
-              {/* Where to create the token, on the label row like Git's "Create a token". */}
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <FormLabel required={creating}>{t("fields.token")}</FormLabel>
                 {preset.docsUrl ? (

@@ -33,11 +33,8 @@ export default async function SyncPage() {
     );
   }
 
-  /* `sync: null` means never scanned: a normal state, not a failure. */
   const run = latest.data?.sync ?? null;
 
-  /* /server/sync/latest omits items, so the first page is fetched here; the
-     client loads the rest. */
   const first = run ? await getSyncRunItems(run.id) : null;
   const items = first?.data?.sync?.items ?? [];
   const ignores = ignoreList.data?.ignores ?? [];
@@ -46,8 +43,7 @@ export default async function SyncPage() {
     <div className="space-y-6">
       <Header t={t} />
       {handover.data?.needed ? <HandoverCard status={handover.data} canManage={canManage} /> : null}
-      {/* Keyed on the data: the panel seeds state from props once, so a
-          refresh must remount it. */}
+      {/* Keyed on the data: the panel seeds state from props once. */}
       <SyncPanel
         key={serverSnapshot(run, items, ignores)}
         run={run}

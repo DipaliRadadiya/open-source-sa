@@ -10,8 +10,6 @@ import {
   timeSeriesOption,
 } from "@/lib/charts/time-series-option";
 
-// 5- and 15-minute load against the core count; the axis always includes the cores line.
-/** Resolved from globals.css at runtime; never restated as literals here. */
 const TOKENS = [
   "chart-1",
   "chart-2",
@@ -27,10 +25,8 @@ export function ServerLoadChart({ history = [], metrics, timeZone }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
   const tokens = useChartTokens(TOKENS);
-  // No seconds: samples are five minutes apart.
   const clock = clockFormatter(format, timeZone);
   const decimal = (value) => format.number(Number(value), { maximumFractionDigits: 2 });
-  // Core count is a fact about the machine, so the live poll is its source.
   const cores = Number(metrics?.cpu?.cores) || 0;
   const latest = history.at(-1);
 
@@ -40,19 +36,14 @@ export function ServerLoadChart({ history = [], metrics, timeZone }) {
   ];
 
   const option = timeSeriesOption({
-    // The header chips name each line.
     legend: false,
     data: history,
     series,
     tokens,
     xLabel: clock,
     value: decimal,
-    // The axis must include the core count even when load is near zero: the
-    // lines hugging the floor under a high ceiling is the message.
     axes: [
       {
-        // Rounded, because a forced ceiling gets a label of its own: the raw
-        // `cores * 1.05` printed "4.2" hard against the "4" tick below it.
         max: axisMax(history, ["load_5", "load_15"], { floor: niceCeiling(cores * 1.05) }),
         formatter: decimal,
       },
@@ -86,7 +77,6 @@ export function ServerLoadChart({ history = [], metrics, timeZone }) {
       compactEmpty
       emptyTitle={t("charts.noHistoryTitle")}
       emptyMessage={t("charts.noHistory")}
-      // The newest COLLECTED sample, not the live poll, so header and line agree.
       summary={
         latest
           ? `5m ${decimal(latest.load_5)} · 15m ${decimal(latest.load_15)}`

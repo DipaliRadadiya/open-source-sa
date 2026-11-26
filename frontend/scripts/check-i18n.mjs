@@ -1,12 +1,10 @@
-/**
- * Fails lint when translations drift. Checks:
- *   1. Every literal `t("…")` resolves in one of the file's own namespaces.
- *   2. Every locale has exactly English's key set.
- *   3. No key is defined twice in one object (`JSON.parse` silently keeps the last).
- *   4. Every locale string has English's ICU shape: same arguments, types and tags.
- *   5. An English string used at several keys is translated one way (scripts/one-voice.mjs).
- * Dynamic keys (`t(\`add.errors.${x}\`)`) can't be resolved statically and are skipped.
- */
+// Fails lint when translations drift:
+// 1. every literal t("…") resolves in the file's namespaces
+// 2. every locale has English's key set
+// 3. no key is defined twice in one object
+// 4. every string has English's ICU shape (arguments, types, tags)
+// 5. an English string used at several keys is translated one way (one-voice.mjs)
+// Dynamic keys are skipped.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -40,12 +38,10 @@ function walk(dir) {
 
 const problems = [];
 
-// 1 — used but missing
 for (const file of SOURCE_DIRS.flatMap(walk)) {
   const src = fs.readFileSync(file, "utf8");
   const namespaces = [
     ...src.matchAll(/(?:useTranslations|getTranslations)\(\s*"([^"]+)"\s*\)/g),
-    // Base and override namespaces; a key may live in either.
     ...[...src.matchAll(/useSubjectTranslations\(\s*"([^"]+)",\s*"([^"]+)"/g)].flatMap((m) => [m, [null, m[2]]]),
   ].map((m) => m[1]);
   if (!namespaces.length) continue;
@@ -58,7 +54,6 @@ for (const file of SOURCE_DIRS.flatMap(walk)) {
   }
 }
 
-// 2 — locale drift
 const base = new Set(flatten(en));
 for (const file of fs.readdirSync(MESSAGES).filter((f) => f.endsWith(".json") && f !== "en.json")) {
   const locale = path.basename(file, ".json");
@@ -67,7 +62,6 @@ for (const file of fs.readdirSync(MESSAGES).filter((f) => f.endsWith(".json") &&
   for (const key of other) if (!base.has(key)) problems.push(`${locale}: orphan ${key}`);
 }
 
-// 3 — a key defined twice in the same object
 for (const file of fs.readdirSync(MESSAGES).filter((f) => f.endsWith(".json"))) {
   const locale = path.basename(file, ".json");
   for (const { name, line, first } of duplicateKeys(
@@ -80,7 +74,6 @@ for (const file of fs.readdirSync(MESSAGES).filter((f) => f.endsWith(".json"))) 
   }
 }
 
-// 4 — the shape inside each string, not just the key that holds it
 const value = (obj, key) =>
   key.split(".").reduce((o, part) => (o && typeof o === "object" ? o[part] : undefined), obj);
 
@@ -105,7 +98,6 @@ for (const file of fs.readdirSync(MESSAGES).filter((f) => f.endsWith(".json") &&
     }
   }
 
-  // 5 — one English string, one translation
   for (const problem of oneVoiceProblems(englishStrings, localeStrings, locale)) {
     problems.push(`${locale}: ${problem}`);
   }

@@ -1,7 +1,6 @@
 import * as React from "react";
 
-// Radix only restores focus to its own Trigger. The opener is read on first render,
-// before an `autoFocus` input inside can take it.
+// Radix only restores focus to its own Trigger.
 export function useReturnFocus(onCloseAutoFocus) {
   const opener = React.useRef(null);
 
@@ -25,14 +24,13 @@ export function useReturnFocus(onCloseAutoFocus) {
   return { capture, onCloseAutoFocus: onClose };
 }
 
-// A menu item disappears with its menu, so focus goes to the menu's trigger (Radix labels the menu with its id).
+// A menu item disappears with its menu, so focus goes to the menu's trigger.
 function menuTriggerOf(element) {
   const menu = element?.closest?.('[role="menu"]');
   const id = menu?.getAttribute("aria-labelledby");
   return id ? document.getElementById(id) : null;
 }
 
-/** Rendered first inside the content, so it mounts once per opening. */
 export function OpenerCapture({ onCapture }) {
   React.useState(() => {
     if (typeof document !== "undefined") onCapture(document.activeElement);

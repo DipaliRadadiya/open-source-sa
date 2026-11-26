@@ -23,20 +23,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { apiMessage } from "@/lib/api/error-message";
 
-// Both directions are confirmed: ON blocks anything unlisted (the API seeds SSH and
-// panel ports first); OFF stops every rule but keeps them.
 export function FirewallStatusCard({ enabled, reference = null, policy, ruleCount, canManage }) {
   const t = useTranslations("firewall");
   const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(null);
   const [pending, setPending] = useState(false);
 
-  // off | on | exposed; see lib/firewall/state.js.
   const state = firewallState(enabled, policy);
   const safeLooking = state === "on";
 
-  // `secure` re-runs the enable path, which seeds SSH and panel rules before changing
-  // the policy, so there is no unprotected window.
   async function apply(next, { secured = false } = {}) {
     setPending(true);
     try {
@@ -57,9 +52,7 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
 
   return (
     <>
-      {/* The headline with its action beside it, then the facts behind it. */}
       <Card className={cn("gap-0 py-0", safeLooking ? undefined : "border-warning/40")}>
-        {/* The button sits beside the text, and under it on a phone, lined up with it. */}
         <CardContent className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
           <span
             className={cn(
@@ -67,7 +60,6 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
               safeLooking ? "bg-success/10 text-success" : "bg-warning/15 text-warning",
             )}
           >
-            {/* Not the "off" icon: this firewall IS running. */}
             {state === "unknown" ? (
               <ShieldQuestion className="size-5" />
             ) : state === "on" ? (
@@ -89,7 +81,6 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
           </div>
           {state === "unknown" ? null : (
             <div className="col-start-2 flex flex-wrap gap-2 sm:col-start-auto">
-              {/* The repair leads; the off switch stays beside it. */}
               {state === "exposed" ? (
                 <ReasonTooltip reason={canManage ? null : DENIED}>
                   <Button disabled={!canManage || pending} onClick={() => setConfirming("secure")}>
@@ -99,8 +90,6 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
                 </ReasonTooltip>
               ) : null}
               <ReasonTooltip reason={canManage ? null : DENIED}>
-                {/* Neutral when it is the off switch: the dangerous action is not the loudest on
-                    the page. The confirm dialog carries the warning and the red button. */}
                 <Button
                   variant={enabled ? "neutral" : "default"}
                   disabled={!canManage || pending}
@@ -114,9 +103,7 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
           )}
         </CardContent>
 
-        {/* "by default" is carried by the label row, so each cell shows only its value. */}
         {enabled && policy?.incoming ? (
-          // Rows on a phone: three columns there split "Заблокировано" mid-word.
           <div className="grid divide-y border-t sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <Fact
               icon={ArrowDownToLine}
@@ -148,7 +135,6 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
         onConfirm={() => apply(true)}
       />
 
-      {/* The same call seeds SSH and panel rules first, so the copy can promise access is kept. */}
       <ConfirmDialog
         open={confirming === "secure"}
         onOpenChange={(open) => !pending && setConfirming(open ? "secure" : null)}
@@ -178,8 +164,6 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
   );
 }
 
-// One fact per cell: the label small and grey, the value in words. Colour only on the
-// icon, and only when the value is good or worth a second look.
 const FACT_TONE = {
   success: "bg-success/10 text-success",
   warning: "bg-warning/15 text-warning",
@@ -192,9 +176,7 @@ function Fact({ icon: Icon, label, value, tone }) {
       <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-[2px] border border-current/30 sm:size-8", FACT_TONE[tone] ?? FACT_TONE.muted)}>
         <Icon className="size-4" aria-hidden />
       </span>
-      {/* Label and value side by side on a phone row, stacked in a column cell. */}
       <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3 sm:block">
-        {/* Mono caps label, as in the dashboard's stat cells. */}
         <p className="font-mono text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">{label}</p>
         <p className="text-sm font-semibold tabular-nums">{value}</p>
       </div>
@@ -202,21 +184,17 @@ function Fact({ icon: Icon, label, value, tone }) {
   );
 }
 
-// Allow-by-default is not flagged anywhere else, so this badge must flag it.
 function incomingTone(value) {
   if (value === "deny") return "success";
   if (value === "allow") return "warning";
   return "muted";
 }
 
-// Outgoing-deny is deliberate hardening: neither praised nor flagged.
 function outgoingTone(value) {
   if (value === "allow") return "success";
   return "muted";
 }
 
-// "deny"/"allow" are UFW's words. Unknown values are shown verbatim rather than
-// mistranslated.
 function policyWord(t, value) {
   if (value === "deny") return t("status.policyDeny");
   if (value === "allow") return t("status.policyAllow");

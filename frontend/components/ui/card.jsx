@@ -3,8 +3,6 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { HeadIcon } from "@/components/ui/head-icon"
 
-// A hairline border and the lowest elevation, so cards sit on the tinted page.
-
 function Card({
   className,
   size = "default",
@@ -37,11 +35,9 @@ function CardHeader({
   );
 }
 
-// A <div> by default, since cards nest inside dialogs; page sections pass `as="h2"`.
 function CardTitle({
   as: Comp = "div",
   className,
-  // The heading's icon chip (components/ui/head-icon.jsx); the description lines up under the text.
   icon = null,
   iconTone = "default",
   children,
@@ -73,7 +69,6 @@ function CardDescription({
   return (
     <div
       data-slot="card-description"
-      // Under the title's text, not under its icon chip (size-9 + gap-3).
       className={cn("text-sm text-muted-foreground group-has-[[data-slot=head-icon]]/card-header:pl-12", className)}
       {...props} />
   );

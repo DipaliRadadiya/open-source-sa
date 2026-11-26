@@ -9,7 +9,6 @@ import { TypeToConfirm } from "@/components/ui/type-to-confirm";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
 
-// The engine also drops the database's users, so the app's credential stops working.
 export function DeleteDatabaseDialog({ database, application = null, open, onOpenChange, redirectTo }) {
   const t = useTranslations("databases");
   const { refreshAndWait, pushAndWait } = useRefresh();
@@ -18,13 +17,11 @@ export function DeleteDatabaseDialog({ database, application = null, open, onOpe
 
   const name = database?.name ?? "";
   const matches = confirm.trim() === name;
-  // The list sends users_count; the detail page sends the users themselves.
   const users = database?.users?.length ?? database?.users_count ?? 0;
   const attached = database?.application_id !== null && database?.application_id !== undefined;
 
   function handleOpenChange(next) {
-    // Cleared at the open site as well as on close: a dialog re-opened by its
-    // own trigger never fires onOpenChange, so stale text would survive.
+    // A dialog reopened by its own trigger never fires onOpenChange, so clear here too.
     if (!next) setConfirm("");
     onOpenChange?.(next);
   }
@@ -34,8 +31,6 @@ export function DeleteDatabaseDialog({ database, application = null, open, onOpe
     setPending(true);
     try {
       await deleteDatabase(database.id);
-      // Deleted from its own detail page: stay on "Deleting…" until the list is
-      // on screen, so nothing on the dead page can be clicked.
       if (redirectTo) {
         await pushAndWait(redirectTo);
         toast.success(t("delete.deleted", { name }));
@@ -76,8 +71,6 @@ export function DeleteDatabaseDialog({ database, application = null, open, onOpe
             : t("delete.usedByUnknown")}
         </Caution>
       ) : (
-        // Its own backups are archived, not deleted. A site's database is
-        // backed up with the site, so this is not said there.
         <p className="text-xs leading-5 text-muted-foreground">{t("delete.backupsKept")}</p>
       )}
       <TypeToConfirm

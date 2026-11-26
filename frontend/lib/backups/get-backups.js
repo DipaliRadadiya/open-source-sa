@@ -21,34 +21,26 @@ import {
 } from "@/lib/schemas/backup";
 import { perPageFrom } from "@/lib/tables/remembered-per-page";
 
-// How long a finished restore keeps its banner (and its Undo) across reloads.
 const FINISHED_RESTORE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-// Held to the selector's values (the API 422s above 100). An absent value must
-// still resolve to a number: the backend defaults to 20, `PerPageSelect` shows 10.
-// A number is the caller's own size (e.g. the 5 latest restores); a URL value falls back to the remembered one.
+// The API refuses per_page above 100.
 async function perPage(value) {
   if (typeof value === "number") return value;
   return perPageFrom(value);
 }
 
-// Paginated by the server: the table grows without bound.
 export async function getBackups(searchParams = {}) {
   return listBackups("/backups", searchParams);
 }
 
-// A database's own backups, under the `database` permission.
 export async function getDatabaseBackups(databaseId, searchParams = {}) {
   return listBackups(`/databases/${databaseId}/backups`, searchParams);
 }
 
-// Backups whose database was deleted, of one engine: they can be restored into this
-// one. From the server-wide list, so they need `backup` view; a refusal reads as none.
 export async function getArchivedDatabaseBackups(engine) {
   return listBackups("/backups", { archived: true, engine, type: "database", per_page: 50 });
 }
 
-// One application's history under `app_backup`; the server-wide list needs `backup`.
 export async function getApplicationBackups(applicationId, searchParams = {}) {
   return listBackups(`/applications/${applicationId}/backups`, searchParams);
 }
@@ -60,7 +52,6 @@ async function listBackups(path, searchParams) {
         per_page: await perPage(searchParams.per_page),
         "filter[application_id]": searchParams.application,
         "filter[database_id]": searchParams.database,
-        // `false` leaves archived ones out (History); a URL value is ignored.
         "filter[archived]": searchParams.archived === true ? 1 : searchParams.archived === false ? 0 : undefined,
         "filter[engine]": searchParams.engine,
         "filter[status]": oneOf(searchParams.status, BACKUP_STATUSES),
@@ -78,11 +69,8 @@ async function listBackups(path, searchParams) {
   };
 }
 
-// Computed on the server so the cutoff matches server timestamps. Undefined for
-// anything unrecognised, which drops the filter instead of a 422.
 export function since(period) {
-  // Only the picker's values: a huge number goes past year zero, where
-  // `toISOString` emits an expanded-year format the API cannot parse.
+  // A huge period goes past year 0, where toISOString() makes a date the API can't parse.
   if (!BACKUP_PERIODS.includes(String(period))) return undefined;
 
   const from = new Date();
@@ -90,24 +78,20 @@ export function since(period) {
   return from.toISOString().slice(0, 10);
 }
 
-/** Drops an unknown enum filter value instead of letting the API answer 422. */
 function oneOf(value, allowed) {
   return allowed.includes(String(value)) ? String(value) : undefined;
 }
 
-// From `meta.counts`, filtered the same way as the rows.
 export function backupCounts(meta) {
   const counts = meta?.counts ?? {};
   return {
     total: counts.total ?? 0,
     verified: counts.completed ?? 0,
     failed: counts.failed ?? 0,
-    // Pending, running and verifying all count as "not finished yet".
     running: (counts.pending ?? 0) + (counts.running ?? 0) + (counts.verifying ?? 0),
   };
 }
 
-/** Every restore this server has run, filtered by the server. */
 export async function getRestores(searchParams = {}) {
   const result = await read("/restores", restoresResponseSchema, {
     searchParams: {
@@ -130,16 +114,11 @@ export async function getRestores(searchParams = {}) {
   };
 }
 
-// Filtered to the site (or a database on its own) by the API; the in-flight check is
-// local because `filter[status]` takes one value. The backend 422s a second restore.
 export async function getActiveRestore(applicationId, { dismissed = [], database } = {}) {
   const { restores: rows } = await getRestores({ application: applicationId, database, per_page: 5 });
-  // Server-wide: a database's own restore is followed and undone on its Backups tab.
   const restores = applicationId || database ? rows : rows.filter((restore) => restore.application_id);
   const active = restores.find((restore) => RESTORE_IN_FLIGHT.includes(restore.status)) ?? null;
 
-  // Otherwise the newest one finished within the last day and not dismissed,
-  // so its banner and Undo survive a reload.
   const latest = restores[0] ?? null;
   const finishedAt = parseApiWallClock(latest?.finished_at);
   const recent =
@@ -153,12 +132,8 @@ export async function getActiveRestore(applicationId, { dismissed = [], database
 
   if (recent === null) return null;
 
-  // Whether this run is an undo: only the backup says so (`is_safety`), and
-  // without it an undo would end by offering to undo itself.
   const { data } = await read(`/backups/${recent.backup_id}`, backupResponseSchema);
 
-  // A finished restore's safety copy may since have been pruned (only the
-  // newest two are kept). Offering Undo for it would end in "not found".
   let safetyBackupId = recent.safety_backup_id ?? null;
   if (recent !== active && safetyBackupId) {
     const safety = await read(`/backups/${safetyBackupId}`, backupResponseSchema);
@@ -172,7 +147,6 @@ export async function getActiveRestore(applicationId, { dismissed = [], database
   };
 }
 
-// Null when not configured. Cached per request: the form and status strip both read it.
 export const getBackupTarget = cache(async function getBackupTarget(applicationId) {
   const result = await read(`/applications/${applicationId}/backup-target`, backupTargetResponseSchema);
   return { target: result.data?.backup_target ?? null, hasVolumes: result.data?.has_volumes ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
@@ -189,8 +163,6 @@ export const getDatabaseBackupTarget = cache(async function getDatabaseBackupTar
   };
 });
 
-// The Overview's status filter, as the URL carries it. "unprotected" is the "Not protected"
-// option: no settings, paused and failing together (`filter[protected]=0`).
 export const COVERAGE_FILTERS = ["unprotected", "protected", "failing", "paused"];
 
 function coverageStateParams(value) {
@@ -209,15 +181,10 @@ function coverageRow(entry, byId) {
     },
     target: entry.backup_target,
     lastBackup: entry.last_backup,
-    // The server's state (one rule with its filter and counts); worked out here only
-    // for an older backend that does not send it.
     state: entry.state ?? classify(entry.backup_target, entry.last_backup),
   };
 }
 
-// One page of the Overview, searched, filtered and sorted by the server (RC-42): it used to
-// load 100 rows and filter them here, so sites past the 100th never showed.
-// The counts in `meta` cover every application, whatever the page or filter.
 export async function getBackupCoverage(searchParams = {}) {
   const [result, { applications }] = await Promise.all([
     read("/backup-targets", backupTargetsResponseSchema, {
@@ -238,7 +205,6 @@ export async function getBackupCoverage(searchParams = {}) {
 
   return {
     rows,
-    // Every application, for the setup dialog and the first-run screen: the rows are one page.
     applications,
     protected: meta.protected,
     unprotected: meta.unprotected,
@@ -246,7 +212,6 @@ export async function getBackupCoverage(searchParams = {}) {
     failing: meta.failing,
     configured: meta.configured,
     total: meta.total,
-    // For the pager: what the search and filter matched, not how many sites exist.
     meta: { ...meta, total: meta.matched },
     failed: result.failed,
     status: result.status,
@@ -254,9 +219,6 @@ export async function getBackupCoverage(searchParams = {}) {
   };
 }
 
-// What the storage warning needs from every configured site, not one page: which destinations
-// are in use, and each site's newest run (an upload that failed). Paged through at the API's
-// maximum; only sites with backup settings, so usually one request.
 export async function getBackupDestinationUsage() {
   const rows = [];
   for (let page = 1; page <= 50; page += 1) {
@@ -269,7 +231,6 @@ export async function getBackupDestinationUsage() {
   }
   return {
     inUse: [...new Set(rows.map((row) => row.backup_target?.storage_destination_id).filter(Boolean))],
-    // One entry per configured site, for "used by N applications".
     targets: rows.map((row) => row.backup_target?.storage_destination_id).filter(Boolean),
     lastBackups: rows
       .filter((row) => row.last_backup)
@@ -278,9 +239,6 @@ export async function getBackupDestinationUsage() {
   };
 }
 
-// Databases with no application (RC-23), shaped like the coverage rows so the same
-// cells render them. A failed read is reported, never shown as "no databases".
-// Cached per request: the overview card and the History/Restores filter both read it.
 export const getDatabaseBackupCoverage = cache(async function getDatabaseBackupCoverage() {
   const result = await read("/backup-targets", databaseBackupTargetsResponseSchema, {
     searchParams: { kind: "database", per_page: 100 },
@@ -294,9 +252,6 @@ export const getDatabaseBackupCoverage = cache(async function getDatabaseBackupC
   return { rows, total: result.data?.meta?.total ?? rows.length, failed: result.failed, status: result.status, failure: result.failure, message: result.message };
 });
 
-// Each application's backup standing for the Applications list, by id: one request for
-// the whole list (the API maximum of 100 rows). `null` when it could not be read, so
-// the column says nothing rather than "Not protected" for every row.
 export const getBackupStanding = cache(async function getBackupStanding() {
   const result = await read("/backup-targets", backupTargetsResponseSchema, { searchParams: { per_page: 100 } });
   if (result.failed) return null;
@@ -311,14 +266,11 @@ export const getBackupStanding = cache(async function getBackupStanding() {
   return byId;
 });
 
-// Each site's newest backup however it ended, for Retry on the mixed history list: the list
-// itself is paged and filtered, so it cannot say which failed row is a site's newest.
 export const getApplicationNewestBackups = cache(async function getApplicationNewestBackups() {
   const result = await read("/backup-targets", backupTargetsResponseSchema, { searchParams: { per_page: 100 } });
   return result.failed ? [] : (result.data?.backup_targets ?? []);
 });
 
-// `null` when unreadable: the form offers a retry, never a hard-coded list.
 export const getBackupTargetOptions = cache(async function getBackupTargetOptions() {
   const result = await read("/backup-targets/options", backupTargetOptionsSchema);
   return { options: result.failed ? null : result.data, failed: result.failed };

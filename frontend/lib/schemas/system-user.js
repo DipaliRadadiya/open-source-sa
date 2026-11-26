@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-// `allows_login: false` cannot be combined with SSH access. Null means unknown,
-// never "denies login".
+// null means unknown.
 export const shellSchema = z.object({
   value: z.string(),
   title: z.string(),
@@ -9,11 +8,8 @@ export const shellSchema = z.object({
   allows_login: z.boolean().nullable().default(null),
 });
 
-// The default for a new account. The full shell list belongs to the server
-// (GET /system-users/shells); do not copy it here.
 export const DEFAULT_SHELL = "/bin/bash";
 
-// Mirrors the backend OS-password policy: min 10, mixed case + a number.
 export const passwordField = z
   .string()
   .min(10, "min10")
@@ -21,28 +17,20 @@ export const passwordField = z
   .regex(/[A-Z]/, "uppercase")
   .regex(/[0-9]/, "number");
 
-// Linux username rules: ^[a-z_][a-z0-9_-]{0,31}$ (the backend also blocks
-// reserved names and enforces uniqueness).
 export const usernameField = z
   .string()
   .min(1, "required_username")
   .max(32, "max32")
   .regex(/^[a-z_][a-z0-9_-]{0,31}$/, "linuxUsername");
 
-// Loose client check for an SSH public key; the backend does the real parse.
 const publicKeyField = z
   .string()
   .trim()
-  // Hardware-token keys too (sk-…@openssh.com, accepted since 2083540c). DSA still passes here
-  // so the backend's own message says why it is refused.
   .regex(/^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-\S+|sk-(ssh-ed25519|ecdsa-sha2-nistp256)@openssh\.com)\s+\S+/, "sshKey");
 
-// Everything past `username` is optional and defaults to bash, no sudo, no SSH,
-// no password, matching the backend's `sometimes` rules.
 export const createSystemUserSchema = z.object({
   username: usernameField,
   public_key: z.union([z.literal(""), publicKeyField]).optional(),
-  // Not an enum: the server owns the list.
   shell: z.string().optional(),
   sudo: z.boolean().optional(),
   ssh_access: z.boolean().optional(),
@@ -60,7 +48,6 @@ export const systemUserPasswordSchema = z
   });
 
 export const sshKeySchema = z.object({
-  // The API's own cap.
   name: z.string().min(1, "required_name").max(255, "max255"),
   public_key: publicKeyField,
 });

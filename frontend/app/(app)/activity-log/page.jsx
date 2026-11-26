@@ -36,8 +36,6 @@ export default async function ActivityLogPage({ searchParams }) {
 
   const isFiltered = Boolean(sp.search || sp.type || sp.action || sp.kind);
 
-
-  // A bookmarked out-of-range ?page must not read as an empty log.
   redirectOutOfRange("/activity-log", sp, meta, failed);
   return (
     <div className="space-y-6">
@@ -47,11 +45,9 @@ export default async function ActivityLogPage({ searchParams }) {
         <LoadFailed description={t("server.loadFailed")} status={status} failure={failure} message={message} />
       ) : (
         <NavTransitionProvider>
-          {/* The pager is not gated on row count: it hides itself when there is nothing to page. */}
           <ListCard
             toolbar={
               <ActivityToolbar
-                // The filters endpoint spans both scopes; this page is server-only.
                 types={typesForScope(filters.types, "server")}
                 actions={actionsForScope(filters.actions, filters.types, "server")}
                 kinds={filters.kinds}

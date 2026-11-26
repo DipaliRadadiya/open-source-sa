@@ -28,12 +28,6 @@ import { COVERAGE_WIDTHS, RunsCell, ScheduleCell, StatusCell, StorageCell } from
 
 const JUST_STARTED_MS = 90_000;
 
-/**
- * Databases that are not part of an application (RC-23), under the applications'
- * coverage: a site's database is backed up with the site, these have schedules of
- * their own, set on the database's Backups tab. Same columns and widths as the
- * applications table above, so the two line up.
- */
 export function DatabaseCoverageCard({ coverage, options, canOpenDatabases = false, canManage = false }) {
   const t = useTranslations("backups.databases");
   const tc = useTranslations("backups.coverage");
@@ -47,7 +41,6 @@ export function DatabaseCoverageCard({ coverage, options, canOpenDatabases = fal
     return () => clearTimeout(id);
   }, [justStarted]);
 
-  // Nothing to say when every database belongs to a site.
   if (!coverage.failed && coverage.rows.length === 0) return null;
 
   async function backUpNow(databaseId, name) {
@@ -91,7 +84,6 @@ export function DatabaseCoverageCard({ coverage, options, canOpenDatabases = fal
   return (
     <>
       {watching ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
-      {/* The applications list's switch point, so both turn into cards together. */}
       <ListCard from="c900" toolbar={heading}>
         <div className="@min-[900px]/page:hidden">
           <DatabaseCards {...listProps} />
@@ -123,7 +115,6 @@ function NameCell({ row, table }) {
           <span className="max-w-full shrink-0 truncate font-medium">{database.name}</span>
         )}
       </HoverHint>
-      {/* As on the application rows: no badge where the row already says it. */}
       {state === "paused" || state === "unprotected" ? null : (
         <span className="shrink-0">
           <StatusCell row={row} />
@@ -148,7 +139,6 @@ function DatabaseActions({ row, canOpenDatabases, canManage, onBackUpNow, busy, 
   const { database, target } = row;
   const settings = `/databases/${database.id}?tab=backups`;
 
-  // Not set up: the schedule is made on the database's own Backups tab.
   if (!target) {
     return (
       <div className="flex items-center justify-end gap-1">
@@ -223,12 +213,10 @@ function DatabaseTable({ rows, options, canOpenDatabases, canManage, onBackUpNow
   return (
     <DataTable
       bare
-      // Fixed widths, as in the applications table above, so the two line up at every width.
       fixedLayout
       columns={columns}
       data={rows}
       rowId={(row) => String(row.database.id)}
-      // A database with no schedule gets one sentence across the three columns.
       spanCells={{
         columns: ["schedule", "storage", "runs"],
         render: (row) => (row.target ? null : <span className="text-sm whitespace-normal text-muted-foreground/80">{t("notSetUpLine")}</span>),
@@ -246,7 +234,6 @@ function DatabaseCards({ rows, options, canOpenDatabases, canManage, onBackUpNow
   const format = useFormatter();
   const engineName = useEngineName();
 
-  // The same frame as the application cards above: protected ones as cards, the rest as rows.
   const configured = rows.filter((row) => row.target);
   const notSetUp = rows.filter((row) => !row.target);
   const settingsHref = (database) => (canOpenDatabases ? `/databases/${database.id}?tab=backups` : null);

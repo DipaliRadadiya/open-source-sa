@@ -10,7 +10,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { HoverHint } from "@/components/ui/hover-hint";
 
-// `min-w-0` + `truncate` so a long title shortens instead of pushing the arrow off-centre.
 function TypeSide({ name, title, iconDataUri, emphasis = false }) {
   return (
     <span className="flex min-w-0 items-center gap-2">
@@ -27,7 +26,6 @@ function TypeSide({ name, title, iconDataUri, emphasis = false }) {
   );
 }
 
-/** One labelled answer, as a `<dl>` row so screen readers get the pairing. */
 function Consequence({ icon: Icon, tone, label, children }) {
   return (
     <div className="flex items-start gap-2.5 p-3">
@@ -46,7 +44,6 @@ function Consequence({ icon: Icon, tone, label, children }) {
   );
 }
 
-// Relabelling changes what the panel offers, not what is on disk; the body states both.
 export function SiteTypeRelabelDialog({
   open,
   onOpenChange,
@@ -54,7 +51,6 @@ export function SiteTypeRelabelDialog({
   target,
   targetTitle,
   siteTypes = [],
-  // The file the verdict rests on; checkable, unlike a confidence score.
   matched = null,
 }) {
   const t = useTranslations("applications.siteTypeDetection");
@@ -63,7 +59,7 @@ export function SiteTypeRelabelDialog({
   const [error, setError] = useState(null);
 
   function handleOpenChange(next) {
-    // Cleared here: opening via `target` skips onOpenChange, so a stale error would survive.
+    // Opening via target skips onOpenChange, so clear the old error here.
     if (!next) setError(null);
     onOpenChange(next);
   }
@@ -73,12 +69,10 @@ export function SiteTypeRelabelDialog({
     setError(null);
     try {
       await changeApplicationSiteType(application.id, target);
-      // Refresh, not a local patch: the type decides the site's screens, so the nav changes too.
       await refreshAndWait();
       toast.success(t("applied", { type: targetTitle }));
       onOpenChange(false);
     } catch (err) {
-      // Backend refusals are worth reading, so kept in the dialog rather than a toast.
       setError(apiMessage(err, t("failed")));
     } finally {
       setPending(false);
@@ -100,7 +94,6 @@ export function SiteTypeRelabelDialog({
       onConfirm={confirm}
     >
       <div className="space-y-3">
-        {/* Each mark with its own name: most marks do not spell their name. */}
         <div className="flex items-center justify-center gap-3 rounded-lg border bg-muted/30 p-3">
           <TypeSide
             name={application.site_type}
@@ -108,11 +101,9 @@ export function SiteTypeRelabelDialog({
             iconDataUri={siteTypes.find((type) => type.name === application.site_type)?.recipe?.icon_data_uri}
           />
           <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          {/* The destination keeps foreground weight; the current type is muted. */}
           <TypeSide name={target} title={targetTitle} iconDataUri={siteTypes.find((type) => type.name === target)?.recipe?.icon_data_uri} emphasis />
         </div>
 
-        {/* Two labelled rows: what changes, and what does not. */}
         <dl className="divide-y rounded-lg border">
           <Consequence icon={Check} tone="success" label={t("changesLabel")}>
             {t("changesBody", { type: targetTitle })}
@@ -122,7 +113,6 @@ export function SiteTypeRelabelDialog({
           </Consequence>
         </dl>
 
-        {/* Only when widening; narrowing back needs no evidence, so this promise holds. */}
         {matched ? (
           <p className="text-xs text-muted-foreground">
             {t("reversible", { from: application.site_type_title ?? application.site_type })}

@@ -6,13 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SizeText } from "@/components/ui/size-text";
 
-// The databases backups, staging, cloning and restoring use, not what the site
-// connects to. The empty state warns only for types that declare a database need.
 export async function DatabaseCard({
   application,
   databases = [],
-  // Server databases attached to no site (what "attach" can offer). Empty means
-  // the next step is creating one.
   unattached = [],
   engines = [],
   failed = false,
@@ -41,7 +37,6 @@ export async function DatabaseCard({
             </span>
           )}
         </CardTitle>
-        {/* Databases are a server-level permission; a site-level reader may lack it. */}
         {canSeeDatabases ? (
           <CardAction className="row-span-1 flex gap-2 self-center">
             <DatabaseCardActions
@@ -57,7 +52,6 @@ export async function DatabaseCard({
 
       <CardContent className="p-0">
         {failed ? (
-          // Never rendered as "none": a failed check is not an empty site.
           <p className="px-(--card-spacing) text-sm text-muted-foreground">{t("loadFailed")}</p>
         ) : missing ? (
           <p

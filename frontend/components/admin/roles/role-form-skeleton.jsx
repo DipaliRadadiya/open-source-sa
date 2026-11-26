@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SkCard, SkForm, SkHeader } from "@/components/ui/skeleton-kit";
 
-// Shared by "new" and "edit" so the two `loading.jsx` files cannot drift: the details
-// card, then the permissions card with its View / Manage columns.
 export function RoleFormSkeleton() {
   return (
     <div className="space-y-6" aria-busy="true">

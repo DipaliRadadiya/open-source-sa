@@ -9,9 +9,6 @@ import { apiMessage } from "@/lib/api/error-message";
 import { installTarget, rangeLabel } from "@/lib/runtime/version-range";
 import { RequiredServicesPanel } from "@/components/applications/required-services-panel";
 
-// Install endpoints are idempotent 202s on a single-worker queue, so firing all is safe.
-// Row state comes from the page's live data, not a local state machine.
-
 const RUNTIME_NAMES = { php: "PHP", node: "Node" };
 
 const ENGINE_LABELS = {
@@ -21,7 +18,6 @@ const ENGINE_LABELS = {
   postgresql: "PostgreSQL",
 };
 
-// Computed once per type: blockers vanish as cleared, so a row would drop on turning green.
 function servicesFor(type, { phpInstallable, nodeInstallable }) {
   const blockers = Array.isArray(type?.blockers) ? type.blockers : [];
   const installable = { php: phpInstallable, node: nodeInstallable };
@@ -52,8 +48,6 @@ function servicesFor(type, { phpInstallable, nodeInstallable }) {
           : null;
     if (!runtime) return [];
 
-    // The server's `suggest`, else the lowest installable version that fits
-    // (matches `runtime-readiness`). Null: nothing installable fits.
     const target = blocker.suggest
       ? { version: blocker.suggest, eol: Boolean(blocker.suggestEol) }
       : installTarget(installable[runtime], blocker.range ?? null);
@@ -65,20 +59,14 @@ function servicesFor(type, { phpInstallable, nodeInstallable }) {
         key: `runtime-${runtime}`,
         kind: runtime,
         version,
-        // The application's requirement, so the exact version above does not read as
-        // what the app demands.
         requirement: blocker.range ? rangeLabel(blocker.range) : null,
-        // True when the only usable version is end-of-life; the row must say so.
         eol: Boolean(target?.eol),
-        // Never the bare runtime name: "PHP — Not installed" is false on a server
-        // running another PHP version.
         name: version ? `${label} ${version}` : blocker.label ? `${label} ${blocker.label}` : label,
       },
     ];
   });
 }
 
-/** Where each row's state actually comes from: the server, every time. */
 function liveState(row, { engines, phpVersions, nodeVersions, canInstall, errors }) {
   if (errors[row.key]) return "failed";
 
@@ -87,7 +75,6 @@ function liveState(row, { engines, phpVersions, nodeVersions, canInstall, errors
     if (engine?.installed === true && engine?.running === true) return "installed";
     if (engine?.install_status === "installing") return "installing";
     if (engine?.install_status === "failed") return "failed";
-    // Not installable on this OS: no Install button that can only 422.
     if (engine && engine.installable === false && !engine.installed) return "impossible";
     if (!canInstall.database) return "denied";
     return "missing";
@@ -135,7 +122,6 @@ export function RequiredServices({
         return {
           ...row,
           state,
-          /* The generic sentence is about version ranges; prefer the server's reason. */
           reason:
             state === "impossible" && row.kind === "database"
               ? ((engines ?? []).find((item) => item?.engine === row.engine)?.unavailable?.reason ??
@@ -148,7 +134,6 @@ export function RequiredServices({
 
   const working = services.some((service) => service.state === "installing");
 
-  // Refresh the page rather than fetch: versions, engines and blockers are computed together.
   useEffect(() => {
     if (!working) return undefined;
     const timer = setInterval(refresh, POLL_MS);
@@ -169,7 +154,6 @@ export function RequiredServices({
         return next;
       });
 
-      // Sequential, so a refusal part-way stops the remaining requests.
       for (const service of queue) {
         try {
           await INSTALL[service.kind](service);

@@ -26,13 +26,11 @@ import {
 export function UserPasswordDialog({ database, user, open, onOpenChange }) {
   const t = useTranslations("databases.users");
   const { refreshAndWait } = useRefresh();
-  // The new connection string, shown once the change lands.
   const [result, setResult] = useState(null);
 
   const form = useForm({
     resolver: zodResolver(passwordFormSchema),
-    // Radix moves focus on open, which would blur the empty field and show an
-    // error before typing. Validate on submit, then live.
+    // Radix moves focus on open, which would blur the empty field and show an error.
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: { password: "" },
@@ -62,8 +60,6 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
     onOpenChange?.(next);
   }
 
-  // Pre-filled with a generated password, fresh on each open so no two users
-  // in a session share one.
   useEffect(() => {
     if (!open) return;
     form.setValue("password", randomPassword());
@@ -123,7 +119,6 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
               control={form.control}
               name="password"
               render={({ field }) => (
-                // Generate follows the input in the markup so Tab reaches the field first.
                 <FormItem className="relative">
                   <FormLabel required>{t("newPassword")}</FormLabel>
                   <FormControl>

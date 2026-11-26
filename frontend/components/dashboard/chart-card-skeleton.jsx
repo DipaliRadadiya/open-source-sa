@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Mirrors `LiveChartCard` (header and plot) so the page does not jump while the chart code loads.
 export function ChartCardSkeleton({ plotHeight = "h-72" }) {
   return (
     <Card className="h-full">

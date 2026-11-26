@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-// Same rule as App\Rules\SafeRelativePath: relative only, no `.`/`..`
-// segments. Catches obvious mistakes; the backend is the real boundary.
 const SAFE_PATH = /^(?!\/)(?!.*(^|\/)\.\.?(\/|$))[^\0]+$/;
 
 export const fileEntrySchema = z.object({
@@ -11,16 +9,13 @@ export const fileEntrySchema = z.object({
   size_human: z.string().nullish(),
   modified_at: z.string().nullish(),
   modified_at_human: z.string().nullish(),
-  // Nullish so older listings without these fields still parse.
   mode: z.string().nullish(),
   owner: z.string().nullish(),
   group: z.string().nullish(),
-  // Symlinks only: where a link points and whether it dangles.
   link_target: z.string().nullish(),
   link_broken: z.boolean().nullish(),
 });
 
-// `available: false` (the walk could not finish) differs from empty `categories`.
 export const breakdownSchema = z.object({
   available: z.boolean(),
   truncated: z.boolean().default(false),
@@ -45,8 +40,7 @@ export const breakdownResponseSchema = z.object({
 
 const measuredSize = z.object({ size: z.number(), size_human: z.string() });
 
-// `GET …/files/sizes`. PHP sends an empty `sizes` as `[]`, not `{}`. A folder missing
-// from `sizes` was not measured; `total` is null when `complete` is false.
+// PHP sends an empty sizes as [] instead of {}.
 export const folderSizesResponseSchema = z.object({
   path: z.string().default(""),
   sizes: z.preprocess((v) => (Array.isArray(v) ? {} : v), z.record(z.string(), measuredSize)).default({}),
@@ -58,13 +52,9 @@ export const folderSizesResponseSchema = z.object({
 export const filesResponseSchema = z.object({
   path: z.string().default(""),
   files: z.array(fileEntrySchema).default([]),
-  // How many dotfiles this directory holds, whether or not they were returned.
-  // Required so a missing field fails loudly instead of reading as "none hidden".
   hidden_count: z.number().int(),
 });
 
-// `batch` is the delete's folder (`YYYYMMDD-HHMMSS`). `size` is nullish so one
-// unmeasurable entry does not blank the rest.
 export const trashEntrySchema = z.object({
   batch: z.string(),
   path: z.string(),
@@ -75,14 +65,11 @@ export const trashEntrySchema = z.object({
 
 export const trashResponseSchema = z.object({
   trash: z.array(trashEntrySchema).default([]),
-  // Null when any entry could not be measured; a partial total reads as complete.
   total_size: z.number().nullish(),
   total_size_human: z.string().nullish(),
-  // Configurable per install (SERVER_TRASH_RETENTION_DAYS); never hardcode it.
   retention_days: z.number().nullish(),
 });
 
-// Sitewide search spans folders, so each entry carries its full relative `path`.
 export const searchFileEntrySchema = fileEntrySchema.extend({
   path: z.string(),
 });
@@ -102,11 +89,8 @@ export const fileContentSchema = z.object({
   content: z.string(),
   size: z.number().nullish(),
   backups: z.array(fileBackupSchema).default([]),
-  // Hash of the content as read; sent back on save so a change made meanwhile is a 409.
   version: z.string().nullish(),
 });
-
-// Write schemas below mirror the request bodies the API takes.
 
 export const newFolderSchema = z.object({
   name: z

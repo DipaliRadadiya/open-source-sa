@@ -18,7 +18,6 @@ import { clockFormatter } from "@/lib/format/time";
 import { historySeries } from "@/lib/server/history-series";
 import { FACT_LABEL } from "@/lib/theme/facts";
 
-/** Tokens this chart draws with, resolved from globals.css at runtime. */
 const TOKENS = [
   "chart-1",
   "chart-2",
@@ -97,18 +96,12 @@ export function QueryChart({ metrics = [], timeZone }) {
         tokens,
         xLabel: clock,
         value: decimal,
-        // Rates on the left, connection counts on the right: no shared unit.
         axes: [{ formatter: axisNumber }, { minInterval: 1 }],
         zoom: true,
       });
       const muted = tokens["muted-foreground"];
-      // The legend is drawn below the chart with each line's live value, so ECharts' own
-      // goes, and the grid takes back its band.
       built.legend = { show: false };
-      // Bottom: the legend band is gone. Top: room for the peak's label above the line.
-      // No end labels: the right axis sits there, and the legend below carries each live value.
       built.grid = { ...built.grid, top: 30, bottom: 56 };
-      // Peak and average marked on the queries line, as their boxes above name them.
       if (built.series[0] && peakQps !== null) {
         built.series[0].markPoint = {
           symbol: "circle",
@@ -186,7 +179,6 @@ export function QueryChart({ metrics = [], timeZone }) {
 
       <CardContent className="space-y-3">
         <p className="text-xs font-medium text-muted-foreground">{t("qps")}</p>
-        {/* Three boxes rather than one strip, each with its own mark. */}
         <dl className="grid gap-2 sm:grid-cols-3">
           {[
             [t("summary.current"), currentQps, Activity],
@@ -207,7 +199,6 @@ export function QueryChart({ metrics = [], timeZone }) {
 
         <EChart option={option} dataTable={table} height="h-80" />
 
-        {/* The legend, with each line's latest reading. */}
         <ul className="flex flex-wrap gap-2">
           {lines.map((line) => {
             const value = latest(line.key);
@@ -220,7 +211,6 @@ export function QueryChart({ metrics = [], timeZone }) {
             );
           })}
         </ul>
-        {/* Explains the slider, the card's only unlabelled control. */}
         <p className="text-xs text-muted-foreground">{t("zoomHint")}</p>
       </CardContent>
     </Card>

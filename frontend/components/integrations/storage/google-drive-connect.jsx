@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { startDriveConnect } from "@/lib/api/storage";
 import { apiMessage } from "@/lib/api/error-message";
 
-// `compact` renders only the button, for the destination row; both modes share one start().
 export function GoogleDriveConnect({ destination, compact = false }) {
   const t = useTranslations("storage.oauth");
   const [state, setState] = useState("idle");
@@ -24,7 +23,6 @@ export function GoogleDriveConnect({ destination, compact = false }) {
     try {
       const { data } = await startDriveConnect(destination.id);
 
-      // A full navigation, not a popup: popups are often blocked.
       window.location.assign(data.oauth.authorize_url);
     } catch (e) {
       setError(apiMessage(e, t("start_failed")));
@@ -62,7 +60,6 @@ export function GoogleDriveConnect({ destination, compact = false }) {
           {state === "starting" ? <Loader2 className="size-3 animate-spin" /> : null}
           {t("connect")}
         </Button>
-        {/* Errors still surface in compact mode. */}
         {error ? (
           <p className="flex items-start gap-1.5 text-xs text-destructive">
             <TriangleAlert className="mt-0.5 size-3 shrink-0" />
@@ -88,8 +85,6 @@ export function GoogleDriveConnect({ destination, compact = false }) {
         {t("connect")}
       </Button>
 
-
-      {/* Same shape as the provider warning above it. */}
       {error ? (
         <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs leading-relaxed">
           <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-destructive" />

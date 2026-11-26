@@ -2,12 +2,10 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { useSetQuery } from "@/hooks/use-set-query";
 
-// `keys` lists every filter param; `SearchInput` follows the URL so the search box empties too.
 export function ClearFiltersButton({
   keys = [],
   extraQuery,
   label,
-  // Lighter variants for use inside a chip or sentence.
   variant = "outline",
   size,
   className,

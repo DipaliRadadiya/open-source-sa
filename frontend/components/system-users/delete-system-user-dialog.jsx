@@ -16,11 +16,8 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
   const { refreshThen, navigateThen } = useRefresh();
   const [pending, setPending] = useState(false);
   const [confirm, setConfirm] = useState("");
-  // A refusal the person has to act on (a session still open) stays in the dialog;
-  // a toast is gone before they have read it.
   const [refusal, setRefusal] = useState(null);
   const [endSessions, setEndSessions] = useState(false);
-  // The row, and the ⋯ that opened this, are gone once it is deleted.
   const removed = useRef(false);
 
   const username = user?.username ?? "";
@@ -39,7 +36,6 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
     if (!matches) return;
     setPending(true);
     setRefusal(null);
-    // Toasted once the row has gone from the list.
     const done = (say) => {
       const after = () => {
         removed.current = true;
@@ -47,8 +43,6 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
         handleOpenChange(false);
         setPending(false);
       };
-      // The last row on its page: go straight to the previous page rather than render
-      // an empty one and redirect.
       if (prevPage) navigateThen({ page: prevPage > 1 ? prevPage : undefined }, after);
       else refreshThen(after);
     };
@@ -56,13 +50,10 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
       await deleteSystemUser(user.id, { endSessions });
       done(() => toast.success(t("toast.deleted")));
     } catch (error) {
-      // Deleted elsewhere: what was asked for is already true.
       if (error?.response?.status === 404) {
         done(() => toast.info(t("toast.alreadyGone", { username })));
         return;
       }
-      // 422 = still owns applications, or still has processes; the backend's sentence
-      // says which.
       const reason = error?.response?.data?.errors?.system_user?.[0];
       if (error?.response?.status === 422 && reason) setRefusal(reason);
       else toast.error(apiMessage(error, t("toast.deleteFailed")));
@@ -95,7 +86,6 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
           <p>{refusal}</p>
         </Caution>
       ) : null}
-      {/* Named as the API's refusal names it ("delete again with End sessions on"). */}
       <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
         <Checkbox
           id="delete-su-end-sessions"

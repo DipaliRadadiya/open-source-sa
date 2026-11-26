@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-// Kind (API exception or failed server operation) is inferred in lib/admin/group-error-logs.js.
-// `occurred_at` is ISO-8601, NOT the usual "DD-MM-YYYY HH:mm:ss"; parseApiDate() returns null for it.
 export const errorLogEntrySchema = z
   .object({
     occurred_at: z.string().nullish(),
@@ -14,13 +12,12 @@ export const errorLogEntrySchema = z
     user_id: z.number().int().nullish(),
     feature: z.string().nullish(),
     operation: z.string().nullish(),
-    // `feature` and `operation` in plain words, translated; null when absent.
     feature_label: z.string().nullish(),
     operation_label: z.string().nullish(),
     exit_code: z.number().int().nullish(),
     error: z.string().nullish(),
     file: z.string().nullish(),
-    // PHP's empty array arrives as [] and older entries omit it; both must parse.
+    // PHP sends an empty array as [].
     trace: z.array(z.string()).nullish().catch(null),
     command: z.string().nullish(),
     duration_ms: z.number().nullish(),
@@ -38,11 +35,9 @@ export const errorLogsResponseSchema = z
   })
   .passthrough();
 
-// The backend clamps to 1–500; these are the three sizes worth offering.
 export const LINE_OPTIONS = [100, 250, 500];
 export const DEFAULT_LINES = 100;
 
-// The backend 422s a non-uuid `reference`; catch partial pastes here.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function isReference(value) {

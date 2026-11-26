@@ -18,12 +18,8 @@ import { CronjobsToolbar } from "@/components/cron-jobs/cronjobs-toolbar";
 import { CronjobsTable } from "@/components/cron-jobs/cronjobs-table";
 import { CreateCronjobDialog } from "@/components/cron-jobs/create-cronjob-dialog";
 
-// Starter templates offered on the empty state, from the API's own templates.
 const STARTER_KEYS = ["laravel", "wordpress"];
 
-// Owns the create dialog so the empty state, quick starters and Duplicate can
-// open it with different seed values.
-// The command to start it again; a command, so not translated.
 const CRON_START = "sudo systemctl start cron";
 
 export function CronjobsPanel({
@@ -44,8 +40,6 @@ export function CronjobsPanel({
   const setQuery = useSetQuery();
   const router = useRouter();
 
-  // Re-read the list just after the soonest job is due so its next run moves
-  // on. One timer for the page, not a poll.
   useEffect(() => {
     const due = cronjobs
       .map((job) => (job.active ? serverTimeToEpoch(job.next_run_at, job.timezone) : null))
@@ -56,8 +50,6 @@ export function CronjobsPanel({
     return () => clearTimeout(id);
   }, [cronjobs, router]);
 
-  // While a run is going (started by hand or by cron), re-read every 5 s so it turns into
-  // its result; stops by itself once no row says running.
   const anyRunning = cronjobs.some((job) => job.running === true);
   useEffect(() => {
     if (!anyRunning) return undefined;
@@ -75,7 +67,6 @@ export function CronjobsPanel({
   function duplicate(job) {
     openCreate({
       initialValues: {
-        // The API rejects a duplicate name, so the copy has to differ.
         name: t("duplicateName", { name: job.name }),
         run_as: job.system_user ? String(job.system_user.id) : OTHER_USER,
         username: job.system_user ? "" : job.username,
@@ -91,7 +82,6 @@ export function CronjobsPanel({
     commandPresets.find((p) => p.key === key && p.command),
   ).filter(Boolean);
 
-  // Disabled with a reason rather than hidden when permission is missing.
   const addButton = (
     <ReasonTooltip reason={canManage ? null : DENIED}>
       <Button disabled={!canManage} onClick={() => openCreate()}>
@@ -113,8 +103,6 @@ export function CronjobsPanel({
 
   return (
     <>
-      {/* Cron itself is down: no job runs, the panel's own scheduler included, whatever
-          "next run" says. Only on a definite false; null means the server could not tell. */}
       {meta?.cron_running === false ? (
         <Caution tone="destructive" size="md" icon={CircleAlert} className="mb-6">
           <div role="alert" className="space-y-1">
@@ -128,8 +116,6 @@ export function CronjobsPanel({
         </Caution>
       ) : null}
 
-      {/* `?page=99` never reaches here: the page redirects to the last real
-          page before rendering. See lib/tables/redirect-out-of-range. */}
       {cronjobs.length === 0 ? (
         <ListCard toolbar={toolbar}>
           {isFiltered ? (
@@ -183,14 +169,11 @@ export function CronjobsPanel({
           )}
         </ListCard>
       ) : (
-        // Below xl the rows are cards of their own, so the list drops its frame there.
         <ListCard from="c900" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
           <CronjobsTable
             data={cronjobs}
             canViewLogs={canViewLogs}
             runAs={{ users: systemUsers, failed: systemUsersFailed }}
-            // The page to land on when this page's only row leaves it (deleted,
-            // or switched out of the status filter); null when a refresh will do.
             prevPage={cronjobs.length === 1 && meta.current_page > 1 ? meta.current_page - 1 : null}
             canManage={canManage}
             schedulePresets={schedulePresets}

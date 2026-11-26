@@ -36,26 +36,16 @@ import { RestartContainersDialog } from "@/components/applications/restart-conta
 import { MagicLoginDialog } from "@/components/applications/magic-login-dialog";
 import { useMagicLogin } from "@/components/applications/use-magic-login";
 
-// Open and Visit are reads; Retry and Delete need `manage`. Visit only while served.
 export function ApplicationRowActions({
   application,
   canManage = false,
-  // Only the list passes this; the app dashboard has its own Magic Login button.
   canMagicLogin = false,
   canRemoveSystemUser = false,
-  // Docker clean-up on delete needs `docker` manage; without it both boxes are hidden.
   canManageDocker = false,
-  // On the app's own dashboard, "Open dashboard" and "Visit" would be redundant.
   showNavigation = true,
-  // False when the role can open no screen inside the application: no "Open" item.
   canOpen = true,
-  // Permission-filtered keys of app screens. Only the detail header passes these,
-  // to keep the list's row menu short.
-  // Called after a successful delete, before redirecting (if redirectTo is set).
   afterDelete,
-  // Where to navigate after deleting. Passed through to DeleteApplicationDialog.
   redirectTo,
-  // The header shows ⋯ as an outlined button the height of its neighbours.
   triggerVariant = "ghost",
   triggerClassName = "size-8",
 }) {
@@ -63,21 +53,14 @@ export function ApplicationRowActions({
   const { refreshThen } = useRefresh();
   const [retrying, setRetrying] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  // Set by items that open a dialog, so only then is focus kept off the ⋯ button
-  // as the menu closes (the dialog takes it).
   const openingDialog = useRef(false);
-  // Signs straight in for one administrator, otherwise opens the picker. Shared
-  // with the site dashboard's button; see use-magic-login.js.
   const magicLogin = useMagicLogin(application.id);
-  // WordPress only, and only while the site is served. The list's catalog is not
-  // filtered by site type, so the row checks itself.
   const showMagicLogin =
     canMagicLogin &&
     application.site_type === "wordpress" &&
     application.status === "active";
 
-  // Close the menu when the status changes underneath it. Render-phase sync: an effect
-  // would paint the stale menu once first.
+  // Synced during render: an effect would paint the stale menu once first.
   const [seenStatus, setSeenStatus] = useState(application.status);
   if (seenStatus !== application.status) {
     setSeenStatus(application.status);
@@ -93,8 +76,6 @@ export function ApplicationRowActions({
   const canRetry = application.status === "failed";
   const showRetry = canManage && canRetry;
   const pauseAction = pauseControl(application, { canManage });
-  // Docker apps have no process card; their restart lives here. The API refuses it
-  // while paused or not yet running, so say why instead of offering a 422.
   const showRestart = canManage && application.serving_profile === "docker";
   const redeploying = containerRedeployInFlight(application);
   const restartHint = application.is_disabled
@@ -107,21 +88,16 @@ export function ApplicationRowActions({
 
   if (!showNavigation && !showRetry && !canManage) return null;
 
-  // No confirmation: restoring service needs no warning.
   async function resume() {
     setResuming(true);
     try {
       await enableApplication(application.id);
-      // After the refresh, so badge and toast agree. Closes the menu here because
-      // pause/resume change `disabled_at`, not `status`.
       refreshThen(() => {
         toast.success(t("pause.resumed", { name: application.name }));
         setResuming(false);
         setMenuOpen(false);
       });
     } catch (error) {
-      // Includes the 422 for a site already resumed elsewhere; the API's message is
-      // clearer than a generic failure.
       toast.error(apiMessage(error, t("pause.resumeFailed")));
       setResuming(false);
     }
@@ -131,7 +107,6 @@ export function ApplicationRowActions({
     setRetrying(true);
     try {
       await retryProvisioning(application.id);
-      // Keep "Retrying…" until the row itself shows Provisioning.
       refreshThen(() => setRetrying(false));
     } catch (error) {
       toast.error(apiMessage(error, t("details.failedAt", { step: provisionStepLabel(application.failed_step, t, "details.") })));
@@ -172,8 +147,7 @@ export function ApplicationRowActions({
                 </DropdownMenuItem>
               ) : null}
 
-              {/* Uses `url`, never built from `domain`: the API serves http:// until the
-                  site has a certificate, and an assumed https:// would be refused. */}
+              {/* Use url, not domain: the API serves http:// until the site has a certificate. */}
               <MenuItemHint hint={canVisit ? null : t("actions.visitHint")}>
                 <DropdownMenuItem asChild={canVisit} disabled={!canVisit}>
                   {canVisit ? (
@@ -192,13 +166,9 @@ export function ApplicationRowActions({
             </>
           ) : null}
 
-          {/* Grouped with Visit: the same act with admin credentials. No separator
-              here; the `canManage` group below draws its own. */}
           {showMagicLogin ? (
             <DropdownMenuItem
               disabled={magicLogin.pending}
-              /* Held open, saying "Signing you in…", until WordPress opens or
-                 the picker takes over (same pattern as Retry). */
               onSelect={(event) => {
                 event.preventDefault();
                 openingDialog.current = true;
@@ -222,7 +192,7 @@ export function ApplicationRowActions({
             <DropdownMenuItem
               disabled={retrying}
               onSelect={(event) => {
-                // Radix closes the menu on select; hold it open so the item can show "Retrying…".
+                // Radix closes the menu on select; hold it open so the item can show Retrying.
                 event.preventDefault();
                 retry();
               }}
@@ -250,13 +220,10 @@ export function ApplicationRowActions({
                   </DropdownMenuItem>
                 </MenuItemHint>
               ) : null}
-              {/* Kept out of the destructive group: pausing is reversible. See
-                  `pauseControl` for which control appears. */}
               {pauseAction === "resume" ? (
                 <DropdownMenuItem
                   disabled={resuming}
                   onSelect={(event) => {
-                    // Hold the menu open so the item can show "Resuming…".
                     event.preventDefault();
                     resume();
                   }}
@@ -274,7 +241,6 @@ export function ApplicationRowActions({
                   {t("pause.action")}
                 </DropdownMenuItem>
               ) : null}
-              {/* The API answers 503 to a delete while a Pull and redeploy runs. */}
               <MenuItemHint hint={redeploying ? t("redeploy.busy") : null}>
                 <DropdownMenuItem
                   variant="destructive"
@@ -290,7 +256,6 @@ export function ApplicationRowActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Mounted only when needed, so each row does not carry an unopened dialog. */}
       {magicLogin.choice ? (
         <MagicLoginDialog
           appId={application.id}

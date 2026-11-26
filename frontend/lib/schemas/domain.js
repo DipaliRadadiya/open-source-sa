@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { isValidApplicationDomain } from "./application.js";
 
-// Every name a site answers to is a row; `type` says what that name does.
 export const domainSchema = z.object({
   id: z.number(),
   domain: z.string(),
@@ -29,8 +28,7 @@ export const certificateSchema = z.object({
   status: z.string().nullish(),
   domains: z.array(z.string()).default([]),
   missing_domains: z.array(z.string()).default([]),
-  // Names on the certificate the site no longer has. certbot fails the whole
-  // renewal if any name cannot be validated, so these stop renewal for all names.
+  // certbot fails the whole renewal if one of these names can't be validated.
   stale_domains: z.array(z.string()).default([]),
   force_https: z.boolean().default(false),
   auto_renew: z.boolean().default(false),
@@ -38,8 +36,7 @@ export const certificateSchema = z.object({
   issued_at: z.string().nullish(),
   expires_at: z.string().nullish(),
   expires_at_human: z.string().nullish(),
-  // What the web server presents versus what is on disk. NOT defaulted:
-  // null means no handshake completed, never "all good".
+  // null means no TLS handshake completed, not all good.
   serving_stale: z.boolean().nullish(),
   served_expires_at: z.string().nullish(),
   served_checked_at: z.string().nullish(),
@@ -51,7 +48,6 @@ export const certificateSchema = z.object({
   reference: z.string().nullish(),
 }).passthrough();
 
-// Only `available` gates a choice; `reason` may be informational, so never branch on its presence.
 export const certificateTypeSchema = z.object({
   type: z.string(),
   label: z.string(),
@@ -61,39 +57,29 @@ export const certificateTypeSchema = z.object({
   reason: z.string().nullish(),
 });
 
-// `null` certificate is a normal state, not an error. `available_types` sits
-// beside it because it describes what the site could have.
 export const certificateResponseSchema = z.object({
   certificate: certificateSchema.nullable(),
   available_types: z.array(certificateTypeSchema).default([]),
 });
 
-// Redirect targets used by the add-domain form.
 export const REDIRECT_STATUSES = [301, 302, 307, 308];
 
-// The backend's 422 is mapped onto the field. `primary` is not an option: promoting is a separate endpoint.
 export const addDomainFormSchema = z
   .object({
-    // Lowercased rather than rejected: the backend stores `strtolower(trim(...))`
-    // anyway, so the submitted value matches what comes back.
     domain: z
       .string()
       .trim()
       .toLowerCase()
       .min(1, "domainRequired")
-      // The backend's own ceiling (`max:253`).
       .max(253, "hostnameTooLong")
-      // Each label is capped at 63, as on the backend.
       .refine((value) => value.split(".").every((label) => label.length <= 63), "hostnameLabelTooLong")
       .refine(isValidApplicationDomain, "hostnameInvalid"),
     type: z.enum(["alias", "redirect"]).default("alias"),
-    // http/https only: `javascript:` and `data:` parse as URLs, and this goes into the redirect directive.
     redirect_to: z.string().trim().optional().default(""),
     redirect_status: z.coerce.number().refine((n) => REDIRECT_STATUSES.includes(n)).default(301),
   })
   .superRefine(redirectRules);
 
-// `PUT …/domains/{domain}` accepts exactly these fields.
 export const editDomainFormSchema = z
   .object({
     type: z.enum(["alias", "redirect"]).default("alias"),
@@ -102,7 +88,6 @@ export const editDomainFormSchema = z
   })
   .superRefine(redirectRules);
 
-/** A redirect needs a target, and the target has to be a real http(s) one. */
 function redirectRules(values, ctx) {
   if (values.type !== "redirect") return;
   if (!values.redirect_to.length) {
@@ -114,7 +99,6 @@ function redirectRules(values, ctx) {
   }
 }
 
-/** `http(s)://host…`, and nothing else. */
 function isHttpUrl(value) {
   let url;
   try {
@@ -122,6 +106,5 @@ function isHttpUrl(value) {
   } catch {
     return false;
   }
-  // A bare hostname parses as nothing; `javascript:alert(1)` parses fine.
   return (url.protocol === "http:" || url.protocol === "https:") && Boolean(url.hostname);
 }

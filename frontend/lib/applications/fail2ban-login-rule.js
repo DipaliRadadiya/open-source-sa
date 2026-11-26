@@ -1,13 +1,5 @@
-/**
- * A Fail2ban filter for one login page, written from two plain answers.
- *
- * The backend's default filter only knows WordPress (wp-login.php). For any other
- * application the person names the address the sign-in form posts to and how the
- * site answers a wrong password. Only that answer is counted, so a good sign-in,
- * which almost always redirects, never adds up to a ban (backend bug #93).
- */
+// fail2ban reads % as interpolation, so it has to be escaped.
 
-// fail2ban reads `%` as interpolation and the backend fills `{…}`, so neither may appear.
 const PATH = /^\/[A-Za-z0-9._~/-]*$/;
 
 export const LOGIN_ANSWERS = {
@@ -15,7 +7,6 @@ export const LOGIN_ANSWERS = {
   page: "200",
 };
 
-// Read back by `parseLoginRule`, so the box shows what the saved filter watches.
 const MARKER = /^# Login page: (\/\S*) \(wrong password: (error|page)\)$/m;
 
 export function validLoginPath(path) {
@@ -42,7 +33,6 @@ export function parseLoginRule(filter) {
   return match ? { path: match[1], answer: match[2] } : null;
 }
 
-/** Still the WordPress default, so on another site type it bans nobody. */
 export function usesWordPressRule(filter) {
   return /wp-login|xmlrpc/.test(filter ?? "");
 }

@@ -26,21 +26,15 @@ export default async function AdminActivityLogPage({ searchParams }) {
 
   const hasFilters = Boolean(sp.search || sp.type || sp.action || sp.kind || sp.security);
 
-
-  // A typed or bookmarked ?page=99 must not read as an empty log.
   if (failed) {
-    // status + failure let the panel name the cause (403 vs 500); the description
-    // is the fallback for failures without specific wording.
     return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
   }
 
   redirectOutOfRange("/admin/activity-log", sp, meta, failed);
   return (
     <div className="space-y-6">
-      {/* The log first; how long it is kept is a button showing the setting. */}
       <PageHeader title={t("title")} actions={retention.retention ? <RetentionButton retention={retention.retention} /> : null} />
 
-      {/* Unanswered is said so: a missing button would read as "kept forever". */}
       {retention.retention ? null : (
         <Caution size="md">
           <p>{t("retention.loadFailed")}</p>
@@ -48,7 +42,6 @@ export default async function AdminActivityLogPage({ searchParams }) {
       )}
 
       <NavTransitionProvider>
-        {/* The pager is not gated on row count: it hides itself when the list is too short. */}
         <ListCard
           toolbar={<ActivityToolbar types={filters.types} actions={filters.actions} kinds={filters.kinds} security />}
           footer={<DataTablePagination meta={meta} />}

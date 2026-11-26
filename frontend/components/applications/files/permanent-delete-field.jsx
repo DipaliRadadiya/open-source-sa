@@ -3,13 +3,10 @@ import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
-// Not behind an admin setting: the trash keeps using disk space until emptied.
 export function PermanentDeleteField({ id = "delete-permanent", checked, onChange, disabled }) {
   const t = useTranslations("applications.files.delete");
 
   return (
-    /* The tint follows the checkbox: red appears only when the delete becomes
-       irreversible. */
     <div
       className={cn(
         "flex items-start gap-2.5 rounded-lg border p-3 transition-colors",

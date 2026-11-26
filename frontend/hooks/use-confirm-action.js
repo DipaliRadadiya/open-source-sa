@@ -1,14 +1,11 @@
 import { useCallback, useState } from "react";
 import { apiMessage } from "@/lib/api/error-message";
 
-// State for a confirmation dialog. On failure the dialog stays open with the error.
 export function useConfirmAction() {
   const [target, setTarget] = useState(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
 
-  // Opening, closing and re-targeting all clear the last failure, so an error
-  // never shows under a different row's name.
   const open = useCallback((next) => {
     setTarget(next);
     setError(null);
@@ -19,8 +16,7 @@ export function useConfirmAction() {
     setError(null);
   }, []);
 
-  // Radix calls this for every way out. Refused while the write is in flight, or the
-  // request would run with nothing on screen owning it.
+  // Can't close while the request is still running.
   const setOpen = useCallback(
     (next) => {
       if (pending) return;
@@ -35,13 +31,10 @@ export function useConfirmAction() {
       setError(null);
       try {
         const result = await fn();
-        // onDone (where callers re-read the page) before closing, so the dialog
-        // never uncovers stale state.
         await onDone?.(result);
         close();
         return true;
       } catch (cause) {
-        // Shown in the dialog, not a toast.
         setError(apiMessage(cause, fallback));
         return false;
       } finally {

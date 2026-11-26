@@ -11,22 +11,18 @@ import { ListCard } from "@/components/data-table/list-card";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
 
-// No Restore here: a deleted site's backup cannot be restored, and a database
-// copy is restored from the Backups tab of the database it should go into.
 export function ArchivedBackups({ backups, canManage, hasFilters, pager }) {
   const t = useTranslations("backups.archivedTab");
   const th = useTranslations("backups.history");
 
   const listProps = {
     backups,
-    // Applications and databases share the list.
     siteHeader: t("columnName"),
     canRestore: canManage,
     canDelete: canManage,
     canDownload: canManage,
     canRun: false,
     showRestore: false,
-    // The delete dialog re-reads the list itself before it closes.
     onDeleted: () => {},
   };
 
@@ -69,7 +65,6 @@ export function ArchivedBackups({ backups, canManage, hasFilters, pager }) {
           />
         </ListCard>
       ) : (
-        // Same container name as History, so the table folds its Size column the same way.
         <div className="@container/history">
           <ListCard from="c900" toolbar={toolbar} footer={pager}>
             <div className="@min-[900px]/page:hidden">

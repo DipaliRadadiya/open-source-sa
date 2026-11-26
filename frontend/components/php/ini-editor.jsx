@@ -18,8 +18,6 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
-// Shared with the Settings tab (php-common-settings.jsx); a literal here keeps this file
-// free of that component's imports.
 const PHP_INI_CHANGED = "php-ini-changed";
 
 async function fetchIni(version) {
@@ -32,13 +30,9 @@ async function fetchIni(version) {
   }
 }
 
-// The php.ini tab. A bad ini can stop FPM for every application on the version, so the
-// API requires `acknowledged`; the backend restores the old file if `php-fpm -t` refuses.
-// Mounted only once its tab is opened, and kept mounted after, so switching tabs keeps edits.
 export function IniEditor({ version, canManage }) {
   const t = useTranslations("services");
   const tPhp = useTranslations("php");
-  // Reading only needs view access (GET …/ini is `permission:php`).
   const readOnly = !canManage;
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -46,12 +40,10 @@ export function IniEditor({ version, canManage }) {
   const [file, setFile] = useState(null);
   const [contents, setContents] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
-  // Keep php.ini.panel-bak. On again after every save or discard, like the acknowledgement.
   const [safetyCopy, setSafetyCopy] = useState(true);
   const tc = useTranslations("common");
   const [phpError, setPhpError] = useState(null);
 
-  // State only changes once the answer is in, so the first read can run from an effect.
   const apply = useCallback(
     (result) => {
       if (result.file) {
@@ -83,8 +75,6 @@ export function IniEditor({ version, canManage }) {
   }
 
   const dirty = file !== null && contents !== file.contents;
-  // The Settings tab rewrote lines in this file. Untouched: reload. Mid-edit: say so,
-  // because saving this copy would undo that change.
   const [stale, setStale] = useState(false);
   useEffect(() => {
     const onChange = (event) => {
@@ -95,7 +85,6 @@ export function IniEditor({ version, canManage }) {
     window.addEventListener(PHP_INI_CHANGED, onChange);
     return () => window.removeEventListener(PHP_INI_CHANGED, onChange);
   }, [version, dirty, apply]);
-  // Leaving the page or picking another version would drop the edit.
   useWatchUnsaved(`php-ini-${version}`, dirty);
 
   async function save() {
@@ -104,14 +93,12 @@ export function IniEditor({ version, canManage }) {
     try {
       await savePhpIni(version, contents, { safetyCopy });
       toast.success(t("phpIni.saved", { version }));
-      // What is on disk now; a second save needs a fresh acknowledgement.
       setFile((current) => ({ ...current, contents }));
       setAcknowledged(false);
       setSafetyCopy(true);
       setStale(false);
       window.dispatchEvent(new CustomEvent(PHP_INI_CHANGED, { detail: { version, source: "ini" } }));
     } catch (error) {
-      // A 422 is PHP refusing the file (old one already restored) or a form error.
       if (error.response?.status === 422) {
         setPhpError(apiMessage(error, t("phpIni.saveFailed")));
       } else {
@@ -129,7 +116,6 @@ export function IniEditor({ version, canManage }) {
     setSafetyCopy(true);
   }
 
-  // "Nothing changed" first: ticking the box would not help then.
   const blockedReason = !dirty
     ? t("phpIni.blockedNoChanges")
     : !acknowledged
@@ -155,7 +141,6 @@ export function IniEditor({ version, canManage }) {
             </Button>
           </div>
         ) : (
-          // Console surface, matching the log viewer and config-test output.
           <div className="flex h-[28rem] flex-col overflow-hidden rounded-lg border border-console-border bg-console">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
               <span className="truncate font-mono text-xs text-console-muted">
@@ -178,7 +163,6 @@ export function IniEditor({ version, canManage }) {
                 onChange={(e) => setContents(e.target.value)}
                 readOnly={readOnly}
                 spellCheck={false}
-                // A plain textarea: a code-editor dependency is not worth the bundle here.
                 className="console-scroll h-full min-h-0 flex-1 resize-none rounded-none border-0 bg-console font-mono text-xs leading-6 text-console-foreground caret-console-foreground shadow-none selection:bg-console-foreground/20 focus-visible:ring-0 dark:bg-console"
                 aria-label={t("phpIni.title", { version })}
               />
@@ -208,7 +192,6 @@ export function IniEditor({ version, canManage }) {
         ) : null}
 
         {readOnly ? null : dirty ? (
-          // Asked only once there is something to save.
           <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 p-3">
             <Checkbox
               id={`ack-${version}`}
@@ -250,7 +233,6 @@ export function IniEditor({ version, canManage }) {
             <RotateCcw className="size-4" />
             {tPhp("ini.discard")}
           </Button>
-          {/* The button says which gate is blocking. */}
           <ReasonTooltip reason={blockedReason}>
             <Button onClick={save} disabled={Boolean(blockedReason) || saving || loading}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}

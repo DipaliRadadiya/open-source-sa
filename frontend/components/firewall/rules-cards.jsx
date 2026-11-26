@@ -12,7 +12,6 @@ import {
   protectedReasonFor,
 } from "@/components/firewall/rule-parts";
 
-// Cards for screens too narrow for six columns, so delete stays reachable.
 export function RulesCards({
   rules,
   enabled,
@@ -36,15 +35,11 @@ export function RulesCards({
                 <PortProtocol rule={rule} labels={labels} />
               </div>
             </div>
-            {/* Phone-only card with compact desktop-size controls; a 44px minimum box keeps
-                them tappable. */}
             <div className="flex shrink-0 items-center gap-1 max-sm:[&_button:not([role=switch]):not([data-slot=protected-tag])]:min-h-11 max-sm:[&_button:not([role=switch]):not([data-slot=protected-tag])]:min-w-11">
               {isLockedOn(rule, shownEnabled(rule)) ? (
                 <ProtectedTag labels={labels} />
               ) : (
                 <>
-                  {/* Same directional guard as the table: a protected rule can always be switched
-                      back ON, never OFF. */}
                   <ReasonTooltip
                     reason={readOnlyReason(protectedReasonFor({
                       rule,

@@ -1,14 +1,11 @@
 import { z } from "zod";
 
-// Only actions that take a service offline ask for confirmation.
 export const DISRUPTIVE_ACTIONS = ["stop", "disable"];
 
-// systemd cgroup accounting. Null means "not measured", NOT zero.
 const usageSchema = z.object({
   memory_bytes: z.number().nullable().optional(),
   memory_human: z.string().nullable().optional(),
   memory_percent: z.number().nullable().optional(),
-  // Null on the first read: a percentage needs two samples.
   cpu_percent: z.number().nullable().optional(),
   tasks: z.number().nullable().optional(),
 });
@@ -18,25 +15,18 @@ export const serviceSchema = z.object({
   label: z.string(),
   unit: z.string(),
   status: z.string(),
-  // Defaults to the only state older APIs had. Must be declared: this object
-  // does not passthrough.
+  // Must be declared; this object doesn't passthrough.
   state: z.string().default("installed"),
   install_reason: z.string().nullish(),
-  // The backend's own sentence, so this row and the setup card agree.
   install_message: z.string().nullish(),
   retryable: z.boolean().default(false),
   enabled: z.boolean(),
   protected: z.boolean().optional(),
   actions: z.array(z.string()).default([]),
-  // Whether this service can validate its own config (nginx -t and friends).
-  // Absent means no.
   testable: z.boolean().optional(),
   usage: usageSchema.nullable().optional(),
-  // Installed package version: `version` beside the name, `package_version` as dpkg
-  // has it. Null when there is nothing to read; absent from an older API.
   version: z.string().nullish(),
   package_version: z.string().nullish(),
-  // Keys into the Logs endpoints; empty means no logs button.
   log_keys: z.array(z.string()).default([]),
 });
 

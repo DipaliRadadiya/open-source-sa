@@ -2,8 +2,6 @@ import { useTranslations, useFormatter } from "next-intl";
 import { Check, CircleX, TriangleAlert } from "lucide-react";
 import { isUnknownDetail, megabytes, sizeFromValues } from "@/lib/admin/preflight-detail";
 
-// An ADVISORY check never gets a red row: it does not gate the update (UpdatePreflight::run()).
-// Grids are `auto-fit`, never a fixed column count, so the last row fills.
 const FILL = "grid gap-3 grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]";
 
 function StatusIcon({ passed, advisory = false }) {
@@ -21,7 +19,6 @@ export function PreflightList({ checks, title = null }) {
   if (!checks.length) return null;
 
   const name = (key) => (t.has(`preflight.${key}`) ? t(`preflight.${key}`) : key);
-  // A tile label is a heading ("Disk space"); falls back to the full name.
   const shortName = (key) => (t.has(`preflightShort.${key}`) ? t(`preflightShort.${key}`) : name(key));
 
   const size = (mb) => {
@@ -30,13 +27,10 @@ export function PreflightList({ checks, title = null }) {
     return `${format.number(unit.value, { maximumFractionDigits: unit.maximumFractionDigits })} ${unit.unit}`;
   };
 
-  // A null parse (or backend "unknown") means no figure to lead with.
-  // `message` is the translated sentence; `detail` stays English for logs.
   const withSize = checks.map((c) => ({ ...c, measured: sizeFromValues(c.values), text: c.message ?? c.detail }));
   const failed = withSize.filter((c) => !c.passed && !c.advisory);
   const tiles = withSize.filter((c) => (c.passed || c.advisory) && c.measured);
   const rows = withSize.filter((c) => (c.passed || c.advisory) && !c.measured);
-  // Gating checks only, so an advisory shortfall does not read as "4 of 5 ready".
   const gating = checks.filter((c) => !c.advisory);
   const passedCount = gating.filter((c) => c.passed).length;
 
@@ -65,7 +59,6 @@ export function PreflightList({ checks, title = null }) {
               ) : isUnknownDetail(c.detail) ? (
                 <p className="shrink-0 text-xs text-muted-foreground">{t("detailUnknown")}</p>
               ) : c.text ? (
-                // Its own line under the name: a long list of changed files ran past the box.
                 <p className="min-w-0 basis-full pl-7 text-xs [overflow-wrap:anywhere] text-muted-foreground">
                   {c.text}
                 </p>
@@ -78,7 +71,6 @@ export function PreflightList({ checks, title = null }) {
       {tiles.length ? (
         <div className={FILL}>
           {tiles.map((c) => (
-            // Figure and caption sit at opposite ends of each row.
             <div key={c.key} className="rounded-xl border bg-muted/25 px-4 py-3">
               <div className="flex items-center gap-2">
                 <p className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
@@ -91,7 +83,6 @@ export function PreflightList({ checks, title = null }) {
                   {size(c.measured.haveMb)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {/* "recommended", not "needed", when nothing is blocked; must agree with the button. */}
                   {c.passed
                     ? t(c.measured.kind === "free" ? "captionFree" : "captionAvailable", {
                         need: size(c.measured.needMb),
@@ -107,7 +98,6 @@ export function PreflightList({ checks, title = null }) {
       {rows.length ? (
         <ul className={FILL}>
           {rows.map((c) => (
-            // No `shrink-0`: the backend's detail text can grow and must wrap, not overflow.
             <li
               key={c.key}
               className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl border px-4 py-3 text-sm"

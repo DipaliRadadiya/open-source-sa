@@ -12,15 +12,10 @@ import { Progress } from "@/components/ui/progress";
 
 const POLL_MS = 3000;
 
-// SFTP/FTP backups: the panel copies the archive to its own disk, then serves it through a
-// signed link for an hour. Closing this dialog does not stop the copy; the button POSTs
-// again on the next click, which answers with the copy already under way.
-// `initial`: that first POST's outcome, `{prep}` or `{refusal}`. Mounted only while open.
 export function PrepareDownloadDialog({ backup, initial, open, onOpenChange }) {
   const t = useTranslations("backups.download.prepare");
   const format = useFormatter();
   const [prep, setPrep] = useState(initial?.prep ?? null);
-  // Refusals before any copy exists (no disk space, no permission): the API's sentence.
   const [refusal, setRefusal] = useState(initial?.refusal ?? null);
   const [starting, setStarting] = useState(false);
   const [opening, setOpening] = useState(false);
@@ -32,7 +27,6 @@ export function PrepareDownloadDialog({ backup, initial, open, onOpenChange }) {
     setBusyFor(null);
     try {
       const { data } = await prepareBackupDownload(backup.id);
-      // No preparation in the answer would leave "Preparing" with nothing to poll.
       if (data?.download_preparation) setPrep(data.download_preparation);
       else setRefusal(t("startFailed"));
     } catch (error) {
@@ -52,7 +46,7 @@ export function PrepareDownloadDialog({ backup, initial, open, onOpenChange }) {
         const { data } = await fetchBackupDownloadPreparation(backup.id, { signal: controller.signal });
         if (data?.download_preparation) setPrep(data.download_preparation);
       } catch {
-        // The next tick asks again; a failed copy is reported in the status itself.
+        // retry on the next poll
       }
     }, POLL_MS);
     return () => {
@@ -61,8 +55,6 @@ export function PrepareDownloadDialog({ backup, initial, open, onOpenChange }) {
     };
   }, [open, preparing, backup.id]);
 
-  // A 1-byte look first, so "busy" or "expired" is said here instead of as JSON in a new
-  // tab. bytes=1-1, not 0-0: a range from byte 0 is logged as a download.
   async function fetchFile() {
     setOpening(true);
     setBusyFor(null);

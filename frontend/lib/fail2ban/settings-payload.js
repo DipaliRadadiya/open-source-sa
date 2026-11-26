@@ -1,8 +1,6 @@
 import { addIgnoreIp, getFail2ban } from "@/lib/api/fail2ban";
 
-// The ban rules `PUT /fail2ban` requires on every call. The ignore list is left
-// out on purpose: omitted, the server keeps its own, so a save from a stale page
-// cannot drop an address someone else added since.
+// Ignore list left out so a stale page can't drop an address someone else added.
 export function settingsPayload(settings) {
   if (!settings) return {};
   return {
@@ -12,8 +10,6 @@ export function settingsPayload(settings) {
   };
 }
 
-// Puts `ip` on the ignore list unless the server's list already has it (a 422
-// without field errors is "already there" or "full"; only the re-read tells which).
 export async function ensureIgnored(ip) {
   try {
     await addIgnoreIp(ip);

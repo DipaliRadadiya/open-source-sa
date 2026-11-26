@@ -2,8 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-// Publishes the sticky chrome's height as `--app-chrome`. Its banners are conditional and
-// wrap, so anything else that sticks must offset by this, never a hardcoded value.
+// Sets --app-chrome to the sticky header's height; anything else sticky must offset by it.
 export function AppChromeHeight() {
   const ref = useRef(null);
 

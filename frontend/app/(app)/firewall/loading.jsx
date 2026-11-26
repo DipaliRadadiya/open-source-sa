@@ -1,7 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SK_CARD, SkCard, SkHeader, SkRows } from "@/components/ui/skeleton-kit";
 
-// Firewall: the status card (headline and its button, three facts), then the rules card.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

@@ -19,7 +19,6 @@ import { DestinationFormFields } from "@/components/integrations/storage/destina
 import { GoogleDriveConnect } from "@/components/integrations/storage/google-drive-connect";
 import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive-setup";
 
-// No credentials (the API reads their presence as "rotate") and no provider (immutable).
 export function EditDestinationDialog({ destination, open, onOpenChange, oauthRedirectUri, localSettings = null, existingNames = [] }) {
   const t = useTranslations("storage.edit");
   const { refreshAndWait } = useRefresh();
@@ -29,7 +28,6 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
 
   const schema = useMemo(() => editStorageDestinationSchema(destination, localSettings), [destination, localSettings]);
 
-  // The non-secret config from the API; secrets are never in the response.
   const values = useMemo(() => {
     const config = {};
     const defaults = defaultConfig(provider, localSettings);
@@ -57,13 +55,11 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
     try {
       const { data } = await updateDestination(destination.id, {
         name: formValues.name.trim(),
-        // Empty string, not omitted: the backend treats an absent key as "keep
-        // what is stored", so clearing must be explicit. "This server" has no prefix field, so it keeps its own.
+        // An empty string, because the backend treats a missing key as keep.
         ...(provider === "local" ? {} : { prefix: formValues.prefix?.trim() ?? "" }),
         config: submittableConfig(provider, formValues.config),
       });
       await refreshAndWait();
-      // Only a moved folder is news; the same path comes back as "found".
       const moved = data?.folder?.message && formValues.config?.path !== destination?.config?.path;
       toast.success(t("saved"), moved ? { description: data.folder.message } : undefined);
       onOpenChange?.(false);
@@ -110,17 +106,12 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
           hideSecrets
           existing
         />
-        {/* Here, not in create: the OAuth `state` is issued against an existing id. */}
         {provider === "google_drive_oauth" ? (
           <>
-            {/* Collapsed; still available because reconnecting is when a wrong
-                redirect URL is usually discovered. */}
             <GoogleDriveSetup redirectUri={oauthRedirectUri} />
             <GoogleDriveConnect destination={destination} />
           </>
         ) : null}
-        {/* What this form leaves alone, in one note instead of two lines of grey print.
-            The provider line explains why there is no provider control. */}
         <Note>
           <ul className="list-disc space-y-1 ps-4">
             {hasCredentials(provider) ? <li>{t("credentialsUntouched")}</li> : null}
@@ -132,8 +123,7 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
   );
 }
 
-// Non-secret fields only, empty ones included. A credential key must never appear:
-// an empty `password` would clear a working one.
+// Never include credential keys: an empty password would clear a working one.
 function submittableConfig(provider, config = {}) {
   const entries = fieldsFor(provider)
     .filter((f) => f.kind !== "secret" && f.kind !== "textarea")

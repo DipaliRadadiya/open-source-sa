@@ -31,40 +31,31 @@ import { hasKeepChoice, keepOptions, sizeFor } from "@/lib/disk-cleaner/keep-day
 
 const FREQUENCIES = ["hourly", "daily", "weekly", "monthly"];
 
-// Radix Select cannot hold "", which is how the form spells "every time".
+// Radix Select can't hold "".
 const ANY = "any";
-// 85 is the one the Delete all tip offers; it must be on the list before it is chosen.
 const THRESHOLDS = ["50", "60", "70", "80", "85", "90"];
-// Suggested beside Delete all: clear every log only when the disk is actually filling up.
 const DELETE_ALL_THRESHOLD = "85";
 
-// A schedule saved with another number (the API takes 1–99) keeps it on offer.
 function thresholdOptions(current) {
   return current && !THRESHOLDS.includes(current)
     ? [...THRESHOLDS, current].sort((a, b) => Number(a) - Number(b))
     : THRESHOLDS;
 }
 
-// Only `safe` categories are offered; the backend enforces the same.
 export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
   const t = useTranslations("diskCleaner");
   const keepLabel = useKeepLabel();
   const { choices, recommended } = keepOptions(keepDays);
   const keepSupported = hasKeepChoice(keepDays);
-  // Never null once the API has the choice. GET /schedule always answers (a fresh server gets
-  // defaults with keep_days null), and saving null with Application logs ticked empties every
-  // application's logs on each run. A schedule saved before the choice says so in a note instead.
+  // Never send null: with Application logs ticked it would empty every app's logs on each run.
   const savedKeep = () => (keepSupported ? (schedule?.keep_days ?? recommended) : null);
   const legacyKeep = keepSupported && schedule?.keep_days == null && (schedule?.categories?.length ?? 0) > 0;
-  // The hour uses the reader's clock convention (AM/PM vs 24h) but never their
-  // timezone, same as a backup's schedule time.
   const format = useFormatter();
   const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
   const [keep, setKeep] = useState(savedKeep);
-  // Biggest first under the chosen keep, the same order as the list on the page.
   const safeCategories = categories
     .filter((c) => c.available && c.safe)
     .map((c) => ({ ...c, size: sizeFor(c, keep) }))
@@ -76,7 +67,6 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
     schedule?.threshold_percent != null ? String(schedule.threshold_percent) : "",
   );
 
-  // Reopening after a cancel shows what is saved, not the last half-typed state.
   function reset() {
     setEnabled(Boolean(schedule?.enabled));
     setFrequency(schedule?.frequency ?? "weekly");
@@ -88,8 +78,6 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
   async function save() {
     setPending(true);
     try {
-      // Off with nothing ticked DELETES the schedule: the API requires a category on
-      // every save. With categories ticked it is only paused.
       if (!enabled && picked.size === 0) {
         await deleteCleanerSchedule();
         await refreshAndWait();
@@ -102,12 +90,9 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
         enabled,
         frequency,
         categories: [...picked],
-        // Empty means "always", which the API expresses as null.
         threshold_percent: threshold === "" ? null : Number(threshold),
-        // Always a real choice (0 = delete all is allowed); an older API gets none.
         ...(keepSupported ? { keep_days: keep ?? recommended } : {}),
-        // `notify` is an unused column; sent back as stored so this form never
-        // rewrites a field it does not own.
+        // notify isn't used; send it back unchanged.
         notify: schedule?.notify ?? false,
       });
       await refreshAndWait();
@@ -127,13 +112,11 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
       })
     : t("schedule.summaryOff");
 
-  // The threshold is the other half of when this fires; "every time" goes without saying.
   const whenLine =
     schedule?.enabled && schedule?.threshold_percent != null
       ? t("schedule.overThreshold", { percent: schedule.threshold_percent })
       : null;
 
-  // Only the API knows the hour; the zone is named because it is the project's, not the reader's.
   const nextClockTime = clockTimeOf(schedule?.next_run_at);
   const nextRunLine =
     schedule?.enabled && schedule?.next_run_at_human
@@ -146,8 +129,6 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
         : t("schedule.nextRun", { when: schedule.next_run_at_human })
       : null;
 
-  // An icon, not a text button: the words squeezed the tile's own text onto three
-  // lines in German and cut off the next run.
   const configureButton = (
     <Button
       variant="outline"
@@ -166,15 +147,11 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
 
   return (
     <>
-      {/* A compact tile like the two beside it. Which items it cleans is in Configure. */}
       <Tile
         compact
         icon={CalendarClock}
         label={t("schedule.title")}
         value={summary}
-        // Shows whether a schedule that looks on has ever fired, and when it fires next.
-        // The next run is null while the cleaner is off: the API names no run that will
-        // not happen, and the tile must not invent one.
         detail={[
           nextRunLine ??
             (schedule?.last_run_at_human
@@ -188,7 +165,6 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
         tone={schedule?.enabled ? "success" : "neutral"}
         action={
           canManage ? (
-            // Named on hover, like the refresh buttons: an icon alone does not say what it opens.
             <Tooltip>
               <TooltipTrigger asChild>{configureButton}</TooltipTrigger>
               <TooltipContent>{t("schedule.setUp")}</TooltipContent>
@@ -216,8 +192,6 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
             <ReasonTooltip
               reason={enabled && picked.size === 0 ? t("schedule.pickSomething") : null}
             >
-              {/* Spinner and label while saving: the dialog stays open, so a
-                  greyed-out button alone reads as a missed click. */}
               <Button type="submit" disabled={pending || (enabled && picked.size === 0)}>
                 {pending ? <Loader2 className="size-4 animate-spin" /> : null}
                 {pending ? t("schedule.saving") : t("schedule.save")}
@@ -234,8 +208,6 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
             <Switch id="cleaner-enabled" checked={enabled} onCheckedChange={setEnabled} />
           </div>
 
-          {/* Off, the settings below are hidden rather than greyed out, so the dialog
-              stays short; picked items are kept and come back when it is turned on. */}
           {!enabled ? (
             <p className="-mt-3 text-xs text-muted-foreground">
               {t("schedule.turnOnFirst")}
@@ -259,15 +231,13 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
                   </Select>
                 </div>
 
-                {/* A list, not a number box: an example "80" in an empty box read as a
-                    value already set, while empty really meant "every time". */}
                 <div className="space-y-2">
                   <Label htmlFor="cleaner-threshold" hint={t("schedule.onlyWhenHint")}>
                     {t("schedule.onlyWhen")}
                   </Label>
                   <Select
                     value={threshold === "" ? ANY : threshold}
-                    // Radix reports "" when the value has no matching item yet; that is not a choice.
+                    // Radix reports "" before the value has a matching item.
                     onValueChange={(value) => value && setThreshold(value === ANY ? "" : value)}
                   >
                     <SelectTrigger id="cleaner-threshold" className="w-full">
@@ -299,7 +269,6 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
                   className="w-full"
                 />
                 {legacyKeep ? <p className="text-xs text-muted-foreground">{t("keep.scheduleLegacy")}</p> : null}
-                {/* A suggestion, not a rule: the API accepts Delete all at any threshold. */}
                 {keep === 0 && threshold !== DELETE_ALL_THRESHOLD ? (
                   <Caution
                     size="md"
@@ -318,7 +287,6 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
               <div className="space-y-2">
                 <Label className="flex flex-wrap items-center justify-between gap-2">
                   <span>{t("schedule.whatToClean")}</span>
-                  {/* Inline, not in a tooltip: Save stays disabled until something is ticked. */}
                   {picked.size === 0 ? (
                     <span className="font-normal leading-snug text-muted-foreground">{t("schedule.pickSomething")}</span>
                   ) : null}
@@ -328,7 +296,6 @@ export function ScheduleCard({ schedule, categories, keepDays, canManage }) {
                     const checked = picked.has(category.key);
                     return (
                       <li key={category.key}>
-                        {/* The whole row is the label, as on the page. */}
                         <label
                           htmlFor={`schedule-${category.key}`}
                           className={cn(

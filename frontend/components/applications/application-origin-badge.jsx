@@ -29,11 +29,7 @@ export function ApplicationOriginBadge({ origin, compact = false }) {
     return null;
   }
 
-  // A neutral pill (`muted`), the same height and shape as the status pill beside it;
-  // the icon, not a dot, says it is where the app came from rather than its state.
-  // `data-slot="badge"` is passed explicitly: as the `asChild` trigger, the pill would
-  // otherwise take the trigger's `data-slot="tooltip-trigger"`, and themes that style
-  // pills through `[data-slot="badge"]` would skip it.
+  // data-slot="badge" is passed explicitly because asChild replaces the element.
   return (
     <Tooltip>
       <TooltipTrigger asChild>

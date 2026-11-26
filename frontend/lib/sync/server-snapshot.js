@@ -1,5 +1,4 @@
-// The panel's `key`: it seeds state once, so a different render must remount it.
-// Compared by value, never identity: every render builds new objects.
+// Compare by value: every render builds new objects.
 export function serverSnapshot(run, items, ignores) {
   return JSON.stringify([
     run?.id ?? null,

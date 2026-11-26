@@ -7,8 +7,6 @@ import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-// One job onto its site's PHP, through the same switch as the site's PHP screen: only the PHP word
-// in the command changes. Mounted per opening, so a refusal from last time is never shown again.
 export function SwitchPhpDialog({ job, version, onOpenChange }) {
   const t = useTranslations("cronJobs");
   const { refreshThen } = useRefresh();
@@ -25,7 +23,6 @@ export function SwitchPhpDialog({ job, version, onOpenChange }) {
         onOpenChange?.(false);
       });
     } catch (err) {
-      // Not this site's, no PHP the panel can swap, too long, version gone: the API says which.
       setError(apiMessage(err, t("phpMismatch.failed")));
       setPending(false);
     }

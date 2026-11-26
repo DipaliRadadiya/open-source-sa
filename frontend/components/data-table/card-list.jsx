@@ -1,14 +1,11 @@
 import { cn } from "@/lib/utils";
 import { FACT_LABEL } from "@/lib/theme/facts";
 
-// Narrow-screen card view for a table; two per row from `sm` up.
 export function CardList({ className, children }) {
-  // grid-cols-1 is not redundant: it gives `minmax(0, 1fr)`, so nowrap content
-  // cannot widen the list past the viewport.
+  // grid-cols-1 gives minmax(0, 1fr) so nowrap content can't widen the list.
   return <ul className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", className)}>{children}</ul>;
 }
 
-// A flex column so a card can push its action row to the bottom with `mt-auto`.
 export function CardListItem({ className, children }) {
   return (
     <li className={cn("flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm", className)}>
@@ -17,7 +14,6 @@ export function CardListItem({ className, children }) {
   );
 }
 
-/** Facts as one column of label-left / value-right rows. */
 export function CardFacts({ className, children }) {
   return (
     <dl className={cn("flex flex-col gap-2 border-t pt-3 text-sm", className)}>{children}</dl>
@@ -27,9 +23,7 @@ export function CardFacts({ className, children }) {
 export function CardFact({ label, value, children, className }) {
   return (
     <div className={cn("flex items-start justify-between gap-3", className)}>
-      {/* pt-px aligns the smaller label with its value. */}
       <dt className={cn("shrink-0 pt-px", FACT_LABEL)}>{label}</dt>
-      {/* A plain value truncates; passed children handle their own overflow. */}
       <dd className={cn("min-w-0 flex-1 text-right", !children && "truncate")}>
         {children ?? value}
       </dd>
@@ -37,10 +31,6 @@ export function CardFact({ label, value, children, className }) {
   );
 }
 
-/**
- * Facts as two columns of label-on-top blocks, for cards whose labels run long in some languages:
- * beside its value a long label squeezed the value into ragged right-aligned wraps.
- */
 export function CardFactGrid({ className, children }) {
   return <dl className={cn("grid grid-cols-2 gap-x-4 gap-y-3 border-t pt-3 text-sm", className)}>{children}</dl>;
 }

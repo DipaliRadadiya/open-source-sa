@@ -21,7 +21,6 @@ import { GROUP_META, FALLBACK_GROUP } from "@/lib/logs/groups";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { LOG_GROUPS } from "@/lib/schemas/log";
 
-/** Known groups first in a fixed order, then anything the API adds later. */
 function groupSources(sources) {
   const order = [...LOG_GROUPS, ...new Set(sources.map((s) => s.group))];
   return [...new Set(order)]
@@ -29,7 +28,6 @@ function groupSources(sources) {
     .filter((g) => g.items.length > 0);
 }
 
-// Unreadable sources stay listed but inert. Below `lg` the rail becomes a select.
 export function LogSourceList({ sources, selected, onSelect, now }) {
   const t = useTranslations("logs");
   const format = useFormatter();
@@ -49,11 +47,9 @@ export function LogSourceList({ sources, selected, onSelect, now }) {
           <SelectContent position="popper">
             {groups.map(({ group, items }) => (
               <SelectGroup key={group}>
-                {/* Same micro-label as the desktop rail. */}
                 <SelectLabel className="text-[12px] font-semibold text-foreground/75">
                   {t.has(`groups.${group}`) ? t(`groups.${group}`) : group}
                 </SelectLabel>
-                {/* The reason is written on the item so it shows without hover or tap. */}
                 {items.map((source) => (
                   <ReasonTooltip
                     key={source.key}
@@ -87,7 +83,6 @@ export function LogSourceList({ sources, selected, onSelect, now }) {
         {groups.map(({ group, items }) => {
           const meta = GROUP_META[group] ?? FALLBACK_GROUP;
           const Icon = meta.icon;
-          // A hairline per group keeps the quiet headings findable.
           return (
             <section key={group} className="space-y-1 py-3 first:pt-0 last:pb-0">
               <h3 className="flex items-center gap-2 px-2.5 text-[12px] font-semibold text-foreground/75">
@@ -115,7 +110,6 @@ export function LogSourceList({ sources, selected, onSelect, now }) {
         })}
         </div>
 
-        {/* Summary footer in the otherwise empty bottom of the card. */}
         <div className="border-t px-4 py-2.5 text-xs text-muted-foreground">
           {lockedCount > 0
             ? t("railSummaryLocked", { total: sources.length, locked: lockedCount })
@@ -140,7 +134,6 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
       className={cn(
         "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-        // The file name carries the weight; the group heading stays quiet.
         source.readable
           ? "font-medium text-foreground hover:bg-muted"
           : "cursor-not-allowed text-muted-foreground",
@@ -148,7 +141,6 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
           "bg-primary/10 font-medium text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] shadow-[inset_2px_0_0_0_var(--color-primary)] hover:bg-primary/15 dark:text-primary",
       )}
     >
-      {/* Written to in the last few minutes: a dot answers "is this live?". */}
       {active ? (
         <span className="relative flex size-1.5 shrink-0" aria-hidden="true">
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-75 motion-reduce:hidden" />
@@ -156,11 +148,9 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
         </span>
       ) : null}
       <span className="min-w-0 flex-1 truncate">{source.label}</span>
-      {/* Size shows for locked sources too; it is useful without access. */}
       {size ? (
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{size}</span>
       ) : null}
-      {/* The lock slot is always reserved so sizes stay aligned as a column. */}
       <span className="flex size-3.5 shrink-0 items-center justify-center">
         {!source.readable ? <Lock className="size-3.5 text-muted-foreground/70" /> : null}
       </span>
@@ -177,7 +167,6 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
     );
   }
 
-  // A disabled control swallows pointer events, so the tooltip hangs off a focusable wrapper.
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -188,7 +177,6 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
           {button}
         </span>
       </TooltipTrigger>
-      {/* Above the item, short and narrow so it stays close to its row. */}
       <TooltipContent
         side="top"
         sideOffset={6}

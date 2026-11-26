@@ -21,12 +21,10 @@ export function AdminHeader({ breadcrumb = null }) {
   const { guardNavigation } = useUnsaved();
 
   return (
-    // The server panel's bar: the trail sits beside the controls, not in a band below.
     <header className="flex h-16 shrink-0 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 sm:px-6 max-sm:[&_button]:min-h-11 max-sm:[&_button]:min-w-11">
       <SidebarToggle />
       <div className="min-w-0 flex-1 max-sm:invisible">{breadcrumb}</div>
       <div className="flex shrink-0 items-center gap-2">
-        {/* Administrators: panel updates show here as well as every other kind. */}
         <OperationsIndicator canOpenApplications />
         <LocaleSwitcher />
         <ThemeToggle />

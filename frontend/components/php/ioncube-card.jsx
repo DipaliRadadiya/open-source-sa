@@ -17,16 +17,12 @@ import { DENIED, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 
-// Not an extensions row: a vendor `zend_extension`, not an apt package. No
-// loader exists for PHP 8.0, so `unsupported` is stated instead of a 422.
 export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
   const t = useTranslations("php.ioncube");
-  // Reuses existing strings under `php`.
   const tp = useTranslations("php");
   const { refreshAndWait } = useRefresh();
   const [busy, setBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  // Recovery copies of the loader and ini files the change replaces. On again after each action.
   const [safetyCopy, setSafetyCopy] = useState(true);
   const tc = useTranslations("common");
 
@@ -43,8 +39,6 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
   const installing = isInFlight(ioncube.status);
   const installFailed = ioncube.status === "failed";
   const { supported, installed } = ioncube;
-  // Installed outside the panel: both buttons would earn a 422, so neither is
-  // offered.
   const external = installed && ioncube.source === "external";
   const canAct = !external && (supported || installed);
 
@@ -54,7 +48,6 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
       await installIonCube(version, { safetyCopy });
       await refreshAndWait();
       setSafetyCopy(true);
-      // Always 202 (the archive is ~29 MB), so the message says it has started.
       toast.success(t("installStarted", { version }));
     } catch (error) {
       toast.error(apiMessage(error, t("installFailed")));
@@ -84,7 +77,6 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{t("title")}</span>
-            {/* Installing wins over installed: during a reinstall both are true. */}
             {installing ? (
               <Badge variant="warning" className="font-normal">
                 {tp("versions.statusInstalling")}
@@ -98,7 +90,6 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
                 {t("notInstalled")}
               </Badge>
             ) : null}
-            {/* Read from PHP itself, so it is the loader actually running. */}
             {installed && ioncube.loader_version ? (
               <span className="font-mono text-xs text-muted-foreground">
                 {t("loaderVersion", { version: ioncube.loader_version })}
@@ -121,8 +112,6 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
           ) : installing ? (
             <p className="text-xs leading-relaxed text-muted-foreground">{t("installing")}</p>
           ) : installFailed ? (
-            /* The server's sentence names the cause (checksum, download);
-               `reason` is a code. */
             <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               <span>
@@ -134,7 +123,6 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
             </p>
           ) : null}
 
-          {/* Install has no confirmation, so its choice sits on the card. */}
           {canAct && canManage && !installed && !installing ? (
             <div className="space-y-2 pt-2">
               <SafetyCopySwitch
@@ -158,7 +146,6 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
           <div className="shrink-0">
             <ReasonTooltip reason={canManage ? null : DENIED}>
               {installed ? (
-                /* `destructive`, like every button that removes something. */
                 <Button
                   variant="destructive"
                   onClick={() => setConfirmOpen(true)}

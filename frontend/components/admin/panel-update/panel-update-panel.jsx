@@ -29,8 +29,6 @@ import { PreflightList } from "./preflight-list";
 import { UpdateProgress } from "./update-progress";
 
 const POLL_MS = 2500;
-// Past this, say "taking longer" but keep polling; the final status is rebuilt
-// from the runner's state file regardless.
 const SLOW_AFTER_MS = 8 * 60 * 1000;
 
 const isActive = (run) => Boolean(run) && (run.status === "pending" || run.status === "running");
@@ -40,8 +38,6 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
   const router = useRouter();
 
   const [state, setState] = useState(initialState);
-  // Seed with the latest run even if settled: the update copy says it's safe to
-  // leave, so the page is usually loaded after a run finished.
   const [run, setRun] = useState(initialState.latest_run ?? null);
   const [dryRun, setDryRun] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -49,15 +45,12 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [slow, setSlow] = useState(false);
-  // A terminal success may already have triggered a reload. Keep it out of
-  // the first paint until sessionStorage can say whether it is new or stale.
+  // A finished update may already have reloaded; wait for sessionStorage before showing it.
   const [successReady, setSuccessReady] = useState(
     initialState.latest_run?.status !== "succeeded",
   );
 
   const activeRunId = isActive(run) ? run.id : null;
-  // A failed run from another build (the panel was updated or redeployed since) says
-  // nothing about this one.
   const staleRun =
     Boolean(run) &&
     !isActive(run) &&
@@ -67,8 +60,6 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     run.from_commit !== state.installed.commit_hash;
   const visibleRun = staleRun || (run?.status === "succeeded" && !successReady) ? null : run;
 
-  // A successful run remains latest_run after reloading into the new code; hide
-  // the run already reloaded for, or it starts a fresh countdown forever.
   useEffect(() => {
     if (run?.status !== "succeeded") return undefined;
 
@@ -86,7 +77,6 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     };
   }, [run?.id, run?.status]);
 
-  // Poll only while a run is active. The panel restarts mid-update, so errors only flag "reconnecting".
   useEffect(() => {
     if (!activeRunId) return undefined;
     const startedAt = Date.now();
@@ -132,8 +122,6 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
       setRun(started);
       setConfirmOpen(false);
     } catch (error) {
-      // A failed reply does not prove the update failed (lost on restart, or schema mismatch
-      // on a valid 202); ask the source of truth.
       let recovered = false;
 
       try {
@@ -150,8 +138,7 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
           recovered = true;
         }
       } catch {
-        // Possibly the restart window. Keep the original error unless the probe proves
-        // a run exists.
+        // keep the original error unless the probe finds a run
       }
 
       if (!recovered) toast.error(apiMessage(error, t("startFailed")));
@@ -160,12 +147,9 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     }
   }
 
-  // The run's own flag too: after a reload the local `dryRun` is gone.
   const runIsDry = dryRun || Boolean(run?.dry_run);
 
   function onFinish() {
-    // Reload only when the code changed: a dry run touches nothing, and a failed real
-    // run was rolled back by the script's ERR trap.
     if (!runIsDry && run?.status === "succeeded") {
       acknowledgePanelUpdate(window.sessionStorage, run.id);
       window.location.reload();
@@ -177,11 +161,8 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     router.refresh();
   }
 
-  // Shown beside the button as well as in its label, so a disabled Update needs
-  // no hover to explain.
   const blockedReason = !state.preflight.ready ? t("notReady") : null;
 
-  // On the status card, not in the page header: actions sit on the card they act on.
   const checkButton = (
     <Button variant="outline" onClick={checkAgain} disabled={checking}>
       <RefreshCw className={checking ? "size-4 animate-spin" : "size-4"} />
@@ -189,10 +170,7 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     </Button>
   );
 
-  // Both actions plus the disabled reason, as one block closing the header row.
   const updateActions = (
-    // A column sized by its wider row, which keeps the reason on one line under the
-    // buttons.
     <div className="flex w-full flex-col items-end gap-1.5 sm:ml-auto sm:w-auto">
       <div className="flex flex-wrap items-center justify-end gap-2">
         {checkButton}
@@ -207,7 +185,6 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
           </Button>
         </ReasonTooltip>
       </div>
-      {/* Capped so the long dry-run hint wraps; every locale's blocked reason fits. */}
       <p className="max-w-md text-xs text-muted-foreground sm:text-right">
         {blockedReason ?? t("dryRunHint")}
       </p>
@@ -241,9 +218,6 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
                 <ReleaseNotes notes={state.available.notes} url={state.available.url} />
               </>
             ) : (
-              // Up to date: whether the next update could start. The checks run anyway;
-              // hiding them until a release appears let a blocked update (uncommitted
-              // changes) surprise people on the day.
               <CardContent className="px-6 py-5">
                 <PreflightList checks={state.preflight.checks} title={t("preflightNext")} />
               </CardContent>

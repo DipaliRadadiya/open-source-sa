@@ -1,29 +1,22 @@
 import { z } from "zod";
 
-// An OS account the panel doesn't manage; the API takes system_user_id XOR username.
 export const OTHER_USER = "__other__";
 
 const PATH_TOKEN = "{path}";
 const PHP_TOKEN = "{php}";
 
-// Linux account name, same rule the backend applies via getent passwd.
 const linuxUsername = z
   .string()
   .trim()
   .regex(/^[a-z_][a-z0-9_-]{0,31}$/, "linuxUsername");
 
-// No "@reboot": the backend's parser (dragonmantank/cron-expression) refuses it.
 const CRON_MACROS = ["@yearly", "@annually", "@monthly", "@weekly", "@daily", "@midnight", "@hourly"];
-// What Linux cron reads per field. The API also takes L, W, ? and #, but cron
-// rejects such a line and ignores the whole file.
 const CRON_TOKEN = /^(\*|\d+|[a-z]{3})(-(\d+|[a-z]{3}))?(\/\d+)?$/i;
 const isMacro = (v) => CRON_MACROS.includes(v.toLowerCase());
 const expressionField = z
   .string()
   .trim()
   .min(1, "required_expression")
-  // Named on its own: the general message offers "a macro like @daily", which
-  // @reboot is, so it read as a typo rather than as unsupported.
   .refine((v) => v.toLowerCase() !== "@reboot", "cronReboot")
   .refine((v) => v.toLowerCase() === "@reboot" || isMacro(v) || v.split(/\s+/).length === 5, "cronExpression")
   .refine(
@@ -37,17 +30,12 @@ const commandField = z
   .min(1, "required_command")
   .max(1000, "max1000")
   .refine((v) => !/[\r\n]/.test(v), "noLineBreaks")
-  // Preset commands ship with a {path} placeholder; the API 422s if it survives.
   .refine((v) => !v.includes(PATH_TOKEN), "unresolvedPath")
-  // The form always fills `{php}`; this catches one typed by hand, which the API also refuses.
   .refine((v) => !v.includes(PHP_TOKEN), "unresolvedPhp")
-  // The panel appends its own logging, which a trailing `# note` would comment out.
   .refine((v) => !hasShellComment(v), "cronTrailingComment");
 
-// `echo "#tag"`, `curl x/#frag` and `$#` are not comments.
 export function hasShellComment(command) {
   let quote = null;
-  // True at the start and after unescaped whitespace: where a word begins.
   let wordStart = true;
   for (let i = 0; i < command.length; i += 1) {
     const c = command[i];
@@ -71,14 +59,12 @@ export function hasShellComment(command) {
   return false;
 }
 
-/* Each job is a file in /etc/cron.d. Mirrors the backend's `NotReservedCronFile`; panel-* is refused too. */
 const RESERVED_CRON_FILES = [
   "php", "e2scrub_all", "sysstat", "anacron", "certbot", "mdadm",
   "popularity-contest", "ntpsec", "plocate", "mlocate", "apt-compat",
   "dpkg", "cron", "crontab", "apport", "update-notifier-common",
 ];
 
-// Laravel's Str::slug, closely enough for the comparison above.
 function cronSlug(value) {
   return String(value ?? "")
     .normalize("NFKD")
@@ -108,29 +94,22 @@ export const createCronjobSchema = z
     command: commandField,
     expression: expressionField,
     active: z.boolean(),
-    // The site the command runs in, picked in the command field; null for a server-level job.
     application_id: z.number().int().positive().nullable().optional(),
   })
-  // "Other OS user" turns the free-text username into the required field.
   .refine(
     (d) => d.run_as !== OTHER_USER || linuxUsername.safeParse(d.username ?? "").success,
     { message: "linuxUsername", path: ["username"] },
   )
-  // As root, a cron job is the whole server for anyone who can manage cron jobs.
   .refine(
     (d) => d.run_as !== OTHER_USER || (d.username ?? "").trim() !== "root",
     { message: "cronRootRefused", path: ["username"] },
   );
 
-// Run-as is editable: the API re-points the job and validates the account as on create.
 export const updateCronjobSchema = createCronjobSchema;
 
 const systemUserRef = z.object({ id: z.number(), username: z.string() });
 
-// One run as the job's log records it (fb0819c9). started_at/duration are null for runs from
-// before the start line existed, and for a start older than the part of the log read.
 const runFields = {
-  // succeeded | failed | running | interrupted (started, never ended, no longer alive)
   status: z.string(),
   exit_code: z.number().nullable().optional(),
   manual: z.boolean().optional().default(false),
@@ -142,7 +121,6 @@ const runFields = {
 
 export const cronjobRunSchema = z.object({
   ...runFields,
-  // At most 64 KB, the end of it.
   output: z.string().nullable().optional(),
   output_truncated: z.boolean().optional().default(false),
 });
@@ -155,26 +133,19 @@ export const cronjobRunsResponseSchema = z.object({
 export const cronjobSchema = z.object({
   id: z.number(),
   name: z.string(),
-  // Nullable: jobs adopted by sync may have no slug.
   slug: z.string().nullish(),
   username: z.string(),
   system_user: systemUserRef.nullable().optional(),
   command: z.string(),
-  // A site's job (null: server-level). Its PHP, as the command names it: "8.3", "default"
-  // (plain `php`) or null when unrecognised; and whether that is the site's (a338f771).
   application_id: z.number().nullish(),
   php_version: z.string().nullish(),
   matches_site_php: z.boolean().nullish(),
   expression: z.string(),
   active: z.boolean(),
-  // The server's zone, not the viewer's: cron runs on the OS clock.
   timezone: z.string().optional(),
-  // null for a paused job: an inactive schedule has no next run.
   next_run_at: z.string().nullable().optional(),
   next_run_at_human: z.string().nullable().optional(),
-  // Null until saved with output capture.
   log_key: z.string().nullable().optional(),
-  // Absent from an API without run history: the screen then shows none of it.
   last_run: z.object(runFields).nullable().optional(),
   running: z.boolean().optional(),
   created_at: z.string().optional(),
@@ -188,9 +159,7 @@ export const cronjobsResponseSchema = z.object({
     per_page: z.number(),
     total: z.number(),
     last_page: z.number(),
-    // Every run-as account across ALL pages (sorted), for the "Runs as" filter.
     usernames: z.array(z.string()).optional(),
-    // Whether the cron daemon runs at all; null when the server could not tell.
     cron_running: z.boolean().nullable().optional(),
   }),
 });

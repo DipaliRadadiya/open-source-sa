@@ -2,12 +2,9 @@ import { cache } from "react";
 import { read } from "@/lib/api/read";
 import { settingsResponseSchema } from "@/lib/schemas/settings";
 
-// Cached per request (layout and section both read it). A group missing from `data`
-// means the server lacks it (e.g. no Redis), not a failed read.
 export const getSettings = cache(async function getSettings() {
   const result = await read("/settings", settingsResponseSchema);
 
-  // Pass on which failure and the API's message; read() already logs it.
   if (result.failed) {
     return {
       data: null,

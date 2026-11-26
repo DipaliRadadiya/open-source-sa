@@ -36,16 +36,11 @@ export default async function ApplicationFirewallPage({ params }) {
     getPermissions(),
     getPermissions("application", id).catch(() => []),
     getTranslations("applications.firewall"),
-    // Not getApplication: exceptions and custom rules are `whenLoaded` and
-    // only returned by this endpoint.
     getApplicationWaf(id),
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone: back to the list, which explains why.
   if (result.status === 404) redirect("/applications?gone=1");
-  // The firewall endpoint answers 403 for roles without Web Firewall, before
-  // the permission check below can run.
   if (result.status === 403) return <PermissionDenied title={t("pageTitle")} />;
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -56,22 +51,17 @@ export default async function ApplicationFirewallPage({ params }) {
   const canManage = can(appPermissions, "app_firewall", "manage", "application");
   const settled = isSettled(application);
 
-  // Category and mode labels come from the API, so their failure is a load
-  // failure. The web server lookup is non-fatal.
   const [{ categories, modes, failed: optionsFailed, status: optionsStatus, failure: optionsFailure, message: optionsMessage }, { webServer }] = settled
     ? await Promise.all([getWafOptions(), getServerCapabilities()])
     : [{ categories: [], modes: [], failed: false }, { webServer: null }];
 
-  // Only watching (detect) mode writes this log, and the API lists it only then.
   const watching = settled && application.waf_enabled && application.waf_mode === "detect";
   const detect = watching
     ? await getApplicationLog(id, "waf_detect", { lines: 200 })
     : null;
-  // 'missing' (404) is normal until the first match, so it is not a failure.
   const detectFailed = detect?.status === "failed" || detect?.status === "locked";
   const detectRows = detect?.log?.lines?.length ? parseDetectLog(detect.log.lines) : [];
 
-  // `waf_supported` wins; the web server name check is for older APIs.
   const unsupported =
     typeof application.waf_supported === "boolean"
       ? !application.waf_supported
@@ -89,7 +79,6 @@ export default async function ApplicationFirewallPage({ params }) {
         <LoadFailed description={t("loadFailed")} status={optionsStatus} failure={optionsFailure} message={optionsMessage} />
       ) : (
         <>
-          {/* Settings still save where unsupported, but nothing enforces them. */}
           {unsupported ? (
             <div className="flex max-w-4xl items-start gap-2.5 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm">
               <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -107,7 +96,6 @@ export default async function ApplicationFirewallPage({ params }) {
           />
           {watching ? (
             <HideWhileReloadPending appId={id}>
-              {/* A saved watch mode may not be running while a reload is owed. */}
               <AutoRefresh intervalMs={30000} stopAfterMs={600000} />
               <DetectLogCard rows={detectRows} failed={detectFailed} />
             </HideWhileReloadPending>

@@ -31,7 +31,6 @@ export default async function CreateApplicationPage({ searchParams }) {
   const [permissions, t, tEngines, format, types, systemUsers, accounts, php, node, capabilities, timezones, engines] = await Promise.all([
     getPermissions(),
     getTranslations("applications"),
-    // Reuses the databases page labels so the two cannot drift.
     getTranslations("databases.engines"),
     getFormatter(),
     getSiteTypes(),
@@ -39,33 +38,26 @@ export default async function CreateApplicationPage({ searchParams }) {
     getGitAccounts(),
     getPhp(),
     getNode(),
-    // Temporary-domain option (target address, wildcard-DNS hosts) and what the server can serve.
     getServerCapabilities().catch(() => null),
     getTimezones().catch(() => []),
-    // Cheap and cached; tells whether a WordPress install can work here.
     getEngines().catch(() => ({ engines: [], failed: true })),
   ]);
 
   const phpVersions = (php.data?.versions ?? []).filter((version) => !version.status || version.status === "ready");
   const nodeVersions = installedNodeVersions(node.data);
 
-  // Explain instead of redirecting, so a view-only reader learns why.
   if (!can(permissions, "application", "manage")) {
     return <PermissionDenied title={t("createTitle")} description={t("noPermission")} />;
   }
 
   if (types.failed) return <LoadFailed description={t("loadFailed")} status={types.status} failure={types.failure} message={types.message} debug={types.debug} />;
 
-  // Mark availability here so the prefill reads the same `available` as the grid. A rendering
-  // type the server cannot serve (PHP on a Node server) is not offered at all.
   const siteTypes = withAvailability(
     withServableRenderingTypes(types.siteTypes, capabilities?.servingProfiles),
     {
       runtimes: {
         phpVersions,
         nodeVersions,
-        // The versions the PHP and Node pages actually offer, so a blocked
-        // card names an installable version rather than a range.
         phpInstallable: php.data?.installable ?? [],
         nodeInstallable: node.data?.installable ?? [],
         failed: php.failed || node.failed,
@@ -83,7 +75,6 @@ export default async function CreateApplicationPage({ searchParams }) {
       }
 
       return t(`unavailableDatabase.${block.state}`, {
-        // `t.has`: an engine without a label prints its own name instead of throwing.
         engines: format.list(
           block.engines.map((engine) => (tEngines.has(engine) ? tEngines(engine) : engine)),
           { type: "disjunction" },
@@ -92,13 +83,10 @@ export default async function CreateApplicationPage({ searchParams }) {
     },
   );
 
-  // Query parameters are untrusted: only prefill a type the server offers
-  // and can create.
   const prefillType = siteTypes.some((type) => type.name === sp?.type && type.available)
     ? sp.type
     : "";
 
-  // An unknown account id is dropped: it would seed a picker that cannot submit.
   const prefillGitAccount = (accounts.accounts ?? []).some(
     (account) => String(account.id) === String(sp?.git_account),
   )
@@ -109,16 +97,11 @@ export default async function CreateApplicationPage({ searchParams }) {
     <div className="space-y-6">
       <PageHeader title={t("createTitle")} />
       <CreateApplicationForm
-        // A server precondition, not a form field, so it sits above the form rather than in
-        // the readiness checklist. The form hides it once a type that needs no database is chosen.
         databaseNotice={
           noDatabaseEngine(engines) ? <NoDatabaseEngineNotice installing={engineInstalling(engines)} /> : null
         }
         initialType={prefillType}
         initialDockerSource={initialDockerSource}
-        // A marketplace slug is a valid site name, and the temporary domain
-        // is generated from the name. Not "docker": the system user is named
-        // after it, and useradd refuses because the docker group exists.
         initialName={prefillType === "docker" ? "" : prefillType}
         siteTypes={siteTypes}
         systemUsers={systemUsers.users}
@@ -136,9 +119,7 @@ export default async function CreateApplicationPage({ searchParams }) {
         serverIp={capabilities?.serverIp ?? null}
         temporaryDomainSuffixes={capabilities?.temporaryDomainSuffixes ?? []}
         timezones={timezones ?? []}
-        // For the required-services panel: what is missing and what can be installed.
         engines={engines?.engines ?? []}
-        // Unfiltered: `phpVersions` drops non-ready versions, including the one installing.
         phpVersionsAll={php.data?.versions ?? []}
         nodeVersionsAll={node.data?.versions ?? []}
         phpInstallable={php.data?.installable ?? []}

@@ -16,7 +16,6 @@ export async function generateMetadata() {
   return { title: t("title") };
 }
 
-// A component still needing a runtime installed needs its version list for the inline picker.
 function needsVersions(setup, key) {
   return setup?.components?.some((c) => c.key === key && c.state !== "installed" && c.state !== "installing");
 }
@@ -29,26 +28,20 @@ export default async function SetupPage() {
     getPermissions(),
     getFail2ban(),
   ]);
-  // Installing fail2ban enables no jail, so jail state is checked too.
-  // "unknown" when unreadable, so no false prompt is shown.
   const fail2banProtection = fail2ban.failed
     ? "unknown"
     : fail2ban.data?.installed && (fail2ban.data.jails ?? []).some((jail) => jail.enabled)
       ? "on"
       : "off";
-  // Each install is gated by its own feature's manage permission, not `setting` view.
   const canInstall = {
     database: can(permissions, "database", "manage"),
     fail2ban: can(permissions, "fail2ban", "manage"),
     php: can(permissions, "php", "manage"),
     node: can(permissions, "node", "manage"),
     build_tools: can(permissions, "node", "manage"),
-    // POST /wp-cli/install is application manage; a missing key reads as allowed.
     wp_cli: can(permissions, "application", "manage"),
   };
 
-  // Fetch installable versions only for the runtimes that still need one, so the
-  // PHP/Node cards can install a version inline instead of navigating away.
   const [php, node] = await Promise.all([
     needsVersions(result.setup, "php") ? getPhp() : Promise.resolve({ data: null }),
     needsVersions(result.setup, "node") ? getNode() : Promise.resolve({ data: null }),
@@ -70,8 +63,7 @@ export default async function SetupPage() {
         </div>
       </div>
 
-      {/* Keyed by locale: the checklist seeds useState from the localised
-          payload once, so a language switch must remount it. */}
+      {/* Keyed by locale: the checklist seeds state from the localised data once. */}
       {result.failed || !result.setup ? (
         <LoadFailed
           description={t("loadFailed")}

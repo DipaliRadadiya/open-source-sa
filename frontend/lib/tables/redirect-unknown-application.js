@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 
-// A bookmarked `?application=` for a site that no longer exists makes the API refuse the
-// whole list (422), which would read as "could not be loaded". Drop the filter instead.
-// Only once the application list itself loaded, so a failed read never removes it.
+// An unknown ?application= makes the API refuse the whole list, so drop the filter.
 export function redirectUnknownApplication(pathname, searchParams, applications, applicationsFailed = false) {
   const wanted = searchParams?.application;
   if (!wanted || applicationsFailed) return;

@@ -33,14 +33,11 @@ export default async function ApplicationEnvironmentPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone: back to the list, which explains why.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
     return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
-  // 403: not allowed; 404: the site type has no .env (e.g. WordPress).
-  // They need different messages.
   if (!can(appPermissions, "app_environment", "view", "application")) {
     if ((await getApplicationEnvironment(id)).status === 404) return <PermissionDenied title={t("pageTitle")} notForType />;
     return <PermissionDenied title={t("pageTitle")} />;
@@ -53,7 +50,6 @@ export default async function ApplicationEnvironmentPage({ params }) {
   );
   const settled = isSettled(application);
 
-  // Fetched in parallel with the environment read to avoid adding latency.
   const [envResult, historyResult] = settled
     ? await Promise.all([getApplicationEnvironment(id), getEnvironmentHistory(id)])
     : [
@@ -63,7 +59,6 @@ export default async function ApplicationEnvironmentPage({ params }) {
 
   return (
     <div className="space-y-6">
-      {/* Only a viewer is told something: that they can look but not change. */}
       <PageHeader title={t("pageTitle")} subtitle={canManage ? null : t("pageSubtitleReadOnly")} />
 
       {!settled ? (
@@ -85,7 +80,6 @@ export default async function ApplicationEnvironmentPage({ params }) {
             meta={historyResult.meta}
             failed={historyResult.failed}
             canManage={canManage}
-            // Same signal as the editor's restore dialog, from the same payload.
             requiresRestart={envResult.environment.requires_restart}
           />
         </>

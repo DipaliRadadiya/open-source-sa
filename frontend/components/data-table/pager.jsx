@@ -3,7 +3,6 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-// e.g. 1 … 4 5 6 … 10; seven or fewer pages render every page.
 export function pageList(current, last) {
   if (last <= 7) {
     return Array.from({ length: last }, (_, i) => i + 1);
@@ -18,7 +17,6 @@ export function pageList(current, last) {
   return pages;
 }
 
-// The caller owns the page state.
 export function Pager({ page, lastPage, total, onPageChange, pending = false }) {
   const t = useTranslations("pagination");
   const pages = pageList(page, lastPage);

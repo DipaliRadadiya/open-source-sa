@@ -7,22 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DomainText } from "@/components/ui/domain-text";
 
-// Four rows plus a counted remainder; the full list is on the Domains screen.
 const SHOWN = 4;
 
-// No certificate is a normal state (plain HTTP), not an error.
 export function DomainsCard({ application, domains = [], certificate = null, failed = false, href = null }) {
   const t = useTranslations("applications.domains");
 
   const secure = certificate?.status === "active";
-  // A new site gets its certificate automatically; do not prompt for one on its way.
   const issuing = certificate?.status === "pending" || certificate?.status === "issuing";
   const promptCertificate = !failed && !secure && !issuing;
 
-  // Primary, then aliases, then redirects, regardless of API order.
   const RANK = { primary: 0, alias: 1, redirect: 2 };
   const ordered = [...domains].sort((a, b) => (RANK[a.type] ?? 3) - (RANK[b.type] ?? 3));
-  // A site always has at least its own name, even before a domain row exists.
   const rows = ordered.length
     ? ordered.slice(0, SHOWN)
     : [{ id: "self", domain: application.domain, type: "primary", type_title: null }];
@@ -30,10 +25,7 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
 
   return (
     <Card>
-      {/* Re-reads until the certificate is issued or fails. */}
       {issuing ? <AutoRefresh intervalMs={5000} stopAfterMs={300000} /> : null}
-      {/* HTTPS and its renewal date are the HTTPS tile's; the card lists the names. The
-          button sits in the header: a footer strip for one button was mostly empty (7 Oct). */}
       <CardHeader className="items-center border-b">
         <CardTitle icon={Globe} as="h2" className="flex flex-wrap items-center gap-2">
           {t("title")}

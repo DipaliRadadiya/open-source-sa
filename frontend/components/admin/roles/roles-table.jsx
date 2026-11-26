@@ -20,8 +20,7 @@ import { RolesCards } from "@/components/admin/roles/roles-cards";
 import { accessCounts } from "@/lib/roles/granted-count";
 import { roleName, roleDescription } from "@/lib/roles/role-label";
 
-/* Cells at module level: flexRender treats a cell function's identity as the
- * component type; inline cells would remount row dialogs on every keystroke. */
+// Cells at module level: inline cells remount and lose dialog state.
 
 function NameCell({ row }) {
   const t = useTranslations("roles");
@@ -76,7 +75,6 @@ function RolesList({ data, meta }) {
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
 
-  // Filtered and paged by the API.
   const filtered = data;
 
   const columns = [
@@ -142,7 +140,6 @@ function RolesList({ data, meta }) {
           )}
         </ListCard>
       ) : (
-        // Below lg the rows are cards of their own, so the list drops its frame there.
         <ListCard from="c900" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
           <div className="@min-[900px]/page:hidden">
             <RolesCards roles={filtered} />

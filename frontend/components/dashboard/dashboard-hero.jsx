@@ -5,12 +5,8 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { PanelServer } from "@/components/illustrations/steel/panel-server";
 
-// Square mono chips.
-// One height for both chips, the IP one included (its copy button made it taller).
 const CHIP = "inline-flex h-6 items-center rounded-[2px] px-2 font-mono text-xs font-medium tracking-[0.08em] uppercase ring-1 ring-[var(--hero-line)]";
 
-// The page's h1. Says in one line whether anything is wrong, so the rest of
-// the page is detail rather than the place you find out.
 export async function DashboardHero({
   facts,
   health,
@@ -22,11 +18,8 @@ export async function DashboardHero({
   const t = await getTranslations("serverDashboard");
   const tApplications = await getTranslations("applications");
   const down = health?.down?.length ?? 0;
-  // Counted like the attention panel: kinds of problem, not applications.
   const problems = new Set(findings.map((finding) => finding.kind)).size;
 
-  // A failed or forbidden read gives no verdict; "Everything is running" would be a guess.
-  // The banner speaks for the server only; the attention count heads its own list below.
   const title = down
     ? t("hero.down", { count: down })
     : problems
@@ -47,15 +40,11 @@ export async function DashboardHero({
   const ip = facts?.public_ip ?? facts?.ip;
 
   return (
-    // One compact status bar; the counts and checks sit right below.
     <section className="relative overflow-hidden rounded-2xl bg-hero">
       <div className="bg-hero-grid pointer-events-none absolute inset-0" />
-      {/* Drafting-sheet corner brackets. */}
       <span aria-hidden className="pointer-events-none absolute top-1.5 left-1.5 size-4 border-t-2 border-l-2 border-primary" />
       <span aria-hidden className="pointer-events-none absolute right-1.5 bottom-1.5 size-4 border-r-2 border-b-2 border-primary" />
       <div className="relative flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4 md:px-6">
-        {/* Small, beside the words: the server keeps its picture without taking
-            the row. Decorative; hidden on a phone. */}
         <PanelServer
           total={applications ? applications.length : null}
           online={online}
@@ -73,7 +62,6 @@ export async function DashboardHero({
           </h1>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
             {summary ? <p className="text-sm text-[var(--hero-muted)]">{summary}</p> : null}
-            {/* No OS chip: it is on the sidebar card and in Server information. */}
             {facts?.uptime?.human ? <span className={CHIP}>{t("hero.up", { time: facts.uptime.human })}</span> : null}
             {ip ? (
               <span className={`${CHIP} gap-1 pr-0.5`}>
@@ -89,8 +77,6 @@ export async function DashboardHero({
         </div>
 
         {canCreate || canViewLogs ? (
-          // max-w-full: on a phone the pair is wider than the banner in German and Russian,
-          // and shrink-0 alone kept it on one line and cut "Create application" off.
           <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">
             {canViewLogs ? (
               <Button asChild variant="ghost" className="border border-[var(--hero-line)] text-[var(--hero-fg)] hover:bg-[var(--hero-wash)] hover:text-[var(--hero-fg)] dark:hover:bg-[var(--hero-wash)]">
