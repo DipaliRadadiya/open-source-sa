@@ -29,14 +29,15 @@ test("the password field's focus ring has room at the bottom of its section", ()
 test("a worker that will not start is explained on the form, not in a vanishing toast", () => {
   // Create: a bare 500 means the worker never existed — the message names the
   // command to check, and the form stays with its values.
-  const create = read("components/applications/workers/create-worker-dialog.jsx");
+  const create = read("components/applications/workers/worker-dialog.jsx");
   assert.match(create, /\(error\.response\?\.status \?\? 0\) >= 500/);
-  assert.match(create, /form\.setError\("root\.server", \{ message: apiMessage\(error, t\("create\.failed"\)\) \}\)/);
+  assert.match(create, /const mode = editing \? "edit" : "create";/);
+  assert.match(create, /form\.setError\("root\.server", \{ message: apiMessage\(error, t\(`\$\{mode\}\.failed`\)\) \}\)/);
   // Edit: since RC-4 (22 Oct) the API rolls a failed edit back, so a server fault shows the
   // API's own sentence and reference rather than claiming the worker was stopped.
-  const edit = read("components/applications/workers/edit-worker-dialog.jsx");
+  const edit = read("components/applications/workers/worker-dialog.jsx");
   assert.match(edit, /\(error\.response\?\.status \?\? 0\) >= 500/);
-  assert.match(edit, /form\.setError\("root\.server", \{ message: apiMessage\(error, t\("edit\.failed"\)\) \}\);\s*refresh\(\);/);
+  assert.match(edit, /form\.setError\("root\.server", \{ message: apiMessage\(error, t\(`\$\{mode\}\.failed`\)\) \}\);\s*if \(editing\) refresh\(\);/);
   for (const locale of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) {
     const w = JSON.parse(read(`messages/${locale}.json`)).applications.workers;
     assert.ok(w.create.failed && w.edit.failed, locale);

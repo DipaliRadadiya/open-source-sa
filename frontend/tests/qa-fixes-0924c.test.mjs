@@ -13,7 +13,7 @@ test("E4: the .env editor registers with the panel's unsaved-changes guard", () 
 });
 
 test("W1: worker dialogs close only after the list has re-read", () => {
-  for (const f of ["delete-worker-dialog", "create-worker-dialog", "edit-worker-dialog"]) {
+  for (const f of ["delete-worker-dialog", "worker-dialog"]) {
     const src = read(`components/applications/workers/${f}.jsx`);
     assert.match(src, /refreshThen\(\(\) => \{/, f);
     assert.doesNotMatch(src, /router\.refresh\(\)/, f);

@@ -76,7 +76,7 @@ test("both dialogs hand the presets to the Type field", () => {
   // They each already received `presets` for the command field's picker and
   // simply did not pass them on, which is how the two controls in one modal
   // ended up disagreeing.
-  for (const name of ["create-worker-dialog", "edit-worker-dialog"]) {
+  for (const name of ["worker-dialog"]) {
     const source = read(`components/applications/workers/${name}.jsx`);
     assert.match(source, /<WorkerKindField[^>]*presets=\{presets\}/, name);
   }

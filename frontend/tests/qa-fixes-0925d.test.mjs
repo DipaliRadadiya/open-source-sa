@@ -11,24 +11,23 @@ test("the worker's account is shown, never typed", () => {
   // A read-only display, not an Input bound to the form.
   assert.match(fields, /id="worker-runs-as"[^>]*readOnly/s);
   assert.doesNotMatch(fields, /name="user"/);
-  for (const f of ["create-worker-dialog.jsx", "edit-worker-dialog.jsx"]) {
+  for (const f of ["worker-dialog.jsx"]) {
     const s = read(`${WK}/${f}`);
     assert.match(s, /user: undefined/, f);
     assert.doesNotMatch(s, /values\.user\?\.trim/, f);
   }
-  assert.match(read(`${WK}/create-worker-dialog.jsx`), /runsAs=\{siteUser\}/);
-  assert.match(read(`${WK}/edit-worker-dialog.jsx`), /runsAs=\{worker\.effective_user\}/);
+  assert.match(read(`${WK}/worker-dialog.jsx`), /runsAs=\{editing \? worker\.effective_user : siteUser\}/);
 });
 
 test("a worker that will not stay running shows the API's message as well as the field error", () => {
   // 422 worker_did_not_start: errors.command is generic; `message` carries what the program
   // printed and the reference, and on an edit that the previous command was kept (RC-4).
-  for (const f of ["create-worker-dialog.jsx", "edit-worker-dialog.jsx"]) {
+  for (const f of ["worker-dialog.jsx"]) {
     const s = read(`${WK}/${f}`);
     assert.match(s, /handleValidationError\(error, form, \{ formError: true, unrendered: \["kind"\] \}\);\s+if \(error\.response\?\.data\?\.reason === "worker_did_not_start"\) \{\n\s+form\.setError\("root\.server", \{ message: apiMessage\(error, /, f);
   }
   // A failed edit still re-reads the list behind the message.
-  assert.match(read(`${WK}/edit-worker-dialog.jsx`), /apiMessage\(error, t\("edit\.failed"\)\) \}\);\s*refresh\(\);/);
+  assert.match(read(`${WK}/worker-dialog.jsx`), /apiMessage\(error, t\(`\$\{mode\}\.failed`\)\) \}\);\s*if \(editing\) refresh\(\);/);
 });
 
 test("create database: an engine error with no engine field on screen is a toast", () => {

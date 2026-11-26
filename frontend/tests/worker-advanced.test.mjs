@@ -33,7 +33,7 @@ test("blank means 'no opinion', which is what the API assumes", () => {
   assert.equal(values.auto_start, true);
 
   const create = readFileSync(
-    new URL("../components/applications/workers/create-worker-dialog.jsx", import.meta.url),
+    new URL("../components/applications/workers/worker-dialog.jsx", import.meta.url),
     "utf8",
   );
   // The user is never sent from the form now: a worker runs as the app's own
@@ -58,7 +58,7 @@ test("the form refuses what the API would refuse", () => {
 test("both dialogs share one set of advanced fields", () => {
   // They already held identical copies of the first two, and adding five more
   // to each by hand is how they start to disagree.
-  for (const file of ["create-worker-dialog.jsx", "edit-worker-dialog.jsx"]) {
+  for (const file of ["worker-dialog.jsx"]) {
     const s = readFileSync(
       new URL(`../components/applications/workers/${file}`, import.meta.url),
       "utf8",
@@ -74,7 +74,7 @@ test("edit seeds from `user`, never the resolved fallback", () => {
    * chosen deliberately, and the worker would stop following the site.
    */
   const edit = readFileSync(
-    new URL("../components/applications/workers/edit-worker-dialog.jsx", import.meta.url),
+    new URL("../components/applications/workers/worker-dialog.jsx", import.meta.url),
     "utf8",
   );
   assert.match(edit, /user: worker\.user \?\? ""/);
@@ -245,17 +245,14 @@ test("both dialogs offer the kind, and exclude the right workers from the check"
   assert.equal(conflictingKind("horizon", []), null);
 
   const edit = readFileSync(
-    new URL("../components/applications/workers/edit-worker-dialog.jsx", import.meta.url),
+    new URL("../components/applications/workers/worker-dialog.jsx", import.meta.url),
     "utf8",
   );
   assert.match(edit, /workers\.filter\(\(w\) => w\.id !== worker\.id\)/, "edit counts the worker against itself");
   assert.match(edit, /<WorkerKindField form=\{form\} presets=\{presets\} workers=\{others\} \/>/);
 
-  const create = readFileSync(
-    new URL("../components/applications/workers/create-worker-dialog.jsx", import.meta.url),
-    "utf8",
-  );
-  assert.match(create, /<WorkerKindField form=\{form\} presets=\{presets\} workers=\{workers\} \/>/);
+  // Create checks against every worker; edit leaves itself out.
+  assert.match(edit, /const others = editing \? workers\.filter\(\(w\) => w\.id !== worker\.id\) : workers;/);
 });
 
 test("the conflict rule has exactly one copy", () => {

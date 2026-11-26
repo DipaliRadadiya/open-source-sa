@@ -55,7 +55,7 @@ test("a field the form holds but never renders is refused", () => {
 
 test("both worker dialogs declare kind unrendered and render the fallback", async () => {
   const { readFileSync } = await import("node:fs");
-  for (const file of ["create-worker-dialog.jsx", "edit-worker-dialog.jsx"]) {
+  for (const file of ["worker-dialog.jsx"]) {
     const source = readFileSync(
       new URL(`../components/applications/workers/${file}`, import.meta.url),
       "utf8",

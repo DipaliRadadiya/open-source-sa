@@ -196,7 +196,7 @@ test("Creating or removing a staging copy keeps the dialog open until the page s
 });
 
 test("Worker form errors, from the form or the server, are scrolled into view", () => {
-  for (const f of ["create-worker-dialog.jsx", "edit-worker-dialog.jsx"]) {
+  for (const f of ["worker-dialog.jsx"]) {
     const src = read(`components/applications/workers/${f}`);
     assert.equal((src.match(/scrollToFirstError\(\);/g) ?? []).length, 2, f);
     assert.match(src, /role="alert"\s*data-form-error/, f);
