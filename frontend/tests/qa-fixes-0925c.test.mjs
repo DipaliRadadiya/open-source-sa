@@ -76,7 +76,7 @@ test("the change history pages past its first twenty rows", () => {
 });
 
 test("the restore list scrolls inside the dialog, keeping its buttons in view", () => {
-  assert.match(read("components/applications/environment/restore-backup-dialog.jsx"), /max-h-\[min\(20rem,45dvh\)\] space-y-2 overflow-y-auto/);
+  assert.match(read("components/backups/restore-version-dialog.jsx"), /max-h-\[min\(20rem,45dvh\)\] space-y-2 overflow-y-auto/);
 });
 
 test("a site type with no .env says the page is not used for it, and a viewer is told they can only view", () => {

@@ -50,7 +50,7 @@ test("upload says 'uploaded' after the list shows the files", () => {
 });
 
 test("the file version list is a radio group", () => {
-  const s = read(`${F}/restore-file-backup-dialog.jsx`);
+  const s = read("components/backups/restore-version-dialog.jsx");
   assert.match(s, /role="radiogroup"/);
   assert.match(s, /role="radio"\s*aria-checked=\{active\}/);
 });

@@ -193,7 +193,8 @@ test("the phone card never splits a permission string across lines", () => {
 const editorSrc = read("components/applications/files/file-editor-dialog.jsx");
 const archiveField = read("components/applications/files/archive-format-field.jsx");
 const bulkSrc = read("components/applications/files/bulk-dialogs.jsx");
-const restoreSrc = read("components/applications/files/restore-file-backup-dialog.jsx");
+const restoreSrc = read("components/backups/restore-version-dialog.jsx");
+const restoreFileSrc = read("components/applications/files/restore-file-backup-dialog.jsx");
 
 test("an upload refused by the rate limit waits and carries on", () => {
   // Twelve files: eight went up, four rows read "Too Many Attempts."
@@ -255,7 +256,9 @@ test("saved versions are listed by when, not by backup file name", async () => {
   assert.equal(when.toISOString(), "2026-09-23T08:50:23.000Z");
   assert.equal(parseApiWallClock("notes.txt.bak-20260923-085023"), null);
   assert.match(restoreSrc, /format\.dateTime\(when, \{ dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" \}\)/);
-  assert.doesNotMatch(restoreSrc, /font-mono text-xs">\{backup\.name\}/);
+  // The file name only shows on hover for file versions.
+  assert.match(restoreFileSrc, /\bnameOnHover\b/);
+  assert.match(restoreSrc, /<HoverHint content=\{backup\.name\}>/);
 });
 
 test("a file skipped for its name is counted as skipped, not failed", () => {

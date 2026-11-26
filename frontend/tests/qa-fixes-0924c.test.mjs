@@ -44,7 +44,7 @@ test("W3: no panel form lets the browser's English bubble answer first", () => {
 });
 
 test("E5: the restore picker is a radio group led by the saved time", () => {
-  const src = read("components/applications/environment/restore-backup-dialog.jsx");
+  const src = read("components/backups/restore-version-dialog.jsx");
   assert.match(src, /role="radiogroup"/);
   assert.match(src, /role="radio"\s+aria-checked=\{active\}/);
   assert.match(src, /parseApiWallClock\(backup\.created_at\)/);

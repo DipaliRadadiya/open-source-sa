@@ -78,30 +78,30 @@ test(".env and file saves and restores send safety_copy, true unless switched of
 test("each place has the switch, on by default, with the red warning when off", () => {
   for (const [file, id] of [
     ["components/applications/environment/environment-editor.jsx", "env-safety-copy"],
-    ["components/applications/environment/restore-backup-dialog.jsx", "env-restore-safety-copy"],
     ["components/applications/environment/environment-history-card.jsx", "history-restore-safety-copy"],
     ["components/applications/files/file-editor-dialog.jsx", "file-safety-copy"],
-    ["components/applications/files/restore-file-backup-dialog.jsx", "file-restore-safety-copy"],
+    ["components/backups/restore-version-dialog.jsx", "{safetyCopyId}"],
   ]) {
     const s = read(file);
     assert.match(s, /const \[safetyCopy, setSafetyCopy\] = useState\(true\);/, file);
-    assert.match(s, new RegExp(`id="${id}"`), file);
+    assert.match(s, id.startsWith("{") ? /id=\{safetyCopyId\}/ : new RegExp(`id="${id}"`), file);
     assert.match(s, /label=\{tc\("keepFileCopy"\)\}/, file);
     assert.match(s, /\{tc\("keepFileCopyOff"\)\}/, file);
   }
+  assert.match(read("components/applications/environment/restore-backup-dialog.jsx"), /safetyCopyId="env-restore-safety-copy"/);
+  assert.match(read("components/applications/files/restore-file-backup-dialog.jsx"), /safetyCopyId="file-restore-safety-copy"/);
   // A first .env save replaces nothing: no switch, and the request keeps the default.
   const editor = read("components/applications/environment/environment-editor.jsx");
   assert.match(editor, /\{canManage && env\.exists \? \(/);
   assert.match(editor, /safetyCopy: !env\.exists \|\| safetyCopy,/);
   // Restores reset to on when their window closes.
-  for (const file of ["components/applications/environment/restore-backup-dialog.jsx", "components/applications/files/restore-file-backup-dialog.jsx", "components/applications/environment/environment-history-card.jsx"]) {
+  for (const file of ["components/backups/restore-version-dialog.jsx", "components/applications/environment/environment-history-card.jsx"]) {
     assert.match(read(file), /setSafetyCopy\(true\);/, file);
   }
 });
 
 test("sentences that promise a backup change when the switch is off", () => {
-  assert.match(read("components/applications/environment/restore-backup-dialog.jsx"), /safetyCopy \? t\("restore\.subtitle"\) : t\("restore\.subtitleNoCopy"\)/);
-  assert.match(read("components/applications/files/restore-file-backup-dialog.jsx"), /safetyCopy \? t\("restore\.subtitle"\) : t\("restore\.subtitleNoCopy"\)/);
+  assert.match(read("components/backups/restore-version-dialog.jsx"), /safetyCopy \? tx\("restore\.subtitle"\) : tx\("restore\.subtitleNoCopy"\)/);
   assert.match(read("components/applications/environment/environment-history-card.jsx"), /safetyCopy \? t\("confirmBody"\) : t\("confirmBodyNoCopy"\)/);
   assert.match(read("components/applications/files/file-editor-dialog.jsx"), /t\(safetyCopy \? "editor\.subtitle" : "editor\.subtitleNoCopy"\)/);
   for (const locale of LOCALES) {
