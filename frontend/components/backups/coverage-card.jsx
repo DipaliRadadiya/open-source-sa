@@ -121,8 +121,8 @@ export function CoverageCard({
         options={[
           { value: "unprotected", label: t("filters.unprotected") },
           { value: "protected", label: t("filters.protected") },
-          { value: "failing", label: t("states.failing") },
-          { value: "paused", label: t("states.paused") },
+          { value: "failing", label: t("status.failing") },
+          { value: "paused", label: t("status.paused") },
         ]}
         className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
       />

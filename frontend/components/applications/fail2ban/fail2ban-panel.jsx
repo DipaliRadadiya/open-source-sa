@@ -34,7 +34,7 @@ import { Caution } from "@/components/ui/caution";
 import { SafetyCopySwitch } from "@/components/backups/safety-copy-switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { DENIED } from "@/components/ui/reason-tooltip";
+import { DENIED, DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { BanRuleFields } from "@/components/applications/fail2ban/ban-rule-fields";
 
 // CodeMirror is large and only needed here and in the file editor, so it is loaded on demand.
@@ -64,7 +64,7 @@ const FILES = [
 /**
  * One status card and one "Ban rules" card: plain fields first, the two raw INI files
  * (written verbatim to `/etc/fail2ban/{jail,filter}.d/`) folded under them. The fields
- * edit the same text the files show (Krishna, 24 Nov: the page was too much at once).
+ * edit the same text the files show (the page was too much at once).
  */
 export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filterTemplate, canManage, loginRuleOffered = false }) {
   const t = useTranslations("applications.fail2ban");
@@ -318,18 +318,20 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
         </CardHeader>
 
         {fieldsReadable || loginRuleOffered ? (
-          <BanRuleFields
-            jail={draft.jail}
-            numbers={fieldsReadable}
-            onJailChange={(jail) => setDraft((current) => ({ ...current, jail }))}
-            loginOffered={loginRuleOffered}
-            loginPath={loginPath}
-            loginAnswer={loginAnswer}
-            onLoginChange={setLogin}
-            pathProblem={pathProblem}
-            numberProblem={numberProblem}
-            disabled={!canManage || saving}
-          />
+          <DisabledReasonProvider denied={!canManage}>
+            <BanRuleFields
+              jail={draft.jail}
+              numbers={fieldsReadable}
+              onJailChange={(jail) => setDraft((current) => ({ ...current, jail }))}
+              loginOffered={loginRuleOffered}
+              loginPath={loginPath}
+              loginAnswer={loginAnswer}
+              onLoginChange={setLogin}
+              pathProblem={pathProblem}
+              numberProblem={numberProblem}
+              disabled={!canManage || saving}
+            />
+          </DisabledReasonProvider>
         ) : null}
 
         {/* The raw files, for rules the fields cannot express. */}

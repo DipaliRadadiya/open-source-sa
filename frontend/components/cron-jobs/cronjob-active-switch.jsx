@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { setCronjobActive } from "@/lib/api/cronjobs";
 import { PendingSwitch } from "@/components/ui/pending-switch";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
 
@@ -50,15 +51,17 @@ export function CronjobActiveSwitch({ job, canManage = true, prevPage = null }) 
   }
 
   return (
-    <PendingSwitch
-      readOnly={!canManage}
-      checked={shown}
-      pending={busy}
-      // Without the permission it only shows whether the job is on.
-      disabled={!canManage}
-      onCheckedChange={canManage ? onToggle : undefined}
-      // Names the job so screen readers can tell the switches apart.
-      aria-label={t("activeFor", { name: job.name })}
-    />
+    <DisabledReasonProvider denied={!canManage}>
+      <PendingSwitch
+        readOnly={!canManage}
+        checked={shown}
+        pending={busy}
+        // Without the permission it only shows whether the job is on.
+        disabled={!canManage}
+        onCheckedChange={canManage ? onToggle : undefined}
+        // Names the job so screen readers can tell the switches apart.
+        aria-label={t("activeFor", { name: job.name })}
+      />
+    </DisabledReasonProvider>
   );
 }

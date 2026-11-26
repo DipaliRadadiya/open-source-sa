@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { APP_BAN_PRESETS, readJailValue, writeJailValue } from "@/lib/applications/fail2ban-jail-fields";
