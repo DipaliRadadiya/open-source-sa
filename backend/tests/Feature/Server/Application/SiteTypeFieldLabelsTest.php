@@ -8,11 +8,9 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Validator;
 
 /*
- * Field labels are localized on the backend so the frontend never holds a
- * label list. That only works if every declared field actually has a
- * translation — otherwise the API ships the raw key ("shop_name") and the
- * frontend has to patch around it, which is exactly what happened for
- * PrestaShop. Twelve fields were missing when this test was written.
+ * Field labels are localized on the backend so the frontend never holds a label list. That only
+ * works if every declared field has a translation: otherwise the API ships the raw key
+ * ("shop_name") and the frontend has to patch around it.
  */
 
 /** @return list<string> every field name any site type declares */
@@ -56,12 +54,9 @@ it('never sends a raw key as a label', function () {
 });
 
 /*
- * Placeholders and defaults are not interchangeable, and the frontend's list of
- * "51 fields needing an example" was built as though they were. A placeholder
- * is ghost text that is never submitted; a default is a real value that is. Ask
- * for a placeholder on `table_prefix` and the box shows a grey `wp_`, the user
- * leaves it alone, and the request carries null — a form that looks filled in
- * and posts nothing.
+ * Placeholders and defaults are not interchangeable. A placeholder is ghost text that is never
+ * submitted; a default is a real value that is. A placeholder on `table_prefix` shows a grey
+ * `wp_`, the user leaves it alone, and the request carries null.
  */
 it('never gives a field both a default and a placeholder', function () {
     $both = [];
@@ -86,11 +81,9 @@ it('never gives a field both a default and a placeholder', function () {
 });
 
 it('offers no default its own validation rules would reject', function () {
-    // A pre-filled value the API refuses is the cheapest possible own-goal:
-    // the form opens already invalid, and the person who typed nothing gets
-    // the error. Worth pinning because the two sit in the same file and are
-    // still easy to change one at a time — `akt_` had to fit a lowercase-only
-    // rule, and `jml_` a length its neighbours do not share.
+    // A pre-filled value the API refuses opens the form already invalid. The two sit in the same
+    // file and are easy to change one at a time (`akt_` had to fit a lowercase-only rule, `jml_`
+    // a length its neighbours do not share).
     $checked = 0;
 
     foreach (app(SiteTypeManager::class)->all() as $type) {
@@ -154,12 +147,8 @@ it('gives every free-text field an example or a value to start from', function (
 });
 
 it('shows a bare example, not a sentence about one', function () {
-    // Mautic's SMTP host carried the literal 'e.g. smtp.example.com' — the
-    // prefix inside the value, so one field read "e.g. ..." while its nine
-    // neighbours showed the value alone. Ghost text is already understood as
-    // an example by being ghost text; saying so again is nine characters of
-    // the box spent on nothing, and it was the one placeholder still hardcoded
-    // in English, so a German form showed "e.g." beside translated examples.
+    // Ghost text is already understood as an example, so a literal 'e.g.' prefix inside the value
+    // is wasted space and, hardcoded in English, shows "e.g." beside translated examples.
     foreach (config('app.available_locales') as $locale) {
         app()->setLocale($locale);
 
@@ -178,9 +167,8 @@ it('shows a bare example, not a sentence about one', function () {
 });
 
 it('has a translation for every placeholder and help string a field references', function () {
-    // These go out through the API in the caller's locale, so an untranslated
-    // one ships the raw key — `application.placeholders.site_title` — into a
-    // form field, which is worse than no example at all.
+    // These go out through the API in the caller's locale: an untranslated one ships the raw key
+    // (`application.placeholders.site_title`) into a form field.
     foreach (config('app.available_locales') as $locale) {
         app()->setLocale($locale);
 
@@ -283,14 +271,9 @@ it('keeps steps as a list — it is a genuine array', function () {
 });
 
 /*
- * The frontend reported PrestaShop's missing syncUrl and added "same problem
- * likely affects Joomla, Akaunting, Node-RED, Uptime Kuma" — a list of who
- * lacked the method, not of who needed it. One of the four was right.
- *
- * Missing syncUrl is only a bug when the application persists a URL. This
- * pins the answer for each so the next person reading the no-op list does not
- * have to re-derive it, and so an installer that starts writing a URL has a
- * failing test rather than a silent mixed-content shop.
+ * Missing syncUrl is only a bug when the application persists a URL. This pins the answer for each
+ * application, so the next reader of the no-op list does not have to re-derive it, and an
+ * installer that starts writing a URL gets a failing test, not a silent mixed-content shop.
  */
 it('implements syncUrl for exactly the installers that persist a URL', function () {
     $implements = [];

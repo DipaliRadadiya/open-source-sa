@@ -10,9 +10,8 @@ use Illuminate\Support\Facades\Process;
 use Tests\Support\FakeCommandPipe;
 
 /*
- * Reading a site's own logs. Every read shells out, because these files live
- * either under /var/log (root-owned) or inside the site's directory (owned by
- * its system user) — the panel account can open neither.
+ * Reading a site's own logs. Every read shells out: the files live under /var/log (root-owned) or
+ * in the site's directory (owned by its system user), and the panel account can open neither.
  */
 
 beforeEach(function () {
@@ -32,11 +31,8 @@ beforeEach(function () {
         'web_root' => '/',
     ]);
 
-    // All four in one directory beside public_html, not under it: everything
-    // under the document root is a URL, and an access log names every visitor
-    // and every URL they asked for. The web server's two used to be under
-    // /var/log/nginx, where the site's owner could not read them and where the
-    // answer depended on which web server the box was built with.
+    // All four in one directory beside public_html, not under it: everything under the document
+    // root is a URL, and an access log names every visitor.
     $this->files = [
         '/home/logowner/logged-site/logs/access.log' => "GET / 200\nGET /about 200\nGET /missing 404\n",
         '/home/logowner/logged-site/logs/error.log' => "PHP Warning: something\n",
@@ -135,8 +131,7 @@ it('says unknown rather than zero when the size cannot be read', function () {
 it('offers the process output only for an application that runs one', function () {
     fakeLogs();
 
-    // A PHP site has no process — an output source for it would be a screen
-    // about nothing.
+    // A PHP site has no process, so no output source.
     expect(collect($this->actingAs($this->admin)->getJson(logUrl())->json('logs'))->pluck('key'))
         ->not->toContain('application');
 
@@ -144,12 +139,9 @@ it('offers the process output only for an application that runs one', function (
 
     $logs = collect($this->actingAs($this->admin)->getJson(logUrl())->json('logs'));
 
-    // For a Node site the web-server logs describe the proxy, so without this
-    // the screen would be confidently useless when it matters most.
-    //
-    // Two sources, both files in the site's own directory rather than one
-    // journal stream: "what did it print" and "what went wrong" are different
-    // questions, and merging them buries the second in the first.
+    // For a Node site the web-server logs describe the proxy, so the process output is needed.
+    // Two file sources, not one journal stream: "what did it print" and "what went wrong" are
+    // different questions, and merging them buries the second in the first.
     expect($logs->pluck('key'))->toContain('application')
         ->toContain('application_error')
         ->and($logs->firstWhere('key', 'application')['kind'])->toBe('file')
@@ -172,9 +164,8 @@ it('filters literally, not as a regex', function () {
     expect($this->actingAs($this->admin)->getJson(logUrl('/access?grep=404'))->json('log.lines'))
         ->toBe(['GET /missing 404']);
 
-    // A regex metacharacter is matched as itself. Treating the filter as a
-    // pattern would hand a user-supplied regex to a large file, which is a
-    // denial of service waiting to happen.
+    // A regex metacharacter is matched as itself; a user-supplied regex run over a large file
+    // is a denial of service.
     expect($this->actingAs($this->admin)->getJson(logUrl('/access?grep=.*'))->json('log.lines'))
         ->toBe([]);
 });
@@ -241,8 +232,8 @@ describe('permissions', function () {
         $user = User::factory()->create();
         grantPermission($user, 'logs', view: true);
 
-        // Server `logs` is auth.log and syslog; `app_log` is one site's own
-        // traffic. Letting one stand in for the other is escalation.
+        // Server `logs` is auth.log and syslog; `app_log` is one site's own traffic. Letting one
+        // stand in for the other is escalation.
         $this->actingAs($user)->getJson(logUrl())->assertForbidden();
     });
 
@@ -264,10 +255,8 @@ describe('permissions', function () {
 
 describe('a read that fails is not an empty log', function () {
     it('reports a denied read as a failure, not as a site with no logs yet', function () {
-        // The file is there — `test -f` says so — but reading it fails. That is
-        // sudo refused, a wrong path, a timeout. It used to render as
-        // `exists: false`, i.e. "this site has no logs", to someone who opened
-        // the error log to find out why the site was down.
+        // The file is there (`test -f` says so) but reading it fails: sudo refused, a wrong path,
+        // a timeout. It used to render as `exists: false`, i.e. "this site has no logs".
         Process::fake(function ($process) {
             $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
@@ -290,8 +279,8 @@ describe('a read that fails is not an empty log', function () {
     });
 
     it('still reports a log that has genuinely never been written', function () {
-        // `test -f` says no. A site nobody has visited has no access log, and
-        // that is an answer rather than a fault.
+        // `test -f` says no: a site nobody has visited has no access log, which is an answer, not a
+        // fault.
         Process::fake(function ($process) {
             $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
@@ -317,9 +306,8 @@ describe('a read that fails is not an empty log', function () {
 /**
  * A `tail` that honours `-n`, which the fake above deliberately does not.
  *
- * These tests are about the difference between "that is the whole log" and
- * "that is the end of the log", so a fake that always returns the whole file
- * would answer the question before it was asked.
+ * These tests separate "that is the whole log" from "that is the end of the log", so a fake that
+ * always returns the whole file would answer the question before it was asked.
  */
 function fakeBigLog(int $totalLines): void
 {
@@ -337,8 +325,7 @@ function fakeBigLog(int $totalLines): void
             $lines = [];
 
             for ($i = $from; $i <= $totalLines; $i++) {
-                // One line in the middle mentions the needle, far enough back
-                // that a capped search window cannot reach it.
+                // One line far back mentions the needle, beyond a capped search window.
                 $lines[] = $i === 10 ? "line {$i} NEEDLE" : "line {$i}";
             }
 
@@ -356,9 +343,8 @@ describe('how much of the log you are actually seeing', function () {
         $response = $this->actingAs($this->admin)
             ->getJson(logUrl('/access?lines=200'))->assertOk();
 
-        // `tail -n 200` can never return more than 200 lines, so comparing its
-        // count against 200 answered the same question every time: the last
-        // 200 lines of a million-line log were reported as the whole log.
+        // `tail -n 200` never returns more than 200 lines, so comparing its count against 200 proves
+        // nothing: the last 200 lines of a huge log were reported as the whole log.
         expect($response->json('log.lines'))->toHaveCount(200)
             ->and($response->json('log.truncated'))->toBeTrue();
     });
@@ -380,10 +366,8 @@ describe('how much of the log you are actually seeing', function () {
         $response = $this->actingAs($this->admin)
             ->getJson(logUrl('/access?grep=NEEDLE'))->assertOk();
 
-        // The needle is at line 10, far outside the 5,000-line search window.
-        // Without this field the answer is an empty list, which reads as "that
-        // is not in your log" when the truth is "I only looked at the end of
-        // it".
+        // The needle is at line 10, outside the 5,000-line search window. Without this field an
+        // empty list reads as "not in your log" when the truth is "only the end was searched".
         expect($response->json('log.lines'))->toBe([])
             ->and($response->json('log.search_window_capped'))->toBeTrue();
     });
@@ -399,13 +383,8 @@ describe('how much of the log you are actually seeing', function () {
 });
 
 /*
- * Emptying a log.
- *
- * Offered for a site's own logs and deliberately nowhere else: the server-wide
- * catalogue includes auth.log, ufw.log and fail2ban.log — the record of what
- * happened to the machine — and a one-click wipe of those is an anti-forensics
- * button rather than a maintenance one. A site's access log is the site's own
- * noise.
+ * Emptying a log: offered for a site's own logs only. The server-wide catalogue includes auth.log,
+ * ufw.log and fail2ban.log, and a one-click wipe of those would be an anti-forensics button.
  */
 
 it('empties a log by truncating it, never by deleting it', function () {
@@ -422,10 +401,8 @@ it('empties a log by truncating it, never by deleting it', function () {
     $commands = collect($runs)->map(fn ($c) => ($c[0] ?? '') === 'sudo' ? array_slice($c, 2) : $c);
     $truncate = $commands->first(fn ($c) => ($c[0] ?? '') === 'truncate');
 
-    // Truncate, because an unlinked open log keeps its space until the writer
-    // restarts and breaks its own handle — `rm` would free nothing and leave
-    // nginx appending to a file no screen can read. It also keeps the inode's
-    // owner, which the web server would not restore on its own.
+    // Truncate, because an unlinked open log keeps its space until the writer restarts: `rm` would
+    // free nothing and leave nginx appending to a file no screen can read.
     expect($truncate)->not->toBeNull()
         ->and($truncate)->toBe(['truncate', '-s', '0', '/home/logowner/logged-site/logs/access.log'])
         ->and($commands->pluck(0)->all())->not->toContain('rm');
@@ -436,15 +413,14 @@ it('records who emptied which log', function () {
 
     $this->actingAs($this->admin)->deleteJson(logUrl('/error'))->assertOk();
 
-    // Destroying a record without recording that it was destroyed is the worst
-    // version of this feature, and the only one a support conversation cannot
-    // recover from.
+    // Destroying a record without recording that it was destroyed is the worst version of this
+    // feature.
     $entry = ActivityLog::query()->where('action', 'log_cleared')->first();
 
     expect($entry)->not->toBeNull()
         ->and($entry->properties['log'])->toBe('error')
         ->and($entry->subject_id)->toBe($this->application->id)
-        // Bug #64: it read "Cleared the error log for :subject".
+        // The placeholder must be filled: it once read "Cleared the error log for :subject".
         ->and(__('activity.application.log_cleared', $entry->properties))
         ->toBe('Cleared the error log for '.$this->application->name);
 });
@@ -452,9 +428,8 @@ it('records who emptied which log', function () {
 it('refuses a source this application does not have', function () {
     fakeLogs();
 
-    // Not a 500, and nothing truncated: the key is resolved through the same
-    // catalogue every read uses, which is what keeps a request from naming a
-    // path of its own.
+    // Not a 500, and nothing truncated: the key is resolved through the same catalogue every read
+    // uses, so a request cannot name a path of its own.
     $this->actingAs($this->admin)->deleteJson(logUrl('/auth'))->assertNotFound();
     $this->actingAs($this->admin)->deleteJson(logUrl('/..%2F..%2Fetc%2Fpasswd'))->assertNotFound();
 });
@@ -471,12 +446,8 @@ it('denies a viewer who may read logs but not manage them', function () {
 });
 
 it('reports a failed truncate rather than claiming the log is empty', function () {
-    // Matched on the binary anywhere in the argv rather than at index 0:
-    // phpunit.xml sets SERVER_OPS_SUDO=false, so commands arrive here bare
-    // while production sees `sudo -n truncate …` (ServerOps::run elevates, and
-    // `truncate` is in server.privilege.binaries). A fake that required the
-    // prefix would pass for the wrong reason, and one that required its absence
-    // would stop working the day the suite ran elevated.
+    // Matched on the binary anywhere in the argv, not at index 0: phpunit.xml sets
+    // SERVER_OPS_SUDO=false so commands arrive bare, while production sees `sudo -n truncate …`.
     Process::fake(fn ($process) => in_array('truncate', $process->command, true)
         ? Process::result(exitCode: 1, errorOutput: 'truncate: cannot open: Permission denied')
         : Process::result(exitCode: 0));

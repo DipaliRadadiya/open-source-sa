@@ -27,11 +27,9 @@ use Illuminate\Support\Facades\Storage;
 /**
  * What the panel wrote for a site, and whether it goes when the site does.
  *
- * Everything here lives *outside* the application's own directory, so removing
- * the site leaves it behind pointing at something that no longer exists. The
- * endings differ in severity but not in kind, and the FPM pool already proved
- * how bad the worst of them gets: one orphan stopped php-fpm initialising for
- * the entire server, and every later site creation was blamed for it.
+ * Everything here lives *outside* the application's own directory, so removing the site leaves it
+ * behind pointing at nothing. The FPM pool shows the worst case: one orphan stopped php-fpm
+ * initialising for the entire server.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -105,11 +103,8 @@ it('stops the certificate renewing', function () {
 
     app(ApplicationProvisioner::class)->deprovision($this->application->fresh(['systemUser', 'certificate']));
 
-    // RemoveCertificate has always known what happens otherwise — "the renewal
-    // keeps running forever, keeps spending rate limit, and eventually emails
-    // the user about a site they removed" — it was just never called from the
-    // path where sites actually go away. The lineage is named after the site,
-    // as v7 names it (v7 layout B3).
+    // RemoveCertificate documents what happens otherwise: the renewal keeps running forever and
+    // spending rate limit. The lineage is named after the site, as v7 names it.
     expect(ranCommand($ran, fn (array $c) => in_array('delete', $c, true)
         && in_array('--cert-name', $c, true)
         && in_array($this->application->slug, $c, true)))->toBeTrue();
@@ -177,10 +172,8 @@ it('releases the slice only once every unit in it is gone', function () {
     $slice = $order->search(fn (string $c) => str_contains($c, '.slice'));
     $workers = $order->search(fn (string $c) => str_contains($c, 'sv-worker'));
 
-    // The slice has to outlast the units inside it. Stopping it first kills
-    // the worker processes out from under the code that is about to disable
-    // and delete their units properly, which would leave enabled units for
-    // processes that no longer exist.
+    // The slice has to outlast the units inside it: stopping it first kills the worker processes
+    // out from under the code that disables and deletes their units properly.
     expect($slice)->not->toBeFalse()
         ->and($workers)->not->toBeFalse()
         ->and($slice)->toBeGreaterThan($workers);
@@ -205,10 +198,9 @@ describe('a certificate that outlived its domains', function () {
             'auto_renew' => true,
         ]);
 
-        // `old.example.com` was removed from the site. certbot re-validates
-        // every name in a lineage and fails the whole renewal if any one of
-        // them cannot be validated — so this certificate has silently stopped
-        // renewing for shop.example.com, which is perfectly fine.
+        // `old.example.com` was removed from the site. certbot re-validates every name in a lineage
+        // and fails the whole renewal if one cannot be validated, so this certificate has silently
+        // stopped renewing for shop.example.com, which is fine.
         expect($certificate->fresh()->staleDomains())->toBe(['old.example.com']);
 
         // The opposite direction, which was already reported, is a name
@@ -309,10 +301,8 @@ describe('the site\'s backups', function () {
 
         app(ApplicationProvisioner::class)->deprovision($this->application->fresh(['systemUser', 'certificate']));
 
-        // A backup exists so that a mistaken deletion is survivable, and
-        // deleting the site is the mistake somebody would most want to undo.
-        // Taking the panel's record of a site off the panel must not destroy
-        // the copy that could put it back.
+        // A backup exists so that a mistaken deletion is survivable: taking the panel's record of
+        // a site off the panel must not destroy the copy that could put it back.
         $this->disk->assertExists('shop/one.tar.gz');
     });
 
@@ -332,11 +322,9 @@ describe('the site\'s backups', function () {
     /**
      * A disk that fails for `$failing` and records every other delete.
      *
-     * Mocked against the Filesystem contract rather than hand-rolled, because
-     * `DestinationDisk::for()` is typed `: Filesystem` — an anonymous class
-     * that does not implement it makes the call raise a TypeError, which
-     * `DeleteBackup` catches like any other Throwable. The delete then appears
-     * to fail for a reason that has nothing to do with the destination.
+     * Mocked against the Filesystem contract because `DestinationDisk::for()` is typed
+     * `: Filesystem`: an anonymous class that does not implement it raises a TypeError, which
+     * `DeleteBackup` catches like any Throwable, so the delete fails for the wrong reason.
      */
     function failingDisk(string $failing, ArrayObject $deleted): Filesystem
     {
@@ -353,10 +341,8 @@ describe('the site\'s backups', function () {
     }
 
     it('deletes every other archive when one of them will not go', function () {
-        // This was one foreach inside one try/catch, so the first failure
-        // aborted the loop — and the rows it never reached cascaded away with
-        // the application, leaving their objects behind with nothing pointing
-        // at them. One unreachable object orphaned every archive for the site.
+        // A failure on one archive must not stop the loop: the rows it never reached cascade away
+        // with the application, leaving their objects with nothing pointing at them.
         $this->disk->put('shop/two.tar.gz', 'archive');
         $this->disk->put('shop/three.tar.gz', 'archive');
 
@@ -371,9 +357,8 @@ describe('the site\'s backups', function () {
             ]);
         }
 
-        // ArrayObject, not an array by reference: a promoted constructor
-        // property cannot be a reference, so the array version recorded
-        // nothing at all.
+        // ArrayObject, not an array by reference: a promoted constructor property cannot be a
+        // reference.
         $deleted = new ArrayObject;
 
         $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
@@ -428,10 +413,8 @@ describe('the site\'s backups', function () {
             'auto_renew' => true,
         ]);
 
-        // Was an anonymous class not implementing Filesystem, so the failure
-        // this asserted on was a TypeError from `DestinationDisk::for()`'s
-        // return type rather than a destination that would not answer. The
-        // assertion held either way, which is exactly why it went unnoticed.
+        // A real Filesystem that fails, so the failure is a destination that will not answer and
+        // not a TypeError from `DestinationDisk::for()`'s return type.
         $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
             app(StorageDriverFactory::class),
             builder: fn (array $config) => failingDisk('shop/one.tar.gz', new ArrayObject),

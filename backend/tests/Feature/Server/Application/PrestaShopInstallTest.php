@@ -47,10 +47,9 @@ beforeEach(function () {
 });
 
 /**
- * PrestaShop's distribution API, in the shape it really answers with
- * (api.prestashop-project.org/prestashop, read 2026-09-26) — trimmed, and
- * deliberately NOT sorted: the real list is newest first today, and nothing
- * promises it stays that way.
+ * PrestaShop's distribution API (api.prestashop-project.org/prestashop) in the shape it really
+ * answers with, trimmed and deliberately NOT sorted: the real list is newest first today, and
+ * nothing promises it stays that way.
  */
 function fakePrestaShopReleases(bool $ok = true): void
 {
@@ -110,9 +109,8 @@ function prestaShopDownload(): string
 it('takes the newest stable release that runs on the site\'s PHP', function () {
     fakePrestaShopReleases();
 
-    // 8.4 is past PrestaShop 8's ceiling of 8.1 — the release the old feed
-    // named, and the one that died on 8.5 on 2026-09-08. Not the release
-    // candidate, not the http entry, and not simply the first in the list.
+    // 8.4 is past PrestaShop 8's ceiling of 8.1. Not the release candidate, not the http entry,
+    // and not simply the first in the list.
     expect(prestaShopDownload())
         ->toBe('https://api.prestashop-project.org/assets/prestashop-classic/9.1.5-5.0/prestashop.zip');
 });
@@ -221,22 +219,16 @@ it('never lets a retry drop the tables of a shop that already installed', functi
     $command = collect(installPrestaShop())
         ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
 
-    // db_clear defaults to 1 — dropping existing tables. The database is ours
-    // and freshly created, so there is nothing to clear and everything to
-    // lose if a second attempt runs against a working shop.
+    // db_clear defaults to 1, which drops existing tables: a second attempt against a working shop
+    // would lose everything, and a fresh database has nothing to clear.
     expect($command)->toContain('--db_clear=0');
 });
 
 it('never passes --license, which prints the licence instead of accepting it', function () {
-    // It reads as "accept the licence" and does the opposite. PrestaShop's own
-    // datas.php defines it as
-    // `'show_license' => ['name' => 'license', 'default' => 0,
-    //  'help' => 'show PrestaShop license']`.
-    //
-    // So `--license=1` told the installer to print the licence and stop. Every
-    // install exited 0 in a third of a second having created nothing, the
-    // panel took that as success and removed `install/`, and the shop answered
-    // `"install" directory is missing` for good.
+    // It reads as "accept the licence" and does the opposite: datas.php defines it as
+    // `'show_license' => [... 'help' => 'show PrestaShop license']`. `--license=1` made the
+    // installer print the licence and exit 0 having created nothing, so the panel removed
+    // `install/` and the shop answered `"install" directory is missing`.
     fakePrestaShopReleases();
     $command = collect(installPrestaShop())
         ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
@@ -251,10 +243,9 @@ it('passes the passwords as arguments, which is documented and deliberate', func
     $command = collect(installPrestaShop())
         ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
 
-    // index_cli.php reads $argv and never touches stdin — there is no prompt
-    // to answer, so unlike every other installer here this one cannot keep
-    // secrets off the command line. Asserted so the exception stays visible
-    // rather than being mistaken for an oversight.
+    // index_cli.php reads $argv and never stdin, so unlike the other installers this one cannot
+    // keep secrets off the command line. Asserted so the exception is not mistaken for an
+    // oversight.
     expect($command)->toContain('--password=ShopPass1234!')
         ->and(collect($command)->contains(fn ($a) => str_starts_with((string) $a, '--db_password=')))->toBeTrue();
 });
@@ -264,9 +255,8 @@ it('puts a moved port in --db_server, which is where PrestaShop wants it', funct
     $command = collect(installPrestaShop(25060))
         ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
 
-    // PrestaShop's CLI has no --db_port; its own docs say "if your MySQL
-    // server is configured on a different port than 3306, please specify it
-    // in the db_server argument like this: --db_server=sql.example.com:3307".
+    // PrestaShop's CLI has no --db_port; a non-3306 port goes in the db_server argument
+    // (`--db_server=sql.example.com:3307`).
     expect($command)->toContain('--db_server=127.0.0.1:25060')
         ->and(collect($command)->contains(fn ($a) => str_starts_with((string) $a, '--db_port')))->toBeFalse();
 });
@@ -276,28 +266,22 @@ it('leaves --db_server bare on a stock database', function () {
     $command = collect(installPrestaShop())
         ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
 
-    // 3306 is the port PrestaShop assumes, and every shop the panel has
-    // installed was given a bare host.
+    // 3306 is the port PrestaShop assumes, so the host stays bare.
     expect($command)->toContain('--db_server=127.0.0.1');
 });
 
 it('checks the shop was really installed before removing the wizard', function () {
-    // `index_cli.php` has exited 0 in half a second having written no
-    // configuration at all. Trusting that, the harden step removed `install/`,
-    // and every request to the shop then answered `"install" directory is
-    // missing` — the wizard that could have finished the job was gone.
-    //
-    // So the config is checked before the irreversible step, and a failure
-    // leaves `install/` alone: the difference between a site somebody can
-    // rescue in a browser and one that can only be deleted.
+    // `index_cli.php` can exit 0 having written no configuration. Trusting that, the harden step
+    // removed `install/` and the shop answered `"install" directory is missing`, with the wizard
+    // that could have finished the job gone. The config is checked before that irreversible step,
+    // and a failure leaves `install/` alone so the site can be rescued in a browser.
     fakePrestaShopReleases();
 
     $runs = new ArrayObject;
     Process::fake(function ($process) use ($runs) {
         $runs[] = ['command' => $process->command];
 
-        // Everything succeeds except the check for a written config — the exact
-        // shape of the failure seen on a real server.
+        // Everything succeeds except the check for a written config.
         return in_array('test', $process->command, true) && in_array('-f', $process->command, true)
             ? Process::result(exitCode: 1)
             : Process::result(exitCode: 0);
@@ -315,11 +299,9 @@ it('checks the shop was really installed before removing the wizard', function (
 });
 
 it('updates the shop URL and the SSL flags when a certificate is issued', function () {
-    // PrestaShop keeps its own copy of the address, in the database, and
-    // `install/index_cli.php --domain=` was the only thing that ever wrote it.
-    // A shop issued a certificate served pages over https while every image
-    // and generated link still pointed at http — the browser sees the mix and
-    // drops the padlock, and the certificate was never the problem.
+    // PrestaShop keeps its own copy of the address in the database. Without updating it, a shop
+    // issued a certificate served https pages with http images and links, and the browser dropped
+    // the padlock.
     $runs = new ArrayObject;
 
     Process::fake(function ($process) use ($runs) {
@@ -335,13 +317,11 @@ it('updates the shop URL and the SSL flags when a certificate is issued', functi
 
     expect($sync)->not->toBeNull();
 
-    // As the site user: the panel does not hold this database's password, and
-    // the only account that still can is the shop itself.
+    // As the site user: the panel does not hold this database's password; only the shop does.
     expect($sync['command'][0])->toBe('runuser');
 
-    // The host and the scheme travel on stdin, never inside the program. The
-    // domain is user input, and interpolating it would be building code from
-    // it — the same reason the queries bind rather than concatenate.
+    // The host and scheme travel on stdin, never inside the program: the domain is user input, and
+    // interpolating it would build code from it.
     $input = json_decode($sync['input'], true);
 
     expect($input['domain'])->toBe('shop.example.com')
@@ -365,9 +345,8 @@ it('counts matched rows, so re-applying the address a shop already has succeeds'
     $command = collect($runs)->first(fn ($command) => in_array('-r', $command, true));
     $program = $command[array_search('-r', $command, true) + 1];
 
-    // MySQL counts changed rows by default. sites:resync re-applies the same
-    // address on every deploy, got 0, and failed a correct shop every time —
-    // measured against a real MariaDB before and after this change.
+    // MySQL counts changed rows by default, so re-applying the same address (sites:resync does,
+    // on every deploy) got 0 and failed a correct shop.
     expect($program)->toContain('Pdo\\\\Mysql::ATTR_FOUND_ROWS')
         ->and($program)->toContain('PDO::MYSQL_ATTR_FOUND_ROWS')
         ->and($program)->toContain('$foundRows => true')
@@ -383,9 +362,8 @@ it('counts matched rows, so re-applying the address a shop already has succeeds'
 });
 
 it('turns the SSL flags back off when the certificate goes away', function () {
-    // RemoveCertificate calls syncUrl with the http:// URL. A shop left
-    // claiming SSL after its certificate is gone redirects to an address that
-    // no longer answers, which is a shop that cannot be reached at all.
+    // RemoveCertificate calls syncUrl with the http:// URL. A shop still claiming SSL after its
+    // certificate is gone redirects to an address that no longer answers.
     $runs = new ArrayObject;
 
     Process::fake(function ($process) use ($runs) {
@@ -405,17 +383,16 @@ it('turns the SSL flags back off when the certificate goes away', function () {
 it('refuses a URL with no host rather than blanking the shop domain', function () {
     Process::fake(fn () => Process::result(exitCode: 0));
 
-    // An empty domain column is a shop that generates links to nowhere, and
-    // the write would report success.
+    // An empty domain column is a shop that generates links to nowhere, yet the write would
+    // report success.
     expect(fn () => app(PrestaShopInstaller::class)
         ->syncUrl($this->application->fresh(['systemUser']), 'not-a-url'))
         ->toThrow(RuntimeException::class);
 });
 
 /*
-| PR-01: the shop name was passed as `--shop_name`, an option PrestaShop's CLI
-| does not have — datas.php maps the `shop_name` setting to `--name` and
-| ignores anything it does not know — so every shop was called "PrestaShop".
+| PrestaShop's CLI has no `--shop_name`: datas.php maps the `shop_name` setting to `--name` and
+| ignores unknown options, so every shop was called "PrestaShop".
 */
 it('names the shop with --name, the option PrestaShop actually reads', function () {
     fakePrestaShopReleases();

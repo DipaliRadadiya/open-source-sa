@@ -12,12 +12,8 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * The credential's life on disk, which is the whole security argument.
- *
- * A classifier nothing calls and a credential nothing cleans up both look exactly
- * like working code, so this file asserts the wiring rather than the units: what
- * reached argv, what reached stdin, where the file was written, and that it was
- * gone afterwards — including after a failure, which is when it matters.
+ * The credential's life on disk. Asserts the wiring, not the units: what reached argv and stdin,
+ * where the file was written, and that it was removed, including after a failure.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -50,9 +46,7 @@ beforeEach(function () {
 /**
  * Every command that ran, plus whatever was piped into each.
  *
- * Faked per command rather than blanket: `compose ps -q` deciding the container
- * came up has to answer something, and an empty answer reads as "exited" and
- * throws — asserting against a box the fake broke.
+ * Faked per command: `compose ps -q` must answer, or an empty answer reads as "exited" and throws.
  *
  * @param  callable|null  $onUp  return a failure to make `compose up` fail.
  */
@@ -61,8 +55,7 @@ function recordPull(array &$ran, ?callable $onUp = null, string $failVerb = 'up'
     Process::fake(function ($process) use (&$ran, $onUp, $failVerb) {
         $args = $process->command;
 
-        // `sudo -n` and `sudo -n env X=y` wrappers are ServerOps' business, not
-        // this test's — strip them so assertions are about the real command.
+        // Strip the `sudo -n` / `env X=y` wrappers so assertions are about the real command.
         while (in_array($args[0] ?? '', ['sudo', '-n', 'env'], true) || str_contains($args[0] ?? '', '=')) {
             array_shift($args);
         }
@@ -93,9 +86,7 @@ function composeCall(array $ran, string $verb): ?array
     return null;
 }
 
-/*
- * Where the secret goes, and where it does not.
- */
+/* Where the secret goes, and where it does not. */
 
 it('sends the token through stdin and the directory through argv', function () {
     $ran = [];
@@ -103,22 +94,18 @@ it('sends the token through stdin and the directory through argv', function () {
 
     app(ContainerSupervisor::class)->apply($this->application, '/home/priv/priv.test');
 
-    // `tee` writes the compose file as well, so match the credential write by its
-    // path — the first `tee` is the site's own file.
+    // `tee` also writes the compose file, so match the credential write by its path.
     $write = collect($ran)->first(fn (array $c): bool => ($c['args'][0] ?? '') === 'tee'
         && str_ends_with($c['args'][1] ?? '', '/config.json'));
 
-    // Docker's own format: `auths.<key>.auth` is base64 of `user:password`. That
-    // is an encoding, not an encryption — which is precisely why the file has to
-    // live somewhere only root can read.
+    // Docker's format: `auths.<key>.auth` is base64 of `user:password`, an encoding, not encryption.
     $encoded = base64_encode('octocat:ghp_SUPERSECRETVALUE');
 
     expect($write)->not->toBeNull()
         ->and($write['input'])->toContain($encoded)
         ->and($write['args'][1])->toEndWith('/config.json');
 
-    // And in no argument of anything that ran, in either form. argv is
-    // world-readable in `ps` for the life of the process.
+    // Never in argv, in either form: it is world-readable in `ps`.
     $argv = json_encode(array_column($ran, 'args'));
 
     expect($argv)->not->toContain('ghp_SUPERSECRETVALUE')
@@ -134,9 +121,7 @@ it('writes the credential outside the site tree, where the site user cannot read
     $write = collect($ran)->first(fn (array $c): bool => ($c['args'][0] ?? '') === 'tee'
         && str_ends_with($c['args'][1] ?? '', '/config.json'));
 
-    // The site user owns their document root. A token there is a token handed to
-    // the tenant — which is exactly what keeping them out of the `docker` group
-    // was for.
+    // The site user owns their document root; a token there is handed to the tenant.
     expect($write['args'][1])->not->toStartWith('/home/priv/');
 });
 
@@ -164,15 +149,12 @@ it('passes --config before the compose subcommand, not after', function () {
 
     $up = composeCall($ran, 'up');
 
-    // `--config` belongs to the docker CLI. After `compose` the plugin reads it as
-    // one of its own and the command fails.
+    // `--config` belongs to the docker CLI; after `compose` the plugin reads it as its own and fails.
     expect($up['args'][1])->toBe('--config')
         ->and($up['args'][3])->toBe('compose');
 });
 
-/*
- * Cleanup. The failure path is the one that matters.
- */
+/* Cleanup. The failure path is the one that matters. */
 
 it('removes the credential after a successful pull', function () {
     $ran = [];
@@ -180,11 +162,8 @@ it('removes the credential after a successful pull', function () {
 
     app(ContainerSupervisor::class)->apply($this->application, '/home/priv/priv.test');
 
-    // Matched on the DIRECTORY, not on "the first `rm`". The supervisor also
-    // removes a stale `compose.panel.yml` with `rm -f`, and it runs first — so the
-    // loose version of this assertion started reporting that command and failing on
-    // `-rf`. Two unrelated cleanups sharing an argv prefix is a coincidence; the
-    // path is what says which one this is.
+    // Match on the directory, not the first `rm`: the supervisor first removes a stale
+    // `compose.panel.yml` with `rm -f`.
     $removed = collect($ran)->first(fn (array $c): bool => ($c['args'][0] ?? '') === 'rm'
         && str_contains((string) ($c['args'][2] ?? ''), '/registry-'));
 
@@ -192,8 +171,7 @@ it('removes the credential after a successful pull', function () {
 });
 
 it('removes the credential after a FAILED pull', function () {
-    // The case a tidy-up at the end of the happy path would miss, and the likelier
-    // outcome the first time somebody configures a registry.
+    // A tidy-up only at the end of the happy path would miss this case.
     $ran = [];
     recordPull($ran, fn () => Process::result(
         output: '',
@@ -211,9 +189,8 @@ it('removes the credential after a FAILED pull', function () {
 });
 
 it('does not write a credential at all for a site with no registry', function () {
-    // Every public image and all fifteen one-click apps take this branch, so it is
-    // the regression that matters most: a `--config` flag pointing at a directory
-    // that was never created would fail every existing site.
+    // Every public image and one-click app takes this branch: a `--config` flag pointing at a
+    // directory that was never created would fail every existing site.
     $this->application->forceFill(['registry_id' => null])->save();
 
     $ran = [];
@@ -226,9 +203,8 @@ it('does not write a credential at all for a site with no registry', function ()
 });
 
 it('does not write a credential for a registry row whose token is missing', function () {
-    // A row that predates the token, or one restored under a different APP_KEY.
-    // Writing an empty basic-auth header would turn an anonymous pull that works
-    // into an authenticated one that is refused.
+    // A row that predates the token or was restored under another APP_KEY: an empty basic-auth
+    // header would turn a working anonymous pull into a refused one.
     $this->registry->forceFill(['config' => []])->save();
 
     $ran = [];
@@ -239,9 +215,7 @@ it('does not write a credential for a registry row whose token is missing', func
     expect(composeCall($ran, 'up')['args'])->not->toContain('--config');
 });
 
-/*
- * Pull and redeploy: the update story, and the reason it cannot just be `up`.
- */
+/* Pull and redeploy: an update cannot just be `up`. */
 
 it('pulls before bringing it up, inside one credential window', function () {
     $ran = [];
@@ -262,7 +236,7 @@ it('pulls before bringing it up, inside one credential window', function () {
 });
 
 it('names a rejected credential differently from a missing one', function () {
-    // Measured wording, Docker Hub refusing a token that exists.
+    // Docker Hub's wording for refusing an existing token.
     $ran = [];
     recordPull($ran, fn () => Process::result(
         output: '',
@@ -274,8 +248,7 @@ it('names a rejected credential differently from a missing one', function () {
         app(ContainerSupervisor::class)->apply($this->application, '/home/priv/priv.test');
         $this->fail('apply() should have thrown');
     } catch (ProvisioningFailedException $e) {
-        // Not `registry_auth`: that reason sends somebody to the Docker page to
-        // add a credential they already added.
+        // Not `registry_auth`: that reason sends the user to add a credential they already added.
         expect($e->reason)->toBe('registry_credentials_rejected');
     }
 });
@@ -289,9 +262,7 @@ it('has the rejected-credential reason translated in every locale', function () 
     }
 });
 
-/*
- * The endpoint.
- */
+/* The endpoint. */
 
 it('refuses to pull for a site that is not a container', function () {
     $this->application->forceFill(['serving_profile' => 'php'])->save();
@@ -302,8 +273,7 @@ it('refuses to pull for a site that is not a container', function () {
 });
 
 it('refuses to pull for a site that is not running', function () {
-    // Otherwise pressing Update on a disabled site puts it back online, and on a
-    // pending one provisions it as a side effect of a different button.
+    // Otherwise Update on a disabled site puts it back online, and on a pending one provisions it.
     $this->application->forceFill(['status' => 'pending'])->save();
 
     $ran = [];
@@ -327,7 +297,7 @@ it('pulls and reports the site back', function () {
     $ran = [];
     recordPull($ran);
 
-    // 202 since D5: the pull runs on the queue (`sync` here, so it has run).
+    // 202: the pull runs on the queue (`sync` here, so it has run).
     $this->withHeaders(['Authorization' => 'Bearer '.$this->admin->createToken('t')->plainTextToken])
         ->postJson('/api/applications/'.$this->application->id.'/container/pull')
         ->assertStatus(202)
@@ -338,12 +308,9 @@ it('pulls and reports the site back', function () {
 });
 
 /*
- * The failure shape. Found on a real box, not here: the classifier was asserted
- * from the supervisor and nothing checked that the ENDPOINT surfaced it, so a
- * rejected credential answered a bare 500 "Server Error" and left the row
- * claiming the site was fine — which is the uninformative failure this whole
- * feature exists to replace. Since D5 the pull is queued, so the reason lands on
- * the redeploy run the screen polls instead of in the response.
+ * The failure shape: the endpoint, not only the supervisor, must surface the classified reason,
+ * or a rejected credential answers a bare 500. The pull is queued, so the reason lands on the
+ * redeploy run the screen polls.
  */
 
 it('records the reason on the run, not 500 with nothing', function () {
@@ -360,17 +327,15 @@ it('records the reason on the run, not 500 with nothing', function () {
         ->assertJsonPath('redeploy.status', 'failed')
         ->assertJsonPath('redeploy.failed_reason', 'registry_credentials_rejected');
 
-    // The titled reason, so the person who pressed the button is told what to fix
-    // rather than being handed a log reference and a shrug.
+    // The titled reason tells the user what to fix, not just a log reference.
     expect($response->json('redeploy.failed_reason_title'))->toBe(__('application.failure_reason.registry_credentials_rejected'))
         ->and($response->json('redeploy.reference'))->not->toBeEmpty()
         ->and($response->json('application.container_redeploy.in_flight'))->toBeFalse();
 });
 
 it('records the failure on the row, so the card does not claim the site is fine', function () {
-    // Failing `pull` rather than `up`, so the recorded STEP is the pull's own —
-    // `container_start` would be the honest answer for a failure after the image
-    // arrived, and the two are not interchangeable in a support conversation.
+    // Fail `pull`, not `up`, so the recorded step is the pull's own (`container_start` would be
+    // the answer for a failure after the image arrived).
     $ran = [];
     recordPull($ran, fn () => Process::result(
         output: '',
@@ -388,7 +353,7 @@ it('records the failure on the row, so the card does not claim the site is fine'
 });
 
 it('clears a previous failure when a pull succeeds', function () {
-    // Otherwise the row keeps showing yesterday's reason beside today's success.
+    // Otherwise the row shows an old reason beside a new success.
     $this->application->forceFill(['failed_step' => 'image_pull', 'failed_reason' => 'registry_auth'])->save();
 
     $ran = [];
@@ -403,9 +368,8 @@ it('clears a previous failure when a pull succeeds', function () {
 });
 
 /*
- * The settings endpoint has the same failure shape, and my feature is what made it
- * reachable: the registry became editable there, so changing it re-pulls, and a
- * wrong credential fails the apply. It answered 500 before this.
+ * The settings endpoint has the same failure shape: the registry is editable there, changing it
+ * re-pulls, and a wrong credential fails the apply.
  */
 
 it('answers 422 when the settings save cannot bring the container up', function () {
@@ -420,8 +384,7 @@ it('answers 422 when the settings save cannot bring the container up', function 
         ->putJson('/api/applications/'.$this->application->id.'/container', ['container_port' => 8080])
         ->assertStatus(422)
         ->assertJsonPath('reason', 'registry_credentials_rejected')
-        // Saved, even though the apply failed. Reverting would leave the compose
-        // file on disk disagreeing with what the panel shows.
+        // Saved despite the failed apply: reverting would leave the compose file out of sync.
         ->assertJsonPath('saved', true);
 
     expect($this->application->fresh()->container_port)->toBe(8080)

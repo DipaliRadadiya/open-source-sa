@@ -13,11 +13,8 @@ use Illuminate\Testing\TestResponse;
 /**
  * How a git application is built decides how it is served.
  *
- * Static and client-side rendering produce files a web server hands out
- * directly. Server-side rendering produces a process to proxy to. Getting the
- * two confused is invisible until the site is live: a directory served for an
- * app that routes in code publishes its source, and a proxy with nothing
- * behind it is a permanent 502.
+ * Static and client-side rendering produce files a web server hands out; server-side rendering
+ * produces a process to proxy to. Confusing the two publishes source or gives a permanent 502.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -82,8 +79,7 @@ it('serves the built files for client-side rendering, with no process', function
 })->with(['csr', 'static']);
 
 it('requires something to start for server-side rendering', function () {
-    // Otherwise the app is served by proxy with nothing behind it — a vhost
-    // that returns 502 forever and gives no hint why.
+    // Otherwise the app is proxied with nothing behind it: a vhost that returns 502 forever.
     createRendered(['start_command' => null])
         ->assertJsonValidationErrors('start_command');
 });
@@ -103,8 +99,7 @@ it('offers the choice on the git card, with the fields that depend on it', funct
 
     $rendering = $fields->firstWhere('name', 'rendering_type');
 
-    // A PHP repository is what this card is used for most, so it is one of the
-    // answers rather than something the user has to know to leave blank.
+    // A PHP repository is the most common use of this card, so it is one of the answers.
     expect(collect($rendering['options'])->pluck('value')->all())->toBe(['php', 'ssr', 'csr', 'static'])
         // The form hides these rather than collecting answers it would refuse.
         ->and($fields->firstWhere('name', 'start_command')['depends_on'])->toBe('rendering_type')
@@ -150,10 +145,8 @@ describe('the resolver', function () {
 });
 
 /*
- * The deploy script has to be settable at creation, not only afterwards on the
- * Deployment screen. The first deploy runs automatically once provisioning
- * finishes, so a script added later has already missed the deploy that decides
- * whether the site comes up at all.
+ * The deploy script must be settable at creation: the first deploy runs automatically once
+ * provisioning finishes, so a script added later has already missed it.
  */
 it('stores a deploy script given at creation', function () {
     createRendered(['deploy_script' => "npm ci\nnpm run build"])->assertCreated();
@@ -163,9 +156,8 @@ it('stores a deploy script given at creation', function () {
 });
 
 it('normalises Windows line endings in a deploy script', function () {
-    // `sh` reads the \r as part of the command, producing "command not found:
-    // npm\r" — an error that is invisible in a log. The Deployment screen
-    // already normalises this; creating a site has to do the same.
+    // `sh` reads the \r as part of the command ("command not found: npm\r"), invisible in a log.
+    // The Deployment screen already normalises this; creating a site must too.
     createRendered(['deploy_script' => "npm ci\r\nnpm run build"])->assertCreated();
 
     expect(Application::where('name', 'App')->first()->deploy_script)
@@ -176,17 +168,13 @@ it('normalises Windows line endings in a deploy script', function () {
 /**
  * Records what the installer actually writes for a MERN box.
  *
- * `beforeEach` above builds its row by hand and omits `serving_profiles`, so
- * every test in this file falls on `ServerCapabilities::DEFAULT_PROFILES` —
- * which contains `php`. That is why a file entirely about deploying Node code
- * from git could not see the git card being refused on a real MERN server: the
- * row it tests against is not the row a MERN server has.
+ * `beforeEach` builds its row by hand without `serving_profiles`, so every test here falls on
+ * `ServerCapabilities::DEFAULT_PROFILES`, which contains `php`: the file could not see the git
+ * card being refused on a real MERN server.
  *
- * `php => true` is deliberate and not a contradiction. The stack preset says
- * `false`, but `recordStack()` merges runtime detection over it and the panel
- * is itself a PHP application, so PHP is installed on every box.
- * `serving_profiles` answers the different question — what this box will
- * *serve*.
+ * `php => true` is deliberate: the stack preset says `false`, but `recordStack()` merges runtime
+ * detection over it and the panel is itself a PHP application. `serving_profiles` answers a
+ * different question: what this box will *serve*.
  */
 function recordRealMernStack(): void
 {
@@ -199,14 +187,11 @@ function recordRealMernStack(): void
 }
 
 it('deploys from git on a MERN server recorded by the installer', function () {
-    // The regression. `GitSiteType::servingProfile()` returns `php` as the
-    // resolver's fallback, the catalog gated on that one value, and a MERN box
-    // serves node and static — so "deploy from git" was refused on the single
-    // stack that exists to run the user's own Node code.
+    // The regression: `GitSiteType::servingProfile()` falls back to `php`, the catalog gated on
+    // that one value, and a MERN box serves node and static, so "deploy from git" was refused.
     //
-    // Asserted through a real create rather than the card alone, because
-    // `StoreApplicationRequest` calls the same `unavailable()`: a card that
-    // returns while the endpoint still refuses is not a fix.
+    // Asserted through a real create because `StoreApplicationRequest` calls the same
+    // `unavailable()`: a card that returns while the endpoint still refuses is not a fix.
     recordRealMernStack();
 
     createRendered(['domain' => 'real-mern.test'])
@@ -216,9 +201,8 @@ it('deploys from git on a MERN server recorded by the installer', function () {
 });
 
 it('offers the git card on a real MERN server without letting the PHP types back in', function () {
-    // Both halves matter. The card has to come back, and the decision that a
-    // MERN box hosts no PHP sites has to survive the fix. The profile *set* is
-    // what separates them: git can be served three ways, WordPress one.
+    // Both halves matter: the card comes back, and a MERN box still hosts no PHP sites. The profile
+    // *set* separates them: git can be served three ways, WordPress one.
     recordRealMernStack();
 
     $names = collect(app(SiteTypeManager::class)->catalog())->pluck('name');
@@ -242,7 +226,7 @@ it('publishes the deploy script as a field on the git site type', function () {
 
     expect(collect($git['fields'])->pluck('name'))->toContain('deploy_script');
 
-    // OLD-22: the schema says what the rules require, so the form can too.
+    // The schema says what the rules require, so the form can too.
     expect(collect($git['fields'])->firstWhere('name', 'start_command')['required_if'] ?? null)
         ->toBe(['rendering_type' => ['ssr']]);
 });

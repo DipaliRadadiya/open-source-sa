@@ -16,14 +16,11 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * A vhost is a rendered file, so the AI bot list, the 8G ruleset and the
- * templates all ship inside the panel and reach an existing site only when
- * its config is written again.
+ * A vhost is a rendered file, so the AI bot list, the 8G ruleset and the templates all ship inside
+ * the panel and reach an existing site only when its config is written again.
  *
- * Before this, nothing wrote it again: the panel would report the new bot
- * list while every site still enforced the old one, and neither side could
- * detect the difference. Protection the user believes is on, silently a
- * version behind, is a security control that has stopped being one.
+ * Without that, the panel reports the new bot list while every site still enforces the old one,
+ * and neither side can detect the difference: a security control silently a version behind.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -73,16 +70,15 @@ function fakeResyncServer(string $onDisk = 'stale config', bool $testPasses = tr
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
         if (($args[0] ?? '') === 'cat') {
-            // The site's own file. Its HTTPS file (v7 layout, B1) exists only
-            // for a site with a certificate, which none of these have.
-            // Nor the bot blocker/8G files in its conf folder (v7's names, written
-            // by the panel since 2026-11-11): a site that never had them.
+            // The site's own file. Its HTTPS file (v7 layout) exists only for a site with a
+            // certificate, which none of these have. Nor the bot blocker/8G files in its conf folder
+            // (v7's names): a site that never had them.
             return str_ends_with((string) end($args), '-ssl.conf') || str_contains((string) end($args), '/conf/nginx/')
                 ? Process::result(exitCode: 1, errorOutput: 'No such file or directory')
                 : Process::result(output: $onDisk);
         }
 
-        // Site configs only — the logrotate policy is written beside them (LOG-01).
+        // Site configs only — the logrotate policy is written beside them.
         if (($args[0] ?? '') === 'tee' && ! str_starts_with((string) end($args), '/etc/logrotate.d/')) {
             $written->append((string) ($process->input ?? ''));
         }
@@ -146,11 +142,9 @@ it('skips a site whose config is already current', function () {
     // one text back for every path.
     $site = makeSite('one.test', ['ai_bot_policy' => 'allow_all']);
 
-    // Feed back exactly what the renderer produces, so nothing has drifted.
-    // Rendered against the provisioner's own document root, not a
-    // hand-written one: the resyncer uses that, so a literal here was
-    // comparing the shipped config against a config for a different path and
-    // could only ever report drift.
+    // Feed back exactly what the renderer produces, so nothing has drifted. Rendered against the
+    // provisioner's own document root, as the resyncer does: a hand-written path would only ever
+    // report drift.
     $current = app(WebServerManager::class)
         ->driver()
         ->renderConfig(
@@ -171,16 +165,12 @@ it('skips a site whose config is already current', function () {
 });
 
 it('creates the directories the config names, even for a site it skips', function () {
-    // The site this exists for has a *correct* vhost already — it names an
-    // ACME challenge root that was simply never created, because nothing made
-    // one at provision time before 2026-09-03. So it is exactly the site the
-    // "already current" skip passes over, and a resync that prepared nothing
-    // left it broken while reporting success.
+    // The site this exists for has a *correct* vhost already — it names an ACME challenge root that
+    // was simply never created at provision time. So it is exactly the site the "already current"
+    // skip passes over, and a resync that prepared nothing left it broken while reporting success.
     //
-    // It bites hardest on OpenLiteSpeed, which resolves a context's `location`
-    // when the config loads rather than per request: the vhost fails its own
-    // test and the site is rolled back. "Deploy, then resync" was the standing
-    // advice for repairing precisely this, and it did not.
+    // It bites hardest on OpenLiteSpeed, which resolves a context's `location` when the config
+    // loads rather than per request: the vhost fails its own test and the site is rolled back.
     $site = makeSite('one.test', ['ai_bot_policy' => 'allow_all']);
 
     $current = app(WebServerManager::class)
@@ -199,9 +189,8 @@ it('creates the directories the config names, even for a site it skips', functio
     expect($result['unchanged'])->toBe(1)
         ->and($result['updated'])->toBe(0);
 
-    // Asserted against the commands, not against the helper's return value:
-    // that ArrayObject collects `tee` *input*, so a filter over it was reading
-    // file contents and could never have seen a mkdir.
+    // Asserted against the commands, not the helper's return value: that ArrayObject collects `tee`
+    // *input*, so a filter over it reads file contents and could never see a mkdir.
     Process::assertRan(fn ($process) => in_array('install', $process->command, true)
         && collect($process->command)->contains(fn ($arg) => str_contains((string) $arg, '.well-known/acme-challenge')));
 });
@@ -269,15 +258,10 @@ it('is wired into the panel update script', function () {
 | The grant that needs a restart nobody was asking for
 |--------------------------------------------------------------------------
 |
-| OpenLiteSpeed's workers open each site's own access log, so the account they
-| run as has to be in the site's log group. Adding it changes no config text at
-| all — and the reload here was gated on text changing. On a server whose sites
-| were all already current the grant landed and sat inert, because supplementary
-| groups are read when a process starts.
-|
-| Measured live on 2026-09-22: `1 site(s): 0 updated, 1 already current`, no
-| reload, and the site went on logging nothing until OpenLiteSpeed was restarted
-| by hand.
+| OpenLiteSpeed's workers open each site's own access log, so the account they run as has to be in
+| the site's log group. Adding it changes no config text — and the reload here was gated on text
+| changing. On a server whose sites were all already current the grant landed and sat inert,
+| because supplementary groups are read when a process starts.
 */
 
 /** Point the resyncer at an OpenLiteSpeed server. */
@@ -312,10 +296,9 @@ function fakeOlsResync(string $onDisk, bool $alreadyMember): ArrayObject
         }
 
         if (($args[0] ?? '') === 'cat') {
-            // The site's own file. Its HTTPS file (v7 layout, B1) exists only
-            // for a site with a certificate, which none of these have.
-            // Nor the bot blocker/8G files in its conf folder (v7's names, written
-            // by the panel since 2026-11-11): a site that never had them.
+            // The site's own file. Its HTTPS file (v7 layout) exists only for a site with a
+            // certificate, which none of these have. Nor the bot blocker/8G files in its conf folder
+            // (v7's names): a site that never had them.
             return str_ends_with((string) end($args), '-ssl.conf') || str_contains((string) end($args), '/conf/nginx/')
                 ? Process::result(exitCode: 1, errorOutput: 'No such file or directory')
                 : Process::result(output: $onDisk);
@@ -362,10 +345,9 @@ it('restarts the web server for a grant, even when no config changed', function 
 });
 
 it('does not restart the web server when the account is already in the group', function () {
-    // 🔴 The negative control, and the guard worth reverting hardest. This
-    // command runs on every deploy; restarting the web server each time — for
-    // a grant that was made months ago — would be a worse bug than the one the
-    // test above fixes.
+    // The negative control, and the guard worth reverting hardest. This command runs on every
+    // deploy; restarting the web server each time for a grant made long ago would be a worse bug
+    // than the one the test above fixes.
     resyncOnOls();
     // No bot blocker, whose file in the conf folder this fake has not got.
     $site = makeSite('one.test', ['ai_bot_policy' => 'allow_all']);
@@ -387,9 +369,8 @@ it('does not restart the web server when the account is already in the group', f
 });
 
 it('splits a site written as one file into v7\'s two, and links the new one', function () {
-    // A site written before step B1 holds its HTTPS server block in
-    // `{slug}.conf`. The resync moves it to `{slug}-le-ssl.conf`, as v7 lays
-    // a site out, and makes that file live.
+    // An older site holds its HTTPS server block in `{slug}.conf`. The resync moves it to
+    // `{slug}-le-ssl.conf`, as v7 lays a site out, and makes that file live.
     $site = makeSite('one.test');
     Certificate::create([
         'application_id' => $site->id, 'type' => CertificateType::LetsEncrypt, 'status' => CertificateStatus::Active,
@@ -403,8 +384,8 @@ it('splits a site written as one file into v7\'s two, and links the new one', fu
         $ran->append($args);
 
         if (($args[0] ?? '') === 'cat') {
-            // Nor the bot blocker/8G files in its conf folder (v7's names, written
-            // by the panel since 2026-11-11): a site that never had them.
+            // Nor the bot blocker/8G files in its conf folder (v7's names): a site that never had
+            // them.
             return str_ends_with((string) end($args), '-ssl.conf') || str_contains((string) end($args), '/conf/nginx/')
                 ? Process::result(exitCode: 1, errorOutput: 'No such file or directory')
                 : Process::result(output: "server {\n    listen 443 ssl;\n    listen 80;\n}\n");
@@ -424,9 +405,8 @@ it('splits a site written as one file into v7\'s two, and links the new one', fu
 });
 
 it('clears the cached config before the update rewrites any vhost', function () {
-    // A setting changed in this release (OLS LSAPI workers 10 → 35) reached the
-    // vhosts only one update later, because resync read the previous release's
-    // cached config (seen live, 2026-11-09).
+    // A setting changed in this release (OLS LSAPI workers 10 → 35) reached the vhosts only one
+    // update later, because resync read the previous release's cached config.
     $update = PanelUpdate::create(['status' => PanelUpdateStatus::Pending, 'to_version' => '99.0.0']);
     $script = app(UpdateScript::class)->render($update, '99.0.0');
 
@@ -436,8 +416,8 @@ it('clears the cached config before the update rewrites any vhost', function () 
 });
 
 it('enables Apache\'s caching and HTTP/2 modules on update, before the vhosts are rewritten', function () {
-    // install.sh enables them on new servers; a server installed before the
-    // vhosts used them would otherwise never get them (2026-11-09).
+    // install.sh enables them on new servers; a server installed before the vhosts used them would
+    // otherwise never get them.
     $update = PanelUpdate::create(['status' => PanelUpdateStatus::Pending, 'to_version' => '99.0.0']);
     $script = app(UpdateScript::class)->render($update, '99.0.0');
 

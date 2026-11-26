@@ -27,15 +27,10 @@ function deleteDockerResources(Application $site): array
 }
 
 /*
- * Deleting a site's Docker network and volumes, when asked to.
+ * Deleting a site's Docker network and volumes, when asked to. Opt-in, like files and
+ * databases: a volume holding a site's MySQL is as unrecoverable as a database.
  *
- * Opt-in, like files and databases: deleting a panel record must not silently
- * destroy data, and a volume holding a Ghost site's MySQL is exactly as
- * unrecoverable as a database.
- *
- * The value of these tests is in the REFUSALS. A network shared by two sites is
- * the whole point of the networks feature, so deleting the site you asked about
- * must never break the one you did not.
+ * The value is in the REFUSALS: deleting one site must never break another sharing a network.
  */
 beforeEach(function () {
     ServerCapability::query()->delete();
@@ -108,8 +103,7 @@ it('removes a volume only this site mounts', function () {
 });
 
 it('keeps a volume another site also mounts', function () {
-    // `sites` includes the site being deleted, so it is excluded by id — counting
-    // instead would keep every volume of every site.
+    // `sites` includes the site being deleted, so exclude it by id; counting would keep every volume.
     $site = dockerSite('alpha', ['volume_mounts' => [['volume' => 'shared_db', 'path' => '/data']]]);
     $other = dockerSite('beta', ['volume_mounts' => [['volume' => 'shared_db', 'path' => '/data']]]);
 
@@ -129,8 +123,7 @@ it('keeps a volume another site also mounts', function () {
 });
 
 it('keeps a volume a FOREIGN container is still holding', function () {
-    // Something outside this site is writing to it — a container somebody started
-    // by hand, or another project's.
+    // Something outside this site holds it: a container started by hand, or another project's.
     $site = dockerSite('alpha', ['volume_mounts' => [['volume' => 'busy_db', 'path' => '/data']]]);
 
     $ran = [];
@@ -146,8 +139,7 @@ it('keeps a volume a FOREIGN container is still holding', function () {
 });
 
 it('keeps a network another site is on', function () {
-    // Two sites on one network is the entire point of the networks feature.
-    // Deleting the site you asked about must not break the one you did not.
+    // Sites sharing a network is the point of the networks feature.
     $site = dockerSite('alpha', ['docker_network' => 'shared-net']);
     $other = dockerSite('beta', ['docker_network' => 'shared-net']);
 
@@ -178,8 +170,7 @@ it('removes a network no other site is on', function () {
 });
 
 it('never removes one of Docker\'s own networks', function () {
-    // A site could have been pointed at `bridge`. Docker recreates these on
-    // restart, so a delete is a control that either fails or does damage.
+    // A site could have been pointed at `bridge`; Docker recreates its own networks on restart.
     $site = dockerSite('alpha', ['docker_network' => 'bridge']);
 
     $ran = [];
@@ -199,9 +190,8 @@ it('says nothing and breaks nothing when the objects are already gone', function
         'volume_mounts' => [['volume' => 'missing_vol', 'path' => '/data']],
     ]);
 
-    // A listing that ANSWERED and simply does not contain them. With an empty
-    // listing the two cases are indistinguishable, which is the point of the
-    // separate `not-listed` reason and of the test below.
+    // A listing that ANSWERED and does not contain them; an empty listing is indistinguishable,
+    // hence the separate `not-listed` reason and the test below.
     $ran = [];
     fakeDockerState([[
         'name' => 'somebody-elses', 'in_use' => false, 'containers' => 0,
@@ -210,16 +200,14 @@ it('says nothing and breaks nothing when the objects are already gone', function
 
     $outcome = deleteDockerResources($site);
 
-    // Recorded as already-gone rather than skipped in silence: a volume appearing
-    // in neither list is what made the first real failure undiagnosable.
+    // Recorded as already-gone, not skipped in silence.
     expect($ran)->toBe([])
         ->and($outcome['removed'])->toBe([])
         ->and($outcome['kept'])->toBe(['missing_vol:already-gone', 'missing-net:not-listed']);
 });
 
 it('records what it kept as well as what it removed', function () {
-    // "We did not delete this" is the half somebody comes looking for when they
-    // find a volume still on the server.
+    // "We did not delete this" is what someone looks for when a volume is still on the server.
     $site = dockerSite('alpha', ['volume_mounts' => [['volume' => 'busy_db', 'path' => '/data']]]);
 
     $ran = [];
@@ -237,11 +225,8 @@ it('records what it kept as well as what it removed', function () {
 });
 
 it('removes a volume its OWN container is still holding', function () {
-    // The bug this test exists for, measured on a real box. The action runs before
-    // `compose down`, so the site's own container is still attached to its own
-    // volume — and guarding on `in_use` made the flag a no-op for every running
-    // site, which is the only case that matters. The log said `kept` and the
-    // volume stayed.
+    // The action runs before `compose down`, so the site's own container is still attached to
+    // its own volume; guarding on `in_use` would make the flag a no-op for every running site.
     $site = dockerSite('alpha', ['volume_mounts' => [['volume' => 'alpha_db', 'path' => '/data']]]);
 
     $ran = [];
@@ -257,7 +242,7 @@ it('removes a volume its OWN container is still holding', function () {
 });
 
 it('removes a network only its OWN containers are attached to', function () {
-    // Same reasoning as the volume: at this point the site has not been stopped.
+    // As with the volume: the site has not been stopped yet.
     $site = dockerSite('alpha', ['docker_network' => 'alpha-net']);
 
     $ran = [];
@@ -272,8 +257,7 @@ it('removes a network only its OWN containers are attached to', function () {
 });
 
 it('keeps a network a foreign container is attached to', function () {
-    // Somebody ran `docker network connect` by hand. Removing it would detach a
-    // container the panel knows nothing about.
+    // Removing it would detach a container someone connected by hand.
     $site = dockerSite('alpha', ['docker_network' => 'alpha-net']);
 
     $ran = [];
@@ -288,10 +272,8 @@ it('keeps a network a foreign container is attached to', function () {
 });
 
 it('says so when Docker could not be asked at all', function () {
-    // `volumes()` returns an empty array when `docker system df -v` does not answer,
-    // and it is the slowest call in that service. Reading that as "no volumes exist"
-    // is how a delete reported success having removed nothing and said nothing —
-    // measured on a real box.
+    // `volumes()` returns an empty array when `docker system df -v` does not answer; reading
+    // that as "no volumes exist" reports success having removed nothing.
     $site = dockerSite('alpha', ['volume_mounts' => [['volume' => 'alpha_db', 'path' => '/data']]]);
 
     $ran = [];
@@ -305,9 +287,7 @@ it('says so when Docker could not be asked at all', function () {
 });
 
 describe('the network the site was created on, after it moved (BUG-5)', function () {
-    // Found in Docker QA on a real box: a site moved from its own network to
-    // `qaui-net` was deleted with "delete Docker network and volumes", and
-    // `sv-app-110_default` stayed behind, still listed against the deleted app.
+    // A site moved off its own network leaves `sv-app-<id>_default` behind on delete.
 
     function movedSite(): Application
     {
@@ -339,8 +319,8 @@ describe('the network the site was created on, after it moved (BUG-5)', function
     });
 
     it('keeps one with the right name that Compose did not create for this site', function () {
-        // Anybody can `docker network create sv-app-6_default`. The name is a guess;
-        // Compose's labels are the fact.
+        // Anybody can `docker network create sv-app-6_default`: the name is a guess, the labels
+        // are the fact.
         $site = movedSite();
 
         $ran = [];
@@ -384,8 +364,7 @@ describe('the network the site was created on, after it moved (BUG-5)', function
     });
 
     it('does not touch a site\'s own default network when it never moved', function () {
-        // `compose down` removes that one itself; planning it too would only add a
-        // "remove failed" for a network that is already gone.
+        // `compose down` removes that one itself; planning it too would add a "remove failed".
         $site = dockerSite('alpha');
 
         $ran = [];

@@ -11,16 +11,10 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * The NodeBB build kept failing on a 2 GB server with nothing in its log.
+ * A build killed by the OOM killer leaves SIGKILL, no stderr, exit 137 and an empty log.
  *
- * Not because the command failed — because it was **killed**. V8 sizes its
- * heap from a compiled-in default rather than from the machine, grows past
- * what the box has, and the OOM killer takes it: SIGKILL, no stderr, exit 137.
- * Every layer above could only say "the build failed", and the reference it
- * offered pointed at an empty log.
- *
- * Two halves, tested here: cap the heap so the build survives, and read the
- * exit status so that when it does not, the panel can say why.
+ * Two halves: cap the V8 heap so the build survives, and read the exit status so the panel can
+ * say why when it does not.
  */
 function fakeMeminfo(int $availableKb): void
 {
@@ -37,9 +31,8 @@ function fakeMeminfo(int $availableKb): void
 }
 
 it('sizes the heap from available memory, not total', function () {
-    // 1200 MiB available → 75% → 900 MiB. Total is 2 GB in the fixture: sizing
-    // from that would authorise a heap larger than the free memory, which is
-    // the mistake that produces the kill this exists to prevent.
+    // 1200 MiB available → 75% → 900 MiB. Sizing from the 2 GB total would allow a heap larger
+    // than the free memory, which is what causes the kill.
     fakeMeminfo(1_228_800);
 
     expect(app(BuildMemoryBudget::class)->heapMegabytes())->toBe(900);
@@ -53,8 +46,7 @@ it('offers the cap as a NODE_OPTIONS environment pair', function () {
 });
 
 it('does not cap a server with plenty of memory', function () {
-    // 32 GB available. A ceiling far past what the build wants is the same as
-    // no ceiling, and V8's own defaults are right here — so leave them.
+    // 32 GB available: a ceiling far past what the build wants is no ceiling, so leave V8's default.
     fakeMeminfo(33_554_432);
 
     expect(app(BuildMemoryBudget::class)->heapMegabytes())->toBeNull()
@@ -62,17 +54,15 @@ it('does not cap a server with plenty of memory', function () {
 });
 
 it('still sets a floor on a very small box', function () {
-    // 256 MB available → 75% is 192 MB, below the floor. The cap is kept at
-    // the floor rather than dropped: this is exactly the machine where the
-    // difference between a readable error and a silent SIGKILL matters most.
+    // 256 MB available → 75% is 192 MB, below the floor. Keep the cap at the floor: small boxes
+    // are where a silent SIGKILL hurts most.
     fakeMeminfo(262_144);
 
     expect(app(BuildMemoryBudget::class)->heapMegabytes())->toBe(512);
 });
 
 it('sets no cap when it cannot read how much memory there is', function () {
-    // A server the panel did not build. A cap derived from a number we failed
-    // to read is worse than no cap.
+    // A cap derived from a number we failed to read is worse than no cap.
     config(['server.proc_dir' => sys_get_temp_dir().'/panel-does-not-exist-'.bin2hex(random_bytes(4))]);
 
     expect(app(BuildMemoryBudget::class)->heapMegabytes())->toBeNull()
@@ -82,8 +72,7 @@ it('sets no cap when it cannot read how much memory there is', function () {
 it('names an out-of-memory kill, which is the failure with an empty log', function () {
     Process::fake();
 
-    // 137 = 128 + SIGKILL. No stdout, no stderr — the shape the OOM killer
-    // leaves behind, and the reason the reference alone explained nothing.
+    // 137 = 128 + SIGKILL, no output: the shape the OOM killer leaves behind.
     $result = new ServerOpsResult(
         ok: false,
         reference: 'ref-123',
@@ -100,8 +89,7 @@ it('names an out-of-memory kill, which is the failure with an empty log', functi
 it('does not claim out of memory when the command explained itself', function () {
     Process::fake();
 
-    // Killed, but it managed to say something first. Its own words are a
-    // better explanation than a category invented here.
+    // Killed, but it said something first: its own words beat an invented category.
     $result = new ServerOpsResult(
         ok: false,
         reference: 'ref-124',
@@ -114,8 +102,7 @@ it('does not claim out of memory when the command explained itself', function ()
 it('leaves an ordinary failure unclassified', function () {
     Process::fake();
 
-    // A wrong reason is worse than none — it sends the user to fix something
-    // that was never broken. Exit 1 says nothing about why, so neither do we.
+    // A wrong reason sends the user to fix something that was never broken; exit 1 says nothing.
     $result = new ServerOpsResult(
         ok: false,
         reference: 'ref-125',
@@ -126,13 +113,8 @@ it('leaves an ordinary failure unclassified', function () {
 });
 
 it('records the reason on the application when a step is killed', function () {
-    // The end-to-end assertion, and the one that matters.
-    //
-    // The three tests above exercise `fromResult()` directly, so they pass
-    // whether or not anything *calls* it — they proved the classifier worked
-    // and would have said nothing if it were wired to nothing. This one runs a
-    // real installer step against a killed process and looks at what the user
-    // is finally shown, which is the only claim worth making.
+    // End to end: the tests above call `fromResult()` directly and would pass even if nothing
+    // called it. This runs a real installer step against a killed process.
     $seeder = new PermissionSeeder;
     $seeder->run();
 
@@ -148,8 +130,7 @@ it('records the reason on the application when a step is killed', function () {
         'status' => 'provisioning', 'node_version' => '22', 'app_port' => 4567,
     ]);
 
-    // Killed: exit 137, and nothing written anywhere. This is what the panel
-    // actually receives when the OOM killer chooses the build.
+    // Killed: exit 137 and no output, as when the OOM killer picks the build.
     Process::fake(fn () => Process::result(output: '', errorOutput: '', exitCode: 137));
 
     try {
@@ -166,8 +147,7 @@ it('records the reason on the application when a step is killed', function () {
         ]);
     }
 
-    // What the API hands the frontend: a named cause, titled in the viewer's
-    // locale, instead of a step and a reference to a log with nothing in it.
+    // What the API hands the frontend: a named cause, titled in the viewer's locale.
     $payload = (new ApplicationResource($application->fresh()))
         ->toArray(request());
 
@@ -177,8 +157,7 @@ it('records the reason on the application when a step is killed', function () {
 });
 
 it('has the reason translated in every locale', function () {
-    // No hardcoded English reaches the user. `hi` is checked explicitly
-    // because it is the locale most often left as an English stub.
+    // `hi` is the locale most often left as an English stub.
     foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
         $line = __('application.failure_reason.out_of_memory', [], $locale);
 
@@ -187,12 +166,8 @@ it('has the reason translated in every locale', function () {
     }
 });
 
-/*
- * The second failure this classifier exists for: a native module that needed
- * compiling on a server with no compiler. Unlike the OOM case there IS output
- * -- thousands of lines of it -- which is exactly why the one line that
- * matters has to be named rather than left in the log.
- */
+// A native module that needs compiling on a server with no compiler: thousands of lines of
+// output, so the one line that matters has to be named.
 
 it('names a missing build tool from the gyp transcript', function () {
     Process::fake();
@@ -214,8 +189,7 @@ it('names a missing build tool from the gyp transcript', function () {
 it('finds it under the npm warnings that buried it in production', function () {
     Process::fake();
 
-    // Shaped like the real failure: npm writes thousands of peer-dependency
-    // warnings around the gyp transcript, and exits 1, which says nothing.
+    // npm writes thousands of peer-dependency warnings around the gyp transcript, then exits 1.
     $noise = str_repeat("npm warn ERESOLVE overriding peer dependency\n", 500);
 
     $result = new ServerOpsResult(
@@ -235,9 +209,8 @@ it('finds it under the npm warnings that buried it in production', function () {
 it('does not blame the compiler for a compile that failed', function () {
     Process::fake();
 
-    // gyp prefixes real compilation errors the same way. A source file that
-    // will not build is a different problem with a different fix, and naming
-    // the toolchain would send someone to install what they already have.
+    // gyp prefixes real compile errors the same way; naming the toolchain would send someone to
+    // install what they already have.
     $result = new ServerOpsResult(
         ok: false,
         reference: 'ref-202',
@@ -261,20 +234,16 @@ it('has the missing-build-tool reason translated in every locale', function () {
 });
 
 it('offers the Node version as a fix, not only the compiler', function () {
-    // The cheaper fix, and the one that would have avoided this entirely:
-    // isolated-vm ships prebuilt binaries for the LTS ABIs and none for the
-    // odd-numbered releases between them. A message that only said "install
-    // build tools" would push every user toward a 300 MB toolchain they do
-    // not need.
+    // The cheaper fix: isolated-vm ships prebuilt binaries for LTS ABIs only, not the odd-numbered
+    // releases, so "install build tools" alone would push users toward a toolchain they do not need.
     expect(__('application.failure_reason.no_build_tools'))->toContain('Node');
 });
 
 it('names an out-of-memory kill that only printed npm warnings first', function () {
     Process::fake();
 
-    // npm prints its peer-dependency warnings before any work starts, so an
-    // npm install killed by the kernel was never "silent" — `npm install
-    // n8n` died at 3.8 GB on the Apache test box and the step had no reason.
+    // npm prints peer-dependency warnings before any work starts, so a killed `npm install` is
+    // never silent.
     $warnings = "npm warn ERESOLVE overriding peer dependency\nnpm warn While resolving: @getzep/zep-cloud@1.0.6\n\nnpm warn   node_modules/@tiptap/pm\n";
 
     $result = new ServerOpsResult(
@@ -301,8 +270,7 @@ it('still prefers npm\'s own error to a guess when it printed one', function () 
 it('names a deploy script that tried to log in to the repository', function (string $stderr) {
     Process::fake();
 
-    // git's own wording, measured on GitHub 2026-10-01 with the `git pull`
-    // the default deploy script used to carry.
+    // git's own wording for a `git pull` that prompts for credentials.
     $result = new ServerOpsResult(
         ok: false,
         reference: 'ref-126',
@@ -310,9 +278,8 @@ it('names a deploy script that tried to log in to the repository', function (str
     );
 
     expect(ProvisioningFailedException::fromResult('script', $result)->reason)->toBe('script_git_auth')
-        // Only the user's script lacks the credential; the panel's own fetch
-        // failing like this is a different problem with a different fix, and
-        // has its own reason (FS-C22): the repository, or its account.
+        // Only the user's script lacks the credential; the panel's own fetch failing like this
+        // means the repository or its account is unreachable.
         ->and(ProvisioningFailedException::fromResult('fetch', $result)->reason)->toBe('git_repository_unreachable')
         ->and(__('application.failure_reason.script_git_auth'))->toContain('git pull');
 })->with([

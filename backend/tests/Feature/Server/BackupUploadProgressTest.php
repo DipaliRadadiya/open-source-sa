@@ -24,15 +24,10 @@ use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 /**
- * A disk that behaves like the real one in the only respect under test.
+ * A disk fake that satisfies the `Filesystem` return type of `DestinationDisk::for()`.
  *
- * `DestinationDisk::for()` is typed to return `Filesystem`, so a bare
- * anonymous class is rejected by PHP before any assertion runs — the fake has
- * to satisfy the contract it is standing in for.
- *
- * Named `fakeUploadDisk` rather than `fakeDisk`: Pest loads every test file
- * into one process, so a helper here shares a global namespace with every
- * other suite, and `DiskCleanerTest` already owns that shorter name.
+ * Named `fakeUploadDisk`: Pest shares one global namespace across test files and
+ * `DiskCleanerTest` already owns `fakeDisk`.
  */
 function fakeUploadDisk(Closure $writeStream): DestinationDisk
 {
@@ -46,11 +41,8 @@ function fakeUploadDisk(Closure $writeStream): DestinationDisk
 }
 
 /**
- * A driver factory whose driver declines the resumable path.
- *
- * These tests are about the `writeStream()` fallback — progress counting, the
- * memory ceiling, stall classification — so the driver must return false and
- * hand control there, exactly as S3/FTP/SFTP do in production.
+ * A driver factory whose driver declines the resumable path, so the `writeStream()`
+ * fallback runs, as with S3/FTP/SFTP in production.
  */
 function decliningDrivers(): StorageDriverFactory
 {
@@ -66,19 +58,8 @@ function decliningDrivers(): StorageDriverFactory
 uses(RefreshDatabase::class);
 
 /*
- * A 24 GB backup to Google Drive could not succeed, and when it failed nobody
- * could tell why.
- *
- * Three separate causes, all proven on a live box on 2026-09-21:
- *
- *  - `RunBackup::$timeout` was a hardcoded 3600. The archive took 13 minutes to
- *    build and over three hours to upload, so the worker killed the job at the
- *    hour mark every single attempt. The run was not slow; it was impossible.
- *  - Nothing recorded progress, so the row said `upload_artifact` for the whole
- *    time and a healthy transfer was indistinguishable from a dead socket. It
- *    was reported as a hang twice, and answering it needed `strace` on the box.
- *  - A stalled upload had no ceiling of its own, so it held the only queue
- *    worker until the job timeout, with every other backup queued behind it.
+ * Large uploads: the job timeout must not cap a long upload, progress and a heartbeat must be
+ * recorded, and a stalled upload needs its own ceiling so it does not hold the only queue worker.
  */
 
 function progressBackup(): Backup
@@ -109,19 +90,14 @@ function progressBackup(): Backup
 }
 
 it('does not cap a backup at the old hardcoded hour', function () {
-    // The literal that made large sites impossible. Asserting on the *value*
-    // rather than merely "is configurable" because the bug was the number, and
-    // a config key that still defaults to 3600 would pass a weaker test while
-    // failing every real 24 GB backup exactly as before.
+    // Assert the value, not just "is configurable": a key still defaulting to 3600 would pass.
     expect((new RunBackup(1))->timeout)->toBe(21600)
         ->and((new RunRestore(1, 1))->timeout)->toBe(21600);
 });
 
 it('keeps retry_after above the job timeout so a slow backup is not run twice', function () {
-    // Laravel hands a job to a second worker once `retry_after` elapses,
-    // whether or not the first has finished. With a 6h timeout and the old
-    // 4200s retry_after, every backup over 70 minutes would have been archived
-    // twice, concurrently, to one key — silent corruption rather than an error.
+    // Laravel hands a job to a second worker once `retry_after` elapses, finished or not: a
+    // shorter value would archive one backup twice, concurrently, to one key.
     expect(config('queue.connections.redis.retry_after'))
         ->toBeGreaterThan(config('server.backups.job_timeout'));
 });
@@ -149,11 +125,7 @@ it('counts every byte the adapter reads off the archive', function () {
     $context = new BackupContext($backup, $backup->target, dirname($archive));
     $context->archivePath = $archive;
 
-    // A fake disk that genuinely drains the handle, because the number under
-    // test is produced by *reading*. A fake that ignores the stream would
-    // assert against a transfer that never happened and pass while the filter
-    // did nothing — the shape of mistake `feedback_a-static-fake-is-not-a-server`
-    // records.
+    // The fake must really drain the handle: the byte count is produced by reading.
     $disk = fakeUploadDisk(function (string $key, $handle): void {
         while (! feof($handle)) {
             fread($handle, 8_192);
@@ -176,9 +148,8 @@ it('names a stalled upload instead of reporting it as a broken destination', fun
     $context = new BackupContext($backup, $backup->target, dirname($archive));
     $context->archivePath = $archive;
 
-    // The wording cURL produces for the low-speed abort, wrapped the way
-    // Flysystem wraps every adapter failure — the string is two links down,
-    // which is exactly why the runner cannot match on it directly.
+    // cURL's low-speed abort wording, wrapped as Flysystem wraps adapter failures: the string
+    // sits two links down the chain, so the runner cannot match it directly.
     $disk = fakeUploadDisk(function (): void {
         throw new RuntimeException(
             'Unable to write file at location: x.',
@@ -203,8 +174,7 @@ it('lets an ordinary upload failure through unchanged', function () {
     $context = new BackupContext($backup, $backup->target, dirname($archive));
     $context->archivePath = $archive;
 
-    // A full Drive is not a stall, and dressing it as one would tell the
-    // operator to wait for the next run instead of going to free up space.
+    // A full Drive is not a stall: reporting it as one would tell the operator to wait, not free space.
     $disk = fakeUploadDisk(function (): void {
         throw new RuntimeException('storageQuotaExceeded');
     });
@@ -218,9 +188,7 @@ it('lets an ordinary upload failure through unchanged', function () {
 it('frees a crashed target as soon as its heartbeat goes cold', function () {
     $backup = progressBackup();
 
-    // Killed one minute in, having uploaded a little. Before the heartbeat the
-    // reaper measured from `started_at` against the job's whole timeout, so
-    // this row — and therefore the site — stayed locked for six hours.
+    // A crashed run is judged by its heartbeat, not by `started_at` against the whole job timeout.
     $backup->forceFill([
         'bytes_transferred' => 500,
         'progress_at' => now()->subSeconds(StaleBackupReaper::heartbeatGraceSeconds() + 60),
@@ -232,9 +200,7 @@ it('frees a crashed target as soon as its heartbeat goes cold', function () {
 it('leaves a slow but living upload alone', function () {
     $backup = progressBackup();
 
-    // Hours old and far past the old `started_at` bound, but still moving.
-    // This is the case a wall-clock timeout cannot tell from the one above,
-    // and killing it is how large backups were made impossible.
+    // Hours old but still moving: a wall-clock timeout cannot tell this from a crashed run.
     $backup->forceFill([
         'started_at' => now()->subHours(5),
         'bytes_transferred' => 9_000_000_000,
@@ -245,11 +211,8 @@ it('leaves a slow but living upload alone', function () {
 });
 
 it('releases the uniqueness lock at pickup so a killed worker strands nothing', function () {
-    // The failure this replaces: a `kill -9` left the lock held for the job's
-    // full TTL, and every dispatch after that was *discarded* — not refused.
-    // The API still answered 202, so the panel reported a backup started and
-    // nothing ran. Raising the timeout to six hours would have stretched that
-    // dead window from 65 minutes to six.
+    // Otherwise a `kill -9` holds the lock for the job's full TTL and later dispatches are
+    // silently discarded while the API still answers 202.
     expect(new RunBackup(1))->toBeInstanceOf(ShouldBeUniqueUntilProcessing::class)
         ->and(new RunRestore(1, 1))->toBeInstanceOf(ShouldBeUniqueUntilProcessing::class);
 });
@@ -257,10 +220,8 @@ it('releases the uniqueness lock at pickup so a killed worker strands nothing', 
 it('refuses to start a second run for a target that is already live', function () {
     $backup = progressBackup();
 
-    // With the lock released at pickup, two jobs for one target can sit in the
-    // queue legitimately. This is the check that cannot be raced — it runs on
-    // the worker about to start writing. Without it the raised timeout would
-    // have traded a stuck lock for two concurrent archives of one site.
+    // With the lock released at pickup, two jobs for one target can queue. This check runs on
+    // the worker about to write, so it cannot be raced.
     $backup->forceFill(['progress_at' => now()])->save();
 
     (new RunBackup($backup->backup_target_id))->handle(
@@ -273,10 +234,8 @@ it('refuses to start a second run for a target that is already live', function (
 });
 
 it('does not stretch the no-heartbeat lockout when the job timeout is raised', function () {
-    // This bound used to be derived from the job timeout. Raising the timeout
-    // 6x for large uploads would have silently made a crash during *archiving*
-    // lock its target out for six hours instead of 65 minutes — a regression in
-    // a completely unrelated part of the feature.
+    // The bound must not follow the job timeout, or a crash during archiving would lock its
+    // target for hours instead of 65 minutes.
     expect(StaleBackupReaper::staleAfterSeconds())->toBe(3900)
         ->and(StaleBackupReaper::staleAfterSeconds())
         ->toBeLessThan(config('server.backups.job_timeout'));
@@ -285,11 +244,8 @@ it('does not stretch the no-heartbeat lockout when the job timeout is raised', f
 /**
  * Run the upload step against a disk that just reports the ceiling it saw.
  *
- * Baselines are set well above the suite's own footprint, never at a flat
- * "128M": Pest runs every test in one process, so by the time this file is
- * reached that process is already using ~186 MB and `ini_set()` to anything
- * lower fails outright. These three passed in isolation and failed in the full
- * suite for exactly that reason.
+ * Baselines must sit well above the suite's own footprint: Pest runs every test in one process,
+ * and `ini_set()` to a lower limit fails outright.
  */
 function ceilingSeenDuringUpload(string $baseline, string $configured): array
 {
@@ -319,22 +275,17 @@ function ceilingSeenDuringUpload(string $baseline, string $configured): array
 }
 
 it('raises the memory ceiling for the upload and puts it back afterwards', function () {
-    // A Drive archive at or under 100 MB is base64-encoded whole, in memory, by
-    // Google's MediaFileUpload. Under the 128 M default a 35 MB backup killed
-    // the worker six times — a fatal, so no reason was ever recorded and the
-    // row just stayed `running`.
+    // Google's MediaFileUpload base64-encodes an archive up to 100 MB whole, in memory; a fatal
+    // there records no reason and leaves the row `running`.
     $result = ceilingSeenDuringUpload(baseline: '512M', configured: '1024M');
 
     expect($result['during'])->toBe('1024M')
-        // Restored: a worker outlives one job, and a ceiling left raised hides
-        // the next thing that leaks.
+        // Restored: a worker outlives one job.
         ->and($result['after'])->toBe('512M');
 });
 
 it('never lowers a ceiling the host already set higher', function () {
-    // Writing the configured value in unconditionally would *reduce* memory on
-    // a generously configured host — turning a fix for small backups into a new
-    // failure for large ones.
+    // Writing the configured value unconditionally would reduce memory on a generous host.
     expect(ceilingSeenDuringUpload(baseline: '2048M', configured: '256M')['during'])
         ->toBe('2048M');
 });
@@ -345,9 +296,8 @@ it('leaves an unlimited host unlimited', function () {
 });
 
 /*
- * FS-C33: a failed backup said only which step stopped — `upload_artifact` —
- * while the storage had said exactly why. The destination test's categories,
- * from the same driver.
+ * A failed backup reports the storage's error category (as the destination test does), not
+ * only the step that stopped.
  */
 class BackupErrorClassUploadStep implements BackupStep
 {

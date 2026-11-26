@@ -8,18 +8,10 @@ use Illuminate\Contracts\Process\ProcessResult;
 /*
  * A pasted compose file is untrusted input that becomes a root-run command.
  *
- * The validator parses it with **`docker compose config --format json`** — the
- * daemon's own parser, not a YAML library — and that is the decision the whole
- * class rests on. A validator whose parser differs from the executor's is a
- * bypass waiting to be found: anything the two read differently is a way past
- * every rule. Using one parser makes that class of hole impossible rather than
- * unlikely.
- *
- * It also normalises, which removes the other half. `- /:/host` and
- * `- {type: bind, source: /, target: /host}` mean the same thing; `config`
- * resolves both to the second, so each rule is written once against one
- * canonical shape instead of guessing at five spellings. The fixtures below
- * are that resolved shape, taken from real output on a Docker box.
+ * The validator parses it with `docker compose config --format json` (the daemon's own parser,
+ * not a YAML library), so validator and executor can never read a file differently. `config`
+ * also normalises (`- /:/host` and `{type: bind, source: /, target: /host}` both resolve to the
+ * second), so each rule is written once against one shape. The fixtures are that resolved shape.
  */
 
 /** A ServerOps whose `docker compose config` returns this resolved document. */
@@ -41,9 +33,8 @@ function composeOps(array $resolved, bool $answered = true): ServerOps
 }
 
 /**
- * A ServerOps whose `docker compose config` refused the file: exit 1, nothing on
- * stdout, Docker's complaint on stderr — what a real parse failure looks like, as
- * opposed to {@see composeOps()} with `answered: false`, which carries no text.
+ * A ServerOps whose `docker compose config` refuses the file: exit 1, complaint on stderr
+ * (unlike {@see composeOps()} with `answered: false`, which carries no text).
  */
 function composeFailure(string $stderr, bool $denied = false): ServerOps
 {
@@ -103,14 +94,9 @@ it('accepts a file that keeps to its own directory and to loopback', function ()
 });
 
 it('binds a public port to loopback instead of refusing the file', function () {
-    // The reversal that matters. `"3001:3001"` is the normal Docker idiom and
-    // EVERY upstream compose file publishes that way — it is what the
-    // project's own README says. Refusing it was right about the danger and
-    // wrong as a product decision: the panel would have been hostile to every
-    // image anyone ever tried.
-    //
-    // Two parses: the first sees a public port, the second (after the
-    // rewrite) sees loopback.
+    // `"3001:3001"` is the normal Docker idiom and every upstream compose file publishes that way,
+    // so it is rewritten to loopback rather than refused.
+    // Two parses: the first sees a public port, the second (after the rewrite) sees loopback.
     $public = ['services' => ['web' => ['ports' => [['published' => '3001', 'target' => 3001]]]]];
     $fixed = ['services' => ['web' => ['ports' => [['host_ip' => '127.0.0.1', 'published' => '3001', 'target' => 3001]]]]];
 
@@ -128,9 +114,8 @@ it('binds a public port to loopback instead of refusing the file', function () {
 });
 
 it('refuses a public port the rewrite could not fix', function () {
-    // The safety does NOT rest on the regex being complete. A mapping form the
-    // rewrite misses is re-parsed, still found public, and refused — never
-    // silently published to the world.
+    // Safety does not rest on the regex being complete: a mapping form the rewrite misses is
+    // re-parsed, still found public, and refused.
     $public = ['services' => ['web' => ['ports' => [['published' => '8080', 'target' => 80]]]]];
 
     // Both parses see a public port: the rewrite changed nothing it could fix.
@@ -155,9 +140,8 @@ it('refuses a bind mount outside the application directory', function () {
 });
 
 it('is not fooled by a sibling directory with the same prefix', function () {
-    // `/home/shop/shop/public_html-evil` starts with the root as a STRING and
-    // is a different directory. Comparing without the separator is the classic
-    // way this check is written wrong.
+    // `/home/shop/shop/public_html-evil` starts with the root as a string but is a different
+    // directory: compare with the separator.
     $ops = composeOps(['services' => ['web' => [
         'volumes' => [['type' => 'bind', 'source' => ROOT.'-evil', 'target' => '/x']],
     ]]]);
@@ -166,8 +150,7 @@ it('is not fooled by a sibling directory with the same prefix', function () {
 });
 
 it('is not fooled by a path that climbs out', function () {
-    // Compose resolves `../../../etc` itself — measured on a real box, it
-    // came back as `/etc`. This asserts the check still holds if a
+    // Compose resolves `../../../etc` itself; this asserts the check also holds if a
     // non-normalised source ever reaches it.
     $ops = composeOps(['services' => ['web' => [
         'volumes' => [['type' => 'bind', 'source' => ROOT.'/../../../etc', 'target' => '/x']],
@@ -199,10 +182,8 @@ it('refuses every documented way out of the container', function () {
         'security_opt' => ['apparmor:unconfined'],
         'network_mode' => 'host',
         'cgroup_parent' => '/',
-        // A build context is a host path the daemon reads as ROOT, and the
-        // bind-mount check does not cover it — that walks `volumes`, and this is
-        // a different key reaching the same filesystem. `context: /root` puts the
-        // server's own keys into an image the site then runs.
+        // A build context is a host path the daemon reads as ROOT. The bind-mount check walks
+        // `volumes` and does not cover it: `context: /root` puts the server's keys into an image.
         'build' => ['context' => '/root'],
     ];
 
@@ -333,11 +314,9 @@ it('refuses a file with no services, which would run nothing', function () {
 });
 
 it('validates from the directory the deploy will run in', function () {
-    // Load-bearing, not tidiness. Compose resolves a relative bind source
-    // against the CWD of the process reading the file — measured: from
-    // /home/ubuntu, `./data` became `/home/ubuntu/data`. Validating from
-    // anywhere else resolves a different path than the deploy will, which is
-    // the validation/execution mismatch this class exists to avoid.
+    // Load-bearing: compose resolves a relative bind source against the CWD of the process
+    // reading the file, so validating from another directory checks a different path than the
+    // deploy will.
     $seen = null;
 
     $process = Mockery::mock(ProcessResult::class);
@@ -425,10 +404,8 @@ it('reports no port when the file publishes none', function () {
 });
 
 it('refuses a build even when the context looks local', function () {
-    // Not only the obvious `/root`. The panel runs published images — every
-    // template here names one — so the key is refused outright rather than
-    // path-checked, because `dockerfile_inline` can `COPY` from anywhere the
-    // context reaches and a relative context is resolved by the daemon, not here.
+    // The key is refused outright, not path-checked: the panel runs published images, and
+    // `dockerfile_inline` can `COPY` from anywhere the context reaches.
     foreach ([['context' => '.'], ['context' => './app'], ['dockerfile_inline' => "FROM scratch\nCOPY /etc/shadow /"]] as $build) {
         $ops = composeOps(['services' => ['web' => ['image' => 'nginx', 'build' => $build]]]);
 

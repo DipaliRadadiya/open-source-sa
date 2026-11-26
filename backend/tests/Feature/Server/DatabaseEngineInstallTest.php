@@ -29,8 +29,8 @@ function installer(string $engine = 'mariadb')
 
 /**
  * A box where the engine is absent, apt succeeds, and the engine answers.
- * `$seen` collects every command so the tests can assert on what ran — and,
- * more importantly, on what was never put on a command line.
+ * `$seen` collects every command so the tests can assert on what ran and on what was never put
+ * on a command line.
  */
 function fakeCleanBox(array &$seen, string $installedPackage = ''): void
 {
@@ -240,9 +240,8 @@ describe('refusing', function () {
 
 describe('the endpoint', function () {
     it('publishes each engine\'s system databases', function () {
-        // The frontend needs this list to grey the rows out, and without it
-        // being sent it had hardcoded PostgreSQL's three — a copy that is
-        // wrong the first time an engine is added and tells nobody.
+        // The frontend needs this list to grey the rows out; hardcoding PostgreSQL's three is wrong
+        // the first time an engine is added.
         $engines = collect(
             $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
                 ->getJson('/api/databases/engines')->assertOk()->json('engines'),
@@ -323,12 +322,9 @@ describe('the endpoint', function () {
     });
 
     it('refuses an engine it has no installer for', function () {
-        // Every engine the panel ships now has one — MongoDB was the last
-        // without, until it got its own apt repository. So the case is faked
-        // rather than borrowed from the catalog: the endpoint has to keep
-        // refusing, because `installer` staying nullable is what lets a new
-        // engine be *operable* before it is *installable*, and a button that
-        // cannot work is worse than a greyed one.
+        // Every shipped engine has an installer now, so the case is faked rather than borrowed from
+        // the catalog: the endpoint has to keep refusing, because `installer` staying nullable lets
+        // a new engine be *operable* before it is *installable*.
         config(['server.databases.engines.mongodb.installer' => null]);
 
         Queue::fake();
@@ -365,14 +361,12 @@ describe('the endpoint', function () {
     });
 
     it('blames the Ubuntu release, not the apt sources, when MongoDB has no build for it', function () {
-        // Ubuntu 26.04 (resolute), the reported case: MongoDB publishes the
-        // tools for it and not the server, so the repository adds cleanly, the
-        // index fetches cleanly, and `apt-get install` finds nothing.
+        // MongoDB publishes the tools for Ubuntu 26.04 and not the server, so the repository adds
+        // cleanly, the index fetches cleanly, and `apt-get install` finds nothing.
         //
-        // Classified generically that is `package_not_found`, whose remedy is
-        // "fix your sources" — sources the panel wrote itself and which are
-        // correct. Everything before this point having succeeded is what makes
-        // the narrower reason true.
+        // Classified generically that is `package_not_found`, whose remedy is "fix your sources",
+        // but they are the panel's own and correct. Everything before this point having succeeded
+        // is what makes the narrower reason true.
         Process::fake(function ($process) {
             $command = $process->command;
 
@@ -585,10 +579,8 @@ describe('another package install holding the lock (S-09)', function () {
     });
 
     it('waits out the lock in the real job and installs, showing the wait as a step', function () {
-        // Found live (2026-11-02): MariaDB installed from the panel right after
-        // the installer finished, while Ubuntu's first-boot updates held the
-        // lock. The job's progress rejected the step its own installer reports
-        // while waiting, and the install failed in seconds instead of waiting.
+        // Right after the installer finishes, Ubuntu's first-boot updates hold the lock. The job's
+        // progress must accept the step its installer reports while waiting, not fail in seconds.
         config(['server.apt.lock_attempts' => 5, 'server.apt.lock_delay_ms' => 0]);
         $seen = [];
         lockedBox($seen, freeAfter: 2);

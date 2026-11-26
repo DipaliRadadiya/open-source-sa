@@ -78,11 +78,7 @@ function pushBody(string $branch = 'main'): string
     return json_encode(['ref' => "refs/heads/{$branch}"], JSON_THROW_ON_ERROR);
 }
 
-/**
- * Posts a raw body, which is the whole point: the signature covers the exact
- * bytes, so `postJson` with an array — which re-encodes — would sign one thing
- * and send another.
- */
+/** Posts a raw body: the signature covers the exact bytes, which `postJson` would re-encode. */
 function deliver(Application $app, string $body, array $headers): TestResponse
 {
     return test()->call(
@@ -131,10 +127,8 @@ describe('GitHub', function () {
     });
 
     it('rejects Bitbucket header on a GitHub application', function () {
-        // The trap this feature is built around: Bitbucket signs identically but
-        // calls the header `X-Hub-Signature`, GitHub's name minus the suffix.
-        // A verifier reading the wrong one would accept nothing, or — worse, if
-        // the scheme were chosen from the request — the weakest thing offered.
+        // Bitbucket signs identically but names the header `X-Hub-Signature`. The scheme must come
+        // from the application's provider, never the request, or the weakest one gets chosen.
         $app = hookedApp('github');
         $body = pushBody();
 
@@ -147,8 +141,7 @@ describe('GitHub', function () {
     });
 
     it('accepts but ignores a push to another branch', function () {
-        // 2xx on purpose: GitHub and GitLab disable a hook that keeps failing,
-        // and "not my branch" is not a failure.
+        // 2xx on purpose: GitHub and GitLab disable a hook that keeps failing.
         $app = hookedApp('github');
         $body = pushBody('feature/x');
 
@@ -162,8 +155,7 @@ describe('GitHub', function () {
 
     it('accepts but ignores a tag push', function () {
         $app = hookedApp('github');
-        // refs/tags/main — the same name as the branch, which is exactly the
-        // case a naive "last path segment" parse would deploy.
+        // refs/tags/main shares the branch's name; a naive "last path segment" parse would deploy.
         $body = json_encode(['ref' => 'refs/tags/main']);
 
         deliver($app, $body, [
@@ -187,8 +179,7 @@ describe('GitHub', function () {
     });
 
     it('deploys once when the provider retries the same delivery', function () {
-        // Providers retry on a timeout, and the first attempt may well have
-        // worked. Two deploys from one push is a real cost, not a cosmetic one.
+        // Providers retry on a timeout even when the first attempt worked.
         $app = hookedApp('github');
         $body = pushBody();
         $headers = [
@@ -261,9 +252,7 @@ describe('GitLab', function () {
     });
 
     it('deploys on a signing token, over id.timestamp.body', function () {
-        // GitLab's recommended mode, per the Standard Webhooks spec. The signed
-        // content is not the body alone — signing only the body is the mistake
-        // this test exists to catch.
+        // GitLab's recommended mode (Standard Webhooks): the signed content is not the body alone.
         $key = random_bytes(24);
         $app = hookedApp('gitlab', 'whsec_'.base64_encode($key));
 
@@ -299,8 +288,7 @@ describe('GitLab', function () {
     });
 
     it('refuses a correctly signed delivery that is too old', function () {
-        // A captured delivery stays validly signed forever; the timestamp
-        // window is the only thing that stops it being replayable forever.
+        // A captured delivery stays validly signed forever; only the timestamp window stops replay.
         $key = random_bytes(24);
         $app = hookedApp('gitlab', 'whsec_'.base64_encode($key));
 
@@ -334,16 +322,13 @@ describe('GitLab', function () {
 
 describe('one deploy per burst', function () {
     it('is unique per application until it starts processing', function () {
-        // Asserted directly because `Queue::fake()` never applies unique-job
-        // locking — a test that only counted pushed jobs would pass whether or
-        // not the interface was there.
+        // Asserted directly: `Queue::fake()` never applies unique-job locking.
         $app = hookApp();
         $other = hookApp(['domain' => 'other.example.com']);
 
         expect(new DeployApplication($app->id))->toBeInstanceOf(ShouldBeUniqueUntilProcessing::class);
         expect((new DeployApplication($app->id))->uniqueId())->toBe((string) $app->id);
-        // Two applications must not share a lock, or a push to one would swallow
-        // the other's deploy.
+        // Applications must not share a lock, or a push to one swallows the other's deploy.
         expect((new DeployApplication($app->id))->uniqueId())
             ->not->toBe((new DeployApplication($other->id))->uniqueId());
     });
@@ -351,8 +336,7 @@ describe('one deploy per burst', function () {
 
 describe('the endpoint itself', function () {
     it('is reachable without authentication', function () {
-        // The signature is the credential. If this ever needs a token, no
-        // provider can call it.
+        // The signature is the credential; if this needs a token, no provider can call it.
         $app = hookedApp('github');
         $body = pushBody();
 
@@ -363,11 +347,8 @@ describe('the endpoint itself', function () {
     });
 
     it('is not bound by the 20-per-minute guest IP limit', function () {
-        // `throttle:api` is prepended to every API route and caps guests at
-        // 20/minute per IP. A provider delivers from shared egress, so that
-        // limit would drop real deliveries and look like a hook that
-        // "sometimes doesn't fire". This route opts out and is limited per
-        // webhook instead.
+        // `throttle:api` caps guests at 20/minute per IP, but providers deliver from shared
+        // egress. This route opts out and is limited per webhook instead.
         $app = hookedApp('github');
         $body = pushBody('untracked');
         $signature = 'sha256='.hash_hmac('sha256', $body, (string) $app->webhook_secret);
@@ -393,10 +374,8 @@ describe('the endpoint itself', function () {
     });
 
     it('tells the provider itself that deploy-on-push is switched off', function () {
-        // The hook stays in the repository when it is switched off in the
-        // panel (the user's own, or one the token could not delete), and the
-        // provider's delivery log said "not found". An authentic delivery is
-        // now told why, so the user reading that log knows what to do.
+        // The hook stays in the repository when switched off in the panel; an authentic delivery
+        // is told why, so the provider's delivery log is useful.
         Queue::fake();
         $app = hookedApp('github');
         $app->forceFill(['webhook_enabled' => false])->save();
@@ -445,10 +424,8 @@ describe('configuring it', function () {
     });
 
     it('says so when GitLab falls back to the plaintext scheme', function () {
-        // With no secret supplied, a legacy plaintext token is the only thing
-        // the panel can generate for GitLab — GitLab mints the signing token
-        // itself. That is allowed, but it must not be silent: the response says
-        // which check is in force so the UI can offer the stronger one.
+        // With no secret supplied only a legacy plaintext token can be generated (GitLab mints
+        // the signing token itself); the response says which check is in force.
         $app = hookApp();
 
         $webhook = $this->withHeaders(hookHeaders())
@@ -470,8 +447,7 @@ describe('configuring it', function () {
     });
 
     it('keeps the URL and secret across a disable and re-enable', function () {
-        // Otherwise turning it off and on again silently invalidates what the
-        // user pasted into their repository settings.
+        // Otherwise re-enabling silently invalidates what the user pasted into the repository.
         $app = hookApp();
         $headers = hookHeaders();
 
@@ -490,9 +466,7 @@ describe('configuring it', function () {
     });
 
     it('records enabling as enabling, not as a rotation', function () {
-        // Enabling for the first time has no previous secret to replace.
-        // Reporting it as "replaced the secret" tells the user something was
-        // invalidated when nothing was.
+        // A first enable has no previous secret to replace.
         $app = hookApp();
 
         $this->withHeaders(hookHeaders())
@@ -532,11 +506,8 @@ describe('configuring it', function () {
     it('is refused for an application that is not deployed from git', function () {
         $app = hookApp(['site_type' => 'wordpress', 'domain' => 'blog.example.com']);
 
-        // 404 rather than the action's own 422: now that this route is gated by
-        // `app_deployment`, CheckPermission's site-type check runs first and
-        // answers the way every other per-app screen does — for a WordPress
-        // site the Deployment screen does not exist, which is a different
-        // statement from "your request was malformed".
+        // 404, not the action's 422: `app_deployment` gating runs CheckPermission's site-type check
+        // first, and for a WordPress site the Deployment screen does not exist.
         $this->withHeaders(hookHeaders())
             ->putJson("/api/applications/{$app->id}/webhook", ['enabled' => true, 'provider' => 'github'])
             ->assertStatus(404);
@@ -547,11 +518,8 @@ describe('configuring it', function () {
         grantPermission($deployer, 'app_deployment', view: true, manage: true);
         $app = hookApp();
 
-        // It configures the Deployment screen, so the grant that owns that
-        // screen is the one that should carry it. Gating this on the
-        // server-level `application` permission meant the owner of the screen
-        // could not set up its webhook, while someone who could not see the
-        // screen at all could.
+        // It configures the Deployment screen, so that screen's grant must carry it, not the
+        // server-level `application` permission.
         $this->withHeaders(['Authorization' => 'Bearer '.$deployer->createToken('t')->plainTextToken])
             ->putJson("/api/applications/{$app->id}/webhook", ['enabled' => true, 'provider' => 'github'])
             ->assertOk();
@@ -587,7 +555,7 @@ describe('configuring it', function () {
 
         expect($providers['github']['secret_source'])->toBe('generate');
         expect($providers['bitbucket']['secret_source'])->toBe('generate');
-        // GitLab is both, and the two are not equivalent — see GitlabWebhook.
+        // GitLab is both, and the two are not equivalent: see GitlabWebhook.
         expect($providers['gitlab']['secret_source'])->toBe('either');
         expect($providers['gitlab']['instructions'])->not->toBeEmpty();
     });

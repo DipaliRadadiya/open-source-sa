@@ -19,8 +19,7 @@ function makeFeatureApp(string $siteType, string $profile = 'php', array $extra 
 {
     return Application::create(array_merge([
         'system_user_id' => test()->systemUser->id,
-        // Distinct per call: application names are unique now, and this
-        // helper is used for several site types in one test.
+        // Distinct per call: application names are unique.
         'name' => 'Site '.$siteType,
         'domain' => $siteType.'.example.com',
         'site_type' => $siteType,
@@ -42,8 +41,7 @@ function sidebarFor(Application $application): array
 }
 
 it('does not offer Deployment on a site with no repository', function () {
-    // A WordPress install has no repository, no branch and no commit history.
-    // The screen would be about nothing — so it is absent, not disabled.
+    // A WordPress install has no repository, branch or commit history: absent, not disabled.
     expect(sidebarFor(makeFeatureApp('wordpress')))->not->toContain('app_deployment');
 });
 
@@ -62,22 +60,14 @@ it('does not offer PHP settings on a static site', function () {
 });
 
 it('does not offer PHP settings on a git site that serves no PHP', function () {
-    // The site type says `php` — it is the default for a repository whose
-    // rendering type was never chosen — but the user picked `static` or
-    // `ssr` at create and the row records it. The row wins: a directory of
-    // files and a Node process have no pool between them.
-    //
-    // Distinct from the static-site case above, which passes on the site
-    // type alone. Only git can disagree with its own type, which is why it
-    // is the one that went unnoticed.
-    // Names and domains are unique, and this test builds three sites.
+    // The git site type says `php` by default, but the row records the `static` or `ssr` the
+    // user picked, and the row wins. Only git can disagree with its own type.
     $static = makeFeatureApp('git', 'static', ['name' => 'Git static', 'domain' => 'git-static.example.com']);
     $node = makeFeatureApp('git', 'node', ['name' => 'Git ssr', 'domain' => 'git-ssr.example.com']);
 
     expect(sidebarFor($static))->not->toContain('app_php')
         ->and(sidebarFor($node))->not->toContain('app_php')
-        // Everything else a git site has is unaffected — this narrows one
-        // feature, it does not turn the site type into something else.
+        // Everything else a git site has is unaffected.
         ->and(sidebarFor($static))->toContain('app_deployment');
 });
 
@@ -91,42 +81,36 @@ it('offers workers on a Node site but not on a one-click PHP one', function () {
 });
 
 it('offers an environment file only where the panel owns one', function () {
-    // WordPress keeps its configuration in wp-config.php — the application's
-    // file, not an env file the panel manages.
+    // WordPress keeps its configuration in wp-config.php, not an env file the panel manages.
     expect(sidebarFor(makeFeatureApp('wordpress')))->not->toContain('app_environment')
         ->and(sidebarFor(makeFeatureApp('git')))->toContain('app_environment')
         // Craft and Statamic are the marketplace exceptions: both read .env.
         ->and(sidebarFor(makeFeatureApp('craftcms')))->toContain('app_environment')
         ->and(sidebarFor(makeFeatureApp('statamic')))->toContain('app_environment')
-        // And Akaunting (Laravel) and Mautic (Symfony), bug #69.
+        // And Akaunting (Laravel) and Mautic (Symfony).
         ->and(sidebarFor(makeFeatureApp('akaunting')))->toContain('app_environment')
         ->and(sidebarFor(makeFeatureApp('mautic')))->toContain('app_environment');
 });
 
 it('offers staging only where a staging recipe exists', function () {
-    // Pushing a WordPress staging site back needs URL rewriting inside
-    // serialised data. That recipe exists for WordPress and nothing else yet.
+    // Pushing a staging site back needs URL rewriting inside serialised data; only WordPress has it.
     expect(sidebarFor(makeFeatureApp('wordpress')))->toContain('app_staging')
         ->and(sidebarFor(makeFeatureApp('git')))->not->toContain('app_staging');
 });
 
 it('does not offer backups or cloning for a database client', function (string $type) {
-    // It holds no content of its own — it reads the databases already on the
-    // server. Reinstalling is the honest recovery path.
+    // It holds no content of its own; it reads the databases already on the server.
     $sidebar = sidebarFor(makeFeatureApp($type));
 
     expect($sidebar)->not->toContain('app_backup')
         ->and($sidebar)->not->toContain('app_clone')
-        // Password protection stays: an exposed phpMyAdmin is a login page for
-        // every database on the box.
+        // Password protection stays: an exposed phpMyAdmin is a login page for every database.
         ->and($sidebar)->toContain('app_security');
 })->with(['phpmyadmin', 'adminer']);
 
 it('offers cloning only where copying the files is the whole job', function () {
-    // A clone of a database-backed site that copies only files is a site
-    // pointing at the original's database — which is why `CloneManager`
-    // refuses one. WordPress is the single type with a recipe for the rest of
-    // it, so it is the single database-backed type that keeps the screen.
+    // A file-only clone of a database-backed site points at the original's database, so
+    // `CloneManager` refuses it. WordPress is the one database-backed type with a recipe.
     expect(sidebarFor(makeFeatureApp('wordpress')))->toContain('app_clone')
         ->and(sidebarFor(makeFeatureApp('static', 'static')))->toContain('app_clone')
         ->and(sidebarFor(makeFeatureApp('git')))->toContain('app_clone')
@@ -136,10 +120,8 @@ it('offers cloning only where copying the files is the whole job', function () {
 });
 
 it('pins which site types offer cloning', function () {
-    // The list, not a rule about the list. A new type arriving with a
-    // database and no clone recipe must not quietly gain the screen, and a
-    // type that grows a `cloneStrategy()` must add `app_clone` in its own
-    // `features()` — which this fails until it does.
+    // Pins the list: a new type with a database and no clone recipe must not quietly gain the
+    // screen, and a type that grows a `cloneStrategy()` must add `app_clone` to its `features()`.
     $offering = collect(app(SiteTypeManager::class)->all())
         ->filter(fn ($type) => in_array('app_clone', $type->features(), true))
         ->map(fn ($type) => $type->name())
@@ -153,8 +135,7 @@ it('pins which site types offer cloning', function () {
 });
 
 it('still returns every application permission for the role form', function () {
-    // An admin assigning a role is not looking at one site, so the unfiltered
-    // list has to stay available — two different questions, two answers.
+    // Assigning a role is not about one site, so the unfiltered list must stay available.
     $all = collect(
         $this->actingAs($this->admin)
             ->getJson('/api/permissions?level=application')
@@ -165,13 +146,9 @@ it('still returns every application permission for the role form', function () {
     expect($all)->toHaveCount(18)
         ->and($all)->toContain('app_deployment')
         ->and($all)->toContain('app_staging')
-        // Container sites only, and filtered out per site type like the rest — but
-        // grantable here, because a role is assigned without a site in mind.
+        // Container sites only, filtered per site type, but grantable here.
         ->and($all)->toContain('app_compose')
-        // Including the one that is not a screen. `app_magic_login` has a null
-        // url so the sidebar skips it, but an admin assigning a role must still
-        // be able to grant it — that separation is the whole reason the url is
-        // null rather than the permission being folded into another.
+        // `app_magic_login` is not a screen (null url, so the sidebar skips it) but is still grantable.
         ->and($all)->toContain('app_magic_login');
 });
 
@@ -185,8 +162,7 @@ it('leaves the server sidebar untouched when an application is named', function 
             ->json('permissions')
     )->pluck('name');
 
-    // The filter only ever removes application-level rows. A server permission
-    // has nothing to do with any one site.
+    // The filter only removes application-level rows.
     expect($server)->toContain('application')
         ->and($server)->toContain('database');
 });
@@ -194,10 +170,8 @@ it('leaves the server sidebar untouched when an application is named', function 
 it('closes the door as well as hiding the link', function () {
     $application = makeFeatureApp('wordpress');
 
-    // A hidden sidebar item is not authorisation — the endpoint is reachable by
-    // anyone who types the URL, and would run against a site with no
-    // repository. 404 rather than 403: for this site the screen does not
-    // exist, which is a different statement from "you may not".
+    // A hidden sidebar item is not authorisation. 404 rather than 403: for this site the
+    // screen does not exist.
     $this->actingAs($this->admin)
         ->postJson("/api/applications/{$application->id}/deploy")
         ->assertNotFound();
@@ -219,26 +193,17 @@ it('rejects an application id that does not exist', function () {
 });
 
 it('offers backups to container sites, and still no cloning', function (string $siteType) {
-    // The pair is the point. Backups were withheld from container sites while
-    // the pipeline could only archive a document root and a database — a
-    // container site has neither, so the artefact would have been one compose
-    // file presented as a site. `ArchiveVolumes` captures the volumes and
-    // `ArchiveFiles` the compose file beside them, so the objection is answered
-    // and the screen is offered.
+    // `ArchiveVolumes` and `ArchiveFiles` capture the volumes and compose file, so backups are
+    // offered. Cloning must not be: it copies served files, so a clone would point at the
+    // original's volumes.
     //
-    // Cloning is not, and must not be: it copies served files, so a clone of a
-    // container site would be a site pointing at the original's volumes.
-    //
-    // Asserted per type rather than once, because the two paths strip their
-    // features independently — the generic Docker type for bring-your-own images
-    // and the recipe-backed type for all nineteen one-clicks — and the
-    // one-clicks were left without `app_container` once before by exactly this
-    // kind of divergence.
+    // Asserted per type: the generic Docker type and the recipe-backed type strip features
+    // independently.
     $sidebar = sidebarFor(makeFeatureApp($siteType, 'docker'));
 
     expect($sidebar)->toContain('app_backup')
         ->and($sidebar)->not->toContain('app_clone')
-        // Still a container site in every other respect.
+        // Still a container site otherwise.
         ->and($sidebar)->toContain('app_container')
         ->and($sidebar)->toContain('app_compose');
 })->with([

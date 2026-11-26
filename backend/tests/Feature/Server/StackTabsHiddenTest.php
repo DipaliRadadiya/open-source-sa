@@ -11,16 +11,13 @@ use Illuminate\Support\Collection;
 /**
  * What a Docker box does not do, and therefore does not show.
  *
- * `--stack=docker` serves containers and nothing else, so versions, ini files and
- * extensions are a screen about nothing there. Reported as "hide the PHP tab",
- * which is half of it: hiding the tab while the seventeen endpoints still answer
- * is the state `EnsureServerManagesDatabases` warns about in its own docblock — a
- * hidden button whose route works, that nobody is looking for.
+ * `--stack=docker` serves containers only, so the PHP versions, ini and extensions screens are
+ * pointless there. Hiding the tab is not enough: the endpoints must refuse too, or the route
+ * still works behind a hidden button (see `EnsureServerManagesDatabases`).
  *
- * The case these tests exist for is the THIRD one, not the first two: a server
- * with no recorded capability row. Those are real, migrated in from another panel,
- * and certainly serving PHP. Refusing them their PHP screen because nobody wrote a
- * row would be a far worse bug than one extra tab on a Docker box.
+ * The case that matters most is a server with no recorded capability row: migrated in from
+ * another panel and serving PHP. Refusing it the PHP screen would be worse than one extra tab
+ * on a Docker box.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -34,9 +31,8 @@ function dockerStackAs(string $stack, array $profiles): void
         'stack' => $stack,
         'web_server' => 'nginx',
         'capabilities' => [
-            // True on a Docker box too, and deliberately: PHP IS installed,
-            // because the panel is a Laravel application. Every assertion below
-            // is about `serving_profiles`, which is the different question.
+            // True on a Docker box too: PHP is installed because the panel is a Laravel app. The
+            // assertions below are about `serving_profiles`.
             'php' => true,
             'node' => false,
             'serving_profiles' => $profiles,
@@ -67,9 +63,7 @@ function phpInSidebar(): bool
     return collect($response->json('permissions'))->contains(fn (array $item) => $item['name'] === 'php');
 }
 
-/*
- * The sidebar.
- */
+/* The sidebar. */
 
 it('hides the PHP tab on a Docker server', function () {
     dockerStackAs('docker', ['docker']);
@@ -84,17 +78,15 @@ it('keeps the PHP tab on every stack that serves PHP sites', function (string $s
 })->with(['lemp', 'lamp', 'ols']);
 
 it('keeps the PHP tab on a server with no recorded capabilities', function () {
-    // The migrated-in box. `ServerCapabilities::DEFAULT_PROFILES` is permissive on
-    // purpose and this is the assertion that keeps it that way.
+    // The migrated-in box: `ServerCapabilities::DEFAULT_PROFILES` is permissive on purpose.
     ServerCapability::query()->delete();
 
     expect(phpInSidebar())->toBeTrue();
 });
 
 it('hides it from the unfiltered menu too, not only from level=server', function () {
-    // The sidebar asks with a level; other callers do not. A filter that only
-    // applied to one of them would hide the tab and leave every page gate saying
-    // the user may still view it.
+    // The sidebar asks with a level; other callers do not. A filter on only one would hide the tab
+    // while page gates still say the user may view it.
     dockerStackAs('docker', ['docker']);
 
     $response = $this->withHeaders(phpTabHeaders())->getJson('/api/permissions');
@@ -104,9 +96,8 @@ it('hides it from the unfiltered menu too, not only from level=server', function
 });
 
 it('hides the Databases tab on a Docker server', function () {
-    // An application that wants a database there brings one as a container, so the
-    // panel manages no engine — and these endpoints already answered 409, which
-    // made this the one tab that was visibly broken rather than merely pointless.
+    // An application there brings its own database container, so the panel manages no engine
+    // and these endpoints already answer 409.
     dockerStackAs('docker', ['docker']);
 
     expect(serverTabs())->not->toContain('database');
@@ -134,20 +125,16 @@ it('hides the Node.js tab on a Docker server', function () {
 });
 
 it('KEEPS the Node.js tab on a LEMP box, even one recorded without Node sites', function () {
-    // The assertion this whole rule was designed around. `hosts('node')` is false
-    // for this row (a LEMP preset no longer looks like this — it hosts Node sites
-    // since 2026-10-05 — but a recorded row can), and hiding the screen on that
-    // basis would take Node away from every Laravel site that builds its assets
-    // with it. The panel's own build_command placeholder is `npm ci && npm run
-    // build`. What makes a Docker box different is that it runs no sites at all.
+    // `hosts('node')` can be false for a recorded LEMP row, but hiding Node on that basis would
+    // break every Laravel site that builds its assets with it (the panel's own `build_command`
+    // placeholder is `npm ci && npm run build`). A Docker box differs: it runs no sites at all.
     dockerStackAs('lemp', ['php', 'static']);
 
     expect(serverTabs())->toContain('node');
 });
 
 it('keeps the Node endpoints answering on a LEMP box', function () {
-    // The same point at the API, because the middleware could have been written
-    // with the wrong predicate just as easily as the sidebar.
+    // The same point at the API: the middleware could use the wrong predicate as easily as the sidebar.
     dockerStackAs('lemp', ['php', 'static']);
 
     $this->withHeaders(phpTabHeaders())->getJson('/api/node')->assertStatus(200);
@@ -165,13 +152,6 @@ it('refuses the Node endpoints on a Docker server', function () {
     }
 });
 
-// The test that used to live here asserted the opposite — that the Docker tab
-// stayed on a LEMP box, because hiding it was "a decision about a different
-// stack and nobody has asked". Somebody asked (2026-10-07), so the decision
-// changed and the assertion moved with it, down with the other three stack
-// filters. Recorded rather than quietly deleted: it was a deliberate choice,
-// not an oversight, and the next person to wonder why should find the answer.
-
 it('has the Node refusal translated in every locale', function () {
     foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
         $line = __('errors/node.not_a_node_server', [], $locale);
@@ -181,9 +161,7 @@ it('has the Node refusal translated in every locale', function () {
 });
 
 it('asks one source for whether databases are managed', function () {
-    // The rule was `foreach (['php','node'])` inside the middleware, and the
-    // sidebar needed the same answer. Two copies of a two-line rule is one copy
-    // that gets fixed, so both now call this.
+    // The middleware and the sidebar must share one rule, or a fix lands in only one copy.
     dockerStackAs('docker', ['docker']);
     expect(app(ServerCapabilities::class)->managesDatabases())->toBeFalse();
 
@@ -191,9 +169,7 @@ it('asks one source for whether databases are managed', function () {
     expect(app(ServerCapabilities::class)->managesDatabases())->toBeTrue();
 });
 
-/*
- * The endpoints. Hiding without gating is the worse state.
- */
+/* The endpoints. Hiding without gating is the worse state. */
 
 it('refuses every PHP endpoint on a Docker server', function () {
     dockerStackAs('docker', ['docker']);
@@ -216,17 +192,14 @@ it('says why, rather than answering 409 with nothing', function () {
     $response = $this->withHeaders(phpTabHeaders())->getJson('/api/php')->assertStatus(409);
 
     expect($response->json('message'))->toBe(__('errors/php.not_a_php_server'))
-        // The sentence has to name the PANEL's own PHP, or the first question back
-        // is "so how is the panel running?"
+        // The sentence must name the panel's own PHP, or the obvious question is how the panel runs.
         ->and($response->json('message'))->toContain('panel');
 });
 
 it('does not refuse them on a LEMP server', function () {
     dockerStackAs('lemp', ['php', 'static']);
 
-    // Not asserting 200: the endpoint shells out to the box and this suite has no
-    // PHP versions installed. Anything other than the capability refusal is what
-    // matters here.
+    // Anything other than the capability refusal (409) is what matters here.
     $this->withHeaders(phpTabHeaders())->getJson('/api/php')->assertStatus(200);
 });
 
@@ -239,11 +212,8 @@ it('has the refusal translated in every locale', function () {
 });
 
 /*
- * Registry credentials as an integration, not a corner of the Docker screen.
- *
- * Reported as "there is no proper instruction, bad UX", and the placement was half
- * of that: the card sat below networks and volumes, so the panel's only
- * private-image support was something you had to already know about to find.
+ * Registry credentials are an integration, not a corner of the Docker screen: private-image
+ * support must be discoverable.
  */
 
 it('offers Docker Registries in the integrations section', function () {
@@ -256,16 +226,14 @@ it('offers Docker Registries in the integrations section', function () {
     $registry = $items->firstWhere('name', 'registry');
 
     expect($registry)->not->toBeNull()
-        // The sub_level is what makes the sidebar draw it under Integrations
-        // beside Git and Storage, rather than loose among the server screens.
+        // `sub_level` makes the sidebar draw it under Integrations beside Git and Storage.
         ->and($registry['sub_level'])->toBe('integration')
         ->and($registry['url'])->toBe('/integrations/registries');
 });
 
 it('is its own permission, not a corner of docker', function () {
-    // The two grants mean different things: `docker` manages networks and volumes
-    // on this box, `registry` stores a credential that can pull private code onto
-    // it. Sharing one would mean granting the second to get the first.
+    // `docker` manages networks and volumes; `registry` stores a credential that can pull private
+    // code onto the box. Sharing one grant would give away the second to get the first.
     dockerStackAs('docker', ['docker']);
 
     $role = Role::create(['name' => 'Netops', 'slug' => 'netops']);
@@ -286,8 +254,7 @@ it('is its own permission, not a corner of docker', function () {
 });
 
 it('hides Docker Registries on a server that hosts no containers', function () {
-    // A credential for pulling container images is nothing on a box that runs
-    // none — and the endpoints refuse there too, so the tab and the routes agree.
+    // The endpoints refuse there too, so the tab and the routes agree.
     dockerStackAs('lemp', ['php', 'static']);
 
     expect(serverTabs())->not->toContain('registry');
@@ -304,11 +271,8 @@ it('has the sidebar label translated in every locale', function () {
 });
 
 it('hides the Docker tab on every stack that serves no containers', function (string $stack, array $profiles) {
-    // The last of the four, and the one that was visibly wrong rather than
-    // merely pointless: `EnsureServerHostsContainers` already answered 409 on
-    // all seventeen Docker routes off a container stack, so the menu offered a
-    // page whose every request failed. Networks, volumes and containerised
-    // databases are all about containers; a box with none has nothing to show.
+    // `EnsureServerHostsContainers` already answers 409 on every Docker route off a container
+    // stack, so the menu must not offer a page whose every request fails.
     dockerStackAs($stack, $profiles);
 
     expect(serverTabs())->not->toContain('docker');
@@ -323,25 +287,21 @@ it('keeps the Docker tab on a Docker server', function () {
     dockerStackAs('docker', ['docker']);
 
     expect(serverTabs())->toContain('docker')
-        // And its registry companion, which was already gated on the same answer.
+        // Its registry companion is gated on the same answer.
         ->and(serverTabs())->toContain('registry');
 });
 
 it('keeps the Docker tab on a server with no recorded capabilities', function () {
-    // The migrated-in box again. `DEFAULT_PROFILES` does not include `docker`,
-    // so this one genuinely does hide — unlike PHP above, where the permissive
-    // default is the whole point. Asserted so the difference is deliberate and
-    // not a surprise later: a box with no row is not a Docker box, and the
-    // endpoints would 409 for it too.
+    // Unlike PHP, `DEFAULT_PROFILES` does not include `docker`: a box with no row is not a Docker
+    // box, and the endpoints would 409 for it too.
     ServerCapability::query()->delete();
 
     expect(serverTabs())->not->toContain('docker');
 });
 
 it('hides the Docker tab from the unfiltered menu too', function () {
-    // Same reason as the PHP case: the sidebar asks with a level, other callers
-    // do not, and a filter that applied to only one would hide the tab while
-    // every page gate still said the user may view it.
+    // Same reason as the PHP case: a filter on only the levelled call would leave page gates saying
+    // the user may view the tab.
     dockerStackAs('lemp', ['php', 'static']);
 
     $response = $this->withHeaders(phpTabHeaders())->getJson('/api/permissions');

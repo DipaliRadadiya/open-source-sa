@@ -14,14 +14,11 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Sleep;
 
 /**
- * DS-03: after `compose up`, wait for the site to answer, and say why when it
- * does not.
+ * After `compose up`, wait for the site to answer, and say why when it does not.
  *
- * The case this exists for, measured on both test panels: Memos deployed with
- * container port 8082 ran happily on 5230, `compose up` exited 0, the panel said
- * Running, and every request was a 502. Now the deploy fails with "Nothing
- * answers on container port 8082 — the image listens on 5230" and the
- * container's last log lines beside it.
+ * Motivating case: Memos deployed with container port 8082 listens on 5230, `compose up` exits 0
+ * and every request is a 502. The deploy must fail with "Nothing answers on container port 8082 —
+ * the image listens on 5230" plus the container's last log lines.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -89,8 +86,8 @@ function fakeReadinessBox(array $box = []): ArrayObject
             return Process::result(output: ($box['running'] ?? true) ? "abc123\n" : '');
         }
 
-        // Every `ps --format json` takes the next health value: the check
-        // asks once for the health and once more for the restart state.
+        // Each `ps --format json` takes the next health value: the check asks once for health and
+        // once for the restart state.
         if (in_array('--format', $args, true) && in_array('json', $args, true)) {
             $health = count($healths) > 1 ? array_shift($healths) : $healths[0];
 
@@ -157,8 +154,7 @@ it('names the port the image really listens on when nothing answers', function (
         ->and($fresh->last_failure['reason'])->toBe('container_port_mismatch')
         ->and($fresh->last_failure['params'])->toMatchArray(['port' => 8082, 'image_ports' => '5230'])
         ->and($fresh->last_failure['log'])->toContain('Server running on port 5230')
-        // Encrypted at rest (DS-08): a first boot prints connection strings,
-        // and the row is in every database dump and panel backup.
+        // Encrypted at rest: a first boot prints connection strings, and the row is in every dump.
         ->and((string) $fresh->getRawOriginal('last_failure'))->not->toContain('Server running')
         ->and((string) $fresh->getRawOriginal('last_failure'))->not->toContain('container_port_mismatch');
 
@@ -186,9 +182,8 @@ it('says nothing answered in time when the port is the declared one', function (
 });
 
 it('waits against the clock, not a count of tries (DS-09)', function () {
-    // A port that accepts and then hangs: each probe burns curl's whole
-    // --max-time. Counted as 30 tries of 3 s, "90 seconds" waited ~258, past
-    // the panel's own 300 s FastCGI timeout on the synchronous PUT /container.
+    // A port that accepts then hangs burns curl's whole --max-time per probe. Counted as tries,
+    // "90 seconds" ran ~258 s, near the 300 s FastCGI timeout on the synchronous PUT /container.
     config(['server.docker.readiness.timeout' => 90, 'server.docker.readiness.interval' => 3]);
     $this->freezeTime();
     Sleep::fake(syncWithCarbon: true);
@@ -261,9 +256,8 @@ function readinessContainers(array $looping): ContainerSupervisor
 }
 
 it('lets a stack whose app restarts while its database starts come up (DS-09)', function (bool $pasted) {
-    // The common shape of a pasted file — app + postgres, restart:
-    // unless-stopped. The app exits once on ECONNREFUSED, is restarted, and
-    // answers. One sighting of that restart used to fail the deploy.
+    // Common pasted-file shape: app + postgres with `restart: unless-stopped`. The app exits once
+    // on ECONNREFUSED, restarts and answers; one sighting of that restart must not fail the deploy.
     if ($pasted) {
         $this->application->forceFill(['compose' => "services:\n  app:\n    image: ghcr.io/umami-software/umami\n  db:\n    image: postgres:16\n", 'container_port' => null])->save();
     }
@@ -312,8 +306,7 @@ it('waits out the deadline on a pasted file, then names the restart (DS-09)', fu
 });
 
 it('does not name the host port as the container port (DS-09)', function () {
-    // A pasted file has no single container port; app_port 3001 is the
-    // panel's loopback port on the host.
+    // A pasted file has no single container port; app_port 3001 is the panel's host loopback port.
     $this->application->forceFill(['compose' => "services:\n  app:\n    image: nginx\n", 'container_port' => null])->save();
     fakeReadinessBox(['curl' => '000']);
 
@@ -356,11 +349,8 @@ it('stops at a container that exited', function () {
 });
 
 it('gives a readiness failure a reference that leads to a server-ops log line', function () {
-    // The verdict comes from probing, not from one failed command, so there was
-    // no server-ops line to point at and the reference was ''. A refused resume
-    // then showed a reason and no reference (integrated QA on .115). The verdict
-    // is now logged under its own reference — the reason and status, not the
-    // container's log, which is stored on the application already.
+    // The verdict comes from probing, not one failed command, so it has no server-ops line of its
+    // own. It is logged under its own reference: reason and status only, not the container log.
     $file = tempnam(sys_get_temp_dir(), 'server-ops-');
     config(['logging.channels.server-ops' => ['driver' => 'single', 'path' => $file, 'level' => 'debug']]);
     fakeReadinessBox(['curl' => '000', 'running' => false]);
@@ -386,9 +376,8 @@ it('does not fail a site on a probe that never ran', function () {
 });
 
 it('leaves one-click apps to their installers, and reports them running (DS-14)', function () {
-    // The file's origin is what decides, not its text: a ghost row is a one-click.
-    // Its check is running + not bouncing, and passing it is now said: the API
-    // used to answer null while the panel page said Running.
+    // The file's origin decides, not its text: a ghost row is a one-click. Its check is running +
+    // not bouncing, and passing it is reported as `running`, not null.
     $this->application->forceFill(['site_type' => 'ghost'])->save();
     $ran = fakeReadinessBox(['curl' => '000']);
 
@@ -421,9 +410,7 @@ it('strips the compose prefix from the last log line', function () {
         ->and(ContainerReadinessCheck::lastLine(''))->toBe('');
 });
 
-/*
- * DS-09: a stored `running` is not a running container.
- */
+/* A stored `running` is not a running container. */
 
 /** `docker ps` answering with these compose projects running; null makes it fail. */
 function fakeLiveProjects(?array $projects): ArrayObject
@@ -434,8 +421,8 @@ function fakeLiveProjects(?array $projects): ArrayObject
         $ran[] = $process->command;
 
         if (in_array('ps', $process->command, true) && in_array('label=com.docker.compose.project', $process->command, true)) {
-            // `sv-app-N` or `sv-app-N<TAB>status`: one running container,
-            // in the `docker ps -a` columns ContainerLiveness reads.
+            // `sv-app-N` or `sv-app-N<TAB>status`: one running container in the `docker ps -a`
+            // columns ContainerLiveness reads.
             $lines = array_map(function (string $line): string {
                 [$project, $status] = array_pad(explode("\t", $line, 2), 2, 'Up 1 minute');
 
@@ -508,14 +495,10 @@ it('keeps a stored failure when the containers are restarted', function () {
     expect($this->application->fresh()->container_status)->toBe('not_answering');
 });
 
-/*
- * DS-12: the cross-check moves the badge both ways, and the check's own
- * docker questions are bounded.
- */
+/* The cross-check moves the badge both ways, and the check's own docker questions are bounded. */
 
 it('drops a stored exit once Docker has the container running again', function () {
-    // The mirror of the DS-09 case: the site was fixed and started — Start
-    // runs no readiness check — and kept its red "failed" until a deploy.
+    // Start runs no readiness check, so a fixed and started site must not keep its red "failed".
     $this->application->forceFill([
         'container_status' => 'exited',
         'last_failure' => ['reason' => 'container_exited', 'params' => [], 'log' => 'boom'],
@@ -542,9 +525,8 @@ it('drops a stored exit once Docker has the container running again', function (
 });
 
 it('does not read a running container as a fixed one when it never stopped', function (string $stored) {
-    // `not_answering` is a running container that does not answer, and a
-    // crash loop is running for part of every bounce: neither is fixed by
-    // being up.
+    // `not_answering` is a running container that does not answer, and a crash loop is running
+    // for part of every bounce: neither is fixed by being up.
     $this->application->forceFill([
         'container_status' => $stored,
         'last_failure' => ['reason' => 'container_not_answering', 'params' => ['port' => 8082, 'seconds' => 90], 'log' => 'x'],
@@ -558,8 +540,7 @@ it('does not read a running container as a fixed one when it never stopped', fun
 })->with(['not_answering', 'restarting']);
 
 it('asks its docker questions under a short ceiling, not the pull timeout', function () {
-    // `compose up` gets the 600 s a pull of gigabytes may need. `ps` and
-    // `logs` ran under the same 600 on every try and after the deadline.
+    // `compose up` gets the 600 s a large pull may need; `ps` and `logs` must not inherit it.
     $timeouts = [];
 
     Process::fake(function ($process) use (&$timeouts) {
@@ -591,14 +572,12 @@ it('asks its docker questions under a short ceiling, not the pull timeout', func
         ->and(array_unique($timeouts['up']))->toBe([600])
         ->and(max($timeouts['ps']))->toBe(ContainerSupervisor::QUERY_TIMEOUT)
         ->and(max($timeouts['logs']))->toBe(ContainerSupervisor::QUERY_TIMEOUT)
-        // What the check can spend after its deadline: one more sample and
-        // the diagnostics, still inside the 300 s request.
+        // What the check can spend after its deadline (one more sample plus diagnostics) must
+        // still fit the 300 s request.
         ->and(ContainerReadinessCheck::MAX_TIMEOUT + 3 * ContainerSupervisor::QUERY_TIMEOUT)->toBeLessThan(300);
 });
 
-/*
- * DS-14: the image's own HEALTHCHECK, one-click status.
- */
+/* The image's own HEALTHCHECK, and one-click status. */
 
 it('passes on the image\'s own healthcheck without asking / at all', function () {
     $ran = fakeReadinessBox(['curl' => '000', 'health' => 'healthy']);
@@ -609,8 +588,7 @@ it('passes on the image\'s own healthcheck without asking / at all', function ()
 });
 
 it('fails an unhealthy container that answers /, with the healthcheck\'s own words', function () {
-    // Kanboard on 26.04: `/` answered 200 with a migration error page, Docker
-    // said unhealthy, and the panel said Running.
+    // `/` can answer 200 with an error page while Docker already reports the container unhealthy.
     fakeReadinessBox([
         'curl' => '200',
         'health' => 'unhealthy',
@@ -687,7 +665,7 @@ it('clears an unhealthy failure once the healthcheck passes', function () {
 });
 
 it('reports a one-click container app as Docker sees it, not null', function () {
-    // Ghost on both DS-11 servers: container_status null while the page said Running.
+    // A one-click app's status must come from Docker, not stay null while the page says Running.
     $this->application->forceFill(['site_type' => 'ghost', 'container_status' => null])->save();
 
     fakeLiveProjects(['sv-app-'.$this->application->id."\tUp 4 minutes"]);
@@ -706,10 +684,8 @@ it('reports a one-click container app as Docker sees it, not null', function () 
 });
 
 /*
- * S-09: a container that does not speak HTTP. The CF-07 matrix's
- * `postgres:16-alpine` (env + two volumes) ran fine for the whole wait and
- * failed as `container_not_answering` on 24.04 and 26.04 alike — `/` on a
- * database port can never answer.
+ * A container that does not speak HTTP (e.g. `postgres:16-alpine`) must not fail as
+ * `container_not_answering`: `/` on a database port can never answer.
  */
 describe('a container whose port is not HTTP (S-09)', function () {
     beforeEach(function () {
@@ -755,9 +731,7 @@ describe('a container whose port is not HTTP (S-09)', function () {
     });
 
     it('keeps the HTTP check for a web container with the same env and volumes', function () {
-        // The other half of the CF-07 row: nginx with env + two volumes went
-        // Active by answering `/`, and a web port that never answers must
-        // still fail rather than pass on "running".
+        // The other half: a web port that never answers must still fail, not pass on "running".
         $this->application->forceFill(['image' => 'nginx:1.27-alpine', 'container_port' => 80])->save();
         $ran = fakeReadinessBox(['curl' => '000', 'exposed' => '{"80/tcp":{}}']);
 

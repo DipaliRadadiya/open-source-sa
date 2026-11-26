@@ -12,17 +12,11 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * The site name is a filename.
+ * The site name is a filename: it names the PHP-FPM pool, the web server vhost and (on
+ * OpenLiteSpeed) the vhost directory. Uniqueness is checked against the disk, not only the
+ * `applications` table: `www` is the distro pool and `panel` the panel's own vhost.
  *
- * It names the PHP-FPM pool, the web server vhost and — on OpenLiteSpeed —
- * the vhost directory, and uniqueness was only ever asked of the
- * `applications` table. That table knows what the panel has made and nothing
- * about what is already on the disk, so `www` (the pool the distro ships) and
- * `panel` (the panel's own vhost) were both accepted and both overwrote the
- * file they landed on. Reachable from create and from rename alike.
- *
- * What these pin: the refusal happens, it names the right collision, it does
- * not fire on a site's own files, and — the one that matters most — a server
+ * Pinned: the refusal, the collision it names, no false hit on a site's own files, and a server
  * that cannot answer the probe can still make sites.
  */
 class ConflictFake
@@ -66,15 +60,11 @@ beforeEach(function () {
 
     ConflictFake::reset();
 
-    // On, as on a real server. The suite turns elevation off globally, which
-    // is exactly what let an unelevated `ls` pass here while it read nothing
-    // on OpenLiteSpeed: the fake cannot tell who is asking unless the
-    // command says so.
+    // Elevation on, as on a real server. The suite turns it off globally, which let an unelevated
+    // `ls` pass here while it read nothing on OpenLiteSpeed.
     config()->set('server.privilege.sudo', true);
 
-    // The versions this "server" has. Without this the probe asks whatever
-    // happens to be installed on the machine running the suite, and the
-    // multi-version test measures nothing.
+    // Pin the installed versions; otherwise the probe asks whatever is installed on this machine.
     $versions = Mockery::mock(PhpVersionManager::class);
     $versions->shouldReceive('versions')->andReturn(['8.4', '8.3']);
     app()->instance(PhpVersionManager::class, $versions);
@@ -92,15 +82,13 @@ beforeEach(function () {
                 return Process::result(errorOutput: 'sudo: a password is required', exitCode: 1);
             }
 
-            // What the live OLS box answered to an unelevated listing — and
-            // what used to read as "nothing here" (2026-09-29).
+            // An unelevated listing of a root-only directory fails; that used to read as "nothing here".
             if (! $elevated && in_array($dir, ConflictFake::$rootOnly, true)) {
                 return Process::result(errorOutput: "{$args[0]}: cannot open directory '{$dir}': Permission denied", exitCode: 2);
             }
 
-            // Only the entries of the directory asked for, the way the listing
-            // really answers — a fake that returned full paths would let a
-            // basename comparison pass while measuring nothing.
+            // Only the entries of the directory asked for, as the real listing answers; full paths
+            // would let a basename comparison pass while measuring nothing.
             $entries = [];
 
             foreach (ConflictFake::$present as $path) {
@@ -137,27 +125,23 @@ function conflictSite(string $name, string $slug): Application
 }
 
 it('refuses a name whose slug is the distro PHP pool', function () {
-    // The real one: `www.conf` is shipped by the php-fpm package, and every
-    // site that is not isolated reaches the pool it defines.
+    // `www.conf` ships with the php-fpm package; every non-isolated site reaches that pool.
     ConflictFake::$present = ['/etc/php/8.4/fpm/pool.d/www.conf'];
 
     expect(conflictFor('www'))->toBe('pool')
-        // Case is not a defence — `Str::slug` lowercases, and one file is one
-        // file.
+        // Case is no defence: `Str::slug` lowercases.
         ->and(conflictFor('WWW'))->toBe('pool');
 });
 
 it('refuses a name whose slug is the panel\'s own vhost', function () {
-    // Worse than the pool case: the reply to this request would be the last
-    // thing the API ever said.
+    // Worse than the pool case: overwriting it takes the panel itself down.
     ConflictFake::$present = ['/etc/nginx/sites-available/panel.conf'];
 
     expect(conflictFor('panel'))->toBe('vhost');
 });
 
 it('checks the pool of every installed PHP version, not just the default', function () {
-    // The version is per site and changeable afterwards, so a collision under
-    // 8.3 is a collision.
+    // The version is per site and can change later, so a collision under 8.3 counts.
     ConflictFake::$present = ['/etc/php/8.3/fpm/pool.d/www.conf'];
 
     expect(conflictFor('www'))->toBe('pool');
@@ -172,7 +156,7 @@ it('leaves an ordinary name alone', function () {
 it('does not trip over a site\'s own files when it is renamed to its own name', function () {
     $application = conflictSite('Shop', 'shop');
 
-    // Everything this site owns is on disk, as it should be.
+    // The site's own files exist on disk.
     ConflictFake::$present = [
         '/etc/php/8.4/fpm/pool.d/shop.conf',
         '/etc/nginx/sites-available/shop.conf',
@@ -190,15 +174,13 @@ it('still refuses when an existing site is renamed onto someone else\'s file', f
 });
 
 it('lets sites be created on a server whose probe cannot answer', function () {
-    // The failure that would matter more than the bug. A sudo grant older
-    // than this build answers nothing, and "I could not look" must not become
-    // "no site may be created here".
+    // "I could not look" (e.g. a sudo grant older than this build) must not become "no site may
+    // be created here".
     ConflictFake::$refused = true;
     ConflictFake::$present = ['/etc/php/8.4/fpm/pool.d/www.conf'];
 
     expect(conflictFor('www'))->toBeNull()
-        // It really did try — a fake that never probed would pass this test
-        // while measuring nothing.
+        // It did try; a fake that never probed would pass while measuring nothing.
         ->and(ConflictFake::$probed)->not->toBeEmpty();
 });
 
@@ -221,12 +203,9 @@ it('refuses the create request itself, in the user\'s language', function () {
 });
 
 it('cannot be reached by a rename at all, since the name is immutable', function () {
-    // This used to assert that the *collision* was refused on rename. It would
-    // still pass, and it would be measuring the wrong thing: `name` is now
-    // refused on this endpoint whatever its value
-    // ({@see \App\Http\Requests\Server\Application\UpdateApplicationRequest}),
-    // so a slug can no longer move and the disk check has nothing to catch
-    // here. Renamed so it does not claim otherwise.
+    // `name` is refused on this endpoint whatever its value
+    // ({@see \App\Http\Requests\Server\Application\UpdateApplicationRequest}), so a slug cannot
+    // move and the disk check has nothing to catch here.
     $application = conflictSite('Shop', 'shop');
 
     ConflictFake::$present = ['/etc/php/8.4/fpm/pool.d/www.conf'];
@@ -236,8 +215,7 @@ it('cannot be reached by a rename at all, since the name is immutable', function
         ->assertStatus(422)
         ->assertJsonValidationErrors('name');
 
-    // An ordinary name is refused for the same reason — the guard is not what
-    // is doing the work.
+    // An ordinary name is refused too: the disk guard is not what does the work.
     $this->actingAs($this->admin)
         ->putJson("/api/applications/{$application->id}", ['name' => 'Perfectly Fine'])
         ->assertStatus(422)
@@ -248,9 +226,8 @@ it('cannot be reached by a rename at all, since the name is immutable', function
 });
 
 it('still accepts the runtime fields the panel really sends to this endpoint', function () {
-    // The one frontend caller of `PUT /applications/{id}` is
-    // `updateApplicationRuntime`, which sends these two and nothing else.
-    // Prohibiting `name` must not cost it.
+    // The frontend's only `PUT /applications/{id}` caller (`updateApplicationRuntime`) sends just
+    // these two; prohibiting `name` must not break it.
     $application = conflictSite('Node Site', 'node-site');
     $application->forceFill(['serving_profile' => 'node', 'php_version' => null])->save();
 
@@ -265,8 +242,7 @@ it('still accepts the runtime fields the panel really sends to this endpoint', f
 });
 
 it('steps over a taken name instead of refusing where there is nobody to ask', function () {
-    // Clone and staging have no user in front of them, so they suffix past
-    // the collision the way they always have for a name another site holds.
+    // Clone and staging have no user to ask, so they suffix past the collision.
     ConflictFake::$present = ['/etc/php/8.4/fpm/pool.d/www.conf'];
 
     $slug = Application::uniqueSlug(
@@ -278,20 +254,17 @@ it('steps over a taken name instead of refusing where there is nobody to ask', f
 });
 
 it('does not reach the server at all without that predicate', function () {
-    // Every already-validated caller keeps the cheap path: the rule has just
-    // asked the disk, and asking again on the way to the same answer is a
-    // second round-trip per site created.
+    // Already-validated callers keep the cheap path: the rule just asked the disk, and asking
+    // again would be a second round-trip per site created.
     Application::uniqueSlug('www');
 
     expect(ConflictFake::$probed)->toBeEmpty();
 });
 
 it('claims the vhost directory on OpenLiteSpeed and the file everywhere else', function () {
-    // OLS's unit is a directory named after the slug, holding the vhost file;
-    // nginx and Apache put a single `{slug}.conf` in a shared directory. The
-    // probe has to ask about the right one — and asking about the parent
-    // unconditionally means asking about `sites-available` itself, which
-    // exists on every server and would refuse every name anyone could type.
+    // OLS's unit is a directory named after the slug; nginx and Apache use one `{slug}.conf` in a
+    // shared directory. Probing the parent unconditionally would list `sites-available` itself,
+    // which exists everywhere and would refuse every name.
     ConflictFake::$present = ['/etc/nginx/sites-available/panel.conf'];
 
     expect(conflictFor('panel'))->toBe('vhost')
@@ -299,13 +272,11 @@ it('claims the vhost directory on OpenLiteSpeed and the file everywhere else', f
         // Never the level above, which holds nginx.conf and every other site.
         ->and(ConflictFake::$probed)->not->toContain('/etc/nginx');
 
-    // Now the same question on OpenLiteSpeed, where the panel's own `panel`
-    // and `panel-api` are directories rather than files.
+    // The same question on OpenLiteSpeed, where `panel` and `panel-api` are directories.
     ServerCapability::query()->delete();
     ServerCapability::create(['web_server' => 'openlitespeed', 'source' => 'detected']);
     config(['server.web_server_drivers.openlitespeed.vhost_root' => '/usr/local/lsws/conf/vhosts']);
-    // The capability is memoised per request, so the manager alone is not
-    // enough — forget the thing it asks as well.
+    // The capability is memoised per request: forget it as well as the manager.
     app()->forgetInstance(ServerCapabilities::class);
     app()->forgetInstance(WebServerManager::class);
 
@@ -318,22 +289,17 @@ it('claims the vhost directory on OpenLiteSpeed and the file everywhere else', f
 });
 
 it('gives up on the disk rather than looping forever', function () {
-    // A predicate that answers "taken" to everything used to spin this loop
-    // at 100% CPU, incrementing a suffix with no end — which is exactly what
-    // `Process::fake()` with no handler produces, since it answers success to
-    // every command. It hung the whole suite for forty minutes.
-    //
-    // A slug that might still collide is the acceptable failure here. An
-    // application that never answers again is not.
+    // A predicate that answers "taken" to everything used to spin this loop forever; that is what
+    // `Process::fake()` with no handler produces (success for every command).
+    // A slug that might still collide is acceptable; an application that never answers is not.
     $slug = Application::uniqueSlug('www', alsoTaken: fn (): bool => true);
 
     expect($slug)->toBe('www-'.(Application::SLUG_DISK_ATTEMPTS + 1));
 });
 
 it('refuses on Apache a name that would sort before its default site, and nowhere else', function () {
-    // Apache answers an unknown name with the first vhost it loads, in file
-    // order, and the panel's answer is v7's 000-default.conf. `00-shop.conf`
-    // would load first and serve every domain this server does not.
+    // Apache answers an unknown name with the first vhost it loads, in file order; the panel's is
+    // 000-default.conf, so `00-shop.conf` would load first and serve every domain not its own.
     expect(conflictFor('00-shop'))->toBeNull();
 
     ServerCapability::query()->delete();

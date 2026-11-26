@@ -46,10 +46,9 @@ beforeEach(function () {
 
     $this->home = storage_path('framework/testing/home-'.uniqid());
     $this->domain = 'restore-me.test';
-    // `{home}/{slug}/public_html`, which is where the panel resolves a document
-    // root — not `{home}/{domain}`. Building it by domain is the same mistake
-    // the PHP-version screen shipped, and it left every restore here failing at
-    // the first step for want of a directory.
+    // `{home}/{slug}/public_html`, which is where the panel resolves a document root — not
+    // `{home}/{domain}`. Otherwise every restore here fails at the first step for want of a
+    // directory.
     $this->siteRoot = $this->home.'/restore-me/public_html';
 
     File::ensureDirectoryExists($this->siteRoot);
@@ -162,10 +161,9 @@ function fakeSafetyBackupTar(): void
         $binary = $command[0] === 'sudo' ? ($command[2] ?? '') : $command[0];
         $args = $command[0] === 'sudo' ? array_slice($command, 2) : $command;
 
-        // Matched by flag presence, not argv position. Compression moved off
-        // `-z` to `--use-compress-program`, so `$args[1]` is no longer the
-        // mode — and a fixture keyed on position silently stopped recognising
-        // "create", which surfaced as the safety backup failing.
+        // Matched by flag presence, not argv position: compression moved to
+        // `--use-compress-program`, so `$args[1]` is no longer the mode, and a fixture keyed on position
+        // stops recognising "create".
         if ($binary === 'tar' && (in_array('-czf', $args, true) || in_array('-cf', $args, true))) {
             file_put_contents(tarArchivePath($args) ?? $args[2], str_repeat('s', 4096));
         }
@@ -198,8 +196,8 @@ it('restores the files, and removes the old site it moved aside once it worked',
         ->and($restore->reason)->toBeNull()
         ->and(File::get($this->siteRoot.'/index.php'))->toContain('restored');
 
-    // 2026-10-29 (Dipali): no copy the user never asked for stays on the
-    // server. The way back after a restore is its safety backup.
+    // No copy the user never asked for stays on the server. The way back after a restore is its
+    // safety backup.
     Process::assertRan(fn ($p) => in_array('rm', $p->command, true) && in_array($copy, $p->command, true));
     expect($restore->rollback_path)->toBeNull()
         ->and($restore->safety_backup_id)->not->toBeNull();
@@ -330,9 +328,8 @@ it('puts the site back when the swap fails half way', function () {
 });
 
 /*
- * Every file restore moves the live site aside to `.rollback-{id}`, and nothing
- * ever removed one: five restores of a 117 MB site left 585 MB on a real server
- * (2026-09-24). Only the newest was kept after that; since 2026-10-29 none is.
+ * Every file restore moves the live site aside to `.rollback-{id}`. None is kept once the restore
+ * has worked, or repeated restores of a large site would fill the disk.
  */
 describe('old copies of the site', function () {
     /**
@@ -484,10 +481,8 @@ describe('old copies of the site', function () {
 });
 
 /*
- * Safety backups are kept to the newest two, and the older ones used to be
- * deleted as rows only: every restore from the third on left a full copy of the
- * site in the bucket that nothing in the panel could see or remove. Found on a
- * real server (2026-09-24) as a 40 MB archive left behind in AWS.
+ * Safety backups are kept to the newest two. Older ones used to be deleted as rows only, leaving a
+ * full copy of the site in the bucket that nothing in the panel could see or remove.
  */
 describe('old safety backups', function () {
     it('removes the archive of a safety backup it prunes, not only the row', function () {
@@ -571,9 +566,8 @@ describe('restoring a database', function () {
     /** A step wired to an engine that records what it was asked to do. */
     function restoreDatabaseStep(array &$calls): RestoreDatabase
     {
-        // Mocked rather than hand-written: the engine contract has twenty-two
-        // methods and a stub of it would be a maintenance burden that proves
-        // nothing about this step.
+        // Mocked rather than hand-written: the engine contract is large, and a stub of it would be a
+        // maintenance burden that proves nothing about this step.
         $engine = Mockery::mock(DatabaseEngine::class);
         $engine->shouldIgnoreMissing();
 
@@ -692,8 +686,8 @@ describe('restoring a database', function () {
     });
 
     it('gives the recreated database back to its users before loading it', function () {
-        // PostgreSQL: the database came back owned by the panel, and every one
-        // of its users was refused at connect (measured 2026-10-04).
+        // PostgreSQL: the database came back owned by the panel, and every one of its users was
+        // refused at connect.
         $database = Database::create([
             'application_id' => $this->application->id,
             'name' => 'shop', 'engine' => 'postgresql',

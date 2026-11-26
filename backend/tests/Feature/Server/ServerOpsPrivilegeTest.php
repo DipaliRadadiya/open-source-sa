@@ -7,15 +7,11 @@ use Illuminate\Support\Facades\Process;
 use Psr\Log\LoggerInterface;
 
 /*
- * php-fpm runs as the unprivileged panel account, so anything touching the
- * system has to go through sudo. install.sh grants the binaries NOPASSWD in
- * /etc/sudoers.d/<slug>; before this existed the panel never invoked sudo, so
- * that grant was dead configuration and every privileged operation failed with
- * "Permission denied" on a correctly installed server.
+ * php-fpm runs as the unprivileged panel account, so anything touching the system goes through
+ * sudo (NOPASSWD grants in /etc/sudoers.d/<slug>).
  *
- * The rest of the suite runs with SERVER_OPS_SUDO=false (see phpunit.xml) so
- * feature tests assert the command a feature runs rather than the prefix.
- * These turn it on.
+ * The rest of the suite runs with SERVER_OPS_SUDO=false (see phpunit.xml) so feature tests assert
+ * the command a feature runs rather than the prefix. These turn it on.
  */
 
 beforeEach(function () {
@@ -60,9 +56,8 @@ it('uses -n so a missing grant fails instead of hanging on a password prompt', f
 
     $this->ops->run(['systemctl', 'restart', 'nginx']);
 
-    // Without -n, sudo waits for a password on a terminal that does not
-    // exist and the operation hangs until the timeout, reported as
-    // something else entirely.
+    // Without -n, sudo waits for a password on a terminal that does not exist and the operation
+    // hangs until the timeout.
     expect($runs[0][0])->toBe('sudo')
         ->and($runs[0][1])->toBe('-n');
 });
@@ -75,8 +70,7 @@ it('leaves unprivileged binaries alone', function () {
         return Process::result(exitCode: 0);
     });
 
-    // Not in the sudoers allowlist — escalating it would be a privilege
-    // granted for no reason, and would fail anyway.
+    // Not in the sudoers allowlist: escalating it would grant a privilege for no reason.
     $this->ops->run(['composer', 'install']);
 
     expect($runs[0])->toBe(['composer', 'install']);
@@ -90,8 +84,8 @@ it('escalates every binary the installer grants', function () {
         return Process::result(exitCode: 0);
     });
 
-    // A sample across the features that were all broken: system users,
-    // firewall, services, package installs, config writes, fail2ban.
+    // A sample across the features: system users, firewall, services, packages, config writes,
+    // fail2ban.
     foreach (['useradd', 'userdel', 'usermod', 'ufw', 'systemctl', 'apt-get',
         'fail2ban-client', 'tee', 'mkdir', 'chown', 'chmod', 'nginx',
         'apachectl', 'phpenmod', 'chpasswd', 'gpasswd'] as $binary) {
@@ -134,8 +128,7 @@ it('does not escalate when the feature is switched off', function () {
 it('logs the command as it was actually executed', function () {
     Process::fake(['*' => Process::result(exitCode: 0)]);
 
-    // The ops log is the only record of what ran. Logging the pre-escalation
-    // command would have made this bug invisible: the log would show
+    // The ops log is the only record of what ran: it must show the escalated command, or it reads
     // `useradd …` whether or not sudo was used.
     $result = $this->ops->run(['useradd', 'deploy'], ['feature' => 'system_user']);
 
@@ -147,9 +140,8 @@ it('redacts secret command options from the server operations log', function () 
     Log::shouldReceive('channel')->once()->with('server-ops')->andReturn($logger);
     Process::fake(['*' => Process::result(exitCode: 0)]);
 
-    // PrestaShop and Statamic accept these only on argv. The process still
-    // needs them, but retaining them in a durable log would turn a brief ps
-    // exposure into a permanent secret leak.
+    // PrestaShop and Statamic accept these only on argv. The process needs them, but a durable log
+    // must not keep them.
     $this->ops->run([
         'php', 'install.php',
         '--password=AdminPassw0rd!',
@@ -162,23 +154,15 @@ it('redacts secret command options from the server operations log', function () 
 });
 
 it('escalates exactly what the written grant covers', function () {
-    // This used to diff config against a list parsed out of install.sh. That
-    // list is gone — the installer renders the file from this same config —
-    // so the drift it watched for cannot happen any more, and comparing a
-    // thing to itself would assert nothing.
-    //
-    // The link still worth checking is the other one: the file that ends up in
-    // /etc/sudoers.d against ServerOps at runtime. A binary in the grant that
-    // elevate() does not prefix is a privilege granted for nothing; one it
-    // prefixes that the grant omits fails on a real server with "a password is
-    // required", which is the failure this whole area exists to prevent.
+    // Checks the file that ends up in /etc/sudoers.d against ServerOps at runtime. A binary in the
+    // grant that elevate() does not prefix is a privilege granted for nothing; one it prefixes
+    // that the grant omits fails on a real server with "a password is required".
     $elevate = new ReflectionMethod($this->ops, 'elevate');
 
     foreach (app(SudoersFile::class)->entries() as $path) {
         $binary = basename($path);
 
-        // The wildcard stands for php-fpm8.4, php-fpm8.3 and whatever else is
-        // installed; probe it with a concrete member of that family.
+        // The wildcard stands for php-fpm8.4, php-fpm8.3 and so on; probe a concrete member.
         $command = [str_contains($binary, '*') ? 'php-fpm8.4' : $binary];
 
         expect($elevate->invoke($this->ops, $command))
@@ -225,10 +209,7 @@ it('still logs an unexpected probe exit as an error', function () {
 });
 
 it('logs the tail of stdout when a command fails, because many tools report there', function () {
-    // Akaunting's installer failed with exit 1 and an empty stderr, so the
-    // ops log recorded proof that something broke and nothing about what.
-    // Laravel's own `artisan` writes command failures to stdout, and so do
-    // wp-cli and composer — logging stderr alone is blind to all of them.
+    // `artisan`, wp-cli and composer write failures to stdout; logging stderr alone is blind to them.
     Process::fake(['*' => Process::result(output: 'The admin password is required.', exitCode: 1)]);
 
     $logged = [];
@@ -245,7 +226,7 @@ it('logs the tail of stdout when a command fails, because many tools report ther
 });
 
 it('does not log stdout for a command that succeeded', function () {
-    // The successful path of some of these is a 90 MB file listing.
+    // Successful output can be huge (a file listing), so it is not logged.
     Process::fake(['*' => Process::result(output: str_repeat('file.txt', 100))]);
 
     $logged = [];
@@ -262,9 +243,8 @@ it('does not log stdout for a command that succeeded', function () {
 });
 
 it('redacts a secret a failing tool echoed back on stdout', function () {
-    // The argv redaction walks arguments one at a time; a tool that prints the
-    // command it was given prints it as one string, where that pass never
-    // looks.
+    // The argv redaction walks arguments one at a time; a tool that echoes the command prints it
+    // as one string, where that pass never looks.
     Process::fake(['*' => Process::result(
         output: 'failed: php artisan install --admin-password=hunter2 --db-name=x',
         exitCode: 1,
@@ -286,10 +266,8 @@ it('redacts a secret a failing tool echoed back on stdout', function () {
 });
 
 it('redacts pass-style option names, not just the word password', function () {
-    // Moodle takes `--adminpass` and Nextcloud `--admin-pass`; neither contains
-    // "password", so a real admin password reached the server-ops log in clear
-    // on every Moodle install. Over-matching costs a redacted value in a log,
-    // under-matching costs a credential.
+    // Moodle takes `--adminpass` and Nextcloud `--admin-pass`; neither contains "password".
+    // Over-matching costs a redacted value in a log, under-matching costs a credential.
     $logged = [];
     Log::shouldReceive('channel')->with('server-ops')->andReturnSelf();
     Log::shouldReceive('info')->once()->withArgs(function (string $message, array $context) use (&$logged) {
@@ -307,16 +285,13 @@ it('redacts pass-style option names, not just the word password', function () {
 
     expect($logged['command'])->not->toContain('Zv9qooXUsAJRdHCO')
         ->and($logged['command'])->toContain('--adminpass=[REDACTED]')
-        // The rest of the command still has to be readable, or the log stops
-        // being useful for the thing it exists for.
+        // The rest of the command stays readable, or the log stops being useful.
         ->and($logged['command'])->toContain('--adminuser=admin');
 });
 
 it('keeps stdout on success when the caller asks, for tools that lie about exit codes', function () {
-    // PrestaShop's installer exited 0 in half a second having written no
-    // configuration. Failure-only capture answers "what went wrong" and cannot
-    // answer "why did nothing happen" — the only account of that was on a
-    // stdout nobody kept.
+    // PrestaShop's installer can exit 0 having written no configuration. Failure-only capture
+    // cannot answer "why did nothing happen"; that account is on stdout.
     Process::fake(['*' => Process::result(output: 'Nothing to do; database already installed.')]);
 
     $logged = [];
@@ -332,28 +307,17 @@ it('keeps stdout on success when the caller asks, for tools that lie about exit 
         ['feature' => 'application', 'op' => 'installer.install_app', 'log_output' => true],
     );
 
-    // `toBeString()` first, deliberately: with failure-only capture this key is
-    // null, and asserting only `toContain` let the null through — the test
-    // passed against the very behaviour it exists to forbid.
+    // `toBeString()` first: with failure-only capture this key is null, and `toContain` alone let
+    // the null through.
     expect($logged['stdout'] ?? null)->toBeString()
         ->and($logged['stdout'])->toContain('Nothing to do');
 });
 
 /*
- * sudo resets the environment.
- *
- * `env_reset` is the default in sudoers, so a variable set on the Process
- * object is gone by the time the elevated binary starts — and nothing reports
- * it. The command runs; it just runs without them.
- *
- * This went unnoticed because the two things that relied on it fail quietly.
- * `DEBIAN_FRONTEND=noninteractive` only matters when a package actually
- * prompts, and the `PATH` pinned for npm only matters when `node` is not
- * already on the default path. PostgreSQL is where it surfaced: libpq reads
- * its password file from `PGPASSFILE` and nowhere else, so every query failed
- * with `fe_sendauth: no password supplied` against a role that had been
- * created correctly — reported by a user on the first real install,
- * 2026-09-10.
+ * sudo resets the environment (`env_reset` is the default), so a variable set on the Process
+ * object is gone by the time the elevated binary starts, and nothing reports it. PostgreSQL shows
+ * it: libpq reads its password file only from `PGPASSFILE`, so every query failed with
+ * `fe_sendauth: no password supplied`.
  */
 it('carries environment variables through sudo', function () {
     $runs = [];
@@ -365,8 +329,8 @@ it('carries environment variables through sudo', function () {
 
     $this->ops->run(['psql', '--dbname=postgres'], [], env: ['PGPASSFILE' => '/tmp/pg.pgpass']);
 
-    // `sudo -n env VAR=value psql …`, not `sudo -n psql …` with the variable
-    // set on a process sudo is about to discard.
+    // `sudo -n env VAR=value psql …`, not `sudo -n psql …` with the variable set on a process
+    // sudo discards.
     expect($runs[0])->toBe(['sudo', '-n', 'env', 'PGPASSFILE=/tmp/pg.pgpass', 'psql', '--dbname=postgres']);
 });
 
@@ -380,8 +344,7 @@ it('keeps apt unattended, which is the case that was quietly failing', function 
 
     $this->ops->apt(['apt-get', 'install', '-y', 'postgresql']);
 
-    // Without this, a package with a debconf prompt waits for an answer
-    // nobody can give until the timeout kills it.
+    // Without this, a package with a debconf prompt waits for an answer nobody can give.
     expect($runs[0])->toContain('DEBIAN_FRONTEND=noninteractive')
         ->and(array_slice($runs[0], 0, 3))->toBe(['sudo', '-n', 'env']);
 });
@@ -396,8 +359,7 @@ it('adds no env wrapper when there is nothing to carry', function () {
 
     $this->ops->run(['systemctl', 'restart', 'nginx']);
 
-    // The common case stays exactly as it was — `env` appears only when a
-    // caller actually asked for a variable.
+    // `env` appears only when a caller asked for a variable.
     expect($runs[0])->toBe(['sudo', '-n', 'systemctl', 'restart', 'nginx']);
 });
 
@@ -409,9 +371,8 @@ it('elevates on the real binary, not on the env wrapper', function () {
         return Process::result(exitCode: 0);
     });
 
-    // `git` is not in the privilege allowlist... but if the decision were made
-    // on `env` instead of the command itself, everything would become
-    // privileged the moment it carried a variable.
+    // `echo` is not in the privilege allowlist; deciding on `env` instead of the command would
+    // make everything privileged the moment it carried a variable.
     $this->ops->run(['echo', 'hello'], [], env: ['FOO' => 'bar']);
 
     expect($runs[0])->toBe(['echo', 'hello'])

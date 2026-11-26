@@ -8,17 +8,12 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
 /*
- * A service whose unit is absent used to be simply missing from this list. For
- * anything the panel can install that reads as "I asked for MySQL and it went
- * nowhere" — the install is either still running or it failed, and both are
- * things the person looking at this page asked for.
+ * A panel-installable service whose unit is absent must still be listed: its install is
+ * either running or failed, and the user asked for it.
  *
- * systemctl is faked locally rather than by borrowing ServiceTest's
- * `fakeUnits()`. Pest helpers only exist once their file has been loaded, so
- * that dependency passes when the directory is run and fails when this file is
- * run alone — an order-dependent green, which is worse than a duplicated
- * closure. Every unit not named in the array answers not-found, which is the
- * state these tests are about.
+ * systemctl is faked locally, not via ServiceTest's `fakeUnits()`: Pest helpers exist only
+ * once their file is loaded, which would make this file pass or fail by run order. Every unit
+ * not named in the array answers not-found.
  */
 
 beforeEach(function () {
@@ -77,13 +72,10 @@ it('shows an engine that is still installing, with nothing to press', function (
 
     expect($row)->not->toBeNull()
         ->and($row['state'])->toBe('installing')
-        // Systemd's own word for "not running", so the status badge renders it
-        // rather than falling through to its unknown-status question mark.
-        // `state` is where the reason lives.
+        // Systemd's own word for "not running", so the badge renders it; `state` holds the reason.
         ->and($row['status'])->toBe('inactive')
         ->and($row['retryable'])->toBeFalse()
-        // Inert on purpose: there is no unit to start, and a Restart button for
-        // something that does not exist is worse than no button.
+        // Inert on purpose: there is no unit to start.
         ->and($row['actions'])->toBe([])
         ->and($row['usage'])->toBeNull()
         ->and($row['testable'])->toBeFalse();
@@ -100,23 +92,17 @@ it('shows a failed engine install with its reason, and marks it retryable', func
     $row = serviceRow('mongodb');
 
     expect($row['state'])->toBe('install_failed')
-        // `failed`, not `install_failed`: to the person looking at the row it
-        // is broken and should be red, and the badge only knows three words.
-        // The distinction survives in `state`.
+        // `failed`, not `install_failed`: the badge only knows three words; `state` keeps the detail.
         ->and($row['status'])->toBe('failed')
         ->and($row['retryable'])->toBeTrue()
         ->and($row['install_reason'])->toBe('apt_failed')
-        // Prose, not the raw code — and the same sentence the setup card shows,
-        // because both read it off the model.
+        // Prose, not the raw code; the same sentence the setup card shows.
         ->and($row['install_message'])->not->toBeNull()
         ->and($row['install_message'])->not->toContain('runtime.');
 });
 
-/*
- * The frontend types `status` as a non-nullable string. A null would fail the
- * zod parse and drop the entire response, so these rows carry a real value —
- * this is the assertion that stops someone "tidying" it to null later.
- */
+// The frontend types `status` as a non-nullable string; a null fails the zod parse and drops
+// the whole response.
 it('never returns a null status, whatever state the row is in', function () {
     fakeUnits(['nginx' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);
 
@@ -146,11 +132,7 @@ it('gives an installed service the installed state and no install fields', funct
         ->and($row['retryable'])->toBeFalse();
 });
 
-/*
- * The unit winning over the tracker row is what makes the transition work: a
- * successful install deletes its row, but if one survived it must not add a
- * ghost entry beside the real service.
- */
+// The unit wins over the tracker row: a surviving row must not add a ghost entry.
 it('shows one row, as an installed service, when the unit exists', function () {
     fakeUnits(['mysql' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]);
 
@@ -167,13 +149,8 @@ it('shows one row, as an installed service, when the unit exists', function () {
         ->and($mysql[0]['state'])->toBe('installed');
 });
 
-/*
- * `ready` with no unit is a state the code should not be able to reach —
- * succeed() deletes the row — so this pins the guard rather than a behaviour
- * anybody sees. It exists because the first version of the test above claimed
- * to cover it and did not: with the unit present, describe() returns before the
- * pending path is ever consulted, so it passed with the guard removed.
- */
+// `ready` with no unit should be unreachable (succeed() deletes the row); this pins the guard.
+// The test above cannot cover it: with the unit present describe() returns before the pending path.
 it('ignores a ready row left behind with no unit, rather than inventing a service', function () {
     fakeUnits([]);
 
@@ -187,21 +164,13 @@ it('ignores a ready row left behind with no unit, rather than inventing a servic
 it('leaves a service nobody has tried to install absent', function () {
     fakeUnits([]);
 
-    // Redis has no installer, so it has no `install` key in the catalog and no
-    // tracker row can exist for it. Absent stays absent — this list is still
-    // "what is on this box", not a catalogue of everything that could be.
+    // Redis has no installer, so no tracker row can exist for it. Absent stays absent.
     expect(serviceRow('redis'))->toBeNull()
         ->and(serviceRow('mongodb'))->toBeNull();
 });
 
-/*
- * PHP is the one kind of service whose catalog entries are generated rather
- * than configured, so the `install` key that covers everything else cannot be
- * written for it. A version that never finished installing has no unit and no
- * config entry — it could not appear at all, which is exactly when somebody
- * wants to see it. `phpFpmServices()` therefore builds rows from the tracker
- * as well as from what is on disk.
- */
+// PHP catalog entries are generated, not configured, so a version that never finished
+// installing has no unit and no config entry. `phpFpmServices()` also builds rows from the tracker.
 describe('PHP versions', function () {
 
     it('shows a version that is still installing', function () {
@@ -236,11 +205,7 @@ describe('PHP versions', function () {
             ->and($row['retryable'])->toBeTrue();
     });
 
-    /*
-     * `InstallTracker::versions()` filters rows with an extension set, so this
-     * passes because of the tracker's design rather than anything this manager
-     * remembers to do — worth pinning so a future change there is caught here.
-     */
+    // `InstallTracker::versions()` filters out rows with an extension set; pinned here.
     it('does not invent a version row for an extension install', function () {
         fakeUnits([]);
 
@@ -253,10 +218,7 @@ describe('PHP versions', function () {
     });
 });
 
-/*
- * Free consequence of driving this from config rather than a match: fail2ban
- * gets the same treatment without the manager knowing anything about it.
- */
+// The mapping is config-driven, so fail2ban gets the same treatment for free.
 it('covers fail2ban too, because the mapping is config not a match', function () {
     fakeUnits([]);
 

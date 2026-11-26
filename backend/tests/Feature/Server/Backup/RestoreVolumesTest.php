@@ -21,13 +21,9 @@ use Illuminate\Support\Str;
 uses(RefreshDatabase::class);
 
 /*
- * The one step in this feature that can destroy data.
- *
- * Everything else writes to a working directory or uploads a file. This empties
- * a volume and extracts over it, so what is asserted here is mostly refusals:
- * it must stop the containers first, it must not touch a volume something else
- * holds, and it must not read "nothing is using it" out of a question Docker
- * failed to answer.
+ * The one restore step that can destroy data: it empties a volume and extracts over it. Mostly
+ * refusals are asserted: stop the containers first, never touch a volume something else holds,
+ * and never read "nothing is using it" out of a question Docker failed to answer.
  */
 beforeEach(function () {
     $this->tmp = sys_get_temp_dir().'/sv-restore-volumes-'.Str::random(8);
@@ -109,10 +105,8 @@ function spyingSupervisor(array &$stopped): ContainerSupervisor
 /**
  * The resolver every other supervisor caller uses.
  *
- * Faked with a real-looking path because the *empty* case is the bug this guards
- * against: `document_root` is a computed value for a container site, its column
- * is blank, and stopping with a blank root finds no compose file and stops
- * nothing.
+ * Returns a real-looking path: `document_root` is computed for a container site and its column
+ * is blank, and stopping with a blank root finds no compose file and stops nothing.
  */
 function stubProvisioner(string $root = '/home/vaultowner/vault/public_html'): ApplicationProvisioner
 {
@@ -122,14 +116,7 @@ function stubProvisioner(string $root = '/home/vaultowner/vault/public_html'): A
     return $provisioner;
 }
 
-/**
- * Takes its state as arguments rather than reaching through `test()`.
- *
- * `test()->target->id` inside a plain helper in this suite fails with
- * "Undefined property ::$id" — the call does not resolve to the running test
- * case from here, and the error names the test class rather than the mistake.
- * Explicit parameters are both clearer and the only reliable form.
- */
+/** Takes its state as arguments: `test()->target` inside a plain helper does not resolve here. */
 function restoreVolumeContext(
     Application $application,
     BackupTarget $target,
@@ -158,9 +145,8 @@ function restoreVolumeContext(
 }
 
 it('stops the containers before writing to a volume', function () {
-    // A container still writing would corrupt the incoming copy and lose its
-    // own writes. A restore is already an outage, so stopping costs nothing
-    // that is not already spent — unlike a backup, where downtime is refused.
+    // A container still writing would corrupt the incoming copy. A restore is already an
+    // outage, unlike a backup, where downtime is refused.
     $stopped = [];
     $ran = [];
 
@@ -172,13 +158,12 @@ it('stops the containers before writing to a volume', function () {
 
     $step->run(restoreVolumeContext($this->application, $this->target, $this->tmp));
 
-    // The root matters as much as the fact of stopping: a blank one finds no
-    // compose file, stops nothing, and leaves the guard below to refuse.
+    // The root matters as much as stopping: a blank one finds no compose file and stops nothing.
     expect($stopped)->toHaveCount(1)
         ->and($stopped[0]['id'])->toBe($this->application->id)
         ->and($stopped[0]['root'])->not->toBe('');
 
-    // And the write really did happen, through a container rather than the host.
+    // The write went through a container, not the host.
     $write = collect($ran)->firstWhere('op', 'restore_volume');
     expect($write)->not->toBeNull()
         ->and($write['command'][0])->toBe('docker')
@@ -186,10 +171,8 @@ it('stops the containers before writing to a volume', function () {
 });
 
 it('empties the volume including dotfiles before extracting', function () {
-    // tar extracting over existing contents merges, so without the delete a
-    // restored volume keeps files the backup never contained — and `rm -rf
-    // /volume/*` would leave the dotfiles, which is where an application's
-    // "already set up" marker lives.
+    // tar over existing contents merges, and `rm -rf /volume/*` would leave the dotfiles, where
+    // an application's "already set up" marker lives.
     $ran = [];
     $stopped = [];
 
@@ -208,9 +191,8 @@ it('empties the volume including dotfiles before extracting', function () {
 });
 
 it('refuses to overwrite a volume another container is using', function () {
-    // The site's own containers are stopped by this point, so anything still
-    // holding the volume belongs to something that is not expecting its data
-    // to be replaced.
+    // The site's own containers are stopped by now, so whatever still holds the volume does not
+    // expect its data to be replaced.
     $ran = [];
     $stopped = [];
 
@@ -228,9 +210,7 @@ it('refuses to overwrite a volume another container is using', function () {
 });
 
 it('refuses when docker could not say whether the volume is in use', function () {
-    // A question that could not be answered is not permission to proceed.
-    // Reading "nothing is using it" out of a failed `docker ps` is how a
-    // restore overwrites live data.
+    // A failed `docker ps` is not "nothing is using it"; reading it so overwrites live data.
     $ran = [];
     $stopped = [];
 
@@ -248,9 +228,7 @@ it('refuses when docker could not say whether the volume is in use', function ()
 
 it('refuses a volumes restore of an archive that holds no volumes', function () {
     $unused = [];
-    // Said plainly rather than skipped: continuing would report success for
-    // having restored nothing, which is the failure mode this whole feature
-    // exists to avoid.
+    // Refused, not skipped: continuing would report success for restoring nothing.
     File::deleteDirectory($this->tmp.'/staging/volumes');
 
     $step = new RestoreVolumes(restoreVolumeOps([]), spyingSupervisor($unused), stubProvisioner());
@@ -260,9 +238,7 @@ it('refuses a volumes restore of an archive that holds no volumes', function () 
 });
 
 it('leaves the containers down for RestartProcess to bring up', function () {
-    // Starting here would start them before `SwapFiles` has put the restored
-    // compose file in place, so a volumes+config restore would come up on the
-    // old definition and then have it swapped underneath.
+    // Starting here would run them before `SwapFiles` puts the restored compose file in place.
     $ran = [];
     $stopped = [];
 
@@ -288,9 +264,8 @@ it('applies only to a restore that includes volumes', function (string $type, bo
 ]);
 
 it('leaves the site running when a restore fails after the containers were stopped', function () {
-    // The site was up when somebody pressed the button. A failed restore that
-    // also leaves it down turns a recoverable mistake into an outage, which is
-    // the guard `SwapFiles` and `RestartProcess` already carry.
+    // The site was up before the restore; a failed one must not leave it down (as in
+    // `SwapFiles` and `RestartProcess`).
     $stopped = [];
     $started = 0;
 
@@ -316,7 +291,7 @@ it('leaves the site running when a restore fails after the containers were stopp
 
     expect(fn () => $step->run($context))->toThrow(RuntimeException::class);
 
-    // The flag survives the throw, which is what tells cleanup it owes a start.
+    // The flag survives the throw: it tells cleanup it owes a start.
     expect($context->processStopped)->toBeTrue();
 
     $step->cleanup($context, failed: true);
@@ -326,9 +301,8 @@ it('leaves the site running when a restore fails after the containers were stopp
 });
 
 it('does not start anything when the restore succeeded', function () {
-    // `RestartProcess` owns the start on the happy path, after `SwapFiles` has
-    // put the restored compose file in place. Starting here as well would bring
-    // the containers up on the old definition first.
+    // `RestartProcess` owns the start on the happy path, after `SwapFiles` has swapped the
+    // compose file.
     $stopped = [];
     $started = 0;
 

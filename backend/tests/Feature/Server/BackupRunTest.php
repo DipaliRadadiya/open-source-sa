@@ -18,10 +18,9 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 
 /*
- * The value here is the whole chain: dump → archive → upload → verify → prune.
- * Each step in isolation proves little; what matters is that a run produces an
- * artefact that is actually on the destination, at the size we sent, and that
- * retention only ever removes backups after a newer one is verified.
+ * The value is the whole chain: dump, archive, upload, verify, prune. A run must leave an artefact
+ * on the destination at the size we sent, and retention may only remove backups after a newer
+ * one is verified.
  */
 
 beforeEach(function () {
@@ -34,10 +33,7 @@ beforeEach(function () {
         fn (array $config) => $this->fakeDisk,
     ));
 
-    // Built where the panel actually looks: `{home}/{slug}/public_html`. The
-    // fixture used to invent its own directory, which meant the archive step
-    // was correctly reporting a missing site root and this whole file has been
-    // red since document roots were made slug-based.
+    // Built where the panel actually looks: `{home}/{slug}/public_html`.
     $this->home = storage_path('framework/testing/home-'.uniqid());
     $this->siteRoot = $this->home.'/backed-up/public_html';
     File::ensureDirectoryExists($this->siteRoot);
@@ -207,11 +203,8 @@ describe('retention', function () {
     });
 
     it('never prunes regular backups for a restore\'s safety backup', function () {
-        // A safety backup is not one of the N the user keeps, yet the prune
-        // step ran for it and kept N-1 regular backups: every restore deleted
-        // the oldest kept backup — row and artefact — and when that was the
-        // one being restored, it was gone once the restore finished (found in
-        // code review 2026-09-29).
+        // A safety backup is not one of the N the user keeps: pruning for it must not delete the
+        // oldest regular backup (it may be the one being restored).
         fakeTar();
         $target = backupTarget(['retention_count' => 2]);
         $runner = app(BackupRunner::class);
@@ -228,11 +221,8 @@ describe('retention', function () {
     });
 
     it('stays verified when an old backup\'s destination can no longer be reached', function () {
-        // The new backup is already uploaded and verified when pruning runs.
-        // Building the disk for an *old* backup's destination sat outside the
-        // try, so a destination that had gone away failed the backup that had
-        // just succeeded — and a failed row is never offered for restore nor
-        // counted by retention (found in code review 2026-09-29).
+        // The new backup is already uploaded and verified when pruning runs. A destination that has
+        // gone away must not fail the backup that just succeeded.
         fakeTar();
         $target = backupTarget(['retention_count' => 1]);
         $runner = app(BackupRunner::class);
@@ -273,18 +263,16 @@ describe('retention', function () {
         fakeTar();
         $runner->run($target);
 
-        // Two verified plus one failed. If the failed one counted, the first
-        // good backup would have been pruned — quietly eroding the retention
-        // the user asked for.
+        // Two verified plus one failed. If the failed one counted, the first good backup would be
+        // pruned, eroding retention.
         expect(Backup::find($first->id))->not->toBeNull();
     });
 });
 
 describe('the archive name', function () {
     /*
-     * A Drive destination writes into somebody's *personal* Google Drive, so
-     * this path is not an implementation detail — it is what they find next to
-     * their photos. One folder per application, archives directly inside it.
+     * A Drive destination writes into somebody's *personal* Google Drive, so this path is what they
+     * find next to their photos: one folder per application, archives directly inside it.
      */
     it('puts the archive in a folder named after the application', function () {
         fakeTar();
@@ -293,18 +281,15 @@ describe('the archive name', function () {
         $key = $backup->manifest['key'];
 
         expect($key)->toStartWith('backed-up.example.com/')
-            // No hardcoded `backups/` wrapper: the destination has its own key
-            // prefix field for that, and this segment doubled it.
+            // No hardcoded `backups/` wrapper: the destination has its own key prefix field.
             ->and($key)->not->toStartWith('backups/')
-            // The date belongs in the name, where it sorts — not in a folder
-            // of its own holding a single file.
+            // The date belongs in the name, where it sorts, not in a folder holding one file.
             ->and(substr_count($key, '/'))->toBe(1);
     });
 
     /*
-     * `75599625-9245-4cf9-…tar.gz` told its owner nothing. A folder named after
-     * a raw Drive id was reported as a suspected compromise for the same
-     * reason; a backup should say what it is without being opened.
+     * A raw id (`75599625-…tar.gz`) tells its owner nothing: a backup should say what it is
+     * without being opened.
      */
     it('names the archive so a human can read it', function () {
         fakeTar();
@@ -313,20 +298,16 @@ describe('the archive name', function () {
         $name = basename($backup->manifest['key']);
 
         expect($name)->toStartWith($backup->created_at->format('Y-m-d-Hi'))
-            // The uid still ends it. That is what stops two panels sharing one
-            // destination from overwriting each other, and it survives a panel
-            // reinstall in a way an autoincrement id does not.
+            // The uid still ends it: that stops two panels sharing one destination from
+            // overwriting each other, and unlike an autoincrement id it survives a reinstall.
             ->and($name)->toContain($backup->uid)
             ->and($name)->toEndWith('.tar.gz');
     });
 
     it('does not reuse a key when the id counter starts again', function () {
-        // The regression. The key used to be
-        // `backups/{domain}/{date}/{backup_id}.tar.gz`, and an id only means
-        // something inside one panel's database — reinstall the panel and the
-        // counting restarts over a bucket that still holds the old archives.
-        // Simulated by giving a second backup the id the first one had, which
-        // is exactly the state a reinstall produces.
+        // The regression: the key used to end in the backup id, which only means something inside
+        // one panel's database. After a reinstall the counting restarts over a bucket that still
+        // holds the old archives. Simulated by giving a second backup the first one's id.
         fakeTar();
 
         $target = backupTarget();
@@ -346,8 +327,7 @@ describe('the archive name', function () {
         expect($second->id)->toBe($firstId)
             ->and($second->manifest['key'])->not->toBe($firstKey);
 
-        // Both archives are still there. Under the old scheme the second
-        // upload landed on the first one's key and destroyed it.
+        // Both archives are still there; under the old scheme the second overwrote the first.
         $this->fakeDisk->assertExists($firstKey);
         $this->fakeDisk->assertExists($second->manifest['key']);
     });
@@ -390,8 +370,8 @@ describe('the archive name', function () {
     });
 
     it('still finds an archive written under the old id-based scheme', function () {
-        // Nothing recomputes the key — every reader takes it off the row — so
-        // a backup from before this change resolves exactly as it always did.
+        // Nothing recomputes the key (every reader takes it off the row), so older backups
+        // resolve as before.
         $target = backupTarget();
         $legacyKey = 'backups/backed-up.example.com/2026-01-01/7.tar.gz';
         $this->fakeDisk->put($legacyKey, str_repeat('x', 2048));

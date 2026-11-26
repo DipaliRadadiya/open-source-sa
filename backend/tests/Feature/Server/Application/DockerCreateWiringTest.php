@@ -13,16 +13,10 @@ use Illuminate\Support\Facades\Process;
 /**
  * Creating a container site together with the network and volume it needs.
  *
- * Reported as "there should be an option to customize the name, and to select
- * which to create along with the container". Before this, a site that wanted both
- * was six steps: create the site, go to the Docker page, create a network, create
- * a volume, come back, attach, mount.
- *
- * The rule that keeps it honest is the INVERSE of the one on the picker: the
- * "create a new one" field refuses a name that already exists. Creating-if-missing
- * and adopting-if-present reads as success while attaching a new site to another
- * site's network, and a typo that happens to collide is exactly the case that must
- * not quietly work.
+ * The rule that keeps it honest is the INVERSE of the one on the picker: the "create a new one"
+ * field refuses a name that already exists. Creating-if-missing and adopting-if-present reads as
+ * success while attaching a new site to another site's network, and a typo that happens to
+ * collide must not quietly work.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -164,9 +158,9 @@ it('refuses half a volume', function () {
 });
 
 it('refuses a volume path over the site\'s own files at create time too', function () {
-    // The same rule the Container card enforces. A volume over the site mount
-    // hides the site's files rather than deleting them, which reads as data
-    // loss. `/panel-site` since DS-01 — `/app` is a legal volume path now.
+    // The same rule the Container card enforces. A volume over the site mount hides the site's
+    // files rather than deleting them, which reads as data loss. The site mount is `/panel-site`;
+    // `/app` is a legal volume path.
     fakeDockerBoxFor();
 
     $this->withHeaders(dockerCreateHeaders())
@@ -287,10 +281,8 @@ it('creates a site with a registry chosen on the form', function () {
         ->postJson('/api/applications', dockerCreatePayload(['registry_id' => $registry->id]))
         ->assertCreated();
 
-    // The whole point of asserting a create path separately: the field is declared
-    // on the site type and the column is fillable, and BOTH have to be true for
-    // `typeColumns()` to carry it. A field that is only one of the two vanishes
-    // silently, which is how a Docker site once arrived with a null `compose`.
+    // The field is declared on the site type and the column is fillable, and BOTH have to be true
+    // for `typeColumns()` to carry it: a field that is only one of the two vanishes silently.
     expect(Application::where('name', 'Shop')->first()->registry_id)->toBe($registry->id);
 });
 
@@ -321,12 +313,9 @@ it('refuses a registry that does not exist', function () {
 /*
  * The size of the container, chosen while deploying it.
  *
- * Both limits were reachable only from the Container screen after the site
- * existed — so the first thing anybody sizing a container went looking for was
- * not on the form that creates one. They are real columns, so declaring them as
- * type fields is all that is needed to persist them (`CreateApplication::
- * typeColumns()` writes any declared field that is fillable); these tests exist
- * because that is an easy thing to half-do and impossible to see.
+ * Both limits are real columns, so declaring them as type fields is all that is needed to persist
+ * them (`CreateApplication::typeColumns()` writes any declared field that is fillable); these
+ * tests exist because that is easy to half-do and impossible to see.
  */
 
 it('creates a site at the size the form asked for', function () {
@@ -363,9 +352,8 @@ it('creates a site with no limits when both were left empty', function () {
 });
 
 it('refuses more CPUs than the box has at create time, not at provision time', function () {
-    // Docker would refuse it too, at `compose up` — which here means a site that
-    // is created, fails to provision, and has to be deleted and made again. The
-    // form is where that belongs.
+    // Docker would refuse it too, at `compose up`: a site that is created, fails to provision and
+    // has to be deleted and made again. The form is where that belongs.
     fakeDockerBoxFor();
 
     app()->instance(HostCpus::class, new class extends HostCpus
@@ -394,8 +382,8 @@ it('refuses a memory limit the container could not start with', function () {
 });
 
 /*
- * DS-01: a new site's own directory is mounted at /panel-site, not /app, where a
- * quarter of popular images keep their program.
+ * A new site's own directory is mounted at /panel-site, not /app, where a quarter of popular
+ * images keep their program.
  */
 
 it('creates a site whose directory is mounted away from /app', function () {

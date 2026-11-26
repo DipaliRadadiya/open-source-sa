@@ -26,20 +26,18 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /**
- * The ionCube Loader — a closed-source `zend_extension`, one file per PHP
- * version, downloaded from the vendor rather than installed from apt.
+ * The ionCube Loader — a closed-source `zend_extension`, one file per PHP version, downloaded from
+ * the vendor rather than installed from apt.
  *
- * 🔴 Everything asserted here about ionCube's own behaviour was measured on a
- * real loader (v15.5.0, PHP 8.4, x86-64) before it was written down:
+ * Its ordering is strict (checked against a real loader, v15.5.0 on PHP 8.4):
  *
  *   - `01-ioncube.ini` ahead of `10-opcache.ini`  → loads, both report in -v
  *   - `20-ioncube.ini` behind it                   → "PHP Fatal error:
  *     [ionCube Loader] The Loader must appear as the first entry in the
  *     php.ini file", and PHP does not start at all
  *
- * That second one is why the ordering has a test of its own, and why nothing
- * reloads a web server before the stack's config test has passed: getting it
- * wrong does not degrade one site, it stops PHP for every site on the version.
+ * That is why the ordering has a test of its own, and why nothing reloads a web server before the
+ * stack's config test has passed: getting it wrong stops PHP for every site on the version.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -222,9 +220,8 @@ it('refuses a PHP version ionCube publishes no loader for, without downloading',
 });
 
 it('writes the loader ini ahead of opcache in every SAPI', function () {
-    // 🔴 Measured: named `20-`, PHP fatals with "The Loader must appear as the
-    // first entry in the php.ini file" and does not start. The number is the
-    // feature.
+    // Named `20-`, PHP fatals with "The Loader must appear as the first entry in the php.ini file"
+    // and does not start. The number is the feature.
     $runs = fakeIonCube();
 
     app(IonCubeLoader::class)->install($this->version);
@@ -286,12 +283,11 @@ it('reports a version it cannot support without claiming anything about it', fun
 });
 
 /*
- * Installed outside the panel. v7 appended a zend_extension line to php.ini
- * (no ini of ours, but PHP reports the loader); on OpenLiteSpeed it installed
- * LiteSpeed's lsphpNN-ioncube, which writes the same 01-ioncube.ini name
- * without our marker. Measured: loading ionCube twice is not fatal, but every
- * CLI run then prints "Cannot load the ionCube PHP Loader - it was already
- * loaded"; and removing the package's ini is undone by the next upgrade.
+ * Installed outside the panel. v7 appended a zend_extension line to php.ini (no ini of ours, but
+ * PHP reports the loader); on OpenLiteSpeed it installed LiteSpeed's lsphpNN-ioncube, which writes
+ * the same 01-ioncube.ini name without our marker. Loading ionCube twice is not fatal, but every
+ * CLI run then prints "Cannot load the ionCube PHP Loader - it was already loaded"; and removing
+ * the package's ini is undone by the next upgrade.
  */
 describe('an ionCube the panel did not install', function () {
     it('reports it as installed, and external', function (array $options) {
@@ -517,9 +513,8 @@ it('records a failed reload as a failed install and retains recovery files', fun
 });
 
 it('keeps the real cause of a failed install and says it in words', function () {
-    // The job recorded every failure as `install_failed` and the card
-    // returned only that code — a failed download and a failed config test
-    // read the same, and the frontend showed the raw word.
+    // Every failure used to be recorded as `install_failed`, so a failed download and a failed config
+    // test read the same and the frontend showed the raw word.
     fakeIonCube(['existing' => true, 'fail' => fn ($args) => ($args[0] ?? '') === 'systemctl']);
     $tracker = app(InstallTracker::class);
     $tracker->start(InstallIonCubeLoader::RUNTIME, $this->version);
@@ -709,21 +704,16 @@ it('refuses uncertain file state rather than treating a failed probe as absence'
 /*
 | Where the ini goes.
 |
-| 🔴 Measured from LiteSpeed's shipped package on 2026-09-18, after a real
-| OpenLiteSpeed server reported ionCube as not installed. `lsphp85` on noble is
-| built with:
+| `lsphp85` on noble is built with (read out of the binary's own configure line):
 |
 |   --with-config-file-path=/usr/local/lsws/lsphp85/etc/php/8.5/litespeed/
 |   --with-config-file-scan-dir=/usr/local/lsws/lsphp85/etc/php/8.5/mods-available/
 |
-| read out of the binary's own configure line, and the package contains
-| `litespeed/` and `mods-available/` and NO `conf.d` at all.
+| and the package contains `litespeed/` and `mods-available/` and NO `conf.d` at all.
 |
-| The old code composed `sapiDir()."/conf.d"` — Debian's layout — which on that
-| stack is wrong twice: absent, so `tee` failed and the install aborted; and
-| unscanned, so merely creating it would have produced an install that reported
-| success and never loaded. The second is the dangerous one, and it is what
-| these tests exist to prevent coming back.
+| Composing `sapiDir()."/conf.d"` (Debian's layout) is wrong twice on that stack: absent, so `tee`
+| fails and the install aborts; and unscanned, so merely creating it would report success and never
+| load. The second is the dangerous one, and these tests exist to keep it from coming back.
 */
 
 it('writes the loader ini where LSPHP actually scans, not into a conf.d', function () {
@@ -781,13 +771,11 @@ it('creates the scan directory before writing into it', function () {
 });
 
 it('reports not-installed without writing a failure to the error log', function () {
-    // A real OpenLiteSpeed server produced this entry, and it was the only
-    // thing the operator could see: "Server operation failed." with a
-    // reference, for `test -f` answering exit 1 — the ordinary answer on every
-    // server that has not installed ionCube.
+    // `test -f` answering exit 1 is the ordinary answer on every server that has not installed
+    // ionCube, and must not be logged as "Server operation failed."
     //
-    // Log::listen rather than Log::shouldReceive: mocking the facade turns
-    // every unrelated log call in the request into a test failure.
+    // Log::listen rather than Log::shouldReceive: mocking the facade turns every unrelated log call
+    // in the request into a test failure.
     config([
         'server.php_stacks.lsphp.binary_candidates' => ['/usr/bin/php'.$this->version],
         'server.php_stacks.lsphp.ini_path' => "{$this->phpDir}/{$this->version}/litespeed/php.ini",
@@ -811,11 +799,10 @@ it('reports not-installed without writing a failure to the error log', function 
 });
 
 /*
-| ionCube that v7 installed (2026-10-13, Dipali): recognised exactly, and
-| removable from the card. On PHP-FPM v7 wrote
-| `zend_extension = {extension_dir}/ioncube_loader_lin_{v}.so` at the end of
-| the cli, fpm and cgi php.ini (serveravatar-seven-agent installation.go,
-| installIoncube); on OpenLiteSpeed it installed LiteSpeed's lsphpXX-ioncube.
+| ionCube that v7 installed: recognised exactly, and removable from the card. On PHP-FPM v7 wrote
+| `zend_extension = {extension_dir}/ioncube_loader_lin_{v}.so` at the end of the cli, fpm and cgi
+| php.ini (serveravatar-seven-agent installation.go, installIoncube); on OpenLiteSpeed it installed
+| LiteSpeed's lsphpXX-ioncube.
 */
 describe('an ionCube v7 installed', function () {
     beforeEach(function () {

@@ -34,9 +34,8 @@ beforeEach(function () {
         ],
     ]);
 
-    // The workspace is the only part that would touch Drive itself. Swapped
-    // for a recorder so the suite never opens a socket, while the exchange
-    // above it still runs for real against faked HTTP.
+    // The workspace is the only part that touches Drive; stub it so no socket opens, while the
+    // token exchange still runs against faked HTTP.
     $this->app->bind(GoogleDriveWorkspace::class, fn () => new GoogleDriveWorkspace(
         fn (string $id, string $secret, string $refresh) => new class extends Drive
         {
@@ -87,18 +86,15 @@ it('hands back a consent URL carrying the scope and an offline grant', function 
 
     expect($url)->toStartWith('https://accounts.google.com/o/oauth2/v2/auth?')
         ->and($url)->toContain(urlencode('https://www.googleapis.com/auth/drive.file'))
-        // Both are load-bearing: without `offline` Google issues no refresh
-        // token at all, and without `consent` it withholds one on every
-        // approval after the first.
+        // Without `offline` Google issues no refresh token; without `consent` it withholds one
+        // after the first approval.
         ->and($url)->toContain('access_type=offline')
         ->and($url)->toContain('prompt=consent');
 });
 
 /*
- * One source for the redirect URI, not two. It is served with the destinations
- * list, because it is needed before this endpoint can be reached at all — and a
- * second copy here is exactly the pair that drifts apart on a string Google
- * compares byte for byte.
+ * One source for the redirect URI: it is served with the destinations list, and a second copy
+ * would drift on a string Google compares byte for byte.
  */
 it('does not repeat the redirect URI on the start call', function () {
     $this->withHeaders(authHeader())->postJson(startUrl())
@@ -107,9 +103,8 @@ it('does not repeat the redirect URI on the start call', function () {
 });
 
 /*
- * A relative redirect URI comes back from Google as a generic `invalid_request`,
- * which reads exactly like a bad client id — and sends the operator off to
- * re-check a value that was perfectly correct. Refuse before asking Google.
+ * A relative redirect URI comes back from Google as a generic `invalid_request` that reads like
+ * a bad client id. Refuse before asking Google.
  */
 it('refuses to start when the panel does not know its own address', function () {
     config(['server.storage.panel_url' => '']);
@@ -137,16 +132,14 @@ it('stores the refresh token and the folder once approved', function () {
     $config = $this->destination->fresh()->config;
 
     expect($config['refresh_token'])->toBe('rt-live')
-        // The panel makes its own folder, because `drive.file` can only see
-        // what this app created. That is what removes the folder-id field.
+        // The panel makes its own folder: `drive.file` only sees what this app created.
         ->and($config['folder_id'])->toBe('FOLDER-1')
         ->and($config['account_email'])->toBe('me@gmail.com');
 });
 
 /*
- * `stateless()` removes the session that normally ties a callback to the request
- * that began it, so the seal is the only binding left. These four tests are that
- * binding.
+ * `stateless()` removes the session that ties a callback to its request, so the seal is the
+ * only binding left. These four tests cover it.
  */
 it('refuses a state this panel did not issue', function () {
     tokenGranted();
@@ -161,9 +154,7 @@ it('refuses a state this panel did not issue', function () {
     expect($this->destination->fresh()->config)->not->toHaveKey('refresh_token');
 });
 
-// Sealing alone is not enough. A `state` lifted from browser history or a
-// referrer header decrypts perfectly — what stops it is that the nonce behind
-// it was burned the first time.
+// A `state` lifted from history or a referrer still decrypts; the burned nonce is what stops it.
 it('refuses a state that has already been used', function () {
     tokenGranted();
     $state = issuedState();
@@ -179,9 +170,8 @@ it('refuses a state that has already been used', function () {
 });
 
 /*
- * The attack the seal exists for: approve on an account you control, then post
- * the callback naming somebody else's destination. The id must come from the
- * seal, never from the request.
+ * The attack the seal prevents: approve on your own account, then post the callback naming
+ * someone else's destination. The id must come from the seal, never the request.
  */
 it('connects the destination named in the state, not one named in the request', function () {
     tokenGranted();
@@ -205,11 +195,9 @@ it('connects the destination named in the state, not one named in the request', 
 });
 
 /*
- * Separates the two halves of the seal. This payload is sealed with *this*
- * panel's key, so it decrypts perfectly — only the nonce is wrong. Without the
- * server-side comparison, anyone who could get the app key to encrypt for them
- * (a debug endpoint, a log, a second feature reusing Crypt) could name any
- * destination they liked.
+ * Separates the two halves of the seal: this payload decrypts with the panel's key and only the
+ * nonce is wrong. Without the server-side comparison, anything that can encrypt with the app
+ * key could name any destination.
  */
 it('refuses a sealed state whose nonce was never issued', function () {
     tokenGranted();
@@ -244,8 +232,8 @@ it('refuses a state whose window has closed', function () {
 });
 
 /*
- * Google reuses `invalid_grant` for a spent code and an aged one, and both mean
- * "press Connect again" — not "your credentials are wrong".
+ * Google reuses `invalid_grant` for a spent and an aged code; both mean "connect again", not
+ * "bad credentials".
  */
 it('names a spent code as something to retry, not a bad credential', function () {
     Http::fake([CONNECT_TOKEN_URL => Http::response(['error' => 'invalid_grant'], 400)]);
@@ -257,10 +245,7 @@ it('names a spent code as something to retry, not a bad credential', function ()
         ->assertJsonPath('oauth.message', __('storage.oauth.code_expired'));
 });
 
-/*
- * The most likely setup fault by far, and the one where naming it exactly saves
- * a support round trip: the URI in Cloud Console does not match what we sent.
- */
+/* The most common setup fault: the URI in Cloud Console does not match what we sent. */
 it('names a redirect URI mismatch instead of blaming the client id', function () {
     Http::fake([CONNECT_TOKEN_URL => Http::response([
         'error' => 'invalid_grant',
@@ -272,8 +257,8 @@ it('names a redirect URI mismatch instead of blaming the client id', function ()
         ->assertJsonPath('oauth.message', __('storage.oauth.redirect_mismatch'));
 });
 
-// Google omits the refresh token when an account has already granted this
-// client. Storing the rest would leave a credential that dies within the hour.
+// Google omits the refresh token when the account already granted this client; storing the rest
+// would leave a credential that dies within the hour.
 it('refuses an approval that carries no lasting token', function () {
     Http::fake([CONNECT_TOKEN_URL => Http::response(['access_token' => 'at'])]);
 
@@ -286,9 +271,8 @@ it('refuses an approval that carries no lasting token', function () {
 });
 
 /*
- * A grant that works but a Drive with no room. Storing the token anyway would
- * leave a destination that looks connected and fails every backup — the exact
- * shape of failure this subsystem exists to refuse.
+ * A working grant but a Drive with no room: storing the token would leave a destination that
+ * looks connected and fails every backup.
  */
 it('refuses to store a token when the folder cannot be created', function () {
     Http::fake([CONNECT_TOKEN_URL => Http::response(['access_token' => 'at', 'refresh_token' => 'rt'])]);
@@ -314,8 +298,8 @@ it('never returns the refresh token to the browser', function () {
         ->and($response->getContent())->not->toContain('shh');
 });
 
-// Completing this writes a credential that can create files in somebody's
-// personal Google account. `view` is not enough.
+// The callback stores a credential that can create files in a personal Google account; `view` is
+// not enough.
 it('refuses a viewer without manage permission', function () {
     $viewer = User::factory()->create();
     $token = $viewer->createToken('t')->plainTextToken;
@@ -346,10 +330,8 @@ it('refuses a destination that does not use Google sign-in', function () {
 });
 
 /*
- * The setup order this whole feature lives or dies by: the callback URL goes
- * into the Google OAuth client when it is *created*, which is before there is a
- * client id to paste into the panel and before any destination exists. So it
- * rides on the list, not on a destination.
+ * The callback URL goes into the Google OAuth client when it is created, before any client id or
+ * destination exists, so it rides on the list, not on a destination.
  */
 it('offers the callback URL before any destination has been made', function () {
     StorageDestination::query()->delete();
@@ -365,21 +347,14 @@ it('offers the callback URL before any destination has been made', function () {
 });
 
 /*
- * This folder lands in somebody's *personal* Google Drive, beside their photos
- * and documents. It has to explain itself without being opened.
- *
- * The first real connection named it "Laravel backups — Drive", because the
- * name was built from `app.name` — the framework's own setting, which ships as
- * the literal string "Laravel". Together with a sibling folder named after a
- * raw Drive id, the result was reported as a suspected compromise, which is the
- * correct reaction to unexplained objects appearing in your Drive.
+ * The folder lands in a personal Google Drive and must explain itself without being opened. Its
+ * name must come from the panel's branding, not `app.name`, which ships as "Laravel".
  */
 it('names the folder after the panel, not the framework', function () {
     config(['branding.name' => 'ServerAvatar']);
     tokenGranted();
 
-    // An object, because a promoted property cannot be by-reference — the
-    // first version of this captured nothing and asserted against null.
+    // An object: a promoted property cannot be by-reference.
     $seen = new \stdClass;
     $seen->name = null;
 
@@ -401,20 +376,15 @@ it('names the folder after the panel, not the framework', function () {
 
     expect($seen->name)
         ->toContain('ServerAvatar')
-        // Which machine's backups these are. One Drive can hold several panels'.
+        // Which machine's backups these are: one Drive can hold several panels'.
         ->toContain('panel.example.test')
         ->toContain('My Drive')
         ->not->toContain('Laravel');
 });
 
 /*
- * A stale failure is about a destination that no longer exists.
- *
- * Connecting replaces both the grant and the folder, so a verdict recorded
- * against the old pair is not merely out of date — it describes something else.
- * The row went on saying "the panel cannot reach the backup folder" after a
- * reconnection that had just created one, which made the advice in that very
- * message (connect again) look like it had not worked.
+ * Connecting replaces both the grant and the folder, so a failure verdict recorded against the
+ * old pair describes something that no longer exists and must be cleared.
  */
 it('clears a failed test verdict when the destination is reconnected', function () {
     tokenGranted();
@@ -433,8 +403,6 @@ it('clears a failed test verdict when the destination is reconnected', function 
 
     expect($fresh->last_test_error)->toBeNull()
         ->and($fresh->last_test_success)->toBeNull()
-        // Not asserted as a pass: connecting proves the grant and the folder,
-        // but the probe also writes and reads back a sentinel, and this did
-        // not. "Not yet tested" is true; "passed" would not be.
+        // "Not yet tested", not a pass: connecting does not run the probe's write/read-back.
         ->and($fresh->last_tested_at)->toBeNull();
 });

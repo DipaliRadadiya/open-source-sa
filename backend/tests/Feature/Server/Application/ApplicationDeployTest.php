@@ -67,12 +67,9 @@ function runDeploy(Application $application): void
 /**
  * Fake git, reporting a commit for rev-parse and "not a repo" for the detect.
  *
- * The curl arm is not optional. Deploy ends with a `verify` step that curls
- * the site and reads the status code off stdout; an exit-0 with no output
- * parses as HTTP 0, so every deploy through this fixture failed at `verify`
- * and never reached the steps after it — which is why the commit and the
- * directory size were never recorded, and why the assertions about them had
- * been failing.
+ * The curl arm is required: deploy ends with a `verify` step that reads the HTTP status off
+ * curl's stdout, and an exit-0 with no output parses as HTTP 0, so the deploy would fail at
+ * `verify` before the commit and directory size are recorded.
  */
 function fakeGit(): void
 {
@@ -90,11 +87,11 @@ it('clones a private repository without the token ever touching the command line
 
     runDeploy($app);
 
-    // This is the point of the whole design: the secret is never an argument.
+    // The secret is never an argument.
     Process::assertNotRan(fn ($p) => str_contains(implode(' ', $p->command), 'ghp_super_secret_value'));
 
-    // It reaches git through a credential file written over stdin instead —
-    // by the site user, who runs git, into a directory only they can enter.
+    // It reaches git through a credential file written over stdin, by the site user into a
+    // directory only they can enter.
     Process::assertRan(fn ($p) => array_slice($p->command, 0, 5) === ['runuser', '-u', 'deploy', '--', 'mkdir']
         && $p->command[5] === '-m' && $p->command[6] === '0700');
     Process::assertRan(fn ($p) => array_slice($p->command, 0, 5) === ['runuser', '-u', 'deploy', '--', 'sh']
@@ -102,9 +99,8 @@ it('clones a private repository without the token ever touching the command line
         && str_contains((string) $p->input, 'ghp_super_secret_value')
         && str_contains((string) $p->input, 'x-access-token'));
 
-    // The remote itself is clean — nothing sensitive lands in .git/config.
-    // (`git init` + `remote add`, not `clone` — see GitDeployer::deploy() for
-    // why a first deploy never clones.)
+    // The remote itself is clean: nothing sensitive lands in .git/config.
+    // (`git init` + `remote add`, not `clone`; see GitDeployer::deploy().)
     Process::assertRan(fn ($p) => in_array('add', $p->command, true)
         && in_array('https://github.com/octocat/hello.git', $p->command, true));
 
@@ -113,9 +109,8 @@ it('clones a private repository without the token ever touching the command line
 });
 
 it('hands the checkout to the site user even when the fetch fails (bug #101)', function () {
-    // `git init` runs as root; the hand-over came only after a successful
-    // fetch, so a failed first deploy left a root-owned .git the site user
-    // could neither repair nor delete.
+    // `git init` runs as root; a hand-over only after a successful fetch left a failed first
+    // deploy with a root-owned .git the site user could neither repair nor delete.
     Process::fake(fn ($process) => match (true) {
         $process->command[0] === 'test' => Process::result(exitCode: 1),
         in_array('fetch', $process->command, true) => Process::result(errorOutput: 'fatal: repository not found', exitCode: 128),
@@ -163,17 +158,15 @@ it('keeps a live site live when a redeploy fails', function () {
     runDeploy($app);
 
     $app->refresh();
-    // The old code is still on disk and still being served — reporting the
-    // site as failed would be a lie.
+    // The old code is still on disk and served; reporting the site as failed would be a lie.
     expect($app->status->value)->toBe('active');
     expect($app->failed_step)->toBe('fetch');
     expect($app->reference)->not->toBeEmpty();
 });
 
 it('says why the fetch failed, in words', function (string $stderr, ?string $reason) {
-    // FS-C22: a failed fetch left `failed_reason` empty, so a typo in the
-    // repository or the branch read as "failed at fetch" plus a log
-    // reference. The stderr is git 2.43's, measured on a test server.
+    // A failed fetch needs a readable `failed_reason`, or a typo in the repository or branch reads
+    // as a bare "failed at fetch". The stderr samples are git 2.43's.
     Process::fake(fn ($process) => match (true) {
         $process->command[0] === 'test' => Process::result(exitCode: 0),
         in_array('fetch', $process->command, true) => Process::result(errorOutput: $stderr, exitCode: 128),
@@ -227,14 +220,9 @@ it('fetches and hard-resets an already-cloned repository', function () {
 });
 
 it('points the remote at the new url before fetching, not after', function () {
-    // Found when the git account became re-linkable. `remote add origin` is a
-    // no-op on an existing checkout, so when the remote changes it is
-    // `set-url` that moves it — and it used to run *after* `reset --hard`.
-    //
-    // The result was a deploy that fetched from the OLD remote, checked out the
-    // previous repository's code, then corrected the URL for next time. It
-    // reported success while serving the wrong repository, which is worse than
-    // failing, because nothing looks wrong.
+    // `remote add origin` is a no-op on an existing checkout, so a changed remote is moved by
+    // `set-url`, which must run before the fetch. After `reset --hard` the deploy fetched from the
+    // old remote and reported success while serving the previous repository.
     $order = collect();
 
     Process::fake(function ($process) use ($order) {
@@ -258,8 +246,8 @@ it('points the remote at the new url before fetching, not after', function () {
 });
 
 it('adds origin only when the checkout does not have it (bug #71)', function (string $remotes, bool $adds) {
-    // Run every time and left to fail, `remote add` logged "remote origin
-    // already exists" as an error on every deploy after the first.
+    // Run every time and left to fail, `remote add` logged "remote origin already exists" as an
+    // error on every later deploy.
     $ran = collect();
 
     Process::fake(function ($process) use ($ran, $remotes) {
@@ -304,15 +292,14 @@ it('runs the build command as the site user, not as the panel', function () {
 
     runDeploy($app);
 
-    // The build command is whatever the user typed. Dropping privileges is
-    // what stops `application:manage` from becoming root-level RCE.
+    // The build command is whatever the user typed; dropping privileges stops `application:manage`
+    // from becoming root-level RCE.
     Process::assertRan(fn ($p) => $p->command[0] === 'runuser'
         && $p->command[2] === 'deploy'
         && str_contains(end($p->command), 'composer install --no-dev'));
 
-    // Recorded as `script` since the Deployment screen replaced the single
-    // build command with an editable script; `build_command` remains the
-    // fallback for applications configured before that.
+    // Recorded as `script`; `build_command` is the fallback for applications configured before the
+    // editable deploy script.
     expect($app->fresh()->steps)->toContain('script');
 });
 
@@ -322,8 +309,7 @@ it('builds with the Node version the site pinned, not the default', function () 
 
     runDeploy($app);
 
-    // A site pinned to 18 on a box defaulting to 22 built with 22 — silently,
-    // and only visible much later as a runtime error in code that compiled.
+    // A site pinned to 18 on a box defaulting to 22 must not silently build with 22.
     Process::assertRan(fn ($p) => $p->command[0] === 'runuser'
         && str_contains(end($p->command), "export PATH='/opt/fnm/node-versions/v18.20.0/installation/bin':\"\$PATH\";")
         && str_contains(end($p->command), 'npm ci && npm run build'));
@@ -367,10 +353,8 @@ it('queues a deploy and refuses one for a non-git application', function () {
         'site_type' => 'static', 'serving_profile' => 'static', 'status' => 'active',
     ]);
 
-    // 404 rather than 422 since the route moved to `app_deployment`: for a
-    // static site the Deployment screen does not exist at all, so the refusal
-    // happens before the controller rather than as a validation failure inside
-    // it. Same outcome, said earlier and more accurately.
+    // 404, not 422: a static site has no Deployment screen (`app_deployment` route), so the
+    // refusal happens before the controller.
     $this->withHeaders(deployHeaders())
         ->postJson("/api/applications/{$static->id}/deploy")
         ->assertStatus(404);
@@ -410,10 +394,7 @@ it('denies deploying with view-only access', function () {
 });
 
 it('stamps the directory size with the moment it was measured', function () {
-    // The size and its date are one fact. Persisting the bytes alone left a
-    // number freshly measured by this deploy carrying whenever the file
-    // browser last happened to walk the site — or no date at all — and the UI
-    // renders an undated size as current.
+    // The size and its date are one fact: the UI renders an undated size as current.
     Process::fake(fn ($process) => match (true) {
         $process->command[0] === 'test' => Process::result(exitCode: 1),
         in_array('rev-parse', $process->command, true) => Process::result(output: "abc123def456\n"),
@@ -434,9 +415,8 @@ it('stamps the directory size with the moment it was measured', function () {
 
 describe('the post-deploy health check', function () {
     /**
-     * A curl that answers non-2xx the first time and 200 once the site has
-     * caught up — which is what a first deploy looks like: the document root
-     * for a framework repository did not exist until the checkout seconds ago.
+     * A curl that answers non-2xx until the site has caught up, as a first deploy does (the
+     * document root did not exist until the checkout seconds ago).
      */
     function fakeGitWarmingUp(int $failFirst, string $then = '200'): void
     {
@@ -460,9 +440,7 @@ describe('the post-deploy health check', function () {
     }
 
     it('waits for a site that is still coming up instead of failing the deploy', function () {
-        // The bug this fixes: one probe, five-second timeout, no second chance.
-        // Every first deploy failed at `verify` and the re-run passed, because
-        // the deploy was never the problem — the timing of the question was.
+        // A single probe with no retry failed every first deploy at `verify`; the re-run passed.
         fakeGitWarmingUp(failFirst: 2);
         $app = gitApp();
 
@@ -473,9 +451,8 @@ describe('the post-deploy health check', function () {
     });
 
     it('still fails when the site answers but is genuinely broken', function () {
-        // The reason this check exists. A 500 that survives every retry is the
-        // deploy's fault, and reporting it as success would be worse than the
-        // false failure this change removes.
+        // A 500 that survives every retry is the deploy's fault; reporting success would be worse
+        // than a false failure.
         fakeGitWarmingUp(failFirst: 99);
         $app = gitApp();
 
@@ -485,10 +462,8 @@ describe('the post-deploy health check', function () {
     });
 
     it('does not fail a deploy over a site it could never reach', function () {
-        // A brand-new domain whose DNS has not propagated. curl exits non-zero
-        // without ever connecting, which says nothing about the code that was
-        // just deployed — failing here sends someone to fix a build that
-        // worked.
+        // A brand-new domain whose DNS has not propagated: curl exits non-zero without connecting,
+        // which says nothing about the code that was just deployed.
         Process::fake(fn ($process) => match (true) {
             $process->command[0] === 'curl' => Process::result(
                 errorOutput: 'curl: (6) Could not resolve host',
@@ -508,8 +483,7 @@ describe('the post-deploy health check', function () {
     });
 
     it('records the check in the steps either way', function () {
-        // Silence is the one thing this must not do: whether the site answered
-        // or not is exactly what someone reading a deploy wants to know.
+        // Whether the site answered is what someone reading a deploy wants to know.
         fakeGitWarmingUp(failFirst: 0);
         $app = gitApp();
 
@@ -519,8 +493,7 @@ describe('the post-deploy health check', function () {
     });
 
     it('counts any answer below 500 as a working site', function (string $code) {
-        // FS-C42: an API with no route at `/` answers 404 and could never
-        // deploy, because only a 2xx counted.
+        // An API with no route at `/` answers 404 and must still deploy; only a 5xx is a broken site.
         fakeGitWarmingUp(failFirst: 0, then: $code);
         $app = gitApp();
 
@@ -537,16 +510,15 @@ describe('the post-deploy health check', function () {
         runDeploy($app);
 
         expect($app->fresh()->failed_step)->toBe('verify')
-            // A code with a sentence, not "curl … returned HTTP 500" (FS-C40).
+            // A code with a sentence, not "curl … returned HTTP 500".
             ->and($app->fresh()->failed_reason)->toBe('verify_http')
             ->and(__('application.failure_reason.verify_http'))->not->toBe('application.failure_reason.verify_http');
     });
 });
 
 it('gives the checked-out branch an upstream so a bare git pull works', function () {
-    // init + fetch + reset leaves the branch with no upstream, and a deploy
-    // script of `git pull` failed the first deploy on the Apache test box:
-    // "There is no tracking information for the current branch".
+    // init + fetch + reset leaves the branch with no upstream, so a deploy script of `git pull`
+    // failed: "There is no tracking information for the current branch".
     $order = collect();
 
     Process::fake(function ($process) use ($order) {
@@ -570,8 +542,7 @@ it('gives the checked-out branch an upstream so a bare git pull works', function
 });
 
 it('points the vhost at the port the app now listens on, on the same deploy (FS-C41)', function () {
-    // A port changed in the settings reached the systemd unit on deploy but
-    // not the proxy, so every visitor got 502.
+    // A port changed in the settings reached the systemd unit but not the proxy: visitors got 502.
     $ran = new ArrayObject;
     Process::fake(function ($process) use ($ran) {
         $ran[] = ['command' => $process->command, 'input' => (string) $process->input];

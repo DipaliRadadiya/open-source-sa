@@ -10,16 +10,12 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Testing\TestResponse;
 
 /**
- * The read-only facts the settings UI needs in order to say something true
- * about each section: how many updates are waiting, whether the last
- * unattended run worked, whether a key exists, whether the clock is actually
- * synchronised, whether Redis is up.
+ * The read-only facts the settings UI needs to say something true about each section: pending
+ * updates, the last unattended run, whether a key exists, clock sync, whether Redis is up.
  *
- * The recurring assertion in here is `null` rather than a value. Each of these
- * reads can fail for ordinary reasons — a package that is not installed, a log
- * the panel cannot open — and reporting a confident `0` or `false` in those
- * cases would be worse than reporting nothing, because it is the same shape as
- * a real answer.
+ * The recurring assertion is `null` rather than a value: each read can fail for ordinary reasons
+ * (a package not installed, a log the panel cannot open), and a confident `0` or `false` there has
+ * the same shape as a real answer.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -67,9 +63,9 @@ function fakeFacts(array $overrides = []): void
         $cmd = $process->command;
         $bin = $cmd[0] ?? '';
 
-        // No authorized_keys on disk unless a test says otherwise — the key
-        // check now asks the server (SecuritySettings::hasSshKey()), and a
-        // catch-all success would read as a key for root and every sudoer.
+        // No authorized_keys on disk unless a test says otherwise: the key check asks the server
+        // (SecuritySettings::hasSshKey()), and a catch-all success would read as a key for root and
+        // every sudoer.
         if ($bin === 'test' && ($cmd[1] ?? '') === '-s' && str_ends_with((string) end($cmd), '/.ssh/authorized_keys')) {
             return Process::result(exitCode: 1);
         }
@@ -87,8 +83,7 @@ function fakeFacts(array $overrides = []): void
                 : Process::result(errorOutput: '43;1');
         }
 
-        // Two logs are tailed and they say different things, so the fake has to
-        // tell them apart by path rather than by binary.
+        // Two logs are tailed and say different things, so tell them apart by path, not binary.
         if ($bin === 'tail') {
             return in_array($dpkgLog, $cmd, true)
                 ? ($overrides['unattended_dpkg'] ?? Process::result(exitCode: 1))
@@ -239,8 +234,8 @@ it('reports whether the server has any ssh key', function () {
         'fingerprint' => 'SHA256:abc',
     ]);
 
-    // Its owner has SSH access off: the save writes AllowGroups ssh-users
-    // sudo root, so this key would let nobody in (FS-C5).
+    // Its owner has SSH access off: the save writes AllowGroups ssh-users sudo root, so this key
+    // would let nobody in.
     readSettings()->assertJsonPath('settings.security.has_ssh_key', false);
 
     $systemUser->update(['ssh_access' => true]);
@@ -348,14 +343,9 @@ it('finds the reboot schedule change under its own verb', function () {
 });
 
 /*
- * Why the automatic update failed, not only that it did.
- *
- * The check matched on the error line and discarded it, so the settings page
- * said "The last automatic update failed" and stopped. The commonest cause is
- * a transient apt lock, which needs no action at all — indistinguishable, from
- * that screen, from a held package or a broken post-install script. The only
- * route to the answer was SSH, which whoever is reading a settings page
- * usually does not have.
+ * Why the automatic update failed, not only that it did. The commonest cause is a transient apt
+ * lock that needs no action, which the screen could not tell from a held package or a broken
+ * post-install script.
  */
 
 it('says why the last unattended run failed', function () {
@@ -367,8 +357,7 @@ it('says why the last unattended run failed', function () {
 
     readSettings()
         ->assertJsonPath('settings.updates.unattended_last_result', 'failed')
-        // The sentence unattended-upgrades wrote, without the timestamp and
-        // level the screen has already shown.
+        // The sentence unattended-upgrades wrote, without the timestamp and level.
         ->assertJsonPath(
             'settings.updates.unattended_last_error',
             'Lock could not be acquired (another package manager running?)',
@@ -389,8 +378,8 @@ it('reports no reason when the run succeeded', function () {
 });
 
 it('redacts a credential an apt error quoted back', function () {
-    // An apt failure can echo the repository URL it could not reach, and this
-    // field is readable by anyone who can open the settings page.
+    // An apt failure can echo the repository URL it could not reach, and anyone who can open the
+    // settings page can read this field.
     File::put($this->aptCheck, '');
     fakeFacts(['unattended' => Process::result(output: implode("\n", [
         '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
@@ -404,8 +393,7 @@ it('redacts a credential an apt error quoted back', function () {
 });
 
 it('keeps a Traceback to its first line', function () {
-    // A Python stack is not what the reader needs on a settings card, and the
-    // full text is still in the log the message names.
+    // A Python stack is not what a settings card needs; the full text stays in the log.
     File::put($this->aptCheck, '');
     fakeFacts(['unattended' => Process::result(output: implode("\n", [
         '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
@@ -414,19 +402,15 @@ it('keeps a Traceback to its first line', function () {
 
     $error = (string) readSettings()->json('settings.updates.unattended_last_error');
 
-    // 300 plus the ellipsis Str::limit appends — the bound is on the text, and
-    // the marker is what tells the reader there is more in the log.
+    // 300 plus the ellipsis Str::limit appends; the marker tells the reader there is more.
     expect(strlen($error))->toBeLessThanOrEqual(303)
         ->and($error)->toEndWith('...');
 });
 
 /*
- * The run, not only the line that decided it.
- *
- * One line answers "is this urgent" and for a lock collision that is the whole
- * story. It does not answer "why did this package refuse" — unattended-upgrades
- * narrates that across several lines, and dpkg narrates the part that actually
- * matters in a different file, which the panel was not reading at all.
+ * The run, not only the line that decided it. One line answers "is this urgent" but not "why did
+ * this package refuse": unattended-upgrades narrates that across several lines, and dpkg narrates
+ * the part that matters in a different file.
  */
 
 it('includes the failed run as a log excerpt', function () {
@@ -460,9 +444,7 @@ it('reports no excerpt when the run succeeded', function () {
 });
 
 it('carries the dpkg log, where the reason for a failed package actually is', function () {
-    // unattended-upgrades says a package failed; dpkg says why. Reporting only
-    // the first tells an administrator that something broke and not one word
-    // about what.
+    // unattended-upgrades says a package failed; dpkg says why.
     File::put($this->aptCheck, '');
     fakeFacts([
         'unattended' => Process::result(output: implode("\n", [
@@ -482,17 +464,15 @@ it('carries the dpkg log, where the reason for a failed package actually is', fu
     $log = (string) readSettings()->json('settings.updates.unattended_last_log');
 
     expect($log)->toContain('post-installation script subprocess returned error exit status 1')
-        // Named, so dpkg's ordinary "Setting up ..." chatter is not read as
-        // part of unattended-upgrades' own narration.
+        // Named, so dpkg's "Setting up ..." chatter is not read as unattended-upgrades' own.
         ->and($log)->toContain('unattended-dpkg.log')
         // Its own blocks are scoped too.
         ->and($log)->not->toContain('an earlier upgrade that succeeded');
 });
 
 it('redacts every line of the excerpt, not only the headline', function () {
-    // The reason line is redacted already. A credentialled mirror is just as
-    // likely to be quoted by the INFO line above it, and that line is now
-    // being published too.
+    // The reason line is redacted already; a credentialled mirror can just as well be quoted by
+    // the INFO line above it, which is published too.
     File::put($this->aptCheck, '');
     fakeFacts(['unattended' => Process::result(output: implode("\n", [
         '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
@@ -507,9 +487,8 @@ it('redacts every line of the excerpt, not only the headline', function () {
 });
 
 it('says the excerpt is partial when the run began before the window', function () {
-    // No start marker in the tail means this is the end of a run, not all of
-    // it. Presented as the whole story it would invite the reader to conclude
-    // the upgrade began with the error.
+    // No start marker in the tail means this is the end of a run, not all of it; presented as the
+    // whole story it would suggest the upgrade began with the error.
     File::put($this->aptCheck, '');
     fakeFacts(['unattended' => Process::result(output: implode("\n", [
         '2026-08-01 06:00:03,003 INFO Packages that will be upgraded: curl',
@@ -537,16 +516,14 @@ it('bounds the excerpt and says so', function () {
     $log = (string) $response->json('settings.updates.unattended_last_log');
 
     expect(strlen($log))->toBeLessThanOrEqual(8 * 1024)
-        // Bounded from the end, because the failure is the last thing that
-        // happened — the reason must survive the bound.
+        // Bounded from the end: the failure is the last thing that happened and must survive.
         ->and($log)->toContain('Could not fetch archives');
 
     $response->assertJsonPath('settings.updates.unattended_last_log_truncated', true);
 });
 
 it('distinguishes a log it could not read from a box that has never run one', function () {
-    // Both were all-nulls, and the screen said nothing in both cases. One of
-    // them is a broken panel.
+    // Both read as all-nulls, but one of them is a broken panel.
     File::put($this->aptCheck, '');
     fakeFacts(['unattended' => Process::result(exitCode: 1, errorOutput: 'Permission denied')]);
 
@@ -580,7 +557,7 @@ it('withholds the excerpt from a viewer who cannot manage settings', function ()
         ->getJson('/api/settings')
         ->assertOk()
         ->assertJsonPath('settings.updates.unattended_last_log', null)
-        // The one-line reason stays: it is what tells a viewer whether to
-        // escalate, and it was already bounded and redacted for that purpose.
+        // The one-line reason stays: it tells a viewer whether to escalate, and is bounded and
+        // redacted.
         ->assertJsonPath('settings.updates.unattended_last_error', 'Could not fetch archives');
 });

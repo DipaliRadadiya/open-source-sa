@@ -24,8 +24,7 @@ beforeEach(function () {
     $this->soDir = $this->phpDir.'/lib';
     File::deleteDirectory($this->phpDir);
 
-    // A real Debian layout in miniature: mods-available holds what is
-    // installed, each SAPI's conf.d holds what is switched on.
+    // Debian layout in miniature: mods-available = installed, each SAPI's conf.d = switched on.
     foreach ([$this->panel, $this->other] as $version) {
         File::makeDirectory("{$this->phpDir}/{$version}/mods-available", 0755, true);
         foreach (['cli', 'fpm'] as $sapi) {
@@ -68,8 +67,7 @@ function fakeExtensions(?callable $override = null, string $startupWarning = '')
         $command = $process->command;
         $first = $command[0] ?? '';
 
-        // apt-cache lists more than is installed, including packages that
-        // share the prefix but are not extensions at all.
+        // apt-cache lists more than is installed, including prefix-sharing non-extensions.
         if ($first === 'apt-cache') {
             $version = ltrim((string) end($command), '^php');
             $version = preg_replace('/-$/', '', (string) preg_replace('/^\^php/', '', (string) end($command)));
@@ -94,8 +92,8 @@ function fakeExtensions(?callable $override = null, string $startupWarning = '')
                 ->join("\n"));
         }
 
-        // apt puts the package's .so and its mods-available ini in place.
-        // The package, not the last argument: apt() appends its lock option.
+        // apt puts the package's .so and mods-available ini in place. Match the package, not
+        // the last argument: apt() appends its lock option.
         if ($first === 'apt-get' && in_array('install', $command, true)
             && preg_match('/^php(\d+\.\d+)-([a-z0-9_]+)$/', (string) collect($command)->first(fn ($arg) => str_starts_with((string) $arg, 'php')), $m)) {
             File::put(test()->phpDir."/{$m[1]}/mods-available/{$m[2]}.ini", "extension={$m[2]}.so\n");
@@ -104,10 +102,8 @@ function fakeExtensions(?callable $override = null, string $startupWarning = '')
             return Process::result(exitCode: 0);
         }
 
-        // phpenmod / phpdismod as Debian's really behave (measured on PHP 8.3,
-        // 2026-10-05): each named module with an ini in mods-available gets its
-        // conf.d link added or removed, and a name with no ini is skipped with
-        // a warning — exit 0 either way.
+        // phpenmod / phpdismod as Debian's behave: each module with an ini in mods-available
+        // gets its conf.d link added or removed; a name with no ini is skipped, exit 0.
         if (in_array(basename($first), ['phpenmod', 'phpdismod'], true)) {
             $version = $command[array_search('-v', $command, true) + 1];
             $dir = test()->phpDir."/{$version}";
@@ -175,10 +171,7 @@ it('lists what apt offers, not just what is installed', function () {
         ->and($catalog['redis']['enabled'])->toBeTrue();
 });
 
-/*
- * Bug #29: many rows had no description. v7 shows apt's own one-liner, which
- * the catalog already reads from `apt-cache search` and used to throw away.
- */
+// Rows show apt's own one-liner from `apt-cache search`.
 it('carries apt\'s description for each package, and none for a built-in', function () {
     fakeExtensions();
 
@@ -192,8 +185,7 @@ it('carries apt\'s description for each package, and none for a built-in', funct
 it('drops packages that share the prefix but are not extensions', function () {
     fakeExtensions();
 
-    // php8.4-fpm is a SAPI, php8.4-common is shared config. A toggle for
-    // either is a button that breaks the server.
+    // php8.4-fpm is a SAPI, php8.4-common is shared config: a toggle for either breaks the server.
     expect(catalogFor($this->panel)->keys())
         ->not->toContain('fpm', 'cli', 'common', 'dev', 'phpdbg');
 });
@@ -201,8 +193,7 @@ it('drops packages that share the prefix but are not extensions', function () {
 it('treats one package with several modules as one row', function () {
     fakeExtensions();
 
-    // php8.4-mysql provides mysqli, mysqlnd and pdo_mysql. Three checkboxes
-    // that must always move together is not a choice, it is a trap.
+    // php8.4-mysql provides mysqli, mysqlnd and pdo_mysql; they must always move together.
     $mysql = catalogFor($this->panel)['mysql'];
 
     expect($mysql['modules'])->toBe(['mysqli', 'mysqlnd', 'pdo_mysql'])
@@ -233,10 +224,8 @@ it('lists compiled-in extensions without a control', function () {
 });
 
 it('leaves ionCube to its own card', function () {
-    // Measured on OpenLiteSpeed with loader 15.5: `php -m` lists "ionCube
-    // Loader" under [PHP Modules] (a bogus built-in row), and LiteSpeed's
-    // repository offers `lsphp84-ioncube` (an Install button for a second
-    // loader beside the one the ionCube card manages).
+    // On OpenLiteSpeed `php -m` lists "ionCube Loader" (a bogus built-in row) and the repository
+    // offers `lsphp84-ioncube` (a second loader beside the ionCube card's).
     fakeExtensions();
 
     $names = collect(extCall('GET', "/api/php/versions/{$this->panel}/extensions")->json('extensions'))->pluck('name');
@@ -244,12 +233,8 @@ it('leaves ionCube to its own card', function () {
     expect($names->filter(fn (string $n) => str_contains(strtolower($n), 'ioncube')))->toBeEmpty();
 });
 
-/*
- * LiteSpeed's PECL packages number their ini — `50-redis.ini`, `40-apcu.ini`
- * (seen on a real OLS box, 2026-09-23). Read as-is the module was `50-redis`:
- * the package row said "not installed" and a second `redis` row turned up as a
- * built-in, for an extension that was loaded.
- */
+// LiteSpeed's PECL packages number their ini (`50-redis.ini`). Read as-is the module was
+// `50-redis`: the package showed "not installed" and a second built-in `redis` row appeared.
 it('reads a numbered ini in mods-available as the module it loads', function () {
     File::move(
         "{$this->phpDir}/{$this->panel}/mods-available/redis.ini",
@@ -291,8 +276,7 @@ it('reloads fpm after a toggle, because phpenmod does not', function () {
     $commands = collect($runs);
 
     expect($commands)->toContain(['/usr/sbin/phpdismod', '-v', $this->other, '-s', 'ALL', 'redis'])
-        // Without this the toggle flips in the UI and nothing changes on the
-        // server until something else happens to restart FPM.
+        // Without the reload the toggle flips in the UI but FPM keeps running as before.
         ->toContain(['systemctl', 'reload', "php{$this->other}-fpm"]);
 });
 
@@ -302,8 +286,7 @@ it('toggles every SAPI at once', function () {
     extCall('PUT', "/api/php/versions/{$this->panel}/extensions/redis", ['enabled' => true])
         ->assertOk();
 
-    // cli and fpm diverging means a site that works in a browser and fails in
-    // a cron deploy, with nothing on screen explaining why.
+    // cli and fpm diverging means a site that works in a browser and fails in a cron deploy.
     expect(collect($runs))->toContain(['/usr/sbin/phpenmod', '-v', $this->panel, '-s', 'ALL', 'redis']);
 });
 
@@ -321,17 +304,13 @@ it('queues an install when enabling something not on the box yet', function () {
 it('refuses to disable an extension the panel runs on', function () {
     fakeExtensions();
 
-    // curl is in panel_required. Disabling it under the panel means the
-    // request to turn it back on never gets answered.
+    // curl is in panel_required: with it off the request to turn it back on is never answered.
     extCall('PUT', "/api/php/versions/{$this->panel}/extensions/curl", ['enabled' => false])
         ->assertUnprocessable()
         ->assertJsonFragment(['message' => 'Turning curl off would take the panel offline — it needs curl.']);
 });
 
-/*
- * Bug #27: redis was not on the list, and the panel's cache, queue and
- * sessions run on phpredis. Turning it off took the panel down.
- */
+// The panel's cache, queue and sessions run on phpredis: turning it off takes the panel down.
 it('refuses to disable redis under the panel when the panel uses phpredis', function () {
     fakeExtensions();
     config(['database.redis.client' => 'phpredis']);
@@ -365,11 +344,7 @@ it('protects the driver of the database the panel is on', function () {
     expect($required)->toBe(['pdo_mysql', 'mysqlnd']);
 });
 
-/*
-| Junior re-test #11: turning off `mysql` answered 200 and logged "Disabled"
-| while mysqli and pdo_mysql stayed loaded — phpdismod was handed the package
-| name, has no ini by that name, and exits 0 anyway (measured on PHP 8.3).
-*/
+// phpdismod handed a package name finds no ini by it and exits 0, so the modules stayed loaded.
 
 it('turns off every module of a package, not just its name', function () {
     $runs = fakeExtensions();
@@ -385,8 +360,7 @@ it('turns off every module of a package, not just its name', function () {
 });
 
 it('says so, and logs nothing, when the extension did not actually move', function () {
-    // The tool exits 0 and changes nothing — exactly what phpdismod does for
-    // a name it has no ini for.
+    // Exits 0 and changes nothing, as phpdismod does for a name it has no ini for.
     fakeExtensions(fn (array $command) => str_ends_with((string) $command[0], 'phpdismod') ? Process::result() : null);
     config(['database.redis.client' => 'predis']);
 
@@ -409,8 +383,7 @@ it('allows disabling that same extension on a version the panel does not use', f
 it('refuses an extension this server does not offer', function () {
     fakeExtensions();
 
-    // The name becomes an apt package name and a path, so a pattern is not
-    // enough — it has to be something apt actually lists.
+    // The name becomes an apt package name and a path: it must be something apt actually lists.
     foreach (['nosuchext', 'redis;rm -rf /', '../../etc/passwd'] as $name) {
         extCall('PUT', "/api/php/versions/{$this->panel}/extensions/".urlencode($name), ['enabled' => true])
             ->assertNotFound();
@@ -429,16 +402,11 @@ it('never purges a package', function () {
 
     extCall('PUT', "/api/php/versions/{$this->other}/extensions/redis", ['enabled' => false])->assertOk();
 
-    // Disabling unlinks and stops. `apt purge php8.4-*` is how a server loses
-    // php8.4-common and every site with it.
+    // `apt purge php8.4-*` would remove php8.4-common and every site with it.
     expect(collect($runs)->filter(fn ($c) => in_array('purge', $c, true)))->toBeEmpty();
 });
 
-/*
- * The reload after a toggle or install used to be fire-and-forget: phpenmod
- * succeeded, the reload failed, and the screen said the extension was on
- * while every running worker went on without it.
- */
+// A failed reload must surface: otherwise the screen says on while workers run without it.
 it('reports a failed reload after a toggle instead of success', function () {
     fakeExtensions(fn (array $command) => ($command[0] ?? '') === 'systemctl'
         ? Process::result(exitCode: 1, errorOutput: 'Job for php-fpm failed')
@@ -453,8 +421,7 @@ it('reports a failed reload after a toggle instead of success', function () {
 });
 
 it('records an install whose reload failed as reload_failed, not enable_failed', function () {
-    // Pressing the toggle again is what `enable_failed` tells the user to do,
-    // and it is not the fix when the module is on and PHP was not reloaded.
+    // `enable_failed` tells the user to press the toggle again, which is no fix here.
     fakeExtensions(fn (array $command) => ($command[0] ?? '') === 'systemctl' ? Process::result(exitCode: 1) : null);
 
     try {
@@ -494,9 +461,8 @@ it('does not list OPcache twice under its display name', function () {
     File::put("{$this->phpDir}/{$this->panel}/mods-available/opcache.ini", "zend_extension=opcache.so\n");
     File::put("{$this->soDir}/opcache.so", '');
 
-    // `php -m` says "Zend OPcache"; the package and the ini say `opcache`.
-    // Compared naively it looks like a built-in as well as a package, and the
-    // user sees the same extension twice with different controls.
+    // `php -m` says "Zend OPcache"; the package and ini say `opcache`. Compared naively it
+    // shows twice, as a built-in and as a package.
     expect(catalogFor($this->panel)->where('name', 'opcache')->count())->toBe(1)
         ->and(catalogFor($this->panel)->keys())->not->toContain('zend opcache', 'zendopcache');
 });

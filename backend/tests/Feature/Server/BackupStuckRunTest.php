@@ -25,16 +25,13 @@ use Illuminate\Support\Facades\Queue;
 uses(RefreshDatabase::class);
 
 /*
- * Two failures that look unrelated on screen and share one cause: a backup job
- * that dies without getting to tell anyone.
+ * Two failures that look unrelated on screen and share one cause: a backup job that dies without
+ * telling anyone.
  *
- *  - Handled failures record the attempt, so the schedule moves on. A job that
- *    is killed outright did not, so the target stayed due and fired again on
- *    the next tick — a new failed row every minute, for as long as whatever
- *    killed it kept killing it.
- *  - The row it leaves behind sits at `running` forever, and every path that
- *    starts a backup refuses while one is in flight. One stranded row and the
- *    site is never backed up again, with nothing on screen saying so.
+ *  - Handled failures record the attempt, so the schedule moves on. A killed job did not, so the
+ *    target stayed due and fired again on every tick.
+ *  - The row it leaves behind sits at `running` forever, and every path that starts a backup
+ *    refuses while one is in flight: the site is never backed up again.
  */
 
 beforeEach(function () {
@@ -83,9 +80,8 @@ function stuckRun(BackupStatus $status, int $minutes): Backup
 describe('a job that dies outright', function () {
 
     /*
-     * BackupRunner's catch block does this for every handled failure, five
-     * lines from the hook that did not. Without it the target is due again on
-     * the next tick and the failure repeats every minute.
+     * BackupRunner's catch block does this for every handled failure. Without it the target is
+     * due again on the next tick and the failure repeats every minute.
      */
     it('records the attempt so the schedule stops firing every minute', function () {
         $before = $this->backupTarget->last_run_at;
@@ -107,10 +103,8 @@ describe('a job that dies outright', function () {
     });
 
     /*
-     * `crashed` is written by that hook and had no entry in the error list, so
-     * the screen rendered the literal key. Every other value `reason` can hold
-     * is a step key, and those were all translated — this one was invented in
-     * the job and never followed up.
+     * `crashed` is written by the hook and had no entry in the error list, so the screen rendered
+     * the literal key. Every other value `reason` can hold is a translated step key.
      */
     it('has prose for its reason, not a translation key', function () {
         // Reading one backup is the server-wide `backup` permission, not the
@@ -131,9 +125,8 @@ describe('a job that dies outright', function () {
 describe('a run stranded in flight', function () {
 
     /*
-     * The bound is the job's own timeout plus the grace ExpiresUniqueLock
-     * already uses for the queue lock. Past it, the worker has given up and the
-     * lock is collectable, so nothing can still be writing to this row.
+     * The bound is the job's own timeout plus the grace ExpiresUniqueLock uses for the queue lock.
+     * Past it the worker has given up and the lock is collectable, so nothing can still be writing.
      */
     it('is closed out once nothing could still be working on it', function () {
         $stale = stuckRun(BackupStatus::Running, 24 * 60);
@@ -145,10 +138,8 @@ describe('a run stranded in flight', function () {
     });
 
     /*
-     * The half that matters more. Expiring early would let a second backup
-     * start beside one that is genuinely running — two archives of the same
-     * site competing for one disk and one archive key, which is exactly what
-     * the unique lock exists to prevent.
+     * The half that matters more: expiring early would let a second backup start beside one that
+     * is genuinely running, two archives competing for one disk and one archive key.
      */
     it('is left alone while it could still be alive', function () {
         $live = stuckRun(BackupStatus::Running, 5);
@@ -254,10 +245,8 @@ describe('POST /backups/{backup}/clear', function () {
 });
 
 /*
- * QA 2026-11-24: killing the worker mid-backup held the target for 65
- * minutes, and Clear refused all that time. The run now records which worker
- * process runs it; once that process is definitely gone, nothing can still be
- * writing, so there is nothing to wait for.
+ * The run records which worker process runs it; once that process is definitely gone, nothing can
+ * still be writing, so there is nothing to wait for.
  */
 describe('a run whose worker is gone', function () {
     // Above Linux's largest possible PID (pid_max ≤ 4194304): never a process.
@@ -307,9 +296,8 @@ describe('a run whose worker is gone', function () {
 });
 
 describe('while a restore of the same site is in progress', function () {
-    // A backup taken mid-restore captures a half-restored site, is marked
-    // verified, and lets retention prune an older good backup to make room
-    // for it (found in code review 2026-09-29).
+    // A backup taken mid-restore captures a half-restored site, is marked verified, and lets
+    // retention prune an older good backup to make room for it.
     beforeEach(function () {
         Restore::forceCreate([
             'application_id' => $this->application->id,
@@ -344,9 +332,8 @@ it('skips a scheduled run while a staging push is overwriting the site', functio
 });
 
 /*
- * 2026-10-29, Dipali: after "Clear" a stuck backup only ever said "never
- * reported back", so neither the user nor support could tell what happened.
- * The step it was on and the likely cause are now kept and spelled out.
+ * After "Clear" a stuck backup keeps the step it was on and the likely cause, so the user and
+ * support can tell what happened instead of "never reported back".
  */
 describe('saying where a dead run stopped and why', function () {
 
@@ -460,8 +447,7 @@ describe('saying where a dead run stopped and why', function () {
     });
 
     /*
-     * Found live: a killed run's tar kept writing a half archive into its
-     * working folder, and nothing ever removed it (464 MB from two runs).
+     * A killed run's tar kept writing a half archive into its working folder; nothing removed it.
      */
     it('removes the half-made archive a cleared run left on the disk', function () {
         stopClock(bootedAt: '-30 days', workerStartedAt: '-1 hour');

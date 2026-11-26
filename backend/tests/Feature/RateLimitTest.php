@@ -11,19 +11,13 @@ use Illuminate\Support\Facades\Route;
 /**
  * The global `api` limiter and the per-route ones have to agree.
  *
- * `bootstrap/app.php` prepends `throttle:api` to every API route, and a
- * per-route `throttle:N,1` does not replace it — both buckets must pass, so
- * the lower always wins. A route that declares a limit above the global one
- * is therefore declaring a number that never applies, and the only way to
- * notice is to make the requests and watch where the 429 lands.
+ * `bootstrap/app.php` prepends `throttle:api` to every API route, and a per-route `throttle:N,1`
+ * does not replace it: both buckets must pass, so the lower always wins. A route declaring a limit
+ * above the global one declares a number that never applies; the only way to notice is to make the
+ * requests and watch where the 429 lands.
  *
- * That is exactly how the resumable-upload endpoints shipped: 1200/min and
- * 240/min on paper, 120/min in fact, so a large upload competed with the
- * panel's own polling for one budget and stalled partway through.
- *
- * These tests make the class of mistake loud. Raising the global limit does
- * not fix it — it only moves where it bites — so the guard is structural
- * rather than a number.
+ * These tests make that class of mistake loud. Raising the global limit does not fix it, so the
+ * guard is structural rather than a number.
  */
 it('has no route declaring a limit above the global one while still inside it', function () {
     $global = (int) config('server.rate_limits.api');
@@ -33,10 +27,9 @@ it('has no route declaring a limit above the global one while still inside it', 
     foreach (Route::getRoutes() as $route) {
         $middleware = $route->gatherMiddleware();
 
-        // `throttle:api` is inside the `api` middleware GROUP, so it never
-        // appears in gatherMiddleware() by name — the group does. Checking for
-        // the name directly matched nothing and made this test pass over every
-        // route in the application while proving exactly nothing.
+        // `throttle:api` is inside the `api` middleware GROUP, so it never appears in
+        // gatherMiddleware() by name — the group does. Checking for the name directly matches nothing
+        // and passes vacuously.
         if (! in_array('api', $middleware, true)) {
             continue;
         }
@@ -100,20 +93,17 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         'api/applications/{application}/files/uploads',
         'api/applications/{application}/files/uploads/{uploadId}',
         'api/applications/{application}/files/uploads/{uploadId}/finalize',
-        // A database import's chunks, for the same reason as the file manager's:
-        // one large upload is hundreds of requests (2026-10-14).
+        // A database import's chunks, for the same reason as the file manager's: one large upload is
+        // hundreds of requests.
         'api/databases/{database}/imports/{import}/chunk',
         // Progress feeds. Watched screens poll these for as long as the work
         // runs, so sharing one budget with the rest of the panel meant a long
         // install ended in a 429 that read as the install having failed.
         'api/applications/{application}',
         'api/applications/{application}/sidebar',
-        // The file browser's archive banner, polled every 2s while a compress
-        // or extract runs. It shipped inside the global limiter on
-        // `throttle:120,1` — under 180, so the test above had nothing to say
-        // about it — and quietly spent 30 of the user's 180 requests a minute
-        // for as long as the Files page was open. The 429s then landed on
-        // whatever the user clicked next.
+        // The file browser's archive banner, polled every 2s while a compress or extract runs. Inside
+        // the global limiter it would spend 30 of the user's 180 requests a minute while the Files page
+        // is open, and the 429s would land on whatever the user clicked next.
         'api/applications/{application}/files/archive-jobs',
         'api/applications/{application}/deployments/{deployment}',
         // Polled every few seconds while the Deployment screen is open, so a
@@ -129,14 +119,12 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         // having failed, on the one screen where that is most alarming.
         'api/settings/updates/run',
 
-        // The rest of the same class, found by auditing for "what does a
-        // screen watch?" rather than by waiting for the next 429 report.
+        // The rest of the same class: what does a screen watch?
         //
-        // The last three previously declared `throttle:120,1`, which never
-        // applied: a per-route throttle stacks with the global one rather than
-        // replacing it, so 120 lost to 180 and they spent the interactive
-        // budget anyway. A number below the global limit is not headroom, and
-        // the test above cannot flag it because it is not a violation.
+        // `throttle:120,1` on these never applied: a per-route throttle stacks with the global one
+        // rather than replacing it, so 120 loses to 180 and the interactive budget is spent anyway. A
+        // number below the global limit is not headroom, and the test above cannot flag it because it
+        // is not a violation.
         'api/php',
         'api/node',
         'api/setup',
@@ -151,17 +139,15 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         // Kuma's rebuild take many minutes.
         'api/applications/{application}/update',
         'api/fail2ban',
-        // RC-20: the running-jobs list, polled by the header on every page —
-        // the one feed that is watched all the time, not just while one job runs.
+        // The running-jobs list, polled by the header on every page — the one feed that is watched all
+        // the time, not just while one job runs.
         'api/operations',
         // Polled while apt installs the compiler toolchain — up to
         // fifteen minutes, which the global limiter would cut short.
         'api/build-tools',
 
-        // Not tied to a job at all: these two are polled every 3s for as long
-        // as their page is open, which spends the interactive budget faster
-        // than anything above. Reported by the frontend rather than found by a
-        // 429, which is the way round we asked for.
+        // Not tied to a job: these two are polled every 3s for as long as their page is open, which
+        // spends the interactive budget faster than anything above.
         'api/server/metrics/live',
         'api/services',
     ]);
@@ -174,11 +160,9 @@ it('gives the central panel its own budget, and no one else', function () {
     expect((int) config('server.rate_limits.central'))
         ->not->toBe((int) config('server.rate_limits.api'));
 
-    // The half that matters, and it goes FIRST: an ordinary caller must not be
-    // handed the vendor's allowance. `withHeader()` persists for the rest of
-    // the test, so asserting this after the central call measured a request
-    // that was still carrying the central token — it read 3000 and would have
-    // passed had the branch been wrong in exactly the way this guards against.
+    // The half that matters, and it goes FIRST: an ordinary caller must not get the vendor's
+    // allowance. `withHeader()` persists for the rest of the test, so asserting this after the
+    // central call would measure a request still carrying the central token.
     $user = User::factory()->create();
 
     expect($this->actingAs($user)->getJson('/api/basic-info')->headers->get('X-RateLimit-Limit'))
@@ -211,34 +195,27 @@ it('keys the progress limiter on identity, not on the record being polled', func
 
     $before = $scope();
 
-    // Exactly what provisioning does, and the reason this test exists: the key
-    // used to be built by interpolating the bound model, which is `toJson()` in
-    // string context. Every status change produced a different key, so every
-    // poll opened a fresh bucket and the limit never engaged — a limiter that
-    // reads like protection and is not one.
+    // Exactly what provisioning does: the key used to be built by interpolating the bound model
+    // (`toJson()` in string context), so every status change opened a fresh bucket and the limit
+    // never engaged.
     $legacyBefore = '1|'.$application->fresh();
 
     $application->update(['status' => 'active', 'steps' => ['install' => 'done']]);
 
     expect($scope())->toBe($before)
-        // Asserted so this test cannot quietly become vacuous: the old
-        // expression really did produce a different key for the same record,
-        // which is the whole defect. If a future change made a stringified
-        // model stable, this line fails and the test above stops proving
-        // anything worth proving.
+        // Asserted so this test cannot become vacuous: the old expression produced a different key for
+        // the same record. If a stringified model ever became stable, this line fails and the test
+        // above proves nothing.
         ->and('1|'.$application->fresh())->not->toBe($legacyBefore);
 });
 
 it('keeps every progress-limited route outside the global limiter', function () {
-    // `throttle:progress` allows 600/min. `throttle:api` allows 180. Both
-    // buckets must pass, so a progress route still inside the global limiter
-    // is bounded by 180 and its own limiter never engages — the same class of
-    // mistake as declaring a number above the global one, but invisible to
-    // that test because no literal appears in the middleware at all.
+    // `throttle:progress` allows 600/min, `throttle:api` 180. Both buckets must pass, so a progress
+    // route still inside the global limiter is bounded by 180 and its own limiter never engages. The
+    // test above cannot see it because no literal appears in the middleware.
     //
-    // It is also the shape a half-finished fix takes: swapping `throttle:N,1`
-    // for `throttle:progress` and forgetting the `withoutMiddleware` line
-    // looks correct in a diff and changes nothing in production.
+    // It is also the shape of a half-finished fix: swapping `throttle:N,1` for `throttle:progress`
+    // and forgetting the `withoutMiddleware` line looks correct in a diff and changes nothing.
     $offenders = [];
 
     foreach (Route::getRoutes() as $route) {

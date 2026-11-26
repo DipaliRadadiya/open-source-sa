@@ -41,9 +41,7 @@ class ChunkedUploadFake
     public static bool $directoryExists = true;
 
     /**
-     * Whether `test` is refused before it runs — a sudoers grant older than
-     * the running build, which is the state of every server that updated the
-     * panel without re-running install.sh.
+     * Whether `test` is refused before it runs (a sudoers grant older than the running build).
      */
     public static bool $probeRefused = false;
 
@@ -66,17 +64,13 @@ class ChunkedUploadFake
 }
 
 /*
- * What matters about chunked upload is not that bytes arrive — it is the
- * handful of properties the design leans on and would fail silently without:
+ * What matters about chunked upload is not that bytes arrive but the properties the design leans
+ * on and would fail silently without:
  *
- *  - the part file is assembled inside the site's own tree, so finalising is
- *    a rename and never a copy (the whole reason large uploads do not thrash
- *    a shared box's page cache),
- *  - the server's own byte count is authoritative, so a retried chunk cannot
- *    quietly corrupt the file,
+ *  - the part file is assembled inside the site's own tree, so finalising is a rename, never a copy,
+ *  - the server's own byte count is authoritative, so a retried chunk cannot corrupt the file,
  *  - the upload id can never become a path,
- *  - and the free-space guard actually refuses, because the alternative is
- *    filling a disk that every hosted site shares.
+ *  - and the free-space guard actually refuses, instead of filling a disk every hosted site shares.
  */
 
 beforeEach(function () {
@@ -200,10 +194,9 @@ it('opens an upload and hands back an id that is not client-chosen', function ()
 });
 
 it('tells the client the largest chunk this server will take', function () {
-    // The client sizes chunks by file size, but post_max_size is the server's
-    // to know. A chunk over it is refused by Laravel's ValidatePostSize with
-    // "The POST data is too large" before any upload code runs — which is
-    // what a 6 GB file picking 32 MB chunks hit on a stock 8M limit.
+    // The client sizes chunks by file size, but post_max_size is the server's to know. A chunk over
+    // it is refused by Laravel's ValidatePostSize ("The POST data is too large") before any upload
+    // code runs.
     $response = $this->actingAs($this->admin)
         ->postJson(uploadsUrl(), ['path' => 'big.zip'])
         ->assertOk();
@@ -228,13 +221,9 @@ it('assembles the part file inside the site tree so finalising is a rename', fun
         ->postJson(uploadsUrl(), ['path' => 'big.zip'])
         ->json('upload_id');
 
-    // The part file must sit under the application root — the same filesystem
-    // as the destination, so finalising renames instead of copying every byte.
-    // It used to sit under the *document root*, on the theory that only the
-    // served directory was "the site tree"; `{root}/.panel` and
-    // `{root}/public_html` are on the same filesystem, so the rename survives
-    // the move and the part file is no longer one deny rule away from being
-    // fetchable over HTTP.
+    // The part file must sit under the application root: the same filesystem as the destination, so
+    // finalising renames instead of copying. Not under the document root, where it would be one
+    // deny rule away from being fetchable over HTTP.
     expect(ChunkedUploadFake::$ran)->toContain(
         "runuser -u siteowner -- touch /home/siteowner/shop/.panel/uploads/{$id}.part"
     );
@@ -245,10 +234,9 @@ it('keeps part files out of the served directory entirely', function () {
         ->postJson(uploadsUrl(), ['path' => 'big.zip'])
         ->assertOk();
 
-    // The guard, not a restatement of the path above: whatever the layout
-    // becomes, nothing an upload writes may land under public_html, where it
-    // is protected only by a per-web-server dotfile rule that OpenLiteSpeed
-    // did not apply to `.panel`.
+    // The guard, not a restatement of the path above: nothing an upload writes may land under
+    // public_html, where it is protected only by a per-web-server dotfile rule (OpenLiteSpeed did
+    // not apply it to `.panel`).
     expect(collect(ChunkedUploadFake::$ran)->filter(
         fn (string $command) => str_contains($command, '/public_html/.panel')
     ))->toBeEmpty();
@@ -298,9 +286,7 @@ it('moves the completed upload into place with a rename', function () {
 
     $this->actingAs($this->admin)->call('PUT', uploadsUrl()."/{$id}", [], [], [], [], 'payload');
 
-    // Body carries the path only — the id is in the URL, exactly as it is for
-    // chunk, status and abort. Requiring it in both places made finalize
-    // reject the client for sending it once.
+    // Body carries the path only — the id is in the URL, as for chunk, status and abort.
     $this->actingAs($this->admin)
         ->postJson(uploadsUrl()."/{$id}/finalize", ['path' => 'big.zip'])
         ->assertOk();
@@ -451,11 +437,9 @@ it('refuses to finalise onto a file that appeared during the upload', function (
 });
 
 it('refuses to finalise when it could not check whether a file is already there', function () {
-    // The guard above is the only thing between `mv -f` and a file the user
-    // never agreed to lose, and `test -e` exits 1 both for "nothing there" and
-    // for a command that was refused before it ran. Read as the first, the
-    // guard opens exactly when the server is least healthy — and the only
-    // trace left is that a file's contents changed.
+    // The guard above is the only thing between `mv -f` and a file the user never agreed to lose,
+    // and `test -e` exits 1 both for "nothing there" and for a command refused before it ran. Read
+    // as the first, the guard opens exactly when the server is least healthy.
     $id = $this->actingAs($this->admin)
         ->postJson(uploadsUrl(), ['path' => 'big.zip'])
         ->json('upload_id');
@@ -475,11 +459,8 @@ it('refuses to finalise when it could not check whether a file is already there'
 
 describe('abandoned uploads', function () {
     it('is actually scheduled, not merely written', function () {
-        // The reason this test exists, and it is the same reason the trash
-        // retention has one: reap() shipped with the feature and had zero call
-        // sites. The docblock described a slow disk leak ending in an outage,
-        // the code to prevent it was correct, and nothing ever ran it. A method
-        // nobody calls reads as done.
+        // Guards against the cleanup method shipping with no call site: reap() was correct, and
+        // nothing ever ran it.
         $events = collect(app(Schedule::class)->events())
             ->map(fn ($event): string => (string) $event->command);
 

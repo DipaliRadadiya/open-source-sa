@@ -23,18 +23,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
 
 /*
- * Deleting a site that Server Sync adopted (FS-C22 #14).
+ * Deleting a site that Server Sync adopted.
  *
- * The panel's own delete knows only the files it writes. An adopted site is
- * served from whatever the server already had — `example.com.conf`, a v7
- * `-le-ssl` sibling, a program in a shared supervisor file, a systemd unit —
- * and those outlived the delete. The rules pinned here:
+ * The panel's own delete knows only the files it writes. An adopted site is served from whatever
+ * the server already had (`example.com.conf`, a v7 `-le-ssl` sibling, a program in a shared
+ * supervisor file, a systemd unit), and those outlived the delete. The rules pinned here:
  *
- *  - "delete with files" is refused, before ANYTHING changes, while a worker
- *    adopted from a shared file or a systemd unit still runs from the site
- *    (Dipali, 2026-10-21: "leave everything untouched");
- *  - an adopted vhost goes only when it is provably this site's alone, and a
- *    config test that fails puts it back exactly;
+ *  - "delete with files" is refused, before ANYTHING changes, while a worker adopted from a
+ *    shared file or a systemd unit still runs from the site;
+ *  - an adopted vhost goes only when it is provably this site's alone, and a config test that
+ *    fails puts it back exactly;
  *  - everything left behind is named, in the activity log too.
  *
  * Nothing here runs a real command: every process goes to the fake host below.
@@ -958,10 +956,8 @@ function servedApacheVhost(Application $application, string $contents): void
 }
 
 describe('a vhost that may serve more than this site', function () {
-    // The domains and the root can be exactly this site's while the file
-    // still does something for somebody else: a second server block with no
-    // name answers every request nothing else claims on its port, an include
-    // pulls in whatever another file says, an alias serves another folder.
+    // The domains and the root can be exactly this site's while the file still does something for
+    // somebody else: a nameless second server block, an include, an alias to another folder.
     // None of that is provably this site's, so none of it is removed.
     it('leaves an nginx file whose domains and root are this site\'s but which does more', function (string $contents) {
         $application = adoptedSite();

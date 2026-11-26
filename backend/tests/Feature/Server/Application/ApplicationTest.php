@@ -19,19 +19,15 @@ beforeEach(function () {
     $this->token = $this->admin->createToken('t')->plainTextToken;
     $this->su = SystemUser::create(['username' => 'deploy', 'home_path' => '/home/deploy', 'shell' => '/bin/bash', 'sudo' => false]);
 
-    // These cover the record and the catalog. Provisioning is dispatched on
-    // create and has its own test file; faking the queue keeps the two
-    // concerns from bleeding into each other.
+    // Provisioning is dispatched on create and has its own test file; fake the queue here.
     Queue::fake();
 });
 
 /** A server that can run everything, so tests aren't at the mercy of the host. */
 function capableServer(bool $php = true, bool $node = true): ServerCapability
 {
-    // A capable server has a database engine too. The catalog now refuses a
-    // type whose engine does not answer, so a fixture that describes the
-    // runtimes and nothing else was claiming a box on which WordPress cannot
-    // be created — which is true, and not what these tests mean.
+    // The catalog refuses a type whose database engine does not answer, so a capable server
+    // needs one too.
     fakeUsableSqlEngine();
 
     return ServerCapability::create([
@@ -94,25 +90,18 @@ it('returns the site type catalog with field schemas', function () {
 });
 
 it('sends the catalog as a JSON array, not an object keyed by position', function () {
-    // The assertion every other test in this file is structurally unable to
-    // make. They all read the payload through `collect(...)->keyBy('name')`,
-    // which treats a JSON array and a JSON object identically — so a catalog
-    // that came back as `{"20": {...}}` passed all of them while the create
-    // page showed "the server's answer was not the shape this page expects".
-    //
-    // The cause is `array_filter` preserving keys: this server hosts no
-    // containers, so the Docker types are dropped and the survivors start at a
-    // non-zero index. Asserted on a server that filters something, because one
-    // that filters nothing cannot fail.
+    // The other tests read the payload via `collect(...)->keyBy('name')`, which treats a JSON
+    // array and object alike, so they would pass a catalog like `{"20": {...}}`. That happens
+    // when `array_filter` keeps keys after the Docker types are dropped; this server filters
+    // something, so the case can fail.
     capableServer();
 
     $response = $this->withHeaders(appHeaders())->getJson('/api/site-types');
 
     $response->assertOk();
 
-    // Both halves on purpose. `array_is_list` names the defect, and the raw
-    // body is what the frontend's `z.array()` actually parses — asserting only
-    // the decoded form would still pass if the encoding changed underneath.
+    // The raw body is what the frontend's `z.array()` parses; the decoded form alone could hide an
+    // encoding change.
     expect(array_is_list($response->json('site_types')))->toBeTrue()
         ->and($response->getContent())->toContain('"site_types":[');
 });
@@ -128,8 +117,7 @@ it('greys out types this server cannot run, with a reason and what to install', 
     expect($types['wordpress']['available'])->toBeFalse();
     expect($types['wordpress']['unavailable_reason'])->toBe('This server does not have PHP installed.');
     expect($types['wordpress']['installable_runtime'])->toBe('php');
-    // The code, not the sentence. The sentence is translated and will be
-    // reworded; anything branching on it breaks the day somebody improves it.
+    // The code, not the sentence: the sentence is translated and may be reworded.
     expect($types['wordpress']['unavailable_code'])->toBe('runtime');
 
     // ...and a type needing no runtime is always available.
@@ -167,8 +155,7 @@ it('creates a git application from a connected account, left undeployed', functi
     $response->assertJsonPath('application.site_type', 'git');
     $response->assertJsonPath('application.repository', 'octocat/hello');
     $response->assertJsonPath('application.branch', 'main');
-    // The response is returned before provisioning runs, and until it
-    // succeeds the app must never look live.
+    // The response returns before provisioning runs, so the app must not look live yet.
     $response->assertJsonPath('application.status', 'pending');
     $response->assertJsonPath('application.status_title', 'Not deployed yet');
     $response->assertJsonPath('application.deployed', false);
@@ -198,8 +185,7 @@ it('creates a git application from a public url with no account', function () {
 });
 
 describe('a git repository that is not there (bug #101)', function () {
-    // A wrong URL used to create the site anyway: it said "Running" and its
-    // first deploy failed with no reason. Now nothing is created.
+    // A wrong URL must create nothing, instead of a site that says "Running" and fails to deploy.
     function createFromPublicUrl(string $branch = 'main'): TestResponse
     {
         return test()->withHeaders(appHeaders())->postJson('/api/applications', [
@@ -426,9 +412,7 @@ it('lists, shows, updates and deletes an application', function () {
     $this->withHeaders(appHeaders())->getJson("/api/applications/{$app->id}")
         ->assertOk()->assertJsonPath('application.name', 'Site');
 
-    // A partial settings update must not wipe what it didn't mention. This
-    // used to send `name` as well; the name is immutable now, so the update
-    // it demonstrates is the settings merge — see
+    // A partial settings update must not wipe what it didn't mention; the name is immutable. See
     // {@see \App\Http\Requests\Server\Application\UpdateApplicationRequest}.
     $this->withHeaders(appHeaders())->putJson("/api/applications/{$app->id}", [
         'settings' => ['b' => 2],
@@ -441,8 +425,8 @@ it('lists, shows, updates and deletes an application', function () {
 });
 
 it('refuses a domain on the general update, which changed the column and nothing else', function () {
-    // The Domains endpoints move the rows, the vhost and the certificate, check
-    // the name is free and ask for `app_domain` manage. This one did none of it.
+    // Only the Domains endpoints move the rows, vhost and certificate, check the name is free and
+    // require `app_domain` manage.
     $app = Application::forceCreate([
         'system_user_id' => $this->su->id, 'name' => 'Site',
         'slug' => 'site', 'domain' => 'site.example.com',
@@ -533,25 +517,20 @@ it('says which types actually install something', function () {
 
     $types = collect($response->json('site_types'))->keyBy('name');
 
-    // The grid has to tell "click and get WordPress" apart from "click and get
-    // an empty directory" — they are the same card otherwise.
+    // The grid must tell "click and get WordPress" apart from "click and get an empty directory".
     expect($types['wordpress']['has_installer'])->toBeTrue()
         ->and($types['git']['has_installer'])->toBeFalse()
         ->and($types['php']['has_installer'])->toBeFalse()
         ->and($types['static']['has_installer'])->toBeFalse();
 
-    // And `installable_runtime` answers a different question: what to install
-    // to make an unavailable card work. It is not about the app at all.
+    // `installable_runtime` is a different question: what to install to enable an unavailable card.
     expect($types['wordpress']['installable_runtime'])->toBeNull();
 });
 
 describe('node version constraints', function () {
     /**
-     * The version picker offered every installed Node to every Node site type,
-     * because it is one shared `nodeFields()` select and nothing narrowed it.
-     * A version the application refuses to run on produced a site the panel
-     * reported as created and a domain that served nothing: n8n exits on an
-     * unsupported version, so the reverse proxy points at a dead port.
+     * An application that refuses an unsupported Node version (n8n exits) would be reported as
+     * created while its reverse proxy points at a dead port, so the version must be validated.
      */
     it('refuses a Node version below what the application supports', function () {
         capableServer();
@@ -573,15 +552,9 @@ describe('node version constraints', function () {
         capableServer();
 
         /*
-         * The ceiling is the half that is easy to forget: too *new* is just as
-         * fatal for an application that refuses to start outside its range
-         * rather than warning about it.
-         *
-         * Driven by a stored release now, not a literal in the site type. n8n
-         * 1.x really did publish `>=20.19 <= 24.x`; 2.x publishes `>=24.0.0`
-         * and no ceiling at all. Pinning the rule to whichever the site type
-         * happened to name was how the two drifted apart in the first place,
-         * so the test states the release and asserts the consequence.
+         * Too new is as fatal as too old for an application that refuses to start outside its
+         * range. The range comes from a stored release (n8n 1.x publishes `>=20.19 <= 24.x`),
+         * not a literal in the site type.
          */
         AppPackageRelease::create([
             'package' => 'n8n',
@@ -603,9 +576,7 @@ describe('node version constraints', function () {
     it('allows a Node the current release does not exclude', function () {
         capableServer();
 
-        // The same rule, the other way round, and the reason the ceiling had
-        // to stop being hand-written: n8n 2.x declares no upper bound, so a
-        // literal `max` would refuse a Node the application accepts.
+        // n8n 2.x declares no upper bound, so a hand-written `max` would refuse a Node it accepts.
         AppPackageRelease::create([
             'package' => 'n8n',
             'version' => '2.39.7',
@@ -627,11 +598,8 @@ describe('node version constraints', function () {
         capableServer();
 
         /*
-         * The floor moved with the version. n8n 1.x ran from 20.19 and this
-         * would have been accepted; 2.x declares `engines: {node: ">=24.0.0"}`,
-         * and the installer now fetches `latest`. A range left on the old floor
-         * would hand someone an application that installs without complaint and
-         * refuses to start — which is the whole failure this rule exists for.
+         * The floor follows the installed version: n8n 2.x declares `engines: {node: ">=24.0.0"}`
+         * while 1.x ran from 20.19, so Node 22 must be refused.
          */
         $this->withHeaders(appHeaders())->postJson('/api/applications', [
             'site_type' => 'n8n',
@@ -647,8 +615,7 @@ describe('node version constraints', function () {
     it('accepts a version inside the range, including the top of the ceiling series', function () {
         capableServer();
 
-        // 24.7 must pass against a ceiling written as `24`: the ceiling is a
-        // major series, not a point release, or it goes stale every patch.
+        // 24.7 must pass against a ceiling written as `24`: the ceiling is a major series.
         $this->withHeaders(appHeaders())->postJson('/api/applications', [
             'site_type' => 'n8n',
             'name' => 'Flows',
@@ -666,8 +633,7 @@ describe('node version constraints', function () {
             'provider' => 'github', 'label' => 'Work', 'identifier' => 'octocat', 'token' => 'ghp_x',
         ]);
 
-        // A git site runs code the panel knows nothing about, so it has no
-        // business having an opinion about the version.
+        // A git site runs code the panel knows nothing about, so it has no version opinion.
         $this->withHeaders(appHeaders())
             ->postJson('/api/applications', gitPayload(['node_version' => '18']))
             ->assertCreated();
@@ -680,10 +646,7 @@ describe('node version constraints', function () {
 
         $types = collect($response->json('site_types'))->keyBy('name');
 
-        // n8n's floor comes from the release being installed — 2.x declares
-        // `>=24.0.0` — and it publishes no ceiling, so neither does this. The
-        // fallback in the site type is what answers here, since no release is
-        // stored in this test.
+        // No release is stored here, so the site type's fallback answers (n8n: floor 24, no ceiling).
         expect($types['nodebb']['node_version_range'])->toBe(['min' => '22', 'max' => null])
             ->and($types['n8n']['node_version_range'])->toBe(['min' => '24', 'max' => null])
             ->and($types['wordpress']['node_version_range'])->toBeNull();
@@ -691,9 +654,7 @@ describe('node version constraints', function () {
 });
 
 it('refuses an application name that would be two systemd directives', function () {
-    // A Node application's name is rendered into its unit's `Description=`,
-    // in a file the panel writes and systemd executes. A newline there is a
-    // directive of the caller's choosing.
+    // The name is rendered into the unit's `Description=`; a newline there injects a directive.
     capableServer();
     $this->account = GitAccount::create([
         'provider' => 'github', 'label' => 'Work', 'identifier' => 'octocat', 'token' => 'ghp_x',

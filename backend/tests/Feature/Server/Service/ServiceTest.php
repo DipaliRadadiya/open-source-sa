@@ -188,7 +188,7 @@ it('offers and runs reload when systemd says the service can reload', function (
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->putJson('/api/services/nginx', ['action' => 'reload'])
-        // The panel's own web server: run after the answer (2026-11-24).
+        // The panel's own web server: run after the answer.
         ->assertStatus(202);
 
     Process::assertRan(fn ($p) => $p->command === ['systemctl', 'reload', 'nginx']);
@@ -284,14 +284,12 @@ it('denies a viewer without manage from running an action', function () {
 /**
  * PostgreSQL is the one service whose status cannot come from systemd.
  *
- * `postgresql.service` is a meta unit — `Type=oneshot`, `ExecStart=/bin/true`,
- * `RemainAfterExit=on` — so `ActiveState` is `active` because /bin/true
- * succeeded, whatever the clusters are doing; and `postgresql@.service`
- * prefixes its ExecStart with `-`, so systemd ignores a cluster that failed to
- * start. Both read from the shipped package, 2026-09-10.
+ * `postgresql.service` is a meta unit (`Type=oneshot`, `ExecStart=/bin/true`,
+ * `RemainAfterExit=on`), so `ActiveState` is `active` whatever the clusters are doing; and
+ * `postgresql@.service` prefixes its ExecStart with `-`, so systemd ignores a cluster that failed
+ * to start.
  *
- * Every fake here has systemd reporting `active`, because that is what a real
- * box reports even with the database completely down.
+ * Every fake here has systemd reporting `active`, as a real box does even with the database down.
  *
  * @param  array<string, array{load: string, active: string, file: string}>  $units
  */
@@ -323,9 +321,8 @@ function postgresServiceRow(): ?array
 }
 
 it('lists PostgreSQL among the services once it is installed', function () {
-    // It was absent entirely: MySQL and MongoDB had start/stop/restart here and
-    // PostgreSQL did not, so a database installed from the panel could not be
-    // restarted from the screen that restarts databases.
+    // PostgreSQL needs start/stop/restart here like MySQL and MongoDB, so a database installed from
+    // the panel can be restarted from the screen that restarts databases.
     fakeServicesWithPostgres(['postgresql' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']], true);
 
     expect(postgresServiceRow())->not->toBeNull()
@@ -355,10 +352,8 @@ it('does not probe a service that has no health command', function () {
         if (($process->command[1] ?? null) === 'show') {
             $unit = $process->command[2] ?? '';
 
-            // Only nginx is on this box. The first version of this test
-            // reported every unit as loaded, so PostgreSQL was installed too
-            // and its probe ran — correctly. A fake that installs everything
-            // cannot show that something was skipped.
+            // Only nginx is on this box: a fake that installs everything cannot show that something
+            // was skipped.
             $load = $unit === 'nginx' ? 'loaded' : 'not-found';
 
             return Process::result(output: "Id={$unit}.service\nLoadState={$load}\nActiveState=active\nUnitFileState=enabled\nCanReload=yes\n");
@@ -377,12 +372,9 @@ it('does not probe a service that has no health command', function () {
 /*
  * Acting on an alias.
  *
- * `list()` folded `mysql.service` into the MariaDB row from the start, and a
- * test above pins that. The single-entry path did not, so the two disagreed:
- * the services screen showed no MySQL row while `PUT /services/mysql` returned
- * 200 and restarted MariaDB, logging "Restarted the MySQL service".
- *
- * Found on a live Ubuntu 26.04 box where `mysql-server` was never installed.
+ * `list()` folds `mysql.service` into the MariaDB row, and a test above pins that. The
+ * single-entry path must agree: otherwise the screen shows no MySQL row while
+ * `PUT /services/mysql` returns 200 and restarts MariaDB, logging "Restarted the MySQL service".
  */
 it('refuses to act on a service key that is only an alias of another entry', function () {
     fakeServices([
@@ -410,9 +402,8 @@ it('still acts on the entry that owns the unit the alias points at', function ()
 });
 
 it('keeps acting on a service whose unit is merely named differently', function () {
-    // `redis` -> `redis-server` is a rename, not an alias: the unit resolves to
-    // itself. Live on the OLS box, so a fix that confused the two would break a
-    // service that works today.
+    // `redis` -> `redis-server` is a rename, not an alias: the unit resolves to itself. A fix that
+    // confused the two would break a service that works.
     fakeServices([
         'redis-server' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'id' => 'redis-server.service'],
     ]);
@@ -440,12 +431,11 @@ it('acts on an aliased unit when no configured entry owns it', function () {
 /*
  * What the services page is allowed to cost.
  *
- * Every row used to be its own `systemctl show`. On a live Ubuntu 26.04 box
- * that measured 174 ms as ten calls against 43 ms as one, for identical
- * information, on a route the frontend polls every three seconds.
+ * Every row used to be its own `systemctl show`; one call for all is much faster, on a route the
+ * frontend polls every three seconds.
  *
- * A regression here is invisible — the screen stays correct and merely gets
- * slower — so counting the calls is the only thing that would notice.
+ * A regression here is invisible — the screen stays correct and merely gets slower — so counting
+ * the calls is the only thing that would notice.
  */
 it('inspects the whole catalog in a single systemctl call', function () {
     fakeServices([
@@ -493,10 +483,9 @@ it('gives each unit its own block even when one in the middle does not exist', f
 });
 
 /*
- * Bug #12: PostgreSQL boots through its clusters (`postgresql@18-main`), each
- * enabled on its own. "Start on boot" off disabled the `postgresql` meta unit
- * only, and the cluster started after the next reboot anyway (measured on the
- * OLS test server: both units enabled in multi-user.target.wants).
+ * PostgreSQL boots through its clusters (`postgresql@18-main`), each enabled on its own. "Start on
+ * boot" off must disable them too, not only the `postgresql` meta unit, or the cluster starts
+ * after the next reboot anyway.
  */
 it('switches start-on-boot for every PostgreSQL cluster, not just the meta unit', function (string $action) {
     Process::fake(function ($process) {
@@ -534,15 +523,15 @@ it('leaves the clusters alone for start, stop and restart, which reach them alre
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->putJson('/api/services/postgresql', ['action' => 'restart'])->assertOk();
 
-    // No action on a cluster unit. Listing them is a read, which the reply
-    // now does to report their memory (bug #13).
+    // No action on a cluster unit. Listing them is a read, which the reply does to report their
+    // memory.
     Process::assertNotRan(fn ($p) => in_array($p->command[1] ?? null, ['start', 'stop', 'restart', 'enable', 'disable'], true)
         && str_starts_with((string) ($p->command[2] ?? ''), 'postgresql@'));
 });
 
 it('reports PostgreSQL\'s memory from its clusters, not the empty meta unit (bug #13)', function () {
-    // `postgresql` is a oneshot wrapper: systemd tracks no memory for it, so
-    // the row read "—" forever while 18-main used 50 MB (measured on nginx 118).
+    // `postgresql` is a oneshot wrapper: systemd tracks no memory for it, so the row would read "—"
+    // forever while the cluster uses memory.
     $memory = [
         'postgresql' => '[not set]',
         'postgresql@18-main.service' => '52355072',
@@ -587,10 +576,9 @@ it('reports PostgreSQL\'s memory from its clusters, not the empty meta unit (bug
 });
 
 /*
- * QA 2026-11-24: restarting the web server or PHP-FPM the panel runs on,
- * inside the request, cut the connection carrying that request, so Central
- * got an error for a restart that worked. The answer now goes first and the
- * restart runs once the response has been sent.
+ * Restarting the web server or PHP-FPM the panel runs on, inside the request, cuts the connection
+ * carrying that request, so Central got an error for a restart that worked. The answer goes first
+ * and the restart runs once the response has been sent.
  */
 describe('restarting what the panel itself runs on', function () {
     it('answers before it restarts the panel\'s own web server', function (string $action) {

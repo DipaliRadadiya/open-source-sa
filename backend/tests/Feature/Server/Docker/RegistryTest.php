@@ -15,10 +15,8 @@ use Illuminate\Support\Facades\Process;
 /**
  * Registry credentials: the endpoints, and what must never come back out.
  *
- * The security argument for this feature is a shape, not a check — encrypted at
- * rest, one reader, scoped to one command — so most of what is asserted here is
- * absence: the token is not in a response, not in an activity row, and not in
- * argv.
+ * The design is a shape, not a check (encrypted at rest, one reader, scoped to one command), so
+ * most assertions are about absence: the token is not in a response, an activity row or argv.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -39,9 +37,8 @@ function registryHeaders(): array
 
 function makeRegistry(array $attributes = []): Registry
 {
-    // `forceCreate`, because the probe columns are deliberately not fillable —
-    // `create()` drops them silently and a test that seeds a green tick would be
-    // asserting against a row that never had one.
+    // `forceCreate`, because the probe columns are deliberately not fillable: `create()` drops them
+    // silently and the test would seed a green tick that never existed.
     return Registry::forceCreate(array_merge([
         'name' => 'GHCR',
         'registry' => 'ghcr.io',
@@ -156,9 +153,8 @@ it('refuses an address with credentials embedded in it', function () {
 });
 
 it('refuses a token with a newline in it', function () {
-    // A pasted token with a trailing newline authenticates nowhere and looks
-    // correct in every screen — and this feature shows it in none of them, so
-    // there would be nothing to look at.
+    // A pasted token with a trailing newline authenticates nowhere and looks correct on every
+    // screen, so there would be nothing to look at.
     $this->withHeaders(registryHeaders())
         ->postJson('/api/integrations/registries', [
             'name' => 'Mine', 'registry' => 'ghcr.io', 'username' => 'u', 'token' => "abc\ndef",
@@ -346,7 +342,7 @@ it('is unavailable on a server that hosts no containers', function () {
  */
 
 it('persists a failed verdict as 200, not as an error', function () {
-    // Measured wording, self-hosted registry v2 refusing a password.
+    // Wording of a self-hosted registry v2 refusing a password.
     Process::fake(fn () => Process::result(
         output: '',
         errorOutput: 'Error response from daemon: login attempt to http://127.0.0.1:5000/v2/ failed with status: 401 Unauthorized',
@@ -400,9 +396,8 @@ it('sends the token on stdin and never in a command argument', function () {
         ->postJson('/api/integrations/registries/'.makeRegistry()->id.'/test')
         ->assertOk();
 
-    // argv is world-readable in `ps` for the life of the process. This is the
-    // assertion that keeps it out — the flag must be `--password-stdin`, and the
-    // value must appear in no argument of any command that ran.
+    // argv is world-readable in `ps` for the life of the process: the flag must be
+    // `--password-stdin` and the value must appear in no argument of any command that ran.
     $flat = json_encode($commands);
 
     expect($flat)->not->toContain('ghp_SUPERSECRETVALUE')
@@ -424,10 +419,8 @@ it('has every status and error reason translated in all eight locales', function
 });
 
 it('points the registry help at Integrations → Docker Registries in every locale (RC-29)', function () {
-    // The help used to send people to "the Docker page, under Registry
-    // credentials" — a screen that no longer exists. They live in the sidebar
-    // under Integrations, whose own labels are the source of truth here, so the
-    // sentence cannot name a menu the sidebar spells differently.
+    // The help names the sidebar's Integrations section, whose own labels are the source of truth,
+    // so it cannot name a menu the sidebar spells differently.
     foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
         $help = __('application.help.registry_id', [], $locale);
         $label = __('nav.registry', [], $locale);

@@ -128,7 +128,7 @@ it('issues, records the paths and puts TLS into the vhost', function () {
     $certificate->refresh();
 
     expect($certificate->status)->toBe(CertificateStatus::Active)
-        // Named after the site, as v7 names it (v7 layout B3).
+        // Named after the site, as v7 names it.
         ->and($certificate->certificate_path)->toBe("/etc/letsencrypt/live/{$this->application->slug}/fullchain.pem")
         ->and($certificate->expires_at?->format('Y-m-d'))->toBe('2030-01-01')
         ->and($this->application->fresh()->url())->toBe('https://shop.example.com');
@@ -229,7 +229,7 @@ it('keeps the lineage when Let\'s Encrypt reissues it under the same name', func
 
     fakeCertbotSuccess();
 
-    // The lineage is the site's name, as v7 names it (v7 layout B3).
+    // The lineage is the site's name, as v7 names it.
     runIssueJob(new IssueCertificate($certificate->id, null, $this->application->slug));
 
     Process::assertNotRan(fn ($process) => in_array('delete', $process->command, true));
@@ -407,9 +407,8 @@ it('owns 443 with the reserved pair on an nginx too old to reject a handshake (U
 
     $config = renderedCertVhost($this->application->fresh());
 
-    // nginx 1.18 does not know `ssl_reject_handshake`: `nginx -t` failed and
-    // every new site on the box stopped at test_config. Still the hostname's
-    // own 443 block, still no certbot path, HTTPS closed, port 80 serving.
+    // nginx 1.18 has no `ssl_reject_handshake`, so `nginx -t` would fail. Still the hostname's
+    // own 443 block, no certbot path, HTTPS closed, port 80 serving.
     expect($config)->not->toContain('ssl_reject_handshake')
         ->toContain('listen 443 ssl http2;', 'listen 80;')
         ->toContain('ssl_certificate     /etc/ssl/sv-oss/.panel-tls-reject.crt;')
@@ -529,8 +528,8 @@ it('refuses an uploaded certificate that covers no name on the site', function (
     activeCertificate($this->application);
     [$pem, $key] = generateKeyPair('example.org');
 
-    // Used to be accepted, marked active and served in place of the working
-    // certificate, with every visitor getting a name-mismatch error.
+    // Must be refused: accepted, it would be marked active and replace the working certificate,
+    // giving every visitor a name-mismatch error.
     $this->actingAs($this->admin)
         ->postJson("/api/applications/{$this->application->id}/certificate", [
             'type' => 'custom',
@@ -589,8 +588,8 @@ it('refuses an uploaded certificate that is not valid yet', function () {
 it('refuses a chain that is not made of whole certificates', function (string $chain) {
     [$pem, $key] = generateKeyPair('shop.example.com');
 
-    // OpenLiteSpeed quietly drops a block it cannot parse, so garbage here used
-    // to be served as though the site had its intermediates.
+    // OpenLiteSpeed quietly drops a block it cannot parse, so garbage would look like served
+    // intermediates.
     $this->actingAs($this->admin)
         ->postJson("/api/applications/{$this->application->id}/certificate", [
             'type' => 'custom',
@@ -653,8 +652,8 @@ it('names the domains that are on the site but not on the certificate', function
 });
 
 it('does not call a name missing when the wildcard covers it', function () {
-    // Support item #16: an uploaded *.example.com certificate covered
-    // shop.example.com, and the screen still warned it was missing.
+    // An uploaded *.example.com certificate covers shop.example.com; the screen must not warn it
+    // is missing.
     $certificate = activeCertificate($this->application);
     $certificate->update(['type' => CertificateType::Custom, 'domains' => ['*.example.com']]);
 
@@ -790,9 +789,8 @@ it('does not carry a Let\'s Encrypt chain path over into an uploaded certificate
 });
 
 it('deletes an uploaded certificate whose row still names an old Let\'s Encrypt chain', function () {
-    // The state every site that went Let's Encrypt -> upload was left in before
-    // the upload cleared it. Deleting used to 500 with no message after HTTPS
-    // was already off, and every retry did the same.
+    // A site that went Let's Encrypt -> upload keeps this state until the upload clears it. Deleting
+    // it must not 500 after HTTPS is already off.
     $certificate = Certificate::create([
         'application_id' => $this->application->id,
         'type' => CertificateType::Custom,
@@ -1096,9 +1094,8 @@ it('renders TLS on all three web servers', function (string $driver) {
 })->with(['nginx', 'apache', 'openlitespeed']);
 
 /**
- * certbot succeeds, and `openssl x509 -enddate` answers for the file it
- * supposedly wrote — the expiry is read off disk rather than assumed from a
- * lifetime, because Let's Encrypt has begun issuing shorter-lived certificates.
+ * certbot succeeds and `openssl x509 -enddate` answers for the written file: the expiry is read
+ * off disk, not assumed from a lifetime, since certificate lifetimes are shrinking.
  */
 function runIssueJob(IssueCertificate $job): void
 {
@@ -1182,17 +1179,13 @@ function generateKeyPair(string $commonName, int $days = 365): array
 | How long is left
 |--------------------------------------------------------------------------
 |
-| `expires_at_human` is `diffForHumans()`, which reports a single unit. On a
-| Let's Encrypt certificate — ninety days — that collapses the entire band in
-| which anybody would decide whether to act. Measured, not assumed:
+| `expires_at_human` is `diffForHumans()`, which reports a single unit. On a 90-day Let's Encrypt
+| certificate that collapses the whole band in which anybody decides to act:
 |
 |   30d -> "4 weeks"   45d -> "1 month"   59d -> "1 month"   60d -> "1 month"
 |   89d -> "2 months"  90d -> "2 months"  1d  -> "23 hours"
 |
-| The frontend asked for a number to replace it. There already is one:
-| `days_remaining` has been on this resource, and in API_REFERENCE.md, all
-| along. These tests pin that it really does distinguish what the sentence
-| cannot, so the next person to ask gets an answer instead of a second field.
+| These tests pin that `days_remaining` distinguishes what the sentence cannot.
 */
 
 it('distinguishes expiry dates that diffForHumans renders identically', function () {
@@ -1204,9 +1197,8 @@ it('distinguishes expiry dates that diffForHumans renders identically', function
     $later->forceFill(['expires_at' => now()->addDays(59)])->save();
     $laterRendered = CertificateResource::make($later->fresh())->resolve();
 
-    // One is comfortable, the other is inside Let's Encrypt's own renewal
-    // window. The sentence used to call both "1 month"; it now counts days,
-    // the same number as days_remaining (APP-2).
+    // One is comfortable, the other is inside Let's Encrypt's own renewal window. The sentence
+    // counts days, the same number as days_remaining.
     expect($soonRendered['expires_at_human'])->toBe('45 days from now')
         ->and($laterRendered['expires_at_human'])->toBe('59 days from now')
         ->and($soonRendered['days_remaining'])->toBe(45)
@@ -1237,9 +1229,8 @@ it('has no number when there is no expiry date', function () {
 });
 
 /*
-| Junior re-test #9: with password protection on and Force HTTPS off, plain
-| http asked for the site password and took it in clear. A certificate now
-| means http is sent to https before the prompt, on every web server.
+| With password protection on and Force HTTPS off, plain http would ask for the site password in
+| clear. A certificate sends http to https before the prompt, on every web server.
 */
 
 it('sends http to https before asking for the site password, whatever Force HTTPS says', function (string $driver, string $redirect) {
@@ -1405,8 +1396,8 @@ describe('custom certificates in v7\'s layout (operator, 2026-10-08)', function 
             ->assertUnprocessable()
             ->assertJsonPath('errors.certificate.0', __('certificate.file_taken', ['path' => '/etc/ssl/certs/ca-certificates.crt']));
 
-        // Read, at most — `test`, and the v7-pair check's `stat`/`cat`/`openssl`
-        // (2026-10-13), which then rejects it. Never written, moved or removed.
+        // Read, at most — `test`, and the v7-pair check's `stat`/`cat`/`openssl`, which then rejects
+        // it. Never written, moved or removed.
         Process::assertNotRan(fn ($process) => in_array('/etc/ssl/certs/ca-certificates.crt', (array) $process->command, true)
             && ! in_array($process->command[0] ?? null, ['test', 'stat', 'cat', 'openssl'], true));
     });
@@ -1528,14 +1519,12 @@ describe('custom certificates in v7\'s layout (operator, 2026-10-08)', function 
 
 /*
 |--------------------------------------------------------------------------
-| A certificate v7 left (2026-10-13, Dipali: "proper fix based v7")
+| A certificate v7 left
 |--------------------------------------------------------------------------
 |
-| v7's agent (ssl.go, customSSLCertificate) wrote an uploaded pair to
-| /etc/ssl/certs/{app}.crt and /etc/ssl/private/{app}.key — the panel's own
-| paths since 37ae4522 — and, on Apache and OpenLiteSpeed, the chain to
-| /etc/ssl/certs/{app}_ca_bundle.crt. On a server moved from v7 those are
-| there with no row behind them.
+| v7's agent (ssl.go, customSSLCertificate) wrote an uploaded pair to /etc/ssl/certs/{app}.crt and
+| /etc/ssl/private/{app}.key — the panel's own paths — and, on Apache and OpenLiteSpeed, the chain
+| to /etc/ssl/certs/{app}_ca_bundle.crt. On a server moved from v7 those are there with no row.
 */
 describe('a certificate v7 left', function () {
     /**

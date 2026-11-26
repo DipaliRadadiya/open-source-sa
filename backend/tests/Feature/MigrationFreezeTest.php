@@ -5,56 +5,22 @@ use Illuminate\Support\Facades\Process;
 /*
  * A migration that has shipped is frozen.
  *
- * On 2026-09-01 the `slug` column was added to `workers` by editing
- * create_workers_table in place. Laravel records a migration by filename, so
- * every panel that had already run that file never saw the edit. Fresh
- * installs got the column; upgraded ones answered 500 on the first worker
- * anyone created — `table workers has no column named slug`.
+ * Laravel records a migration by filename, so editing a shipped create migration in place
+ * reaches fresh installs only; upgraded panels never see it. The suite builds its schema from
+ * scratch and cannot notice, so this compares the tree with the latest release.
  *
- * Nothing in the suite could catch it. Tests build the schema from scratch,
- * where an edited create migration is simply correct. The bug only exists on a
- * database built by the *previous* version of that file, and no test has one.
+ * Two squashes replaced shipped migrations on purpose (one per table, final shape). There is
+ * no upgrade path across either: such panels are reinstalled, since their `migrations` table
+ * records none of the new files. After launch a change is a new migration.
  *
- * So this checks the one thing that is visible from here: whether a migration
- * already inside a release differs from what that release shipped. Changing a
- * released migration is the whole failure mode, and it is invisible every other
- * way until somebody upgrades.
+ * Three checks hold from the baseline on:
  *
- * The squash, 2026-10-23. The 104 migrations shipped up to v1.0.19 were
- * replaced by one migration per table (`2026_10_24_0000NN_create_*`), each
- * creating its table in its final shape. That deletes shipped migrations, the
- * very thing this file forbids, and it was done on purpose: Dipali was
- * rebuilding every install, test servers included, from scratch at the time.
- * There is no upgrade path across the squash. A panel installed before it is
- * reinstalled, never upgraded: its `migrations` table records none of the
- * new files, so `migrate` would try to create every table it already has.
- *
- * The second squash, 2026-11-25. The ten migrations added after the baseline
- * (keep_days, export expiry and import safety copy, restore and staging
- * safety copies, activity retention, backup stop details and worker process,
- * provisioned disable_functions, nginx_location) were folded into their
- * tables' create migrations, so every table again has exactly one file
- * (Dipali; schema compared table by table before and after: identical). Seven
- * of them had shipped in v8.0.20, so this edits and deletes released
- * migrations on purpose, as the first squash did: everything was still in
- * test mode and is reinstalled, not upgraded. There is no upgrade path from
- * v8.0.20 or earlier across it — the release checks below skip those
- * releases and apply in full from the next one on. After launch this must
- * not happen again: a change is a new migration.
- *
- * The rule therefore holds again from the baseline on, with three checks:
- *
- *  - A released migration may be missing from the tree only when it sorts
- *    before the baseline, which is what "removed by the squash" means. One
- *    deleted after the squash fails.
- *  - Nothing in the tree may sort before the baseline. Migrations run in
- *    filename order, so a `2026_10_23_*_add_x` from a branch cut before the
- *    squash would run before the table it alters exists.
- *  - The baseline files are pinned by hash (tests/Fixtures/migration-
- *    baseline.sha256) from the moment they land, not only from the first
- *    release that contains them: the rebuilt servers run them straight from
- *    the branch, so for them an edit is already an edit to a shipped file.
- *    The release comparison would not see it until the next tag.
+ *  - A released migration may be missing only when it sorts before the baseline.
+ *  - Nothing in the tree may sort before the baseline: migrations run in filename order, so an
+ *    older-dated `add_x` would run before the table it alters exists.
+ *  - The baseline files are pinned by hash (tests/Fixtures/migration-baseline.sha256) from the
+ *    moment they land, since rebuilt servers run them straight from the branch and the release
+ *    comparison would not see an edit until the next tag.
  */
 
 /** Every migration file sorts after this; the squashed set sorted before it. */
@@ -63,7 +29,7 @@ function migrationSquashBaseline(): string
     return '2026_10_24_000000';
 }
 
-/** The last release the 2026-11-25 squash leaves without an upgrade path. */
+/** The last release the second squash leaves without an upgrade path. */
 function secondSquashThroughRelease(): string
 {
     return 'v8.0.20';
@@ -88,9 +54,7 @@ function latestReleaseTag(): ?string
     foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $tag) {
         $tag = trim($tag);
 
-        // Not one of this panel's releases (those are v1.x), yet it sorts
-        // above all of them, so comparing against it would check the tree
-        // against an older commit than the real latest release.
+        // Not one of this panel's releases, yet it sorts above all of them.
         if ($tag === 'v7.0.18') {
             continue;
         }
@@ -121,9 +85,7 @@ function releasedMigrations(string $tag): ?array
 it('never changes a migration that has already shipped in a release', function () {
     $tag = latestReleaseTag();
 
-    // A shallow clone or a checkout with no tags cannot answer this. Skipped
-    // rather than passed: a check that silently succeeds when it cannot look is
-    // worse than no check, because it reads as a guarantee.
+    // Skipped, not passed: a check that succeeds when it cannot look reads as a guarantee.
     if ($tag === null) {
         $this->markTestSkipped('no release tag available to compare against');
     }
@@ -138,8 +100,7 @@ it('never changes a migration that has already shipped in a release', function (
 
         $released = Process::path(base_path('..'))->run(['git', 'show', $tag.':'.$tracked]);
 
-        // Absent from the release: a new migration, which is exactly the right
-        // way to change a shipped schema.
+        // Absent from the release: a new migration, the right way to change a schema.
         if ($released->failed()) {
             continue;
         }
@@ -202,7 +163,7 @@ it('keeps every baseline migration exactly as it was squashed', function () {
             return [$name => $hash];
         });
 
-    // One per table (61 since application_runs; re-pinned by the 2026-11-25 squash).
+    // One per table.
     expect($pinned)->toHaveCount(61);
 
     $changed = $pinned

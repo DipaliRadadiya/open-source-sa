@@ -59,11 +59,8 @@ it('returns safe API errors to an administrator', function () {
 });
 
 it('records API failures through the server operations channel', function () {
-    // The message is the exception's own — this screen exists to identify an
-    // error, and it used to record the same seven words for every one of them.
-    // But it is still redacted: an exception message carries whatever was in
-    // scope when it was thrown, which is how a connection string ends up in a
-    // log read by more people than the file it came from.
+    // The message is the exception's own, but still redacted: it carries whatever was in scope
+    // when thrown, such as a connection string.
     $logger = Mockery::mock();
     $logger->shouldReceive('error')
         ->once()
@@ -85,9 +82,8 @@ it('records API failures through the server operations channel', function () {
 });
 
 it('records where the exception came from, in application frames only', function () {
-    // The top of a Laravel stack is the same handler chain every time and says
-    // nothing about this failure; the first frames inside the application are
-    // what identify it.
+    // The top of a Laravel stack is the same handler chain every time; the first application
+    // frames identify the failure.
     $captured = null;
 
     $logger = Mockery::mock();
@@ -219,11 +215,8 @@ it('falls back to redacted stdout when a server operation has no stderr', functi
 });
 
 it('sends the command that failed, with how long it ran and how often it was tried', function () {
-    // Recorded since the feature shipped and never sent, so the screen showed
-    // that something broke without ever showing what. The command was already
-    // redacted where it was written -- ServerOps puts every command line
-    // through CommandRedactor before logging it -- so this is the same text an
-    // operator would read on the box, without having to go to the box.
+    // ServerOps puts every command line through CommandRedactor before logging, so this is the
+    // text an operator would read on the box.
     File::put($this->logDir.'/server-ops.log', json_encode([
         'message' => 'server operation',
         'context' => [
@@ -252,9 +245,7 @@ it('sends the command that failed, with how long it ran and how often it was tri
         // Redacted at the point it was written, and still redacted here.
         ->and($entry['command'])->not->toContain('hunter2')
         ->and($entry['duration_ms'])->toBe(12043)
-        // Three attempts and twelve seconds is a lock being retried; one
-        // attempt and 40ms is something else entirely, and the timestamps
-        // alone cannot tell those apart.
+        // Three attempts in twelve seconds is a lock being retried; timestamps alone cannot tell.
         ->and($entry['attempts'])->toBe(3);
 });
 
@@ -285,20 +276,15 @@ it('denies non-admins', function () {
 });
 
 it('keeps the end of a noisy stderr, where the reason is', function () {
-    // Shaped like the failure that motivated this: `npm install n8n` writes
-    // thousands of peer-dependency warnings and puts the cause last. Head
-    // truncation showed the warnings and threw the cause away.
+    // `npm install` writes thousands of peer-dependency warnings and puts the cause last; head
+    // truncation would keep the warnings and drop the cause.
     $reference = '4f2b8c71-0d3a-4e55-9b21-7c6e5a1d2f80';
     $noise = str_repeat("npm warn ERESOLVE overriding peer dependency\n", 400);
     $cause = 'gyp ERR! stack Error: not found: make';
 
-    // THE TRAILING NOISE IS THE TEST. npm does not stop at the error -- it
-    // prints unfinished timers and an upgrade notice after it, about 2 KB
-    // worth. Measured against the real 1 MB log from that failure: the last
-    // 1000 characters do not contain the cause, the last 4000 do. Without
-    // this tail the fixture passes at any limit, because the cause would be
-    // the final thing in the string -- which is precisely what made the bug
-    // survive in production.
+    // THE TRAILING NOISE IS THE TEST. npm prints about 2 KB of timers and upgrade notices after
+    // the error: the last 1000 characters miss the cause, the last 4000 hold it. Without this
+    // tail the cause is last and the fixture passes at any limit.
     $trailing = str_repeat("npm silly unfinished npm timer reify 1789040712600\n", 40);
 
     File::put($this->logDir.'/server-ops.log', json_encode([
@@ -320,11 +306,9 @@ it('keeps the end of a noisy stderr, where the reason is', function () {
         ->assertOk()
         ->json('error_logs.0.error');
 
-    // The point of the whole change.
     expect($error)->toContain($cause);
 
-    // And it is still bounded -- an unbounded field would also "pass" the
-    // assertion above while putting a megabyte of npm output on the screen.
+    // Still bounded: an unbounded field would also pass the assertion above.
     expect(mb_strlen($error))->toBeLessThanOrEqual(4001);
     expect($error)->toStartWith('…');
 });
@@ -348,18 +332,8 @@ it('does not truncate a stderr that already fits', function () {
         ->assertJsonPath('error_logs.0.error', 'short and complete');
 });
 
-/*
- * A real restore failure, logged the ordinary way.
- *
- * Monolog puts the message at the top level of the record; only ServerOps also
- * writes one inside `context`. So this resource read `context.message`, missed,
- * and fell through to "Server operation failed." — while `context.detail` held
- * the entire cause and was never read at all.
- *
- * What that looked like on screen: a card with a reference id and every other
- * field null, for a failure that knew exactly what was wrong. The operator's
- * only route to the answer was opening server-ops.log on the box.
- */
+// A restore failure logged the ordinary way: Monolog puts the message at the top level, only
+// ServerOps also writes one inside `context`, and `context.detail` holds the cause.
 it('shows what a failed restore actually said', function () {
     File::put($this->logDir.'/server-ops.log', json_encode([
         'message' => 'restore failed',
@@ -391,8 +365,7 @@ it('shows what a failed restore actually said', function () {
         );
 });
 
-// Command output still wins where there is any: `detail` is the explanation for
-// things that are not shell commands, not a replacement for what one printed.
+// Command output still wins: `detail` explains things that are not shell commands.
 it('prefers what the command printed over a summary of it', function () {
     File::put($this->logDir.'/server-ops.log', json_encode([
         'message' => 'server operation',
@@ -414,11 +387,7 @@ it('prefers what the command printed over a summary of it', function () {
         ->assertJsonPath('error_logs.0.error', 'gyp ERR! stack Error: not found: make');
 });
 
-/*
-| ERR-02 (old QA list, 2026-10-01): the screen reads the server-ops log, and
-| failed jobs and scheduled tasks were written only to laravel.log, so an
-| admin relying on the screen never saw them.
-*/
+// The screen reads the server-ops log, so failed jobs and scheduled tasks must be written there.
 
 it('shows a queued job that failed', function () {
     // The event the queue worker fires when a job gives up for good.
@@ -478,12 +447,7 @@ it('gives an API 500 the reference the user was shown, not a new one', function 
     expect($entries)->not->toBeEmpty();
 });
 
-/*
- * RC-24 (frontend QA, 17 Oct): an exception that renders its own 4xx was
- * recorded as a 500 crash — the status came from a fixed list of classes —
- * so a Fail2ban "this would lock you out" (422) filled the Error log and the
- * dashboard's failure count. The status recorded is now the one rendered.
- */
+// The recorded status is the one rendered: an exception that renders its own 4xx is not a 500 crash.
 it('does not record an exception that answered the user with a 4xx', function (Throwable $exception) {
     Log::shouldReceive('channel')->never();
 
@@ -508,11 +472,8 @@ it('still records an exception that rendered a 5xx, with that status', function 
     );
 });
 
-/*
- * The log records `pm2_jlist_user` and `staging_dump_list` for whoever reads
- * the server-ops file. The admin screen shows words; the identifiers stay in
- * `operation` / `feature` for anyone who searches the log.
- */
+// The admin screen shows words; the raw identifiers (`pm2_jlist_user`) stay in `operation` /
+// `feature` for anyone searching the log.
 function errorLogEntryWith(array $context): array
 {
     File::put(test()->logDir.'/server-ops.log', json_encode([
