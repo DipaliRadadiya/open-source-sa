@@ -18,8 +18,7 @@ it('records the stack the installer built', function () {
 
     expect($record->stack)->toBe('lemp');
     expect($record->web_server)->toBe('nginx');
-    // `installer` rather than `detected`: this server's history is known, which
-    // is the whole point of the command.
+    // `installer` rather than `detected`: the installer knows what it built.
     expect($record->source)->toBe('installer');
 });
 
@@ -34,8 +33,7 @@ it('refuses an unknown stack without touching the record', function () {
 
     $this->artisan('server:record-stack', ['stack' => 'kubernetes'])->assertFailed();
 
-    // The earlier value survives — a typo in the installer must not blank out
-    // what the panel already knew.
+    // The earlier value survives: a typo in the installer must not blank what the panel knew.
     expect(ServerCapability::query()->value('stack'))->toBe('lemp');
 });
 
@@ -51,10 +49,8 @@ it('is safe to run twice', function () {
 /*
  * Detection, which decides the web server on a box the panel did not build.
  *
- * Every vhost the panel ever writes hangs off this one value, so getting it
- * wrong is not a cosmetic error: it picked ApacheDriver on a real OpenLiteSpeed
- * server and site creation failed with
- * `tee: /etc/apache2/sites-available/x.conf: No such file or directory`.
+ * Every vhost the panel writes hangs off this value: a wrong one picks ApacheDriver on an
+ * OpenLiteSpeed server and site creation fails writing under /etc/apache2.
  */
 describe('detecting the web server', function () {
     /**
@@ -73,9 +69,8 @@ describe('detecting the web server', function () {
     }
 
     it('believes what is running over what was left behind', function () {
-        // The real failure: apache purged, its /etc directory still there, and
-        // apache is listed before openlitespeed. A directory is not a web
-        // server, and the box was plainly running OpenLiteSpeed.
+        // Apache purged, its /etc directory left behind, and apache listed before openlitespeed:
+        // a directory is not a web server.
         fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/etc/apache2/sites-available', '/usr/local/lsws/conf/vhosts']);
 
         expect(app(ServerCapabilities::class)->webServer())
@@ -83,8 +78,7 @@ describe('detecting the web server', function () {
     });
 
     it('still answers when nothing is running', function () {
-        // Installed but stopped is still the web server this box uses, and the
-        // setup screen has to be able to say what it found.
+        // Installed but stopped is still the box's web server; the setup screen must name it.
         fakeDetectedWebServer(running: [], dirs: ['/usr/local/lsws/conf/vhosts']);
 
         expect(app(ServerCapabilities::class)->webServer())
@@ -94,20 +88,11 @@ describe('detecting the web server', function () {
     /*
      * The phantom /etc/apache2.
      *
-     * `phpX.Y-fpm` ships one file — `conf-available/phpX.Y-fpm.conf`, the
-     * snippet Apache would enable if it were installed — and shipping it
-     * creates /etc/apache2 and /etc/apache2/conf-available. Every stack
-     * installs php-fpm, because the panel's own API runs on it. So an
-     * OpenLiteSpeed box has /etc/apache2 from before OpenLiteSpeed is
-     * unpacked, on a machine that has never had Apache, and `apt purge`
-     * cannot remove it: the directory belongs to a package the panel needs.
+     * `phpX.Y-fpm` ships `conf-available/phpX.Y-fpm.conf`, which creates /etc/apache2 and
+     * /etc/apache2/conf-available. Every stack installs php-fpm, so an OpenLiteSpeed box that
+     * never had Apache still has /etc/apache2, and `apt purge` cannot remove it.
      *
-     * The code used to blame `apt remove apache2` for this. That is a real
-     * cause but the rare one; the common one is a clean install, which is why
-     * it reproduced on every OLS server rather than only on recycled ones.
-     *
-     * Detecting on `sites-available` instead settles it: that directory is
-     * shipped by `apache2` and by nothing else.
+     * Detecting on `sites-available` settles it: only `apache2` ships that directory.
      */
     it('is not fooled by the /etc/apache2 that php-fpm ships', function () {
         // A clean OLS box: no Apache, but php-fpm's directory is there.
@@ -121,10 +106,8 @@ describe('detecting the web server', function () {
     });
 
     it('is not fooled by it while OpenLiteSpeed is stopped either', function () {
-        // The systemd tiebreak cannot save this one — nothing is running, so
-        // the answer comes from the directory list alone. That is the window
-        // the installer runs in: php-fpm is installed before OpenLiteSpeed
-        // starts, and a box detected during it was recorded as Apache.
+        // Nothing is running, so only the directory list decides. This is the installer's window:
+        // php-fpm is installed before OpenLiteSpeed starts.
         fakeDetectedWebServer(
             running: [],
             dirs: ['/etc/apache2', '/etc/apache2/conf-available', '/usr/local/lsws/conf/vhosts'],
@@ -135,9 +118,8 @@ describe('detecting the web server', function () {
     });
 
     it('still detects a real Apache install', function () {
-        // The other half, and the one that keeps this honest: tightening the
-        // probe must not make the panel blind to the web server it is named
-        // for. `sites-available` is what an actual apache2 package ships.
+        // The other half: tightening the probe must not blind the panel to a real Apache.
+        // `sites-available` is what the apache2 package ships.
         fakeDetectedWebServer(
             running: ['apache2'],
             dirs: ['/etc/apache2', '/etc/apache2/conf-available', '/etc/apache2/sites-available'],
@@ -151,9 +133,8 @@ describe('detecting the web server', function () {
 /*
  * Repairing a record the box contradicts.
  *
- * The panel does not use detection — it uses this record. So a wrong one is
- * not self-correcting, and on the real server that hit this the only way out
- * was an operator running a command they had to be told about first.
+ * The panel uses the stored record, not detection, so a wrong one does not correct itself
+ * unless it is reconciled.
  */
 describe('reconciling a wrong record', function () {
     it('corrects a recorded web server that is not even installed', function () {
@@ -185,9 +166,8 @@ describe('reconciling a wrong record', function () {
             'verified_at' => now(),
         ]);
 
-        // Apache installed but stopped, OpenLiteSpeed running alongside it.
-        // Stopping a web server is not the panel's cue to decide the box runs
-        // something else — that is a judgement call, and this must not make it.
+        // Apache installed but stopped, OpenLiteSpeed running alongside it. A stopped web server
+        // is not a cue to decide the box runs something else.
         fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/etc/apache2/sites-available', '/usr/local/lsws/conf/vhosts']);
 
         expect(app(ServerCapabilities::class)->reconcileWebServer())
@@ -196,15 +176,10 @@ describe('reconciling a wrong record', function () {
     });
 
     it('repairs an OLS box recorded as apache by the phantom directory', function () {
-        // Both halves of the bug in one place. Detection ran before the
-        // installer's record — during the install, or on a box the panel did
-        // not build — and picked apache off php-fpm's /etc/apache2. Then the
-        // self-repair could not undo it: its "is the recorded server even
-        // installed?" test was that same phantom directory, so on any OLS
-        // server it always answered yes and reconciliation never fired.
-        //
-        // The only way out was an operator running `server:record-stack ols`,
-        // which is exactly what the repair exists to avoid.
+        // Detection ran before the installer's record and picked apache off php-fpm's
+        // /etc/apache2. The repair must not trust that same phantom directory for its "is the
+        // recorded server installed?" test, or it never fires and only `server:record-stack ols`
+        // can fix the record.
         ServerCapability::query()->create([
             'stack' => null,
             'web_server' => 'apache',
@@ -223,10 +198,9 @@ describe('reconciling a wrong record', function () {
     });
 
     it('never overrules the installer', function () {
-        // `source: installer` is a statement of what was built. A filesystem
-        // check is a weaker signal, and silently overriding it would write
-        // vhosts for a web server nobody chose — a worse version of the bug
-        // this repairs. panel:doctor reports the disagreement instead.
+        // `source: installer` states what was built; a filesystem check is weaker, and overriding
+        // it would write vhosts for a web server nobody chose. panel:doctor reports the
+        // disagreement instead.
         ServerCapability::query()->create([
             'stack' => 'ols',
             'web_server' => 'openlitespeed',
@@ -261,11 +235,8 @@ describe('reconciling a wrong record', function () {
 });
 
 it('repairs the record at the moment a feature asks for the driver', function () {
-    // The point of the whole exercise. Leaving the repair to `panel:doctor`
-    // means the panel knows it is wrong, keeps writing vhosts into a directory
-    // that is not there, and waits to be asked — which on the real server
-    // showed up as site creation failing, then WAF failing differently, then
-    // every other vhost write, all of them one stored value.
+    // Leaving the repair to `panel:doctor` would keep writing vhosts into a directory that is
+    // not there; every vhost write depends on this one stored value.
     ServerCapability::query()->create([
         'stack' => null,
         'web_server' => 'apache',
@@ -296,20 +267,16 @@ it('does not re-probe once it has looked', function () {
     $manager->driver();
     $manager->driver();
 
-    // A healthy record costs a directory check and nothing else: it never
-    // reaches the systemd probe, and resolving the driver repeatedly — which
-    // several features do — must not turn into repeated subprocesses.
+    // A healthy record costs a directory check only: resolving the driver repeatedly must not
+    // spawn repeated subprocesses.
     Process::assertNothingRan();
 });
 
 /*
  * Detection must not depend on one exact directory.
  *
- * Narrowing every web server to the directory the panel writes vhosts into
- * fixed the Apache phantom and broke OpenLiteSpeed on a real server: doctor
- * reported "none of nginx, apache, openlitespeed found" on a box plainly
- * running one. Only Apache has a decoy directory; nginx and OpenLiteSpeed
- * never needed the narrowing.
+ * Only Apache has a decoy directory, so only Apache needs the narrow check; narrowing nginx and
+ * OpenLiteSpeed to their vhost directory makes doctor report "none found" on a working box.
  */
 describe('detection tolerates either directory', function () {
     it('finds OpenLiteSpeed from the server root alone', function () {
@@ -324,8 +291,7 @@ describe('detection tolerates either directory', function () {
         expect(app(ServerCapabilities::class)->webServer())->toBe('nginx');
     });
 
-    // The one that must stay narrow. php-fpm ships /etc/apache2, so a bare
-    // one is not an Apache installation and must never be read as one.
+    // The one that must stay narrow: php-fpm ships /etc/apache2, so a bare one is not Apache.
     it('still refuses to call php-fpm\'s /etc/apache2 an Apache install', function () {
         fakeDetectedWebServer(
             running: ['lshttpd'],
@@ -337,9 +303,8 @@ describe('detection tolerates either directory', function () {
 });
 
 /*
- * Bug #1: install.sh records the stack before it writes the sudoers grant,
- * and `which` is privileged, so `sudo -n which node` was refused and a MERN
- * box came up recorded as having no Node.
+ * install.sh records the stack before it writes the sudoers grant, and `which` is privileged,
+ * so `sudo -n which node` is refused: Node must be found without sudo.
  */
 describe('finding Node before sudo is set up', function () {
     beforeEach(function () {

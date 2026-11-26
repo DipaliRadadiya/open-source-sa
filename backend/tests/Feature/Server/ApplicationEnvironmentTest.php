@@ -11,10 +11,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Process;
 
 /*
- * The endpoint. Every file operation here goes through ServerOps because the
- * file belongs to the site's system user and the panel account cannot open it,
- * so the fake stands in for a real directory: `cat` returns what is "on disk",
- * `tee` writes to it, `test` answers existence.
+ * File operations go through ServerOps (the file belongs to the site's system user), so the
+ * fake stands in for a real directory: `cat` reads it, `tee` writes it, `test` checks existence.
  */
 
 beforeEach(function () {
@@ -177,9 +175,8 @@ it('refuses to save a file it cannot parse', function () {
 it('lets the user empty the file', function () {
     fakeSite();
 
-    // Clearing the editor is a legitimate save. `required` counts "" as absent,
-    // so this used to answer "The raw field is required" about the field the
-    // user had just deliberately emptied.
+    // Clearing the editor is a legitimate save. `required` counts "" as absent, so a deliberately
+    // emptied field must not answer "The raw field is required".
     $this->actingAs($this->admin)
         ->putJson(envUrl(), ['raw' => ''])
         ->assertOk();
@@ -277,10 +274,8 @@ describe('site types that keep no .env', function () {
     it('is refused at the endpoint too, not just hidden in the nav', function () {
         fakeSite();
 
-        // A missing nav item is not access control — the URL is still typeable.
-        // 404 rather than 403, set by the shared permission middleware: for a
-        // WordPress site this screen does not exist at all, which is a
-        // different statement from "you may not have it".
+        // A missing nav item is not access control — the URL is still typeable. 404 rather than 403
+        // (shared permission middleware): for a WordPress site this screen does not exist at all.
         $this->actingAs($this->admin)
             ->getJson("/api/applications/{$this->wordpress->id}/environment")
             ->assertNotFound();
@@ -293,9 +288,8 @@ describe('site types that keep no .env', function () {
 
 describe('permissions', function () {
     it('does not show the screen to a view-only role at all', function () {
-        // Operator decision 2026-09-29: the `.env` screen is for whoever may
-        // edit it. A view grant opens neither the file, its history, nor a
-        // save (see VisiblePermissions::MANAGE_ONLY for the sidebar half).
+        // The `.env` screen is for whoever may edit it: a view grant opens neither the file, its
+        // history, nor a save (see VisiblePermissions::MANAGE_ONLY for the sidebar half).
         fakeSite();
         $user = User::factory()->create();
         grantPermission($user, 'app_environment', view: true, manage: false);
@@ -329,12 +323,9 @@ describe('permissions', function () {
 
 describe('which file the screen opens', function () {
     it('opens the .env beside the code when one is already there', function () {
-        // This site's code root is also its served directory, so the panel
-        // creates a .env one level above it. The framework does not look
-        // there: it reads the one beside its own code — which git put there,
-        // which the file manager shows, and which the screen used to report as
-        // "no environment file", offering to create a second copy that nothing
-        // would ever read.
+        // The site's code root is also its served directory, so the panel creates a .env one level
+        // above it. The framework reads the one beside its own code (the one git put there), so that
+        // one must be reported — not "no environment file" with an offer to create an unread copy.
         $beside = '/home/envowner/deployed-site/public_html/.env';
         $this->disk = [$beside => "APP_ENV=production\nAPP_KEY=base64:real\n"];
         fakeSite();
@@ -352,9 +343,8 @@ describe('which file the screen opens', function () {
 
         $response = $this->actingAs($this->admin)->getJson(envUrl())->assertOk();
 
-        // It said "exposed" for Akaunting and Mautic while their /.env
-        // answered 403: nginx and Apache refuse a dotfile at any depth, and
-        // OLS does too since its rule stopped being anchored to `/`.
+        // nginx, Apache and OLS refuse a dotfile at any depth (OLS's rule is not anchored to `/`),
+        // so a nested /.env answering 403 is not "exposed".
         expect($response->json('environment.exposed'))->toBeFalse()
             ->and(collect($response->json('environment.checks'))->pluck('code'))
             ->not->toContain('file_exposed');
@@ -408,12 +398,9 @@ describe('which file the screen opens', function () {
 
 describe('when the panel cannot tell', function () {
     it('refuses to report "no environment file" when the check itself failed', function () {
-        // `test -f` exits 1 for a file that is not there AND for a command
-        // that never ran — a sudoers grant older than this build is the
-        // common one. Read as the first, the screen shows an empty editor and
-        // offers to create a .env for a site whose .env the user is looking
-        // at in the file manager. `test` prints nothing on either outcome, so
-        // stderr means something refused to run it.
+        // `test -f` exits 1 both for a missing file AND for a command that never ran (e.g. a sudoers
+        // grant older than this build). Read as "missing", the screen would offer to create a .env
+        // over an existing one. `test` prints nothing either way, so stderr means it was refused.
         Process::fake(fn () => Process::result(
             errorOutput: 'sudo: a password is required',
             exitCode: 1,
@@ -427,9 +414,8 @@ describe('when the panel cannot tell', function () {
     });
 
     it('still reports a genuinely absent file as absent', function () {
-        // The other half: exit 1 and nothing on stderr is a real answer, and
-        // a site with no .env yet is an ordinary state this screen exists to
-        // fix. Turning that into an error would break every new site.
+        // Exit 1 with nothing on stderr is a real answer: a site with no .env yet is an ordinary state
+        // this screen exists to fix, so it must not become an error.
         $this->disk = [];
         $this->present = [];
         fakeSite();
@@ -604,8 +590,8 @@ describe('what one change did, variable by variable', function () {
         $response = $this->actingAs($this->admin)->getJson(envUrl('/history/'.$log->id.'/diff'))->assertOk();
         $changes = collect($response->json('diff.changes'))->keyBy('key');
 
-        // Bug #67: which secret changed, never its value — the before side
-        // is a rotated password nothing else on screen shows.
+        // Which secret changed, never its value — the before side is a rotated password nothing else
+        // on screen shows.
         expect($changes['DB_PASSWORD'])->toMatchArray([
             'before' => null, 'after' => null, 'status' => 'changed', 'secret' => true,
         ])
@@ -755,8 +741,7 @@ describe('what one change did, variable by variable', function () {
 
 describe('restoring a backup', function () {
     it('refuses a name that is not a backup with a 422, not a 500', function (string $name) {
-        // It reached the service unvalidated, which threw, and the user saw
-        // "server error" while an error was logged (found live 2026-09-29).
+        // An unvalidated name used to reach the service, which threw: the user saw "server error".
         fakeSite();
 
         $this->actingAs($this->admin)->postJson(envUrl('/restore'), ['backup' => $name])
@@ -849,9 +834,8 @@ describe('the mode a save leaves the file in', function () {
 describe('one-click apps with a .env beside their code (bug #69)', function () {
     it('opens Mautic\'s real .env and names it Symfony, not Node.js', function () {
         $this->application->forceFill(['site_type' => 'mautic', 'slug' => 'mautic'])->save();
-        // Where Mautic really keeps it: inside the document root, beside its
-        // code. Mautic also ships a package.json for its asset build, which
-        // the detector used to see first.
+        // Mautic keeps it inside the document root, beside its code, and also ships a package.json
+        // for its asset build — which must not win detection.
         $this->disk = ['/home/envowner/mautic/public_html/.env' => "APP_ENV=prod\nAPP_DEBUG=0\n"];
         $this->present = ['/home/envowner/mautic/public_html/bin/console', '/home/envowner/mautic/public_html/package.json'];
         fakeSite();
@@ -889,8 +873,8 @@ describe('the key an application encrypts its data with (bug #17)', function () 
     it('refuses to change n8n\'s encryption key', function () {
         fakeSite();
 
-        // Accepted before, and every credential saved in n8n became unreadable,
-        // with no error until a workflow next ran.
+        // A changed key makes every credential saved in n8n unreadable, with no error until a
+        // workflow next runs.
         $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "N8N_ENCRYPTION_KEY=\"ffffffffffffffffffff\"\nN8N_PORT=5678\n"])
             ->assertUnprocessable()
             ->assertJsonPath('errors.raw.0', __('errors/application.environment_key_locked', ['key' => 'N8N_ENCRYPTION_KEY']));
@@ -956,8 +940,8 @@ describe('the key an application encrypts its data with (bug #17)', function () 
     });
 
     it('refuses n8n\'s port, data folder and listen address, which the panel set', function (string $key, string $from, string $to) {
-        // Bug #7 (re-test 2026-10-05): N8N_PORT=5999 saved with 200, and at the
-        // next restart n8n listened where the vhost sends nothing.
+        // N8N_PORT=5999 used to save with 200; after the next restart n8n listened where the vhost
+        // sends nothing.
         $this->disk = [$this->env => "N8N_ENCRYPTION_KEY=\"0123456789abcdef0123\"\n{$key}={$from}\n"];
         fakeSite();
 

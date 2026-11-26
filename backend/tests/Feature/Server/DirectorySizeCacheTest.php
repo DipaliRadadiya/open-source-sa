@@ -16,9 +16,8 @@ use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
-    // Feature access is role-based with no admin bypass, and the Administrator
-    // role can only hold permissions that exist — so without the seeder the
-    // admin has none of them and every route here answers 403.
+    // No admin bypass: the Administrator role only holds permissions that exist, so without the
+    // seeder every route here answers 403.
     $this->seed(PermissionSeeder::class);
 
     Sanctum::actingAs(User::factory()->admin()->create());
@@ -41,9 +40,8 @@ it('exposes directory_size_bytes in application resource when set', function () 
 it('returns a null size rather than dropping the field when never measured', function () {
     $this->application->update(['directory_size_bytes' => null]);
 
-    // Present-and-null, not absent: the frontend has to be able to tell "not
-    // measured yet" from "this endpoint does not report size", and a column
-    // that disappears from some rows can do neither.
+    // Present-and-null, not absent: the frontend must tell "not measured yet" from "size not
+    // reported".
     $this->getJson("/api/applications/{$this->application->id}")
         ->assertOk()
         ->assertJsonPath('application.directory_size_bytes', null)
@@ -129,8 +127,7 @@ describe('measuring on demand', function () {
 
         fakeDu(42);
 
-        // Asking for one folder used to write its size into the application's,
-        // so a glance at uploads permanently shrank the site.
+        // A folder's size must not overwrite the application's own figure.
         $this->getJson("/api/applications/{$this->application->id}/files/size?path=wp-content/uploads");
 
         expect($this->application->fresh()->directory_size_bytes)->toBe(5000000);
@@ -141,8 +138,7 @@ describe('keeping the size current by itself', function () {
     it('re-measures after files change, without making the request wait', function () {
         Queue::fake();
 
-        // The write path stats its target as a file; fakeDu answers 'd' for the
-        // directory probes the other tests need.
+        // The write path stats its target as a file (fakeDu answers 'd' for directory probes).
         Process::fake(function ($process) {
             if (in_array('-printf', $process->command, true)) {
                 return Process::result(output: "f\t5");
@@ -156,23 +152,19 @@ describe('keeping the size current by itself', function () {
             'content' => 'hello',
         ])->assertOk();
 
-        // Queued, not measured inline: `du` walks every inode, and paying that
-        // in the request would make saving one file as slow as counting the
-        // whole site.
+        // Queued, not inline: `du` walks every inode and would slow saving one file.
         Queue::assertPushed(MeasureApplicationSize::class);
     });
 
     it('walks the site once for a burst of changes, not once per change', function () {
         fakeDu(1234);
 
-        // Unique per application, so fifty deletions leave one job. Without
-        // that, a bulk delete is a bulk `du`.
+        // Unique per application, so fifty deletions leave one job instead of fifty `du` walks.
         $first = new MeasureApplicationSize($this->application->id);
         $second = new MeasureApplicationSize($this->application->id);
 
         expect($first->uniqueId())->toBe($second->uniqueId())
-            // And the lock expires, so a worker killed mid-measure does not
-            // stop this site ever being measured again.
+            // The lock expires, so a worker killed mid-measure cannot block the site forever.
             ->and($first->uniqueFor())->toBeGreaterThan($first->timeout);
     });
 
@@ -192,11 +184,8 @@ describe('keeping the size current by itself', function () {
 });
 
 it('measures a site once it has been provisioned', function () {
-    // Only a git deploy and the file browser ever wrote a size, so a one-click
-    // site nobody had deployed or browsed was never counted — it read "Not
-    // measured" in the sites list for as long as it existed. Queued rather
-    // than inline: `du` over a fresh WordPress is forty thousand inodes and
-    // does not belong inside provisioning.
+    // Without this, a one-click site nobody deployed or browsed would read "Not measured"
+    // forever. Queued, not inline: `du` over a fresh WordPress is tens of thousands of inodes.
     Queue::fake();
     Process::fake();
 
@@ -214,9 +203,8 @@ it('measures a site once it has been provisioned', function () {
 });
 
 it('queues a measurement for sites that have never had one, from the list', function () {
-    // The backfill is why an existing site ever gets a number: it was created
-    // before anything measured on provision, and nobody is going to run a
-    // command. Browsing the list is enough.
+    // The backfill is how a site created before provision-time measuring gets a number:
+    // browsing the list is enough.
     Queue::fake();
 
     Application::factory()->create([
@@ -231,8 +219,7 @@ it('queues a measurement for sites that have never had one, from the list', func
 });
 
 it('leaves an already-measured site alone', function () {
-    // Otherwise every page view re-walks every site on the server, which is
-    // the inline `du` this design exists to avoid, only queued.
+    // Otherwise every page view would re-walk every site, which is the inline `du` the queue avoids.
     Queue::fake();
 
     Application::query()->update([
@@ -246,8 +233,7 @@ it('leaves an already-measured site alone', function () {
 });
 
 it('caps how many one page view may queue', function () {
-    // A server with hundreds of sites must not turn one page view into
-    // hundreds of directory walks. It fills in over a few visits instead.
+    // Hundreds of sites must not turn one page view into hundreds of walks; it fills in over visits.
     Queue::fake();
 
     Application::factory()
@@ -264,10 +250,8 @@ it('caps how many one page view may queue', function () {
 });
 
 it('backfills a site that has a measurement date but no figure', function () {
-    // The deploy path used to write the bytes without the date; a row in the
-    // mirror image of that — date, no bytes — displays as "Not measured" and
-    // was skipped by a guard that only looked at the date, so it could never
-    // recover.
+    // A row with a date but no bytes displays as "Not measured"; a guard that only looked at
+    // the date would skip it and it could never recover.
     Queue::fake();
 
     Application::query()->update([
@@ -281,10 +265,8 @@ it('backfills a site that has a measurement date but no figure', function () {
 });
 
 it('records the reference when a measurement fails, not an empty string', function () {
-    // ServerOperationException is built with no message at all — it carries a
-    // reference and leaves the stderr in the server-ops log. Logging only
-    // getMessage() wrote `"detail":""` against a real failure: proof that
-    // something broke, and no way to find out what.
+    // ServerOperationException has no message, only a reference (stderr goes to the server-ops
+    // log), so logging getMessage() alone would write an empty detail.
     Log::shouldReceive('channel')->with('server-ops')->andReturnSelf();
     Log::shouldReceive('warning')->once()->withArgs(
         fn (string $message, array $context): bool => $context['reference'] === 'ref-123'
@@ -299,11 +281,8 @@ it('records the reference when a measurement fails, not an empty string', functi
 });
 
 it('keeps a partial total when du could not read every file', function () {
-    // `du` walks as the site's own user and exits 1 on any entry it cannot
-    // read, while still printing a correct total for everything it could. A
-    // real uptime-kuma checkout had a handful of unreadable files under
-    // test/, which made the entire site permanently unmeasurable — a usable
-    // figure discarded over the files missing from it.
+    // `du` runs as the site user and exits 1 on any unreadable entry, yet still prints a correct
+    // total for the rest: that figure must be kept, not discarded.
     Process::fake(fn ($process) => match (true) {
         in_array('du', $process->command, true) => Process::result(
             output: "1048576\t/home/site/public_html\n",
@@ -321,8 +300,7 @@ it('keeps a partial total when du could not read every file', function () {
 });
 
 it('still fails when du produced no total at all', function () {
-    // Zero is not a partial answer, it is no answer — the previous figure and
-    // its date must survive rather than being overwritten with nothing.
+    // Zero is no answer: the previous figure and its date must survive.
     Process::fake(fn ($process) => match (true) {
         in_array('du', $process->command, true) => Process::result(
             output: '',
@@ -342,8 +320,7 @@ it('still fails when du produced no total at all', function () {
 });
 
 it('measures only the never-measured sites by default', function () {
-    // The useful default: fill in the gaps. Walking every inode on the server
-    // is a deliberate act, not something a bare command does.
+    // The default fills in the gaps; walking every inode is a deliberate act.
     Process::fake(fn ($process) => match (true) {
         in_array('du', $process->command, true) => Process::result(output: "2048\t/home/site"),
         in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
@@ -365,8 +342,7 @@ it('measures only the never-measured sites by default', function () {
 });
 
 it('keeps going when one site cannot be measured, and says so', function () {
-    // One unreadable checkout must not deny every other site its number —
-    // which is what happened on a real server.
+    // One unreadable checkout must not deny every other site its number.
     Process::fake(fn ($process) => match (true) {
         in_array('du', $process->command, true) => Process::result(output: '', errorOutput: 'denied', exitCode: 1),
         in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
@@ -379,17 +355,15 @@ it('keeps going when one site cannot be measured, and says so', function () {
 });
 
 it('measures the least recently measured sites first when sweeping', function () {
-    // The rotation is what makes a per-minute schedule work: each tick takes a
-    // different slice, so every site comes round instead of the first few
-    // being walked forever while the rest stay stale.
+    // The rotation makes a per-minute schedule work: each tick takes a different slice, so no
+    // site stays stale while the first few are walked forever.
     Process::fake(fn ($process) => match (true) {
         in_array('du', $process->command, true) => Process::result(output: "512\t/home/site"),
         in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
         default => Process::result(exitCode: 0),
     });
 
-    // Created newest-first on purpose, so id order contradicts measurement
-    // order — otherwise ordering by id would pass this test by coincidence.
+    // Created newest-first on purpose, so ordering by id would not pass by coincidence.
     $newer = Application::factory()->create([
         'system_user_id' => $this->systemUser->id,
         'directory_size_bytes' => 2,
@@ -430,10 +404,8 @@ it('never measures more than the limit in one sweep', function () {
 });
 
 it('measures every site when the sweep is unbounded', function () {
-    // The scheduled default: --stale=0 --limit=0 means every site, every
-    // minute, however recently it was measured. `--limit=0` must read as "no
-    // ceiling" rather than as a limit of zero rows, which would measure
-    // nothing at all and look exactly like the schedule not running.
+    // The scheduled default: --stale=0 --limit=0 means every site, every minute. `--limit=0` must
+    // read as "no ceiling", not zero rows, which would look like the schedule not running.
     Process::fake(fn ($process) => match (true) {
         in_array('du', $process->command, true) => Process::result(output: "777\t/home/site"),
         in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
@@ -454,16 +426,11 @@ it('measures every site when the sweep is unbounded', function () {
 });
 
 /*
- * A container site's size is mostly not in its directory.
+ * A container site's size is mostly not in its directory: its compose file is a few KB while
+ * its volumes hold the data, and the sites list sorts by this figure.
  *
- * 🔴 Measured on the test box: a Mattermost install reported **6,468 bytes** —
- * the length of its compose file — while its six volumes held about 284 MB, one
- * of them 164 MB of plugins. The sites list sorts by this figure, so it was
- * ordering container sites by how much YAML they had.
- *
- * The volumes are unreadable to the site's own user by design (`/var/lib/docker/
- * volumes` is root-owned at 0700), which is why `du` as the site user could never
- * have found them, and why this is a second measurement rather than a wider one.
+ * The volumes are unreadable to the site user by design (`/var/lib/docker/volumes` is root-owned
+ * at 0700), so this is a second measurement rather than a wider `du`.
  */
 
 /** A container site, and a fake box that answers for its volumes. */
@@ -498,8 +465,7 @@ function fakeSizeBox(int $directoryBytes, array $volumes, string $root = '/home'
         }
 
         if (in_array('du', $command, true)) {
-            // Which `du` this is, decided by what it was asked about — the volume
-            // walk names mountpoints, the site walk names the document root.
+            // The volume walk names mountpoints, the site walk names the document root.
             $paths = array_values(array_filter(
                 $command,
                 fn ($arg): bool => is_string($arg) && str_starts_with($arg, '/'),
@@ -538,14 +504,12 @@ it('counts a container site as its directory plus its volumes', function () {
     $fresh = $application->fresh();
 
     expect($fresh->volume_size_bytes)->toBe(188_295_757)
-        // The total, because this is the figure the list shows and sorts by.
+        // The total: the figure the list shows and sorts by.
         ->and($fresh->directory_size_bytes)->toBe(188_302_225);
 });
 
 it('leaves the volume figure null for a site that has no volumes to measure', function () {
-    // Null, not 0. "This question does not apply" and "the volumes are empty" are
-    // different answers, and the second one would have the dashboard explaining a
-    // breakdown to somebody running WordPress.
+    // Null, not 0: "does not apply" and "the volumes are empty" are different answers.
     Process::fake(fn ($process) => match (true) {
         in_array('du', $process->command, true) => Process::result(output: "1048576\t/home/site/public_html\n"),
         in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
@@ -559,15 +523,13 @@ it('leaves the volume figure null for a site that has no volumes to measure', fu
     expect($fresh->volume_size_bytes)->toBeNull()
         ->and($fresh->directory_size_bytes)->toBe(1048576);
 
-    // And Docker was never asked. On a server with no Docker installed that call
-    // is a failure, and on any server it is a shell-out to be told nothing.
+    // And Docker was never asked: with no Docker installed that call fails.
     Process::assertNotRan(fn ($process): bool => in_array('volume', $process->command, true));
 });
 
 it('does not count another site\'s volumes as its own', function () {
-    // `sv-app-2_` against `sv-app-20_data` is the collision that matters, and it
-    // is why the match is a prefix including the underscore rather than the
-    // looser pattern the Docker page uses to attribute a volume to a site.
+    // `sv-app-2_` against `sv-app-20_data` is the collision that matters: the match is a prefix
+    // including the underscore.
     $application = containerSizeSite();
     $otherId = $application->id + 1;
 
@@ -583,10 +545,8 @@ it('does not count another site\'s volumes as its own', function () {
 });
 
 it('counts a volume attached by name as well as one the panel prefixed', function () {
-    // Two sources, and neither is complete: `volume_mounts` holds what somebody
-    // attached on the Container screen — which can be a volume the panel did not
-    // create and does not prefix — while the prefix covers every volume a
-    // one-click app or a pasted compose file brought with it.
+    // Two sources, neither complete: `volume_mounts` holds volumes attached on the Container
+    // screen (possibly unprefixed), the prefix covers those a one-click app or compose file brought.
     $application = containerSizeSite([
         'volume_mounts' => [['volume' => 'shared-uploads', 'path' => '/data']],
     ]);
@@ -603,11 +563,8 @@ it('counts a volume attached by name as well as one the panel prefixed', functio
 });
 
 it('does not let a folder-size click drop the volumes back out of the total', function () {
-    // `folderSize('/')` used to write its figure into `directory_size_bytes`,
-    // which was right while the two meant the same thing. They do not any more —
-    // so asking the File Manager for the root folder's size would have quietly
-    // reset the site to its compose file's length until the next real
-    // measurement, and nothing would have said so.
+    // `folderSize('/')` must not write into `directory_size_bytes`, or the root folder's size
+    // would silently reset the site to its compose file's length.
     $application = containerSizeSite();
 
     fakeSizeBox(6468, ['sv-app-'.$application->id.'_data' => 500_000]);
@@ -618,8 +575,7 @@ it('does not let a folder-size click drop the volumes back out of the total', fu
 
     $folder = app(FileBrowser::class)->folderSize($application->fresh(), '/');
 
-    // The folder answers about the folder — honestly, and it is the smaller
-    // number — and the site's own figure is untouched.
+    // The folder answers about the folder; the site's own figure is untouched.
     expect($folder['size'])->toBe(6468)
         ->and($application->fresh()->directory_size_bytes)->toBe(506_468);
 });

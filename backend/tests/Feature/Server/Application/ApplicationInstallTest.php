@@ -31,10 +31,7 @@ beforeEach(function () {
     Http::preventStrayRequests();
 });
 
-/**
- * The salt service. Each test opts in, because whether it answers is itself
- * something worth testing — an install must not depend on it being up.
- */
+/** The salt service. Each test opts in: an install must not depend on it being up. */
 function fakeSaltService(bool $reachable = true): void
 {
     Http::fake(['api.wordpress.org/*' => $reachable
@@ -71,11 +68,8 @@ function wpApp(array $overrides = []): Application
 /**
  * A wordpress application with a slug, the way a real one is created.
  *
- * `slug` is deliberately not fillable — {@see CreateApplication} sets it with
- * `forceCreate` because it names the web-server config file, and a caller
- * choosing that is a caller choosing which file the panel overwrites. So a
- * test that passes it to `create()` gets a silent null, which is exactly how
- * the first version of this file failed.
+ * `slug` is deliberately not fillable — {@see CreateApplication} sets it with `forceCreate`
+ * because it names the web-server config file. Passing it to `create()` yields a silent null.
  */
 function sluggedApp(string $slug, array $overrides = []): Application
 {
@@ -114,15 +108,9 @@ it('installs wordpress end to end after the site is serving', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
 
-    // The install runs only after the vhost is live — WordPress writes its own
-    // URL into the database during setup.
-    // `create_database` is in this list now. It was always in the documented
-    // one and never emitted, because the step lists were assembled by hand in
-    // each installer and the database is created by the manager above them.
-    // `create_php_pool` sits between ownership and the vhost: a PHP site gets
-    // its own FPM pool, running as its own Linux user, before anything is
-    // served from it. Without that step every PHP site ran as the shared
-    // www-data and could read every other site's configuration.
+    // The install runs only after the vhost is live — WordPress writes its own URL into the
+    // database during setup. `create_php_pool` gives a PHP site its own FPM pool and user, so it
+    // cannot read other sites' configuration.
     expect($app->steps)->toBe([
         'ensure_account', 'create_directory', 'set_ownership', 'placeholder', 'harden_php', 'create_php_pool',
         'write_config', 'test_config', 'reload',
@@ -140,17 +128,14 @@ it('runs wp-cli under the site own php, not whatever the shebang finds', functio
 
     runProvision(wpApp());
 
-    // wp-cli is a phar with `#!/usr/bin/env php`. Trusting that means the
-    // site's own PHP version is not necessarily the one that installs it —
-    // and on an OpenLiteSpeed box, where PHP lives in the lsws tree, there
-    // may be no system `php` for the shebang to find at all.
+    // wp-cli is a phar with `#!/usr/bin/env php`: the shebang may find another PHP version, or
+    // none at all on OpenLiteSpeed, where PHP lives in the lsws tree.
     Process::assertRan(function ($p) {
         $command = $p->command;
         $wp = array_search('/usr/local/bin/wp', $command, true);
         $php = array_search('/usr/bin/php8.4', $command, true);
 
-        // Not `$wp - 1`: the interpreter also carries the installer's memory
-        // limit now, so what sits between the two is a run of `-d` pairs.
+        // Not `$wp - 1`: a run of `-d` pairs (memory limit etc.) sits between the two.
         $between = $php === false ? [] : array_slice($command, $php + 1, $wp - $php - 1);
 
         $onlyIniFlags = count($between) % 2 === 0
@@ -216,9 +201,8 @@ it('creates a database and a dedicated user, and writes them into wp-config', fu
 });
 
 it('copies the extracted files into the site as the site user, never as root', function () {
-    // The document root is not always new — "Retry setup" copies into one the
-    // site user has had all along — and root's `cp` wrote through a link
-    // planted at a destination path (the `.panel` class of bug, 2026-09-29).
+    // The document root is not always new ("Retry setup" reuses one), and root's `cp` would
+    // write through a link planted at a destination path.
     fakeSaltService();
     fakeInstallServer();
     runProvision(wpApp());
@@ -240,15 +224,10 @@ it('hands the extracted files to the site user, not root', function () {
 
     runProvision($app);
 
-    // The extract copy runs elevated, so without this every file is root's and
-    // the installer's own CLI -- which runs as the site user -- cannot write.
-    // Mautic surfaced it as "Unable to create the cache directory
-    // (.../var/cache/prod)"; provisioning's set_ownership step cannot cover it
-    // because that runs before the download.
-    //
-    // The trailing `/.` matters: $documentRoot can be the `current` symlink,
-    // and `chown -R` on a symlink argument changes the link rather than
-    // descending into the release it points at.
+    // The extract copy runs elevated, so every file would be root's and the installer's own CLI
+    // (running as the site user) could not write; set_ownership runs before the download.
+    // The trailing `/.` matters: $documentRoot can be the `current` symlink, and `chown -R` on
+    // a symlink argument changes the link, not the release it points at.
     Process::assertRan(function ($p) {
         $args = ($p->command[0] ?? null) === 'sudo' ? array_slice($p->command, 2) : $p->command;
 
@@ -263,10 +242,8 @@ it('names the database after the slug rather than the domain', function () {
     fakeSaltService();
     fakeInstallServer();
 
-    // The domain normalizes to `shop_dipali_store_co_in` -- 23 characters of
-    // hostname before the random tail, because every dot becomes an
-    // underscore. The slug is the short, unique name the site's own directory
-    // already uses, so `/home/deploy/shop` and `shop_xxxxxx` read together.
+    // The domain would normalize to a long name (every dot becomes an underscore). The slug is
+    // the short, unique name the site's own directory already uses.
     $app = sluggedApp('shop', ['name' => 'Shop', 'domain' => 'shop.dipali-store.co.in']);
 
     runProvision($app);
@@ -274,18 +251,15 @@ it('names the database after the slug rather than the domain', function () {
     $database = Database::where('application_id', $app->id)->with('users')->first();
 
     expect($database->name)->toMatch('/^shop_[a-z0-9]{6}$/')
-        // The user is the same string; naming them apart would mean two
-        // identifiers to keep unique instead of one.
+        // The user is the same string: one identifier to keep unique, not two.
         ->and($database->users->first()->username)->toBe($database->name);
 });
 
 it('does not hand out a name the engine already has', function () {
     fakeSaltService();
 
-    // The engine says the first candidate is taken and the second is free.
-    // Before this the primary path called `generate()`, which asked nobody --
-    // so a collision with an adopted database surfaced from the catch in
-    // provisionDatabase as an opaque create_database failure with no cause.
+    // The engine says the first candidate is taken and the second is free. Without the probe, a
+    // collision with an adopted database fails as an opaque create_database error.
     $offered = [];
 
     Process::fake(function ($process) use (&$offered) {
@@ -296,9 +270,8 @@ it('does not hand out a name the engine already has', function () {
         if (($process->command[0] ?? '') === 'mysql') {
             $sql = (string) $process->input;
 
-            // The availability probe -- statements go over stdin, never argv.
-            // Matched on its EXISTS, not on the table: describeDatabase()
-            // reads information_schema.schemata too, after the create.
+            // The availability probe (statements go over stdin, never argv). Match on its EXISTS,
+            // not the table: describeDatabase() also reads information_schema.schemata.
             if (str_contains($sql, 'CASE WHEN EXISTS') && str_contains($sql, 'information_schema.schemata')) {
                 preg_match("/schema_name = '([^']+)'/", $sql, $m);
                 $offered[] = $m[1] ?? '';
@@ -328,8 +301,7 @@ it('does not hand out a name the engine already has', function () {
 it('reports the reference the failure was actually logged under', function () {
     fakeSaltService();
 
-    // Read the log back rather than trust the value: the claim is that the
-    // reference the user is given points at an entry that exists.
+    // Read the log back: the reference the user is given must point at an entry that exists.
     $dir = storage_path('logs/install-reference-'.getmypid());
     File::deleteDirectory($dir);
     File::makeDirectory($dir, 0755, true);
@@ -337,16 +309,14 @@ it('reports the reference the failure was actually logged under', function () {
     Log::forgetChannel('server-ops');
 
     Process::fake(function ($process) {
-        // Both clients, not just mysql: failing every mysql statement takes
-        // the engine out of the running entirely, and the install then fails
-        // somewhere else on mariadb -- passing for the wrong reason.
+        // Both clients, not just mysql: otherwise the install fails elsewhere on mariadb and the
+        // test passes for the wrong reason.
         if (! in_array($process->command[0] ?? '', ['mysql', 'mariadb'], true)) {
             return Process::result(exitCode: 0);
         }
 
-        // Everything answers, the name is free, and creating it is the one
-        // thing that fails -- a real CREATE DATABASE refusal, which is where
-        // the engine mints the reference this test is about.
+        // Everything answers and the name is free; only CREATE DATABASE is refused, which is
+        // where the engine mints the reference under test.
         return str_contains((string) $process->input, 'CREATE DATABASE')
             ? Process::result(errorOutput: 'ERROR 1044 (42000): Access denied', exitCode: 1)
             : Process::result(output: '1');
@@ -359,9 +329,7 @@ it('reports the reference the failure was actually logged under', function () {
     $app->refresh();
     $log = File::get($dir.'/server-ops.log');
 
-    // Before this, the catch minted a fresh uuid and dropped the engine's --
-    // so the id handed to the user appeared in no log at all, and the one the
-    // entry was written under was thrown away.
+    // The engine's reference must be reused, not replaced by a fresh uuid that appears in no log.
     expect($app->status->value)->toBe('failed')
         ->and($app->failed_step)->toBe('create_database')
         ->and($app->reference)->not->toBeEmpty()
@@ -381,9 +349,7 @@ it('writes an entry for a failure that had not logged one', function () {
 
     fakeInstallServer();
 
-    // A bug rather than a server refusal: nothing ran, so nothing logged, and
-    // the reference minted for it would otherwise name no entry at all -- the
-    // same defect as the uuid, for the failures hardest to diagnose.
+    // A bug rather than a server refusal: nothing logged, so the reference would name no entry.
     $this->mock(CreateDatabase::class)
         ->shouldReceive('execute')
         ->andThrow(new RuntimeException('unexpected'));
@@ -405,16 +371,9 @@ it('keeps the database user within the length MySQL will accept', function () {
     fakeSaltService();
     fakeInstallServer();
 
-    // No slug on this row, so the name falls back to the domain -- which is
-    // what every application created before the slug column looks like, and
-    // the case the length cap exists for.
-    //
-    // A nip.io host, which is how every IP-addressed test site is reached and
-    // is long before anyone has typed a real domain. This one produced
-    // `wordpress_139_59_88_213_nip_io_xqolim` (37 chars) and killed the
-    // install at create_database with MySQL's "ERROR 1470 ... is too long for
-    // user name" -- 32 is the hard limit, and the same string names both the
-    // database and its user.
+    // No slug, so the name falls back to the domain (how applications created before the slug
+    // column look). A nip.io host gives `wordpress_139_59_88_213_nip_io_xxxxxx` (37 chars), but
+    // MySQL's user-name limit is 32 and the same string names the database and its user.
     $app = wpApp(['domain' => 'wordpress.139.59.88.213.nip.io']);
 
     runProvision($app);
@@ -423,8 +382,7 @@ it('keeps the database user within the length MySQL will accept', function () {
     $username = $database->users->first()->username;
 
     expect(strlen($username))->toBeLessThanOrEqual(32)
-        // The random tail is what keeps two truncated domains apart, so it
-        // must survive the truncation rather than being cut off by it.
+        // The random tail keeps two truncated domains apart, so it must survive truncation.
         ->and($username)->toMatch('/_[a-z0-9]{6}$/')
         ->and($username)->toStartWith('wordpress_');
 });
@@ -434,10 +392,8 @@ it('locks down wp-config.php, which holds live database credentials', function (
     fakeInstallServer();
     runProvision(wpApp());
 
-    // By the site user, who wrote it: root's chmod followed a link planted
-    // at the path (the `.panel` class of bug, 2026-09-29). And 0600, not
-    // 0640: the site runs as its own user, and its group is not private —
-    // on OpenLiteSpeed the web server account is a member of it.
+    // By the site user (root's chmod would follow a planted link). 0600, not 0640: the group is
+    // not private — on OpenLiteSpeed the web server account is a member of it.
     Process::assertRan(fn ($p) => array_slice($p->command, 0, 6) === ['runuser', '-u', 'deploy', '--', 'chmod', '0600']
         && str_contains((string) end($p->command), 'wp-config.php'));
 });
@@ -452,9 +408,7 @@ function wpConfigWritten(): string
             $config = (string) $process->input;
         }
 
-        // The name-availability probe: a bare exitCode-0 answers "" here,
-        // which reads as "taken" and exhausts the allocator before a config
-        // is ever written.
+        // The name-availability probe: a bare exitCode-0 answers "", which reads as "taken".
         return ($process->command[0] ?? '') === 'mysql'
             ? Process::result(output: '1')
             : Process::result(exitCode: 0);
@@ -467,10 +421,8 @@ function wpConfigWritten(): string
 
 it('writes a moved database port into DB_HOST, which wpdb parses itself', function () {
     fakeSaltService();
-    // 🔴 The panel's connection is editable (PUT /databases/connections/mysql),
-    // so a managed MySQL on 25060 used to be handed a wp-config naming the
-    // default port: a site that provisions, reports Active, and cannot reach
-    // its own database.
+    // The connection is editable (PUT /databases/connections/mysql): a managed MySQL on 25060
+    // must not get a wp-config naming the default port.
     moveDatabasePort('mysql', 25060);
 
     expect(wpConfigWritten())->toContain("define('DB_HOST', '127.0.0.1:25060');");
@@ -479,8 +431,7 @@ it('writes a moved database port into DB_HOST, which wpdb parses itself', functi
 it('leaves DB_HOST bare on a stock database, as every existing site has it', function () {
     fakeSaltService();
 
-    // 3306 is what wpdb assumes, so naming it would change the config every
-    // WordPress the panel has ever installed carries, to say nothing new.
+    // 3306 is what wpdb assumes, so naming it would only change existing sites' configs.
     expect(wpConfigWritten())->toContain("define('DB_HOST', '127.0.0.1');");
 });
 
@@ -497,9 +448,7 @@ it('gives every install its own salts', function () {
             $configs[] = $m[1] ?? '';
         }
 
-        // The name-availability probe. A bare exitCode-0 answers "" here,
-        // which reads as "taken" and exhausts the allocator, so the install
-        // fails before it writes a config at all.
+        // The name-availability probe: a bare exitCode-0 answers "", which reads as "taken".
         return ($process->command[0] ?? '') === 'mysql'
             ? Process::result(output: '1')
             : Process::result(exitCode: 0);

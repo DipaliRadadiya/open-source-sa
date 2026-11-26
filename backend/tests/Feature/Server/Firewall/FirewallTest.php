@@ -125,10 +125,9 @@ it('rejects a duplicate rule', function () {
 });
 
 it('refuses a deny rule that ufw would write over an existing allow', function () {
-    // ufw counts port/protocol/source as one rule. `ufw deny 22/tcp` beside
-    // `allow 22/tcp` prints "Rule updated" and replaces it, while the panel
-    // kept listing both; deleting the deny then removed SSH altogether. Found
-    // live on the Apache test box, which it locked out.
+    // ufw counts port/protocol/source as one rule: `ufw deny 22/tcp` beside `allow 22/tcp` prints
+    // "Rule updated" and replaces it, while the panel kept listing both; deleting the deny then
+    // removed SSH altogether.
     fakeUfw('active');
     FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
 
@@ -207,11 +206,9 @@ it('refuses to delete a protected default rule while the firewall is enabled', f
 });
 
 it('refuses an edit that turns a rule into a copy of another', function () {
-    // Creating an identical rule was already rejected by CreateFirewallRule.
-    // *Editing* one onto the same port/protocol/action/source was not, so the
-    // list ended up showing the same line twice — and because ufw is
-    // idempotent, deleting one of the pair changes nothing visible, which
-    // reads as a broken delete.
+    // Creating an identical rule is rejected by CreateFirewallRule; *editing* one onto the same
+    // port/protocol/action/source must be too, or the list shows the same line twice and, ufw
+    // being idempotent, deleting one of the pair looks like a broken delete.
     fakeUfw('active');
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -232,10 +229,9 @@ it('refuses an edit that turns a rule into a copy of another', function () {
 });
 
 it('lets a rule be saved when only its description changed', function () {
-    // The check must not compare a rule against itself, or every edit that
-    // left the ports alone would be refused as a duplicate of the row being
-    // edited. The fields the request does not send come from the stored row,
-    // so this comparison sees 8081 either way.
+    // The check must not compare a rule against itself, or every edit that left the ports alone
+    // would be refused as a duplicate of the row being edited. Fields the request does not send
+    // come from the stored row, so this comparison sees 8081 either way.
     fakeUfw('active');
 
     $created = $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -287,11 +283,8 @@ it('enables the firewall, seeding default rules first', function () {
 });
 
 it('returns the rules it just seeded, so the screen has something to show', function () {
-    // The seeding was never the bug; not saying so was. This response used to
-    // carry only `enabled` and `default_policy`, so on a freshly set-up server
-    // the rules list stayed empty while the note said incoming traffic was
-    // blocked — and the four rules only appeared after switching the firewall
-    // off and on again, which happened to trigger a refetch.
+    // The response must carry the seeded rules, not only `enabled` and `default_policy`; else the
+    // rules list stays empty on a freshly set-up server until the firewall is switched off and on.
     fakeUfw('active');
 
     $response = $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -322,14 +315,10 @@ it('refuses to enable the firewall when a default recovery rule cannot be applie
 
 describe('enabling with a default rule switched off', function () {
     /*
-     * `ProtectedRuleGuard` lets a seeded rule be switched off while the
-     * firewall is not enforcing — that escape hatch is deliberate, and is the
-     * only way to shut port 80 on a server that needs it shut. But enabling
-     * used to apply every default rule regardless of its `enabled` flag, so
-     * the port came back open while the panel still showed the rule off, and
-     * the guard then locked it in that state the moment ufw was enforcing.
-     * A screen saying a port is closed while it is open is the 2026-09-08 bug
-     * with the direction reversed.
+     * `ProtectedRuleGuard` lets a seeded rule be switched off while the firewall is not enforcing
+     * (deliberate: the only way to shut port 80 on a server that needs it shut). Enabling must
+     * honour that `enabled` flag: applying every default regardless reopened the port while the
+     * panel showed the rule off, and the guard then locked it in that state.
      */
     it('leaves a web port the user switched off closed', function () {
         fakeUfw('active');
@@ -510,10 +499,8 @@ describe('a rule the panel seeded for itself', function () {
         return FirewallRule::create(['port_from' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
     }
 
-    // Each of these used to answer 200 and run `ufw delete allow 443/tcp`,
-    // while *deleting* the identical rule answered 422 — same effect on the
-    // running firewall, opposite answers. With deny-incoming that is every
-    // site on the box going dark.
+    // Each of these used to answer 200 and run `ufw delete allow 443/tcp`, while deleting the
+    // identical rule answered 422. With deny-incoming that takes every site on the box dark.
     it('cannot be switched off while the firewall is on', function () {
         fakeUfw('active');
         $rule = seededWebRule();
@@ -566,9 +553,8 @@ describe('a rule the panel seeded for itself', function () {
         fakeUfw('active');
         $rule = seededWebRule();
 
-        // The model is already filled by the time the guard runs, so reading
-        // the live attribute would report 8443 — and send someone looking for
-        // a row that does not exist.
+        // The model is already filled when the guard runs, so the live attribute would report 8443
+        // and send someone looking for a row that does not exist.
         $this->withHeader('Authorization', "Bearer {$this->token}")
             ->putJson("/api/firewall/rules/{$rule->id}", ['port_from' => 8443])
             ->assertUnprocessable()
@@ -625,11 +611,9 @@ describe('a rule the panel seeded for itself', function () {
     });
 
     it('reads the stored origin, not a filled one', function () {
-        // Driven at the guard rather than the endpoint on purpose: validation
-        // already strips `origin`, so an HTTP test here passes whether the
-        // guard reads the stored value or the submitted one, and proves
-        // nothing about the guard. If the request rules ever gain `origin`,
-        // this is the test that stays honest.
+        // Driven at the guard rather than the endpoint: validation already strips `origin`, so an
+        // HTTP test passes whether the guard reads the stored or the submitted value. If the
+        // request rules ever gain `origin`, this test stays honest.
         fakeUfw('active');
         $rule = seededWebRule();
         $rule->fill(['origin' => 'user', 'enabled' => false]);
@@ -663,10 +647,8 @@ it('rejects a source that matches every address', function () {
 });
 
 it('reports an unreadable firewall state as unknown, never as disabled', function () {
-    // The rule this has always protected: `false` would read as "nothing is
-    // being blocked". What changed is the audience -- this is a screen, and
-    // failing the whole request left nothing to look at on precisely the
-    // server someone opens it to investigate. Third state instead.
+    // `false` would read as "nothing is being blocked". This is a screen, and failing the whole
+    // request leaves nothing to look at on the very server being investigated: use a third state.
     Process::fake(fn ($process) => in_array('status', $process->command, true)
         ? Process::result(exitCode: 1, errorOutput: 'ERROR: could not read /etc/ufw')
         : Process::result(exitCode: 0));
@@ -685,10 +667,9 @@ it('reports an unreadable firewall state as unknown, never as disabled', functio
 });
 
 it('still refuses to delete a protected rule when the state cannot be read', function () {
-    // The half that must not move. `DeleteFirewallRule` asks whether the
-    // firewall is on before letting a protected rule go, and an unreadable
-    // state has to stop it rather than be read as "off, so deleting is safe".
-    // The screen degrades; the guard does not.
+    // The half that must not move: `DeleteFirewallRule` asks whether the firewall is on before
+    // letting a protected rule go, and an unreadable state must stop it, not read as "off". The
+    // screen degrades; the guard does not.
     $rule = FirewallRule::create([
         'port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow',
         'source_ip' => null, 'origin' => 'system', 'enabled' => true,
@@ -718,15 +699,8 @@ it('denies a viewer without manage from adding a rule', function () {
 /*
  * A newly created rule must not report itself as off.
  *
- * `enabled` defaults to true in the database, and a model built by `create()`
- * never learns a database default — so the 201 body said `enabled: false`
- * while ufw already had the port open. Every later read said true. A client
- * rendering the create response, which is the natural thing to do, showed the
- * user a disabled rule for an open port.
- *
- * Found by driving the real API on a live box. The existing create test above
- * asserts origin, protected and summary — everything except the field that was
- * wrong, which is why this survived to be found by hand.
+ * `enabled` defaults to true in the database, but a model built by `create()` never learns a
+ * database default, so the 201 body said `enabled: false` while ufw already had the port open.
  */
 it('reports a newly created rule as enabled, because ufw has already applied it', function () {
     fakeUfw();
@@ -760,14 +734,11 @@ it('keeps the model default and the column default saying the same thing', funct
 | Searching the rules list by service name
 |--------------------------------------------------------------------------
 |
-| The rules the panel seeds itself carry no description — measured on a live
-| OpenLiteSpeed box, where 22, 80 and 443 all had `description: null`. So
-| searching "ssh" matched nothing while the row sat in plain sight, and the
-| list showed a readable summary that is built at read time and therefore
-| exists nowhere the database can search.
+| The rules the panel seeds itself carry no description, and the readable summary is built at
+| read time, so searching "ssh" matched nothing while the row sat in plain sight.
 |
-| A service name now resolves to its port. The text search is unchanged, and
-| the regression tests below are what say so.
+| A service name now resolves to its port. The text search is unchanged, and the regression
+| tests below are what say so.
 */
 
 /** The rules list as the API returns it, for `?search=$term`. */
@@ -865,13 +836,9 @@ it('keeps a filter applied when the search matches a service name', function () 
 | The port range a rule may name
 |--------------------------------------------------------------------------
 |
-| Creating a rule capped both ends at 65534 while editing one allowed
-| `port_to` up to 65535, so "allow everything from 9000 up" — the natural way
-| to write an open upper range — was refused on the way in and accepted on the
-| way through the edit screen.
-|
-| Nothing justified 65534. Every other port field in this application uses
-| 65535, and it was measured against the real thing:
+| Creating a rule capped both ends at 65534 while editing allowed `port_to` up to 65535, so
+| "allow everything from 9000 up" was refused on create and accepted on edit. Every other port
+| field uses 65535, and ufw accepts it:
 |
 |   ufw --dry-run allow 9000:65535/tcp  ->  Rules updated
 |   ufw --dry-run allow 0/tcp           ->  ERROR: Bad port
@@ -891,9 +858,8 @@ it('accepts the highest real port, which ufw takes and this refused', function (
 });
 
 it('still refuses a port above the range and a port of zero', function () {
-    // The other side of the boundary. Widening a limit is the moment to pin
-    // that it is still a limit — and 0 is refused here so the user is told
-    // why, rather than having ufw refuse it later where nobody is watching.
+    // Widening a limit is the moment to pin that it is still a limit: 0 is refused here so the
+    // user is told why, not by ufw later where nobody is watching.
     fakeUfw();
 
     foreach ([FirewallRule::PORT_MAX + 1, 0] as $port) {
@@ -905,9 +871,8 @@ it('still refuses a port above the range and a port of zero', function () {
 });
 
 it('lets create and update agree on the range, so neither can drift', function () {
-    // 🔴 The guard that would have caught this. The two requests disagreed for
-    // three commits and nothing noticed, because every test only ever asked
-    // one of them. This asks both the same question and compares the answers.
+    // The create and update requests once disagreed unnoticed because each test asked only one
+    // of them. This asks both the same question and compares the answers.
     fakeUfw();
 
     $rule = FirewallRule::create([
@@ -930,9 +895,8 @@ it('lets create and update agree on the range, so neither can drift', function (
 });
 
 /*
- * Bug #20: ufw stops at the first match, and a deny for one address was
- * appended below "allow 22 from anywhere", so it blocked nothing. As v7,
- * deny and reject go on top.
+ * ufw stops at the first match: a deny appended below "allow 22 from anywhere" blocked nothing,
+ * so deny and reject go on top.
  */
 describe('where a rule lands', function () {
     function fakeNumberedUfw(string $numbered, int $insertExit = 0): void
@@ -1005,7 +969,7 @@ describe('where a rule lands', function () {
 });
 
 /*
-| FW-08 (old QA list): rules added with the ufw CLI were not shown at all.
+| Rules added with the ufw CLI were not shown at all.
 */
 
 /** ufw with the panel's own 22/80 plus two rules added by hand. */
@@ -1115,7 +1079,7 @@ it('needs manage on the firewall to take over or remove one', function () {
 });
 
 it('lets a protected rule be switched back on while the firewall is enforcing, and still refuses switching it off', function () {
-    // FS-C3: once switched off (firewall down), there was no way back on.
+    // Once switched off (firewall down), there was no way back on.
     fakeUfw('active');
     $rule = FirewallRule::create(['port_from' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default', 'enabled' => false]);
 
@@ -1136,8 +1100,8 @@ it('lets a protected rule be switched back on while the firewall is enforcing, a
 });
 
 it('refuses a port range with both protocols, which ufw cannot express', function () {
-    // FS-C22: ufw answers "Must specify 'tcp' or 'udp' with multiple ports",
-    // which the panel turned into a 500.
+    // ufw answers "Must specify 'tcp' or 'udp' with multiple ports", which the panel turned into
+    // a 500.
     fakeUfw('active');
 
     $this->withHeader('Authorization', "Bearer {$this->token}")

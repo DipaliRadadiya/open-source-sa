@@ -51,10 +51,8 @@ function fakeDb(): void
                 str_contains($sql, "LIKE 'max_connections'") => Process::result(output: "max_connections\t151"),
                 str_contains($sql, 'SHOW GLOBAL STATUS') => Process::result(output: "Threads_connected\t5\nThreads_running\t1\nQueries\t1000\nSlow_queries\t2\nUptime\t3600"),
                 str_contains($sql, 'SELECT table_name') => Process::result(output: "users\t42\t8192\nposts\t10\t4096"),
-                // information_schema.schemata — what a database was created
-                // with. Answered before the COALESCE size query below, which
-                // also selects from information_schema and would otherwise
-                // swallow this one.
+                // information_schema.schemata (what a database was created with). Must come before
+                // the COALESCE size query, which also selects from information_schema.
                 str_contains($sql, 'default_character_set_name') => Process::result(output: "utf8mb4\tutf8mb4_uca1400_ai_ci"),
                 str_contains($sql, 'SELECT COALESCE') => Process::result(output: '1048576'),
                 str_contains($sql, 'SELECT 1') => Process::result(output: '1'),
@@ -94,7 +92,7 @@ it('names generic SQL and MongoDB client operations in the server log', function
             && $context['engine'] === $engine
             && $context['op'] === 'query',
     )->andReturn(new ServerOpsResult(true, 'query-reference', null));
-    // MongoDB looks for its client first (bug #48).
+    // MongoDB looks for its client first.
     $ops->shouldReceive('probe')->andReturn(new ServerOpsResult(true, 'probe-reference', null));
 
     expect((new $class($connection, $ops))->available())->toBeTrue();
@@ -190,10 +188,8 @@ it('creates a database', function () {
 it('refuses a charset the chosen engine has never heard of', function () {
     fakeDb();
 
-    // `utf8mb4` is a MySQL charset. It used to validate against one global
-    // list regardless of engine, so this request was accepted and the value
-    // stored against a MongoDB database that has no such concept — a field
-    // the API confirmed and nothing could ever apply.
+    // `utf8mb4` is a MySQL charset: validation is per engine, so MongoDB (no such concept)
+    // must not store it.
     test()->withHeaders(dbAuth())->postJson('/api/databases', [
         'name' => 'shop', 'engine' => 'mongodb', 'charset' => 'utf8mb4',
     ])->assertStatus(422)->assertJsonValidationErrors('charset');
@@ -202,8 +198,7 @@ it('refuses a charset the chosen engine has never heard of', function () {
 });
 
 it('still accepts that charset on the engine it belongs to', function () {
-    // The other half of the rule above: engine-scoped must not mean nobody
-    // can set a charset at all.
+    // The other half of the rule above: engine-scoped must not block every charset.
     fakeDb();
 
     test()->withHeaders(dbAuth())->postJson('/api/databases', [
@@ -228,8 +223,8 @@ it('rolls back a new database when its requested initial user cannot be created'
         $sql = (string) ($process->input ?? '');
 
         return match (true) {
-            // A running engine: creating on one that does not answer is now a
-            // 422 before any SQL (DatabaseEngineNotRunningTest).
+            // A running engine: creating on one that does not answer is a 422 before any SQL
+            // (DatabaseEngineNotRunningTest).
             str_contains($sql, 'VERSION()') => Process::result(output: '8.0.36'),
             str_contains($sql, 'CREATE USER') => Process::result(exitCode: 1, errorOutput: 'user create failed'),
             default => Process::result(exitCode: 0),
@@ -303,8 +298,7 @@ it('refuses a username that already exists instead of failing with a 500 (bug #3
     });
     $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
 
-    // The engine refused the second account, and that reached the user as
-    // "the database operation failed" with a reference to quote.
+    // An existing account must give a clear 422, not a generic "operation failed" reference.
     test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/users", [
         'username' => 'shop_user', 'password' => 'AnotherPass88', 'connection_preference' => 'localhost',
     ])->assertStatus(422)
@@ -325,8 +319,7 @@ it('refuses a taken first-user name before making the new database', function ()
             : Process::result(output: '1');
     });
 
-    // Found live: the database was made, logged as created and dropped
-    // again, and the message named a field the form does not have.
+    // The check runs before creating: otherwise the database is made, logged and dropped again.
     test()->withHeaders(dbAuth())->postJson('/api/databases', [
         'name' => 'shop', 'engine' => 'mysql',
         'create_user' => ['username' => 'shop_user', 'password' => 'S3cretPass99'],
@@ -462,10 +455,8 @@ it('can retry cleanup after the database was dropped but a user cleanup failed',
 });
 
 it('deletes a PostgreSQL database whose role cleanup would have needed it', function () {
-    // psql behaves as a real cluster does: once the database is gone, any
-    // connection aimed at it fails. That is the whole bug — role cleanup used
-    // to run inside the database the line before had dropped, so deletion
-    // returned 500 and left the panel row pointing at nothing.
+    // psql behaves like a real cluster: once the database is gone, any connection aimed at it
+    // fails, so role cleanup must not run inside the dropped database.
     $dropped = false;
     Process::fake(function ($process) use (&$dropped) {
         $cmd = implode(' ', (array) $process->command);
@@ -492,11 +483,8 @@ it('deletes a PostgreSQL database whose role cleanup would have needed it', func
 });
 
 it('clears a PostgreSQL row stranded by the old delete, on a plain retry', function () {
-    // The three rows left on the test server by the bug above: the real
-    // database is already gone, only the panel row survives. There is no
-    // repair endpoint and there should not be one — DROP DATABASE IF EXISTS
-    // and DROP ROLE IF EXISTS both succeed against nothing, so pressing
-    // delete a second time is what clears it.
+    // The real database is already gone and only the panel row survives. No repair endpoint is
+    // needed: DROP DATABASE/ROLE IF EXISTS succeed against nothing, so deleting again clears it.
     Process::fake(function ($process) {
         $cmd = implode(' ', (array) $process->command);
 
@@ -536,15 +524,8 @@ it('adopts untracked databases without dropping anything', function () {
 | What an adopted database was created with
 |--------------------------------------------------------------------------
 |
-| The panel records charset and collation when it *creates* a database and
-| recorded neither when it adopted one, so every database brought over from
-| another panel showed a blank charset forever — on the screen that exists for
-| migrated servers, beside panel-created databases showing theirs.
-|
-| Measured on a live server before fixing it: the engines knew all along.
-|
-|   untracked_pg     UTF8      C.UTF-8
-|   untracked_maria  utf8mb4   utf8mb4_uca1400_ai_ci
+| The panel records charset and collation when it creates a database, so one it adopts from
+| another panel must have them read back from the engine instead of showing a blank charset.
 */
 
 it('records the charset an adopted database already had', function () {
@@ -561,10 +542,8 @@ it('records the charset an adopted database already had', function () {
 });
 
 it('leaves the charset null when the engine cannot say', function () {
-    // MongoDB has no database-level charset — encoding is UTF-8 by definition
-    // of BSON and a collation belongs to an index or a query. Null rather than
-    // inventing "UTF8" to fill the column: the field means "what this was
-    // created with", and for Mongo that question has no answer.
+    // MongoDB has no database-level charset (BSON is UTF-8; a collation belongs to an index or
+    // query). Null, not an invented "UTF8": the field means "what this was created with".
     fakeDb();
 
     expect(app(DatabaseManager::class)->engine('mongodb')->describeDatabase('anything'))
@@ -710,11 +689,8 @@ it('still lists no tables for an empty database on a running engine', function (
 });
 
 it('no longer offers to optimize or repair', function () {
-    // Removed 2026-09-08 rather than hidden, so the endpoints have to be gone
-    // and not merely unlinked from the interface. `REPAIR TABLE` on InnoDB is
-    // a note and an exit code of 0 -- the endpoint reported success having
-    // done nothing on every table this panel manages -- and `OPTIMIZE TABLE`
-    // on InnoDB is a whole-table rebuild that ran inside the request.
+    // The endpoints are removed, not just unlinked. On InnoDB `REPAIR TABLE` reports success
+    // having done nothing, and `OPTIMIZE TABLE` is a whole-table rebuild inside the request.
     fakeDb();
     $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
 
@@ -754,9 +730,8 @@ it('samples db metrics into the table and prunes old rows', function () {
 });
 
 /**
- * fakeDb(), plus a dpkg that reports exactly these server packages installed.
- * Every SQL client call is recorded with the engine's binary, so a test can
- * see which engines were probed at all.
+ * fakeDb(), plus a dpkg that reports exactly these server packages installed. SQL client
+ * calls are recorded by binary, so a test can see which engines were probed.
  *
  * @param  array<int, string>  $packages
  */
@@ -789,8 +764,8 @@ function fakeMetricsServer(array $packages): ArrayObject
 }
 
 it('samples only engines whose server is installed, without probing the rest (bug #22)', function () {
-    // A MariaDB server. "MySQL" there is MariaDB's own port reached as root
-    // with no password: every 5 minutes, an "Access denied" in its log.
+    // On a MariaDB server, probing "MySQL" reaches MariaDB's own port as root with no password:
+    // an "Access denied" in its log on every sample.
     $probes = fakeMetricsServer(['mariadb-server']);
 
     test()->artisan('db:sample-metrics')->assertExitCode(0);
@@ -822,15 +797,12 @@ it('exports a database and streams the download', function () {
         return Process::result(exitCode: 0);
     });
 
-    // Faked so dispatch does not run inline: the point of the change is that
-    // the request returns before the dump does.
+    // Faked so dispatch does not run inline: the request must return before the dump does.
     Queue::fake();
 
     $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
 
-    // 202, not 201: the dump is queued. It outlives nginx's read timeout on any
-    // real database, so the request used to be told it had failed while
-    // mysqldump carried on and succeeded.
+    // 202, not 201: the dump is queued and would outlive nginx's read timeout on a real database.
     $res = test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/export")->assertStatus(202);
     expect($res->json('export.status'))->toBe('queued')
         ->and($res->json('export.file'))->toBeNull()
@@ -890,8 +862,7 @@ it('does not strand an export at running when the worker dies', function () {
         'status' => ExportStatus::Running,
     ]);
 
-    // Without the failed() hook the row sits at `running` forever and the
-    // screen spins on something that stopped existing.
+    // Without the failed() hook the row sits at `running` forever.
     (new RunDatabaseExport($export->id, $db->id))->failed(null);
 
     expect($export->refresh()->status)->toBe(ExportStatus::Failed)
@@ -920,8 +891,7 @@ it('lists exports newest first, including ones still running', function () {
 
     $res = test()->withHeaders(dbAuth())->getJson('/api/databases/exports')->assertOk();
 
-    // The in-flight one is what someone who just pressed the button is looking
-    // for; hiding it until it finishes is how a page looks like it did nothing.
+    // The in-flight dump must be listed: hiding it until it finishes makes the page look idle.
     expect($res->json('exports.0.status'))->toBe('running')
         ->and($res->json('exports.1.status'))->toBe('completed')
         ->and($res->json('exports.1.database'))->toBe('shop')
@@ -969,8 +939,7 @@ it('deletes a failed export that never produced a file', function () {
         'status' => ExportStatus::Failed, 'reason' => 'dump_failed',
     ]);
 
-    // Keyed by id precisely so these are removable — by filename they would sit
-    // in the list forever with nothing able to clear them.
+    // Keyed by id so these are removable; by filename they could never be cleared.
     test()->withHeaders(dbAuth())->deleteJson("/api/databases/exports/{$export->id}")->assertNoContent();
 
     expect(DatabaseExport::find($export->id))->toBeNull();
@@ -999,8 +968,8 @@ it('refuses to delete an export without manage permission', function () {
 it('re-measures the size when a single database is shown', function () {
     fakeDb();
 
-    // What the column looked like before: written once at creation and never
-    // touched again, so a database that had grown still read as empty.
+    // The size column is refreshed, not written once at creation: a grown database must not
+    // read as empty.
     $db = Database::create(['name' => 'shop', 'engine' => 'mysql', 'size_bytes' => 0]);
 
     test()->withHeaders(dbAuth())->getJson("/api/databases/{$db->id}")->assertOk()
@@ -1068,9 +1037,7 @@ it('leaves the last known size alone when the engine cannot be reached', functio
 
     test()->artisan('databases:refresh-sizes')->assertExitCode(0);
 
-    // Writing a failed probe as 0 would report every database on a stopped
-    // engine as empty — the same wrong-but-confident answer the stale column
-    // used to give.
+    // Writing a failed probe as 0 would report every database on a stopped engine as empty.
     expect($db->refresh()->size_bytes)->toBe(4096);
 });
 
@@ -1130,16 +1097,11 @@ it('reports an engine that is neither running nor present as not installed', fun
 });
 
 it('repairs an engine that is installed but the panel cannot reach', function () {
-    // "The package is present" is not "the panel can use it". Installing an
-    // engine is apt *and* provisioning the account the panel connects with.
-    //
-    // Short-circuiting on the package alone skipped the second half, so on any
-    // server where the engine was already installed — one the panel was
-    // reinstalled beside, or where MariaDB predates the panel — the connection
-    // stayed on the defaults (root, TCP, no password) and every query came back
-    // ERROR 1698: Ubuntu's root authenticates over the unix socket, not TCP.
-    // The response said `queued: false`, so the setup page had nothing to poll
-    // and the install looked like it had stopped by itself, with no way to retry.
+    // "The package is present" is not "the panel can use it": installing an engine is apt and
+    // provisioning the account the panel connects with. Skipping the second half leaves the
+    // default connection (root, TCP, no password), and queries fail with ERROR 1698 because
+    // Ubuntu's root authenticates over the unix socket. The response must say `queued: true`
+    // so the setup page has something to poll.
     Bus::fake();
 
     Process::fake(function ($process) {
@@ -1170,8 +1132,7 @@ it('repairs an engine that is installed but the panel cannot reach', function ()
 });
 
 it('does nothing when the engine is installed and answering', function () {
-    // The normal case must stay a no-op: pressing install on a working engine
-    // should not re-provision it.
+    // The normal case stays a no-op: installing on a working engine must not re-provision it.
     Bus::fake();
 
     Process::fake(function ($process) {
@@ -1198,13 +1159,12 @@ it('does nothing when the engine is installed and answering', function () {
 
 /*
 |--------------------------------------------------------------------------
-| Bug #34: adopted databases and their users
+| Adopted databases and their users
 |--------------------------------------------------------------------------
 |
-| Adopt recorded the database and none of its users, so it showed 0 users
-| and deleting it left them behind with their rights. And a user that serves
-| two databases (common on a server brought over from v7) must not be dropped
-| with the first one: the other site would stop working.
+| Adopting records the database and its users, and deleting it drops them. A user that serves
+| two databases (common on a server brought over from v7) must not be dropped with the first
+| one: the other site would stop working.
 */
 function fakeDbWithUsers(): ArrayObject
 {
@@ -1299,7 +1259,7 @@ describe('database usernames (bug #25)', function () {
         $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
         $user = $db->users()->create(['username' => 'old_u', 'password' => 'oldpw', 'connection_preference' => 'localhost', 'host' => 'localhost']);
 
-        // Was a 500 from inside the engine.
+        // A duplicate name must be a 422, not a 500 from inside the engine.
         test()->withHeaders(dbAuth())->patchJson("/api/databases/{$db->id}/users/{$user->id}", ['username' => 'taken_u'])
             ->assertStatus(422)
             ->assertJsonPath('errors.username.0', __('errors/database.user_exists', ['username' => 'taken_u']));

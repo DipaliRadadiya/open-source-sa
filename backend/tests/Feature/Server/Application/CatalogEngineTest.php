@@ -11,13 +11,11 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * Whether a card is offered depends on an engine the application can actually
- * use.
+ * Whether a card is offered depends on an engine the application can actually use.
  *
- * `missingEngines()` used to return early for anything accepting MySQL or
- * MariaDB — nearly the whole catalog — so only NodeBB was ever checked. On a
- * MongoDB-only server every SQL-backed type reported itself available, took a
- * filled-in form, and failed at provisioning with `no-database-engine`.
+ * `missingEngines()` once returned early for anything accepting MySQL or MariaDB, so on a
+ * MongoDB-only server every SQL-backed type looked available and failed at provisioning with
+ * `no-database-engine`.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -35,9 +33,8 @@ beforeEach(function () {
 /**
  * Answer as a server with only `$engines` reachable.
  *
- * The client binary in the command is what says which engine is being asked:
- * `available()` is a live query through ServerOps either way, so a server
- * without MySQL is one where the `mysql` client's query does not succeed.
+ * The client binary in the command says which engine is asked: `available()` is a live query
+ * through ServerOps, so a server without MySQL is one where the `mysql` query fails.
  */
 /**
  * @param  array<string, string>  $versions  what an engine reports for its
@@ -56,9 +53,8 @@ function onlyEngines(array $engines, array $versions = []): void
 
         foreach (['mysql' => 'mysql', 'mariadb' => 'mariadb', 'mongodb' => 'mongosh', 'postgresql' => 'psql'] as $engine => $client) {
             if (str_contains($command, $client)) {
-                // A version query needs a version: answering `1` describes a
-                // server running PostgreSQL 1, which every type with a
-                // minimum reads as unusable.
+                // A version query needs a real version: `1` reads as PostgreSQL 1, which every type
+                // with a minimum treats as unusable.
                 $sql = (string) $process->input;
                 $versionQuery = str_contains($sql, 'server_version') || str_contains($sql, 'VERSION()');
 
@@ -83,9 +79,8 @@ function onlyEngines(array $engines, array $versions = []): void
 }
 
 /**
- * Prefixed because Pest helpers share one global namespace across the whole
- * suite: a bare catalog() collides with the permissions one and takes the
- * entire run down with a fatal, not a failed test.
+ * Prefixed because Pest helpers share one global namespace: a bare catalog() collides with the
+ * permissions one and fatals the whole run.
  *
  * @return array<string, array<string, mixed>> keyed by type name
  */
@@ -106,14 +101,12 @@ it('greys a SQL-backed type on a server with only MongoDB', function () {
 
     expect($types['wordpress']['available'])->toBeFalse()
         ->and($types['wordpress']['unavailable_code'])->toBe(SiteTypeManager::BLOCKED_DATABASE)
-        // Named so the sentence can say what to install, rather than "a
-        // database" — the whole point of the block is that it is actionable.
+        // Named so the sentence says what to install, not just "a database".
         ->and($types['wordpress']['unavailable_reason'])->toContain('MySQL');
 });
 
 it('offers a MongoDB type on that same server', function () {
-    // The other half of the same answer: greying everything would be as wrong
-    // as greying nothing, and this is the type the old check did handle.
+    // Greying everything would be as wrong as greying nothing; this is the type the old check handled.
     onlyEngines(['mongodb']);
 
     expect(siteTypeCatalog()['nodebb']['available'])->toBeTrue();
@@ -137,18 +130,15 @@ it('accepts either of the engines a type lists', function () {
 });
 
 it('leaves a type that needs no database alone when nothing is installed', function () {
-    // The check must not become "this server has a database engine". A static
-    // site does not care, and greying it would hide the catalog for the exact
-    // reason the old early return worried about.
+    // The check must not become "this server has a database engine": a static site does not care.
     onlyEngines([]);
 
     expect(siteTypeCatalog()['php']['available'])->toBeTrue();
 });
 
 it('probes each engine once however many types ask about it', function () {
-    // Not an optimisation. `available()` is a live query through sudo, and the
-    // check that used to run for one type now runs for eleven — unmemoized
-    // that is dozens of subprocesses to render a grid of cards.
+    // `available()` is a live query through sudo and now runs for eleven types: unmemoized, that is
+    // dozens of subprocesses to render the catalog.
     onlyEngines(['mysql']);
 
     siteTypeCatalog();
@@ -194,12 +184,9 @@ it('never advertises an engine the installer would refuse', function () {
 /**
  * Choosing the engine, where the server genuinely offers a choice.
  *
- * Until PostgreSQL existed there was never one to offer. Eight types list
- * `mysql, mariadb`, which reads like a choice and is not — the two cannot
- * coexist, they fight over 3306 and the installer refuses the second, so
- * exactly one is ever usable. NodeBB's `mongodb, postgresql` is the first
- * pairing a server can have both halves of, and the panel was picking for the
- * user silently on a decision nothing can undo afterwards.
+ * Eight types list `mysql, mariadb`, which looks like a choice but is not: the two fight over
+ * 3306, so exactly one is ever usable. NodeBB's `mongodb, postgresql` is the first pairing a
+ * server can have both halves of; the panel used to pick silently, and nothing can undo it.
  */
 describe('the database engine picker', function () {
     it('offers no choice when the server has only one of the engines', function () {
@@ -226,9 +213,8 @@ describe('the database engine picker', function () {
     });
 
     it('never offers it for a type whose two engines cannot coexist', function () {
-        // MySQL and MariaDB are one choice wearing two names. Even with both
-        // somehow answering, WordPress must not sprout a picker — and this is
-        // the case that would have made the field appear on eight types.
+        // MySQL and MariaDB are one choice with two names: even with both answering, WordPress
+        // must not get a picker (it would have appeared on eight types).
         onlyEngines(['mysql', 'mariadb']);
 
         $fields = collect(siteTypeCatalog()['wordpress']['fields'])->pluck('name');
@@ -250,11 +236,9 @@ describe('the database engine picker', function () {
     });
 
     it('skips an engine that is too old when it is the one picking', function () {
-        // The implicit half of the version gate. The explicit choice is
-        // refused by StoreApplicationRequest with a message; here nobody
-        // chose, so the fallback must walk past the PostgreSQL it cannot use
-        // and land on MySQL — exactly as it does for one that is not
-        // installed at all.
+        // The implicit half of the version gate. An explicit choice is refused by
+        // StoreApplicationRequest; here nobody chose, so the fallback must walk past the
+        // PostgreSQL it cannot use and land on MySQL, as for an engine that is not installed.
         onlyEngines(['mysql', 'postgresql'], ['postgresql' => '13.15']);
 
         $app = Application::factory()->create(['site_type' => 'moodle', 'settings' => []]);
@@ -288,13 +272,9 @@ describe('the database engine picker', function () {
 /**
  * The engine `provisionDatabase()` actually provisions.
  *
- * Goes through that method rather than calling the two decision helpers
- * directly, which is what the first version did — and reverting the line that
- * *uses* them left every test green, because nothing exercised the wiring. A
- * test of two methods the caller might not call is a test of nothing.
- *
- * It creates a real database row, which is the point: the answer is read back
- * from what was provisioned, not from what was returned.
+ * Goes through that method, not the two decision helpers directly: reverting the line that uses
+ * them would otherwise leave every test green. It creates a real database row, so the answer is
+ * read back from what was provisioned.
  *
  * @param  array<int, string>  $accepted
  */
@@ -317,9 +297,8 @@ describe('the create endpoint and the engine choice', function () {
     it('refuses an engine the application cannot use', function () {
         onlyEngines(['mysql', 'postgresql']);
 
-        // WordPress is MySQL/MariaDB only. Accepting this would create a
-        // PostgreSQL database and hand WordPress a config it cannot use —
-        // the site reported Active and broken at first load.
+        // WordPress is MySQL/MariaDB only: accepting this would give it a PostgreSQL config it
+        // cannot use (Active, then broken at first load).
         createWithEngine('wordpress', 'postgresql')
             ->assertStatus(422)
             ->assertJsonValidationErrors('database_engine');
@@ -403,10 +382,8 @@ it('lists PostgreSQL last for every type that now takes it', function () {
 
     $types = siteTypeCatalog();
 
-    // Order is behaviour, not presentation: provisioning takes the first
-    // accepted engine the server actually has, so PostgreSQL ahead of MySQL
-    // would silently move every new site on an existing server onto a
-    // different database. Last is what keeps them where they are.
+    // Order is behaviour: provisioning takes the first accepted engine the server has, so
+    // PostgreSQL ahead of MySQL would silently move every new site on an existing server.
     foreach (['craftcms', 'joomla', 'moodle', 'nextcloud'] as $type) {
         expect($types[$type]['accepted_engines'])->toBe(['mysql', 'mariadb', 'postgresql'], $type);
     }
@@ -417,9 +394,8 @@ it('keeps the four MySQL-only types MySQL-only', function () {
 
     $types = siteTypeCatalog();
 
-    // Upstream has no supported PostgreSQL path for any of these, so a card
-    // offering it would be an install that fails at the application's own
-    // setup — which is the failure acceptedEngines() exists to prevent.
+    // Upstream has no supported PostgreSQL path for these; offering it would fail at the app's
+    // own setup, which acceptedEngines() exists to prevent.
     foreach (['wordpress', 'prestashop', 'mautic', 'akaunting'] as $type) {
         expect($types[$type]['accepted_engines'])->toBe(['mysql', 'mariadb'], $type);
     }
@@ -450,9 +426,8 @@ describe('the minimum engine version', function () {
     });
 
     it('refuses a PostgreSQL older than the application will run on', function () {
-        // Moodle 5.0 raised its minimum to 14. On 13 the site would be created,
-        // provisioned, and die inside Moodle's own installer — the failure
-        // acceptedEngines() exists to prevent, one level down.
+        // Moodle 5.0 needs PostgreSQL 14. On 13 the site would be created, provisioned, then die
+        // inside Moodle's own installer.
         onlyEngines(['mysql', 'postgresql'], ['postgresql' => '13.15']);
 
         createWithEngine('moodle', 'postgresql')
@@ -469,10 +444,8 @@ describe('the minimum engine version', function () {
     });
 
     it('holds each application to its own minimum, not a shared one', function () {
-        // 🔴 The reason the number lives on the installer. Joomla's own
-        // requirements table enforces 12, so refusing it on 13 would be the panel
-        // inventing a requirement — the failure a version gate is likeliest to
-        // cause, and the one a single shared floor of 14 would have caused here.
+        // The floor lives on the installer: Joomla's own requirements enforce 12, so a single
+        // shared floor of 14 would refuse a server the app accepts.
         onlyEngines(['mysql', 'postgresql'], ['postgresql' => '13.15']);
 
         createWithEngine('joomla', 'postgresql')->assertSuccessful();
@@ -487,9 +460,8 @@ describe('the minimum engine version', function () {
     });
 
     it('does not refuse an engine whose version cannot be read', function () {
-        // 🔴 An engine that will not answer is a question we could not ask, not
-        // an answer of "too old". Refusing on it would turn an unreadable
-        // database into a server that cannot host a site.
+        // An engine that will not answer is a question we could not ask, not "too old": refusing
+        // would turn an unreadable database into a server that cannot host a site.
         onlyEngines(['postgresql'], ['postgresql' => '']);
 
         createWithEngine('moodle', 'postgresql')->assertSuccessful();
@@ -501,9 +473,8 @@ describe('Moodle and Mautic on Ubuntu 24.04\'s MySQL 8.0 (S-09)', function () {
         $this->su = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
     });
 
-    // What a stock 24.04 box answered in the CF-06 create matrix. Moodle 5.0
-    // and Mautic both need 8.4, and both were offered there and then failed
-    // inside their own installers.
+    // What a stock 24.04 box reports. Moodle 5.0 and Mautic need 8.4 and used to be offered
+    // anyway, then failed inside their own installers.
     $ubuntu2404 = '8.0.46-0ubuntu0.24.04.4';
 
     it('greys both on MySQL 8.0 with a reason that names the versions', function () use ($ubuntu2404) {

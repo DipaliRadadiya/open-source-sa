@@ -15,10 +15,8 @@ use Illuminate\Support\Facades\Process;
 /**
  * An application with a start command runs a real process.
  *
- * Until now `app_port` and `start_command` were stored, echoed back, and read
- * by nothing — a user could configure a Node app, see the values persist, and
- * find that nothing was ever listening. These cover the machinery that makes
- * them true, and the guards that stop it doing damage.
+ * These cover the machinery that makes `app_port` and `start_command` take effect, and the
+ * guards that stop it doing damage.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -99,10 +97,8 @@ describe('the unit', function () {
 
         app(ProcessSupervisor::class)->apply(nodeApp(), '/home/appuser/api.test');
 
-        // Picked by content, not position: applying a unit also writes a
-        // logrotate policy for the log files it now appends to, and indexing
-        // into the list made this assert against whichever happened to be
-        // written first.
+        // Picked by content, not position: applying a unit also writes a logrotate policy, so
+        // indexing into the list asserted against whichever was written first.
         $unit = collect($written)->first(fn (string $body): bool => str_contains($body, '[Unit]')) ?? '';
 
         expect($unit)
@@ -116,8 +112,8 @@ describe('the unit', function () {
             ->toContain('StartLimitBurst=5')
             ->toContain('MemoryMax=512M');
 
-        // In [Unit]: under [Service] systemd ignores StartLimitIntervalSec
-        // ("Unknown key", seen on a real server) and the limit never trips.
+        // In [Unit]: under [Service] systemd ignores StartLimitIntervalSec ("Unknown key") and
+        // the limit never trips.
         $unitSection = substr($unit, 0, strpos($unit, '[Service]'));
 
         expect($unitSection)->toContain('StartLimitBurst=5')
@@ -126,11 +122,9 @@ describe('the unit', function () {
     });
 
     it('loads the same .env the Environment screen edits', function () {
-        // These were two independent path calculations, and they disagreed for
-        // every Node application: the unit read `{documentRoot}/.env` while the
-        // screen edited one a directory above it. The user saw their file in
-        // the file manager, an empty editor in the panel, and a service that
-        // read neither of the two the panel could name.
+        // These were two independent path calculations that disagreed for every Node application:
+        // the unit read `{documentRoot}/.env` while the screen edited one a directory above it, so
+        // the service read neither of the two files the panel could name.
         $written = new ArrayObject;
         Process::fake(function ($p) use ($written) {
             if (($p->command[0] ?? '') === 'tee') {
@@ -150,11 +144,9 @@ describe('the unit', function () {
     });
 
     it('keeps a proxied app\'s .env at its code root', function () {
-        // Nothing under a Node app's document root is fetchable by path — the
-        // vhost proxies, and denies dotfiles ahead of the proxy besides. The
-        // "never inside the served directory" rule was written for a directory
-        // the web server hands out, and moving the file for a proxied app only
-        // put it where the application does not look.
+        // Nothing under a Node app's document root is fetchable by path: the vhost proxies and
+        // denies dotfiles. The "never inside the served directory" rule is for directories the web
+        // server hands out; moving the file would only put it where the application does not look.
         $application = nodeApp(['serving_profile' => 'node']);
 
         expect($application->envPath())->toBe($application->codePath().'/.env');
@@ -206,10 +198,9 @@ describe('the unit', function () {
 
         app(ProcessSupervisor::class)->remove(nodeApp());
 
-        // The application's unit and every one of its worker units share
-        // `sv-app-<id>.slice`. Stopping a slice kills what is still inside it,
-        // and the workers are removed after this — by the code that knows how
-        // to disable them first.
+        // The application's unit and its worker units share `sv-app-<id>.slice`. Stopping a slice
+        // kills what is still inside it; the workers are removed after this, by the code that
+        // knows to disable them first.
         Process::assertNotRan(fn ($p) => in_array('stop', (array) $p->command, true)
             && str_contains(implode(' ', (array) $p->command), '.slice'));
     });
@@ -277,10 +268,8 @@ describe('the unit', function () {
     });
 
     it('will not cluster a command with no script for PM2 to fork', function (string $command) {
-        // Cluster mode is not a flag that applies to any command. Pointed at
-        // something it cannot fork, PM2 silently runs one fork-mode process —
-        // the old panel's users chose four instances and got one, with no
-        // error anywhere. Better to run the command we were given.
+        // Cluster mode is not a flag that applies to any command: pointed at something it cannot
+        // fork, PM2 silently runs one fork-mode process. Better to run the command we were given.
         $unit = renderedUnit(nodeApp(['process_instances' => 4, 'start_command' => $command]));
 
         expect($unit)->not->toContain('pm2-runtime')
@@ -379,9 +368,8 @@ describe('the unit', function () {
 
         $supervisor->apply($application, '/home/appuser/api.test');
 
-        // The template renders whatever `slice()` returns. When each built the
-        // name itself they were free to stop agreeing, and the cleanup would
-        // then stop a slice nothing was ever in.
+        // The template renders whatever `slice()` returns; when each built the name itself they
+        // could stop agreeing, and the cleanup would stop a slice nothing was ever in.
         // Not the first write — the logrotate policy is written before the
         // unit, because systemd creates the log files but not their directory.
         $unit = collect($written)->first(fn (string $c) => str_contains($c, '[Unit]'));
@@ -405,10 +393,9 @@ it('logs a missing unit as an expected probe, not an error', function () {
         return Process::result(output: '');
     });
 
-    // Through `remove()`, which is what actually asks the question — the probe
-    // itself is private, and reaching past that to call it was the only reason
-    // this test failed. A site with no unit (WordPress, static) is the common
-    // case, so removal has to be a no-op rather than an error.
+    // Through `remove()`, which is what actually asks the question; the probe itself is private.
+    // A site with no unit (WordPress, static) is the common case, so removal has to be a no-op
+    // rather than an error.
     app(ProcessSupervisor::class)->remove(nodeApp());
 
     // The exit-1 probe call was made, and logged at info level rather than
@@ -495,10 +482,9 @@ describe('ports', function () {
     });
 
     it('keeps its own port while it is running and listening on it', function () {
-        // The case above with nothing listening never happens for a live
-        // site: the app itself is on its port, and `ss` cannot say whose
-        // socket it is. Every save of a running Node site's runtime was
-        // refused (found live on nodebb, 2026-09-29).
+        // The case above with nothing listening never happens for a live site: the app itself is
+        // on its port, and `ss` cannot say whose socket it is. Every save of a running Node
+        // site's runtime was refused.
         Process::fake(fn () => Process::result(output: "LISTEN 0 511 127.0.0.1:3500 0.0.0.0:*\n"));
         $app = nodeApp(['app_port' => 3500, 'domain' => 'running.test']);
 

@@ -19,14 +19,11 @@ use Illuminate\Support\Facades\Process;
 uses(RefreshDatabase::class);
 
 /*
- * The five lists that grew a search box on the screen before they had one on
- * the server. Each was returning every row, so the screen filtered and sorted
- * a JavaScript array — correct only for as long as the array was the whole
- * table. These tests pin the contract that replaces it.
+ * Server-side search, filter, sort and paging for the five lists the screen used to filter
+ * client-side (correct only while the array was the whole table).
  *
- * One file rather than five, because the interesting properties are the ones
- * all five share: a page has a bound, an unknown filter is refused rather than
- * answered with nothing, and an ordering is stable enough to page through.
+ * One file because the properties are shared: a page has a bound, an unknown filter is refused
+ * rather than answered with nothing, and an ordering is stable enough to page through.
  */
 
 beforeEach(function () {
@@ -38,11 +35,7 @@ beforeEach(function () {
 
 describe('every paged list', function () {
 
-    /*
-     * Ten, and the client asks for more. Named per endpoint rather than
-     * inherited from a base class, but they had better agree — a page size that
-     * differs per screen is a thing users notice and nobody decided.
-     */
+    /* Ten per page on every endpoint, even when the client asks for more; the defaults must agree. */
     it('returns ten rows by default and honours the sizes the page-size control offers', function () {
         Database::factory()->count(12)->create(['engine' => 'mariadb']);
         grantPermission($this->user, 'database');
@@ -60,21 +53,14 @@ describe('every paged list', function () {
             ->assertJsonPath('meta.last_page', 1);
     });
 
-    /*
-     * A size the control does not offer is a client bug. Honouring it quietly
-     * would mean the API has a second, undocumented set of page sizes that
-     * nobody chose and no test covers.
-     */
+    /* A size the control does not offer is a client bug; honouring it would add an undocumented page size. */
     it('refuses a page size that is not one of the offered ones', function () {
         grantPermission($this->user, 'database');
 
         $this->getJson('/api/databases?per_page=7')->assertStatus(422);
     });
 
-    /*
-     * The whole point of the exercise: the row must be found by a query, not by
-     * the browser having been handed every row.
-     */
+    /* The row must be found by a query, not by the browser having been handed every row. */
     it('searches on the server and says so honestly when there is no match', function () {
         Database::factory()->create(['name' => 'shop_production', 'engine' => 'mariadb']);
         Database::factory()->count(15)->create(['engine' => 'mariadb']);
@@ -84,8 +70,7 @@ describe('every paged list', function () {
 
         expect($found->json('databases'))->toHaveCount(1)
             ->and($found->json('databases.0.name'))->toBe('shop_production')
-            // Not `total: 16`. A search that reports the unfiltered count makes
-            // the pager offer pages that do not exist.
+            // Not `total: 16`: an unfiltered count makes the pager offer pages that do not exist.
             ->and($found->json('meta.total'))->toBe(1);
 
         $this->getJson('/api/databases?search=nothing-by-this-name')
@@ -95,10 +80,8 @@ describe('every paged list', function () {
     });
 
     /*
-     * §7.2 of the API standard: reject unknown filter and sort keys with a 422.
-     * The alternative — an empty list — is indistinguishable from "you have no
-     * databases", which is the failure the backup list shipped with once
-     * already.
+     * API standard §7.2: reject unknown filter and sort keys with a 422. An empty list would be
+     * indistinguishable from "you have no databases".
      */
     it('refuses a filter value that is not real rather than answering with nothing', function () {
         Database::factory()->count(3)->create(['engine' => 'mariadb']);
@@ -112,9 +95,8 @@ describe('every paged list', function () {
     });
 
     /*
-     * The column reaching ORDER BY comes from the endpoint's whitelist, never
-     * from the request. A 422 here is also what stops `sort=password` being a
-     * way to ask the database about a column the API does not expose.
+     * The column reaching ORDER BY comes from the endpoint's whitelist, never from the request;
+     * the 422 stops `sort=password` probing columns the API does not expose.
      */
     it('refuses a sort column the endpoint does not offer', function () {
         grantPermission($this->user, 'database');
@@ -151,34 +133,26 @@ describe('every paged list', function () {
     });
 
     /*
-     * Rows that tie on the sorted column leave the database free to return them
-     * in any order, and free to pick a different one next time. Paged, that
-     * shows a row on two pages and hides another entirely — which reads as data
-     * loss and cannot be reproduced on demand.
+     * Rows that tie on the sorted column may come back in any order, so paging could show a row
+     * on two pages and hide another.
      *
-     * Asserted against the generated SQL rather than by paging real rows. The
-     * paging version was written first and **passed with the tiebreak removed**:
-     * SQLite happens to scan in rowid order, so the hazard this guards against
-     * cannot be provoked on the database the suite runs on. A test that cannot
-     * fail is not evidence, whatever colour it prints. The structural claim —
-     * "every sorted query ends with a unique column" — is the part that is
-     * actually true here, so that is what gets checked.
+     * Asserted against the generated SQL, not by paging real rows: SQLite scans in rowid order,
+     * so a paging test passes even with the tiebreak removed. The claim checked is "every sorted
+     * query ends with a unique column".
      */
     it('always ends a sorted query with a unique column', function () {
         $sql = ListSort::apply(Database::query(), 'name', ['name', 'created_at'])->toSql();
 
         expect($sql)->toContain('order by "name" asc, "databases"."id" desc');
 
-        // And on the default, where nothing was asked for.
+        // The default sort, when nothing was asked for.
         expect(ListSort::apply(Database::query(), null, ['created_at'])->toSql())
             ->toContain('order by "created_at" desc, "databases"."id" desc');
     });
 
     /*
-     * The whitelist is the only thing that ever reaches ORDER BY. The
-     * FormRequest refuses an unknown column first, but this class is what puts
-     * a string into SQL, so it checks its own precondition rather than trusting
-     * every future caller to have validated.
+     * Only the whitelist reaches ORDER BY. The FormRequest refuses unknown columns first, but this
+     * class is what puts a string into SQL, so it re-checks rather than trusting its callers.
      */
     it('falls back to the whitelist when handed a column that is not on it', function () {
         $sql = ListSort::apply(Database::query(), 'password', ['created_at', 'name'])->toSql();
@@ -187,10 +161,7 @@ describe('every paged list', function () {
             ->and($sql)->not->toContain('password');
     });
 
-    /*
-     * QA 2026-11-19: `%` and `_` are LIKE wildcards, so `shop_db` also found
-     * `shopxdb`, `%` found every row and `50%` found `sale50off`.
-     */
+    /* `%` and `_` are LIKE wildcards: unescaped, `shop_db` would match `shopxdb` and `50%` would match `sale50off`. */
     it('matches what was typed, wildcard characters included', function () {
         foreach (['shopxdb', 'shop_db', 'sale50off', 'sale50%off', 'bang!db', 'bangxdb'] as $name) {
             Database::factory()->create(['name' => $name, 'engine' => 'mariadb']);
@@ -225,12 +196,8 @@ describe('every paged list', function () {
 });
 
 /*
- * The applications table moved search, filters and paging into the URL when the
- * endpoint began paging at ten — its own comment explains that client-side
- * versions "silently operated on the first page alone". Sort was named in that
- * migration and never built on either side: the API had no `sort`, the table
- * stopped passing `sortable`, and the columns kept `sortingFn` entries nothing
- * invoked. The list could not be ordered at all.
+ * The applications list: search, filters, paging and sort all live in the URL. Client-side
+ * versions would silently operate on the first page alone.
  */
 describe('GET /applications', function () {
 
@@ -272,18 +239,15 @@ describe('GET /applications', function () {
     });
 
     it('refuses a sort column the table does not show', function () {
-        // `owner` is a column on screen but lives on a relation, so it is
-        // deliberately not sortable — a 422 says so rather than silently
-        // ordering by something else.
+        // `owner` lives on a relation, so it is deliberately not sortable; a 422, not a silent
+        // fallback to another order.
         $this->getJson('/api/applications?sort=owner')->assertStatus(422);
         $this->getJson('/api/applications?sort=php_version')->assertStatus(422);
     });
 
     /*
-     * A site nothing has measured yet is not a site of zero bytes, and the two
-     * must not mix. The table decided this before the server did — it mapped
-     * null to -1 so the unmeasured group at one end — and the server has to
-     * reproduce it or the same click gives a different answer.
+     * A site nothing has measured yet is not a site of zero bytes, and the two must not mix.
+     * The table put unmeasured sites at one end (null as -1); the server must match it.
      */
     it('treats a never-measured site as smaller than an empty one', function () {
         $unmeasured = Application::factory()->create(['name' => 'unmeasured', 'directory_size_bytes' => null]);
@@ -297,14 +261,9 @@ describe('GET /applications', function () {
     });
 
     /*
-     * ⚠️ The two behavioural tests either side of this one pass with the null
-     * handling removed: SQLite already puts NULL first ascending, so the
-     * hazard cannot be provoked on the database the suite runs on. PostgreSQL
-     * puts it last, and this panel supports PostgreSQL — so the ordering would
-     * differ between two installs of the same panel and no test would notice.
-     *
-     * This asserts the generated SQL instead, which is the part that is
-     * actually true here. A test that cannot fail is not evidence.
+     * The behavioural tests around this one pass even without the null handling: SQLite sorts
+     * NULL first ascending, PostgreSQL last, so installs on different databases would order
+     * differently. This asserts the generated SQL instead.
      */
     it('orders nulls explicitly rather than inheriting the database default', function () {
         $sql = ListSort::apply(
@@ -326,15 +285,12 @@ describe('GET /applications', function () {
 
         expect($ascending)->toContain('"directory_size_bytes" is null desc');
 
-        // A column not on the list is untouched — the clause is opt-in per
-        // column, not applied to everything that might be nullable.
+        // A column not on the list is untouched: the clause is opt-in per column.
         expect(ListSort::apply(Application::query(), 'name', IndexApplicationsRequest::SORTS)->toSql())
             ->not->toContain('is null');
     });
 
-    /*
-     * Descending is "biggest first", and an unknown size is not big.
-     */
+    /* Descending is "biggest first", and an unknown size is not big. */
     it('puts never-measured last when sorting biggest first', function () {
         Application::factory()->create(['name' => 'unmeasured', 'directory_size_bytes' => null]);
         Application::factory()->create(['name' => 'empty', 'directory_size_bytes' => 0]);
@@ -397,8 +353,7 @@ describe('GET /admin/roles', function () {
             ->assertJsonPath('meta.per_page', 10)
             ->assertJsonPath('roles.0.name', 'Administrator');
 
-        // The description is searchable because the screen searched it: a role
-        // is often remembered by what it is for rather than what it is called.
+        // The description is searchable: a role is often remembered by what it is for.
         $this->getJson('/api/admin/roles?search=billing')
             ->assertOk()
             ->assertJsonCount(1, 'roles')
@@ -439,9 +394,8 @@ describe('GET /firewall/rules', function () {
             ->assertOk()
             ->assertJsonCount(10, 'rules')
             ->assertJsonPath('meta.total', 12)
-            // Deliberately absent. This endpoint answers "which rules are
-            // there"; `GET /firewall` answers "what is the state of the
-            // firewall", and that one shells out to `ss` to do it.
+            // Deliberately absent: this endpoint lists rules; `GET /firewall` reports the firewall
+            // state and shells out to `ss` to do it.
             ->assertJsonMissingPath('listening')
             ->assertJsonMissingPath('your_ip');
     });
@@ -460,10 +414,8 @@ describe('GET /firewall/rules', function () {
     });
 
     /*
-     * `filter[enabled]=0` is a request for the disabled rules, not an absent
-     * filter. Read with `??` it is falsy and gets dropped, and the endpoint
-     * answers with everything — which looks like a filter that found nothing
-     * wrong rather than one that never ran.
+     * `filter[enabled]=0` asks for the disabled rules, not an absent filter. Read with `??` it is
+     * falsy and dropped, and the endpoint answers with everything.
      */
     it('treats filter[enabled]=0 as a request for the disabled rules', function () {
         FirewallRule::create(['port_from' => 80, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user', 'enabled' => true]);
@@ -476,23 +428,16 @@ describe('GET /firewall/rules', function () {
     });
 
     it('leaves the composite firewall endpoint returning its rules unchanged', function () {
-        // Faked locally rather than borrowing FirewallTest's `fakeUfw`. Pest
-        // helpers are global once their file is loaded, and "once their file is
-        // loaded" makes the dependency depend on which files this run happens
-        // to include — an order-dependent pass, which is worse than a duplicate
-        // four-line closure.
-        //
-        // Needed at all because `GET /firewall` asks ufw for its live status.
-        // That is precisely the cost this new endpoint exists to keep out of a
-        // page turn.
+        // Faked locally, not via FirewallTest's `fakeUfw`: Pest helpers are global only once their
+        // file is loaded, so borrowing one makes the pass depend on which files run.
+        // `GET /firewall` asks ufw for its live status; the paged endpoint exists to avoid that.
         Process::fake(fn ($process) => in_array('status', $process->command, true)
             ? Process::result(output: "Status: active\nDefault: deny (incoming), allow (outgoing), disabled (routed)\n")
             : Process::result(exitCode: 0));
 
         FirewallRule::create(['port_from' => 80, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
 
-        // Nothing on the screen breaks the moment this ships; the frontend
-        // moves over when it is ready to.
+        // The existing endpoint keeps working, so the frontend can move over when ready.
         $this->getJson('/api/firewall')->assertOk()->assertJsonCount(1, 'rules');
     });
 });
@@ -510,9 +455,8 @@ describe('GET /backup-targets', function () {
     });
 
     /*
-     * The header says "N of M sites protected". Recomputed per page it would
-     * say "2 of 10" on a server with forty sites — a different sentence, and a
-     * false one. The counts get their own aggregate queries for this reason.
+     * The header says "N of M sites protected". Recomputed per page it would say "2 of 10" on a
+     * server with forty sites, so the counts use their own aggregate queries.
      */
     it('keeps the coverage counts describing the server, not the page', function () {
         $applications = Application::factory()->count(12)->create();

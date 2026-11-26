@@ -23,15 +23,12 @@ beforeEach(function () {
     // authorisation check below would be testing an empty set.
     $this->seed(PermissionSeeder::class);
 
-    // Issuing a link writes the sign-in script and the token file to the
-    // phpMyAdmin site, so every path through this endpoint now runs commands.
-    // Recorded through the closure form rather than Process::recorded(), which
-    // does not exist on this version's fake.
+    // Issuing a link writes the sign-in script and the token file to the phpMyAdmin site, so every
+    // path runs commands. Recorded via the closure form: this fake has no Process::recorded().
     $this->ranCommands = [];
     $this->ranInput = [];
 
-    // What `cat config.inc.php` finds on the site. Empty by default, which is
-    // the case that matters least; the interesting states are set per test.
+    // What `cat config.inc.php` finds on the site: empty by default, other states set per test.
     $this->configContents = '';
 
     Process::fake(function ($process) {
@@ -44,10 +41,9 @@ beforeEach(function () {
         // particular `tee` — the file contents never appear in argv.
         $this->ranInput[$command] = (string) $process->input;
 
-        // Every step now runs as the phpMyAdmin site's user, so the read
-        // arrives as `runuser -u <user> -- cat …`. Matched after that prefix:
-        // a fake that only knew the bare `cat` would return an empty config
-        // and let the "already configured" test pass without looking.
+        // Every step runs as the phpMyAdmin site's user, so the read arrives as
+        // `runuser -u <user> -- cat …`. Matched after that prefix: a fake that only knew bare `cat`
+        // would return an empty config and let the "already configured" test pass unchecked.
         $bare = preg_replace('/^runuser -u \S+ -- /', '', $command);
 
         return str_starts_with($bare, 'cat ') && str_contains($bare, 'config.inc.php')
@@ -75,7 +71,7 @@ beforeEach(function () {
 
 /**
  * A certificate the site can serve, for its own name. Sign-in links are
- * refused over plain HTTP (bug #98), so every happy path needs one.
+ * refused over plain HTTP, so every happy path needs one.
  */
 function securePma(Application $application): Application
 {
@@ -93,9 +89,8 @@ function securePma(Application $application): Application
 /**
  * Every command the endpoint ran, as a flat string.
  *
- * A free function rather than a closure property because Pest shares helper
- * names across the whole suite and `ssoCommands` is specific enough not to
- * collide with one.
+ * A free function, not a closure property: Pest shares helper names across the suite, and
+ * `ssoCommands` is specific enough not to collide.
  *
  * @return array<int, string>
  */
@@ -106,8 +101,7 @@ function ssoCommands(): array
 
 /**
  * The prefix every SSO file operation must carry: the phpMyAdmin site's own
- * user. As root, `tee` and `chown` followed a link planted at `sso.php` or
- * `config.inc.php` (the `.panel` class of bug, 2026-09-29).
+ * user. As root, `tee` and `chown` followed a link planted at `sso.php` or `config.inc.php`.
  */
 function asPma(string $command): string
 {
@@ -115,15 +109,8 @@ function asPma(string $command): string
 }
 
 /**
- * Uses the suite's shared helper rather than a local one: permissions are
- * granted through a role, and the pivot carries `view`/`manage`. Syncing a
- * permission *name* as if it were an id silently attaches nothing (or, on
- * SQLite, trips the foreign key).
- */
-/**
- * Permissions are role-based, and the pivot carries `view`/`manage` — a bare
- * `sync(['database'])` passes a permission *name* where an id belongs, so it
- * attaches nothing and trips the foreign key on the way past.
+ * Permissions are role-based and the pivot carries `view`/`manage`: syncing a permission *name*
+ * where an id belongs attaches nothing (or trips the foreign key on SQLite).
  */
 function grantDatabasePermission(User $user): void
 {
@@ -137,18 +124,15 @@ function grantDatabasePermission(User $user): void
 describe('POST /databases/{database}/phpmyadmin-sso', function () {
 
     /*
-     * The scheme is the bug this endpoint shipped with: it said `https://`
-     * whatever the site could answer on, and a site with no certificate has no
-     * TLS listener at all — so the button led to a connection refused, which
-     * reads as a broken panel rather than a missing certificate.
+     * The link scheme must follow the site: with no certificate there is no TLS listener, so an
+     * `https://` link is a connection refused that reads as a broken panel.
      */
     it('refuses a phpMyAdmin site without HTTPS (bug #98)', function () {
         grantDatabasePermission($this->user);
         DatabaseUser::factory()->create(['database_id' => $this->database->id]);
 
-        // The link carries a live database session, and the cookie it buys
-        // then rides along with every request. Over plain HTTP both cross the
-        // network in clear text. Magic Login already refused this.
+        // The link carries a live database session, and the cookie it buys rides along with every
+        // request. Over plain HTTP both cross the network in clear text.
         $this->pmaApp->certificate()->delete();
 
         $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso")
@@ -182,10 +166,8 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
     });
 
     /*
-     * The other half of why this never worked: the token went into the panel's
-     * cache and the URL pointed at a `sso.php` that no installer had ever
-     * written. Nothing on the phpMyAdmin site could read the one or serve the
-     * other.
+     * The token must be written on the phpMyAdmin site itself, next to an `sso.php` that serves
+     * it: the panel's cache is not readable from there.
      */
     it('writes the sign-in script onto the phpMyAdmin site', function () {
         grantDatabasePermission($this->user);
@@ -258,11 +240,8 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
     /*
      * The same site, on the stack where `isolated_at` is null for everything.
      *
-     * phpMyAdmin could not be opened at all on an OpenLiteSpeed server: the
-     * guard read `isolated_at`, which records an FPM *pool*, and LSPHP has
-     * none — each vhost carries its own `extUser` instead. So every database
-     * on the box was refused with `phpmyadmin_not_isolated`, and it was
-     * reported as one disabled button rather than a dead feature.
+     * `isolated_at` records an FPM *pool*, which LSPHP has none of (each vhost carries its own
+     * `extUser`), so the guard must not refuse with `phpmyadmin_not_isolated` on OpenLiteSpeed.
      */
     it('mints a link on OpenLiteSpeed, where no site ever has a pool', function () {
         grantDatabasePermission($this->user);
@@ -293,8 +272,7 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
     /*
      * A site created before this feature has one server entry, on cookie auth.
      * Dropping sso.php next to it would hand a session to a server that does
-     * not exist, so the config has to come forward with it — otherwise the only
-     * repair is deleting the site and making it again.
+     * not exist, so the config has to come forward with it.
      */
     it('adds the signon server to a configuration written before this feature', function () {
         grantDatabasePermission($this->user);
@@ -332,9 +310,8 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
 
         $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso")->assertOk();
 
-        // Rewriting would regenerate blowfish_secret, and a new secret cannot
-        // decrypt the cookies the old one issued — every signed-in user would
-        // be thrown out each time somebody else clicked the button.
+        // Rewriting would regenerate blowfish_secret, and a new secret cannot decrypt the old
+        // cookies: every signed-in user would be thrown out on each click.
         expect(collect(ssoCommands())->contains(fn (string $c) => str_contains($c, 'tee '.$this->pmaApp->rootPath().'/public_html/config.inc.php')))->toBeFalse();
     });
 
@@ -368,10 +345,8 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
     it('names the engine it is refusing, not whichever was the only one at the time', function () {
         grantDatabasePermission($this->user);
 
-        // The message was hardcoded to MongoDB, the only non-SQL engine when it
-        // was written. A PostgreSQL database was then refused with a sentence
-        // about a database it has nothing to do with — which reads as a panel
-        // bug rather than as an answer. Reported by the frontend, 2026-09-10.
+        // The message must name the actual engine: a hardcoded "MongoDB" text on a PostgreSQL
+        // database reads as a panel bug rather than an answer.
         $postgres = Database::factory()->create(['engine' => 'postgresql']);
 
         $this->postJson("/api/databases/{$postgres->id}/phpmyadmin-sso")
@@ -382,10 +357,9 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
     it('returns 422 when no phpMyAdmin site is deployed', function () {
         grantDatabasePermission($this->user);
 
-        // The only phpMyAdmin site is one that never finished provisioning:
-        // the record exists but nothing is being served, so SSO has nowhere
-        // to send the user. There is no "stopped" status — a site is Pending,
-        // Provisioning, Active or Failed.
+        // The only phpMyAdmin site never finished provisioning: the record exists but nothing is
+        // served, so SSO has nowhere to send the user. (A site is Pending, Provisioning, Active
+        // or Failed; there is no "stopped".)
         $this->pmaApp->update(['status' => ApplicationStatus::Failed]);
 
         DatabaseUser::factory()->create(['database_id' => $this->database->id]);
@@ -427,8 +401,7 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
     });
 
     it('refuses a view-only role, because the session it opens can write', function () {
-        // DB-02: the sign-in lands as the database's own user, and a
-        // read-only role used it to run an INSERT.
+        // The sign-in lands as the database's own user, so a read-only role could run an INSERT.
         grantPermission($this->user, 'database');
         DatabaseUser::factory()->create(['database_id' => $this->database->id]);
 
@@ -448,11 +421,9 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
 });
 
 /*
- * Both of these files are PHP the panel generates and never executes itself,
- * so a syntax error in either would only ever surface on a customer's server —
- * as a blank page from phpMyAdmin, with the cause in a log the panel does not
- * read. TOKEN_PARSE makes the tokeniser reject what it would otherwise skip
- * past, which is as close to `php -l` as this can get in-process.
+ * Both files are PHP the panel generates and never executes, so a syntax error would only show
+ * as a blank phpMyAdmin page on a customer's server. TOKEN_PARSE makes the tokeniser reject
+ * what it would otherwise skip past: as close to `php -l` as this gets in-process.
  */
 describe('the generated files', function () {
 
@@ -493,10 +464,8 @@ describe('the generated files', function () {
 it('opens the phpMyAdmin the caller asked for, not whichever came first', function () {
     grantDatabasePermission($this->user);
     DatabaseUser::factory()->create(['database_id' => $this->database->id]);
-    // A second installation, created after the first. Before `application_id`
-    // existed the endpoint took `->first()` on an unordered query, so this one
-    // was unreachable — and a client could not correct it afterwards, because
-    // the token is written into the chosen site's own directory.
+    // A second installation, created after the first. Without `application_id` the endpoint took
+    // an unordered `->first()`, so this one was unreachable.
     $second = securePma(Application::factory()->create([
         'site_type' => 'phpmyadmin',
         'domain' => 'pma-two.example.com',

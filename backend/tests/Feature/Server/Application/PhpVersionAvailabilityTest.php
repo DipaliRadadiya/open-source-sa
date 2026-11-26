@@ -14,21 +14,17 @@ use Illuminate\Testing\TestResponse;
 /**
  * A site may only be created on a PHP version this server actually has.
  *
- * The two web-server families fail differently, which is why this went unseen.
- * On nginx and Apache a missing version is caught by the pool step: the pool
- * file is written into an `/etc/php/<version>` that does not exist and
- * provisioning stops with something to read. **OpenLiteSpeed has no pool step**
- * — `PoolManager::supported()` is true only for the FPM stack — so nothing
- * checked at all. The vhost was written naming an `lsphp` binary that is not on
- * the box, `openlitespeed -t` passed (it does not stat the interpreter), and the
- * site went Active and answered 503 on every request.
+ * nginx and Apache catch a missing version in the pool step (the pool file goes into a
+ * non-existent `/etc/php/<version>`). **OpenLiteSpeed has no pool step**
+ * (`PoolManager::supported()` is true only for the FPM stack), so nothing checked: the vhost
+ * named an absent `lsphp` binary, `openlitespeed -t` passed, and the site went Active and
+ * answered 503.
  *
- * Written against the LSPHP stack because that is where the hole was, and
- * because its "installed versions" come from a directory this test can build.
+ * Written against the LSPHP stack because that is where the hole was, and because its
+ * "installed versions" come from a directory this test can build.
  */
 beforeEach(function () {
-    // An ordinary server: the catalog now refuses a database-backed type
-    // when no engine answers, and these fixtures faked nothing at all.
+    // An ordinary server: the catalog refuses a database-backed type when no engine answers.
     fakeUsableSqlEngine();
 
     $this->seed(PermissionSeeder::class);
@@ -85,9 +81,8 @@ function createPhpVersionSite(array $overrides = []): TestResponse
 /**
  * Craft's required fields, so a range test fails on the range and nothing else.
  *
- * Named for this file rather than `craft()`: Pest helpers share one global
- * namespace across the whole suite, and a collision is a fatal that takes every
- * later test down with it rather than failing one.
+ * Named for this file rather than `craft()`: Pest helpers share one global namespace, and a
+ * collision is a fatal error that takes the whole run down.
  */
 function craftPayload(array $overrides = []): array
 {
@@ -144,10 +139,9 @@ it('stores no PHP version for a site that does not run PHP', function () {
 });
 
 it('does not refuse anything when no versions could be detected', function () {
-    // An empty list is also what an unreadable stack directory looks like.
-    // Turning that into "no site may be created" would make a directory the
-    // panel cannot read into a server that cannot host anything — and a box
-    // with genuinely no PHP is already refused by the runtime capability check.
+    // An empty list is also what an unreadable stack directory looks like. Refusing every site then
+    // would turn an unreadable directory into a server that cannot host anything; a box with
+    // genuinely no PHP is already refused by the runtime capability check.
     File::deleteDirectory($this->lsws);
 
     createPhpVersionSite(['php_version' => '8.4', 'domain' => 'blind.example.com'])->assertSuccessful();
@@ -165,11 +159,10 @@ it('opens the create form on an installed version rather than a hardcoded one', 
 });
 
 it('has the installer write the version it installed as the default for sites', function () {
-    // `PHP_VERSION=8.3 ./install.sh` installed exactly one PHP — 8.3 — and left
-    // `server.default_php_version` on its config default of 8.4, so every site
-    // created without an explicit version pointed at a PHP that was never on
-    // the box. `PANEL_PHP_VERSION` was written and is a different decision: it
-    // is the panel's own interpreter, read by the self-updater alone.
+    // `PHP_VERSION=8.3 ./install.sh` installs exactly one PHP (8.3) but left
+    // `server.default_php_version` on its config default of 8.4, so sites created without an
+    // explicit version pointed at a PHP that was never installed. `PANEL_PHP_VERSION` is a different
+    // decision: the panel's own interpreter, read by the self-updater alone.
     $installer = file_get_contents(base_path('../install.sh'));
 
     expect($installer)->toContain('set_env "${dir}/.env" SERVER_DEFAULT_PHP_VERSION "$PHP_VERSION"');
@@ -219,20 +212,16 @@ it('checks the sites that name no version against the server default', function 
 
 describe('the version the application itself can run on', function () {
     /*
-     * Installed is not the same question as supported, and until 2026-09-08
-     * only the first was asked. The PHP field is one shared `phpFields()`
-     * select offering every version on the box, and `defaultPhpVersion()`
-     * opened on the newest — `FpmPhpStack::versions()` sorts descending.
+     * Installed is not the same question as supported. The PHP field is one shared `phpFields()`
+     * select offering every version on the box, and `defaultPhpVersion()` opens on the newest
+     * (`FpmPhpStack::versions()` sorts descending).
      *
-     * So a server whose newest PHP was 8.5 pre-selected 8.5 for PrestaShop,
-     * whose 8.2.1 release vendors the monolithic `symfony/symfony`. The
-     * install died inside `ProxyCacheWarmer->warmUp()` during kernel boot,
-     * twenty-one frames into someone else's vendor directory, after the
-     * archive had been downloaded, unpacked, chowned and given a database.
+     * So a server whose newest PHP was 8.5 pre-selected 8.5 for PrestaShop, whose 8.2.1 release
+     * vendors the monolithic `symfony/symfony`; the install died in `ProxyCacheWarmer->warmUp()`
+     * during kernel boot, after the download, unpack, chown and database creation.
      *
-     * Since 2026-09-26 PrestaShop installs 9.x on 8.1 – 8.5 and every range in
-     * the catalog tops out at 8.5, so the "very new" PHP here is 8.6: the
-     * shape of the bug, one version further on.
+     * PrestaShop now installs 9.x on 8.1 – 8.5 and every catalog range tops out at 8.5, so the
+     * "very new" PHP here is 8.6: the same bug shape, one version further on.
      */
 
     beforeEach(function () {
@@ -290,9 +279,8 @@ describe('the version the application itself can run on', function () {
     });
 
     it('refuses a PHP older than the application supports', function () {
-        // The other direction, and the reason this is a range: Statamic 6
-        // requires 8.3 or above, so for it 8.1 is the wrong answer and 8.6 is
-        // the right one -- the exact inverse of PrestaShop on the same box.
+        // The other direction, and why this is a range: Statamic 6 requires 8.3+, so 8.1 is wrong and
+        // 8.6 is right — the inverse of PrestaShop on the same box.
         createPhpVersionSite([
             'site_type' => 'statamic',
             'domain' => 'flat.example.com',
@@ -317,14 +305,10 @@ describe('the version the application itself can run on', function () {
     });
 
     it('refuses a PHP that would silently install a different Craft major', function () {
-        // Craft declared no range at all, and the consequence was worse than a
-        // failed install: `composer create-project craftcms/craft` is unpinned,
-        // `craftcms/cms` 5.x requires ^8.2 and 4.x requires ^8.0.2, so on 8.1
-        // Composer resolves *backwards* and installs Craft 4 — a different
-        // major, on a site the panel reports as a Craft site. Nothing fails.
-        // Every other required field is supplied, so `php_version` is the only
-        // thing that can fail — otherwise this passes on a missing site_name
-        // and proves nothing about the range.
+        // Craft declared no range at all: `composer create-project craftcms/craft` is unpinned,
+        // `craftcms/cms` 5.x requires ^8.2 and 4.x ^8.0.2, so on 8.1 Composer resolves *backwards* and
+        // installs Craft 4 — a different major — and nothing fails.
+        // Every other required field is supplied, so `php_version` is the only thing that can fail.
         createPhpVersionSite(craftPayload(['domain' => 'craft-old.example.com', 'php_version' => '8.1']))
             ->assertJsonValidationErrors('php_version');
 
@@ -362,11 +346,9 @@ describe('the version the application itself can run on', function () {
 
     describe('an empty version field', function () {
         it('is checked against the version it will actually resolve to', function () {
-            // The hole the range had: an empty field is not "no version", it
-            // is `server.default_php_version` — the newest PHP on the box, and
-            // therefore the exact version a ceiling exists to exclude. The rule
-            // returned early on blank, so clearing the field walked past it:
-            // green form, no error, install dead inside PrestaShop's vendored
+            // An empty field is not "no version": it is `server.default_php_version`, the newest PHP on the
+            // box and so exactly the version a ceiling exists to exclude. The rule returned early on blank,
+            // so clearing the field walked past it: green form, install dead inside PrestaShop's vendored
             // Symfony.
             config(['server.default_php_version' => '8.6']);
 
@@ -415,9 +397,8 @@ describe('the version the application itself can run on', function () {
 });
 
 it('offers only the PHP versions the site type runs on, keeping the current one', function () {
-    // Measured on a real server: WordPress (7.4+) listed an installed 7.0,
-    // and choosing it was refused with a 422 — the menu offered what the
-    // endpoint rejects.
+    // WordPress (7.4+) used to list an installed 7.0, and choosing it was refused with a 422 — the
+    // menu must not offer what the endpoint rejects.
     installLsphpBuild('7.0');
     installLsphpBuild('8.2');
 
@@ -442,10 +423,9 @@ it('offers only the PHP versions the site type runs on, keeping the current one'
 });
 
 it('refuses to move a site to a PHP that is still installing', function () {
-    // Its directory exists as soon as apt starts. Measured: a switch then
-    // wrote the site's pool into the half-installed PHP, apt's own start of
-    // php-fpm failed on the socket the old version still held, and both the
-    // install and the switch failed.
+    // Its directory exists as soon as apt starts. A switch then wrote the site's pool into the
+    // half-installed PHP, apt's own php-fpm start failed on the socket the old version still held,
+    // and both the install and the switch failed.
     installLsphpBuild('8.2');
     app(InstallTracker::class)->start('php', '8.2');
 
@@ -475,9 +455,8 @@ function pointServerDefaultAt(?string $target): void
 }
 
 /*
- * "Make default" on the PHP screen is the default for new sites too
- * (operator's call, 2026-10-01). It moves the `php` command; new sites used to
- * start from install.sh's SERVER_DEFAULT_PHP_VERSION regardless.
+ * "Make default" on the PHP screen is the default for new sites too: it moves the `php` command,
+ * whereas new sites used to start from install.sh's SERVER_DEFAULT_PHP_VERSION regardless.
  */
 describe('the server default chosen on the PHP screen', function () {
     beforeEach(function () {

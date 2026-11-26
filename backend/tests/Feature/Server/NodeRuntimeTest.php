@@ -46,8 +46,7 @@ function fakeNode(bool $fnm = true, array $installed = [], ?string $default = nu
         $runs[] = [
             'command' => $process->command,
             'input' => (string) $process->input,
-            // npm is a Node script, so what PATH it is given decides whether it
-            // runs at all — recorded here so a test can say so.
+            // npm is a Node script, so the PATH it is given decides whether it runs at all.
             'environment' => $process->environment,
         ];
         $command = $process->command;
@@ -101,8 +100,7 @@ it('reports the Node that was already on the box, without managing it', function
 
     $node = nodeSettings();
 
-    // The normal state of a migrated server. It must be usable and untouched;
-    // clobbering it would break whatever already depends on it.
+    // The normal state of a migrated server: usable and untouched, since existing sites depend on it.
     expect($node['manager'])->toBe('system')
         ->and($node['system']['version'])->toBe('24.18.0')
         ->and($node['system']['path'])->toBe('/usr/bin/node')
@@ -112,8 +110,7 @@ it('reports the Node that was already on the box, without managing it', function
 it('offers the section even with nothing installed', function () {
     fakeNode(fnm: false, systemNode: false);
 
-    // "Nothing is installed" is exactly what the screen needs to say in order
-    // to offer installing something.
+    // "Nothing is installed" is what lets the screen offer installing something.
     expect(nodeSettings())->not->toBeNull()
         ->and(nodeSettings()['manager'])->toBe('none');
 });
@@ -123,8 +120,7 @@ it('gives each version the absolute path a systemd unit needs', function () {
 
     $versions = collect(nodeSettings()['versions'])->keyBy('version');
 
-    // This is the whole reason fnm was chosen over nvm: a unit's ExecStart
-    // has no shell to resolve a version name in.
+    // Why fnm over nvm: a unit's ExecStart has no shell to resolve a version name in.
     expect($versions['20.11.0']['path'])->toBe('/opt/fnm/node-versions/v20.11.0/installation/bin/node')
         ->and($versions['20.11.0']['is_default'])->toBeTrue()
         ->and($versions['18.20.4']['is_default'])->toBeFalse();
@@ -146,9 +142,8 @@ it('offers one version per major rather than every patch release', function () {
 });
 
 /*
- * QA 2026-11-24: Node lists its alphas and RCs next to real releases. Read by
- * the leading number only, `v27.0.0-alpha.0.1.1` became `27.0.0` — a version
- * that does not exist — at the top of the picker, and installing it failed.
+ * Node lists its alphas and RCs next to real releases. Read by the leading number only,
+ * `v27.0.0-alpha.0.1.1` would become `27.0.0`, a version that does not exist.
  */
 it('never offers a pre-release, or one rewritten as a release', function () {
     Process::fake(fn ($process) => str_ends_with((string) $process->command[0], 'fnm') && in_array('list-remote', $process->command, true)
@@ -164,14 +159,9 @@ it('never offers a pre-release, or one rewritten as a release', function () {
 
 describe('versions Node itself has stopped supporting', function () {
     /*
-     * 🔴 The report this exists to stop happening again.
-     *
-     * A user picked Node 21 — dead since June 2024 — for a one-click n8n site.
-     * The install ran for five minutes and died compiling `isolated-vm`:
-     * native modules ship prebuilt binaries per Node ABI, and nobody builds
-     * them for a buried release, so npm fell back to a C++ compile on a server
-     * that has no compiler. The version was carrying an EOL badge in the very
-     * list it was offered from, and that was not enough.
+     * Native modules ship prebuilt binaries per Node ABI and nobody builds them for an
+     * end-of-life release, so a one-click install on one (e.g. n8n's `isolated-vm`) falls back
+     * to a C++ compile on a server with no compiler. An EOL badge alone was not enough.
      */
     it('does not offer a dead line', function () {
         eolNode('18');
@@ -182,9 +172,8 @@ describe('versions Node itself has stopped supporting', function () {
     });
 
     it('still offers a line the catalog has no answer about', function () {
-        // A box with no egress has never refreshed the catalog. Hiding
-        // everything there would turn an absent badge into an empty screen —
-        // "we have not been told" is not "it is dead".
+        // A box with no egress has never refreshed the catalog; "we have not been told" is not
+        // "it is dead", and hiding everything would leave an empty screen.
         lifecycleNode('20', 'lts');
         fakeNode();
 
@@ -193,8 +182,7 @@ describe('versions Node itself has stopped supporting', function () {
     });
 
     it('offers dead lines again when the operator asks for them', function () {
-        // The escape hatch for a server migrating an application that
-        // genuinely needs a dead runtime.
+        // Escape hatch for migrating an application that genuinely needs a dead runtime.
         config()->set('server.runtimes.node.offer_eol', true);
         eolNode('18');
         fakeNode();
@@ -204,9 +192,8 @@ describe('versions Node itself has stopped supporting', function () {
     });
 
     it('never hides a dead version that is already installed', function () {
-        // Only the offer to add new ones is withdrawn. A site is running on
-        // that version; dropping it from the screen would leave the user
-        // unable to see, let alone move off, the runtime they are on.
+        // Only the offer to add new ones is withdrawn; a site may be running on this version, and
+        // hiding it would stop the user seeing or leaving it.
         eolNode('18');
         fakeNode(installed: ['18.20.4', '22.11.0']);
 
@@ -242,7 +229,7 @@ it('counts how many sites pin each version', function () {
         'status' => 'pending', 'node_version' => '20.11.0',
     ]);
 
-    // What makes removing a version refusable rather than a surprise.
+    // What lets removing a version be refused rather than a surprise.
     expect(collect(nodeSettings()['versions'])->firstWhere('version', '20.11.0')['in_use_by'])->toBe(1);
 });
 
@@ -282,8 +269,7 @@ it('queues an install, once per version however many times it is clicked', funct
 
     nodeCall('POST', '/api/node/versions', ['version' => '20.11.0'])->assertStatus(202);
 
-    // Two clicks would otherwise start two fnm installs racing over the same
-    // directory.
+    // Two clicks would otherwise start two fnm installs racing over one directory.
     Queue::assertPushed(InstallNodeVersion::class, 1);
     expect((new InstallNodeVersion('20.11.0'))->uniqueId())
         ->toBe('node-install-20.11.0')
@@ -362,8 +348,8 @@ it('moves the symlinks when the default changes, and no unit files', function ()
     expect($commands)->toContain(['ln', '-sfn', "{$bin}/node", '/usr/local/bin/node'])
         ->and($commands)->toContain(['ln', '-sfn', "{$bin}/npm", '/usr/local/bin/npm']);
 
-    // A site pinned to 18 keeps the absolute path already in its unit —
-    // changing the server default must not migrate a running site.
+    // A site pinned to 18 keeps the absolute path already in its unit; changing the default must
+    // not migrate a running site.
     expect($commands->flatten()->filter(fn ($a) => str_contains((string) $a, 'systemd')))->toBeEmpty();
 });
 
@@ -411,8 +397,7 @@ it('refuses to remove a version a site depends on, and names the site', function
         'status' => 'pending', 'node_version' => '18.20.4',
     ]);
 
-    // Otherwise the failure is a site that stops booting with no obvious
-    // cause.
+    // Otherwise a site stops booting with no obvious cause.
     nodeCall('DELETE', '/api/node/versions/18.20.4')
         ->assertUnprocessable()
         ->assertJsonFragment(['message' => __('errors/node.version_in_use', ['version' => '18.20.4', 'apps' => 'Checkout'])]);
@@ -425,8 +410,8 @@ it('refuses to remove the default version', function () {
 });
 
 /*
- * Bug #30: the panel's frontend unit runs a pinned fnm binary, which need not
- * be the default — so the default check alone let it be removed.
+ * The panel's frontend unit runs a pinned fnm binary, which need not be the default, so the
+ * default check alone would let it be removed.
  */
 it('refuses to remove the version the panel itself runs on', function () {
     fakeNode(installed: ['24.21.0', '22.11.0'], default: '22.11.0', panelNode: '24.21.0');
@@ -447,16 +432,14 @@ it('removes a version nothing depends on', function () {
 });
 
 it('updates npm with that version\'s own npm', function () {
-    // A release this Node version can actually run: 20.11.0 does not satisfy
-    // npm 11's `^20.17.0 || >=22.9.0`, which is the whole point of pinning.
+    // A release this Node version can run: 20.11.0 does not satisfy npm 11's `^20.17.0 || >=22.9.0`.
     NpmRelease::query()->create(['major' => '10', 'version' => '10.9.9', 'node_range' => '^18.17.0 || >=20.5.0']);
     $runs = fakeNode(installed: ['20.11.0']);
 
     nodeCall('POST', '/api/node/versions/20.11.0/npm')->assertOk();
 
-    // A global npm belongs to whichever version is default, and would update
-    // the wrong one. The spec is pinned rather than `@latest` for the reason
-    // NodeRuntime::updateNpm() gives.
+    // A global npm belongs to the default version and would update the wrong one. The spec is
+    // pinned rather than `@latest` (see NodeRuntime::updateNpm()).
     expect(collect($runs)->pluck('command'))
         ->toContain(['/opt/fnm/node-versions/v20.11.0/installation/bin/npm', 'install', '-g', 'npm@10.9.9']);
 });
@@ -498,8 +481,7 @@ it('reads npm from each version own npm, not from whatever is on PATH', function
 
     $versions = collect(app(NodeOverview::class)->read()['versions'])->keyBy('version');
 
-    // A global `npm -v` reports the default version's npm for every row —
-    // the same number next to every version, and wrong for all but one.
+    // A global `npm -v` reports the default version's npm for every row, wrong for all but one.
     expect($versions['20.11.0']['npm_version'])->toBe('10.2.4')
         ->and($versions['18.20.4']['npm_version'])->toBe('9.8.1');
 
@@ -524,13 +506,8 @@ it('reports no npm version rather than a wrong one when it cannot be read', func
 });
 
 it('gives npm a PATH with node on it when updating it', function () {
-    // npm is a Node script (`#!/usr/bin/env node`), so it needs `node` on PATH
-    // even when run by absolute path. Without it this failed in three
-    // milliseconds with "/usr/bin/env: 'node': No such file or directory" — an
-    // error about node, from a command about npm, on a box with both installed.
-    //
-    // `npmVersion()` directly below the method already pinned PATH for exactly
-    // this reason; the update path was written without it.
+    // npm is a Node script (`#!/usr/bin/env node`), so it needs `node` on PATH even when run by
+    // absolute path; without it: "/usr/bin/env: 'node': No such file or directory".
     $runs = fakeNode(installed: ['v24.19.0'], default: 'v24.19.0');
 
     app(NodeRuntime::class)->updateNpm('24.19.0', '12.0.2');
@@ -542,16 +519,14 @@ it('gives npm a PATH with node on it when updating it', function () {
     $path = $update['environment']['PATH'] ?? '';
     $binDir = dirname((string) $update['command'][0]);
 
-    // This version's own bin dir, and first: the point of the method is to
-    // update npm inside one version, and borrowing another version's node to
-    // do it is how the wrong thing gets updated.
+    // This version's own bin dir, and first: borrowing another version's node would update the
+    // wrong npm.
     expect($path)->toStartWith($binDir.':');
 });
 
 it('installs the newest npm this node version can run, not npm@latest', function () {
-    // npm 12 needs Node `^22.22.2 || ^24.15.0 || >=26.0.0`. On Node 20,
-    // `npm install -g npm@latest` replaces a working npm with one that cannot
-    // start — the button that is meant to keep a version current breaks it.
+    // npm 12 needs Node `^22.22.2 || ^24.15.0 || >=26.0.0`; on Node 20, `npm@latest` would
+    // replace a working npm with one that cannot start.
     NpmRelease::query()->create(['major' => '11', 'version' => '11.19.1', 'node_range' => '^20.17.0 || >=22.9.0']);
     NpmRelease::query()->create(['major' => '12', 'version' => '12.0.2', 'node_range' => '^22.22.2 || ^24.15.0 || >=26.0.0']);
 
@@ -568,11 +543,8 @@ it('installs the newest npm this node version can run, not npm@latest', function
 });
 
 it('refuses to update npm when it cannot tell which npm to install', function () {
-    // This used to fall back to `npm@latest`, on the grounds that a box with
-    // no egress was then no worse off than before the catalog existed. But an
-    // empty catalog is not a rare offline box -- it is every server whose
-    // catalog has never been filled -- and on a Node 20 box `@latest` installs
-    // an npm that cannot start. Not knowing what to install is now a refusal.
+    // No fallback to `npm@latest`: an empty catalog is every server that never filled it, and
+    // on Node 20 `@latest` installs an npm that cannot start. Not knowing is a refusal.
     Http::fake(['registry.npmjs.org/*' => Http::response(status: 503)]);
 
     $runs = fakeNode(installed: ['20.19.0'], default: '20.19.0');
@@ -581,15 +553,13 @@ it('refuses to update npm when it cannot tell which npm to install', function ()
         ->assertUnprocessable()
         ->assertJsonPath('message', __('errors/node.npm_target_unknown'));
 
-    // The guard that matters: nothing was installed. A refusal that still ran
-    // the install would be the old behaviour with a worse status code.
+    // The guard that matters: nothing was installed.
     expect(collect($runs)->contains(fn ($run) => in_array('install', $run['command'], true)))->toBeFalse();
 });
 
 it('refreshes the catalog before giving up on it', function () {
-    // The catalog is empty here and the registry is reachable, which is the
-    // ordinary state of a server that has never run the scheduled refresh.
-    // Fetching once beats refusing: the answer is one request away.
+    // Empty catalog plus a reachable registry is the normal state before the scheduled refresh
+    // has run; fetching once beats refusing.
     Http::fake(['registry.npmjs.org/*' => Http::response([
         'versions' => [
             '11.19.1' => ['version' => '11.19.1', 'engines' => ['node' => '^20.17.0 || >=22.9.0']],
@@ -614,8 +584,7 @@ it('sends the newest npm each version can run beside the one it has', function (
             str_contains(implode(' ', $command), 'fnm') && in_array('list', $command, true) => Process::result(
                 output: "* v24.19.0 default\n* v18.20.4\n"
             ),
-            // Both versions carry the same npm; what differs is how far each
-            // one is allowed to go.
+            // Both versions carry the same npm; what differs is how far each may go.
             str_ends_with((string) ($command[0] ?? ''), '/npm') && in_array('-v', $command, true) => Process::result(output: "10.9.9\n"),
             default => Process::result(exitCode: 0),
         };
@@ -623,9 +592,8 @@ it('sends the newest npm each version can run beside the one it has', function (
 
     $versions = collect(app(NodeOverview::class)->read()['versions'])->keyBy('version');
 
-    // Node 24 can reach npm 12 and has 10 — an update worth offering. Node 18
-    // already has the newest npm it will ever run, so the button must go away
-    // rather than pointing at a release that cannot start on it.
+    // Node 24 can reach npm 12 and has 10: an update worth offering. Node 18 already has the
+    // newest npm it can run, so the button must go away.
     expect($versions['24.19.0']['npm_latest'])->toBe('12.0.2')
         ->and($versions['24.19.0']['npm_update_available'])->toBeTrue()
         ->and($versions['18.20.4']['npm_latest'])->toBe('10.9.9')
@@ -633,12 +601,9 @@ it('sends the newest npm each version can run beside the one it has', function (
 });
 
 it('records that the server now has Node, so the create screen stops denying it', function () {
-    // `ServerCapabilities::current()` returns the *stored* row and only
-    // detects when there is none. install.sh writes that row once — a `lamp`
-    // server records `'node' => false` — so installing Node afterwards left
-    // the create-application screen insisting Node was not installed on a
-    // server that plainly had it, forever. Nothing self-corrected, because
-    // nothing detects again while a row exists.
+    // `ServerCapabilities::current()` returns the *stored* row and only detects when there is none.
+    // install.sh writes it once (a `lamp` server records `'node' => false`), so installing Node
+    // later must update the row or the create screen keeps denying Node.
     ServerCapability::query()->delete();
     ServerCapability::query()->create([
         'stack' => 'lamp',
@@ -654,25 +619,23 @@ it('records that the server now has Node, so the create screen stops denying it'
 
     app()->call([new InstallNodeVersion('22.11.0'), 'handle']);
 
-    // A fresh instance: the service memoises the row for the life of a
-    // request, and asserting through the same one would pass on the cache
-    // rather than on what was written.
+    // A fresh instance: the service memoises the row per request, so the same one would pass
+    // on the cache rather than on what was written.
     expect(app()->make(ServerCapabilities::class, [])->supports('node'))->toBeTrue();
 });
 
 describe('found on a real server, 2026-09-23', function () {
     it('does not offer a pre-1.0 line the catalog says is dead', function () {
-        // Node files 0.x by minor — `0.12`, not `0`. Keyed by the major alone,
-        // 0.12.18 looked up `0`, found nothing, read "unknown" as "keep", and
-        // a release dead since 2016 sat in the install list.
+        // Node files 0.x by minor (`0.12`, not `0`); keyed by the major alone, 0.12.18 finds
+        // nothing, reads "unknown" as "keep" and offers a long-dead release.
         lifecycleNode('0.12', 'eol');
         lifecycleNode('0.10', 'eol');
         Process::fake(fn ($process) => str_ends_with((string) $process->command[0], 'fnm') && in_array('list-remote', $process->command, true)
             ? Process::result(output: "v0.7.12\nv0.9.12\nv0.10.48\nv0.11.16\nv0.12.18\nv22.11.0\n")
             : Process::result(output: "/usr/local/bin/fnm\n"));
 
-        // The odd dev lines (0.7, 0.9, 0.11) are not in Node's schedule at
-        // all; they are dead because a line after them is.
+        // The odd dev lines (0.7, 0.9, 0.11) are not in Node's schedule; they are dead because a
+        // later line is.
         expect(app(NodeRuntime::class)->installable())->toBe(['22.11.0']);
     });
 
@@ -688,9 +651,8 @@ describe('found on a real server, 2026-09-23', function () {
     });
 
     it('hands a newly installed version to whoever owns the fnm directory', function () {
-        // install.sh gives /opt/fnm to the panel account; fnm runs elevated,
-        // so a version added from the Node screen came out root-owned and its
-        // npm update — which runs as the panel account — failed with EACCES.
+        // install.sh gives /opt/fnm to the panel account; fnm runs elevated, so a new version would
+        // be root-owned and its npm update (run as the panel account) would fail with EACCES.
         $runs = new ArrayObject;
         Process::fake(function ($process) use ($runs) {
             $runs[] = $process->command;
@@ -720,9 +682,9 @@ describe('found on a real server, 2026-09-23', function () {
     });
 
     it('keeps the server\'s own Node in front, as on a server from v7', function () {
-        // v7 installs Node from nodesource at /usr/bin/node and runs its sites
-        // on it. /usr/local/bin comes first on PATH, so linking the default
-        // there moved them all to another version (operator, 2026-10-07).
+        // v7 installs Node from nodesource at /usr/bin/node and runs its sites on it.
+        // /usr/local/bin comes first on PATH, so linking the default there would move them all to
+        // another version.
         $runs = fakeNode(installed: ['24.1.0'], default: '24.1.0');
         Process::fake(function ($process) use ($runs) {
             $runs[] = ['command' => $process->command];
@@ -815,14 +777,12 @@ describe('a Node site created without a version', function () {
     }
 
     it('is pinned to the server default', function () {
-        // Left blank, the installer had no Node on its PATH: a Node-RED on a
-        // fresh server died on `npm: No such file or directory`.
+        // Left blank, the installer has no Node on its PATH and dies on `npm: No such file or directory`.
         expect(createNodeSite('nodered')->node_version)->toBe('22.11.0');
     });
 
     it('is pinned to a version the type can run when the default is outside its range', function () {
-        // n8n needs 24+. Pinning the 22 default would reproduce the n8n
-        // install that died on a Node it cannot run.
+        // n8n needs 24+; pinning the 22 default would install it on a Node it cannot run.
         expect(createNodeSite('n8n')->node_version)->toBe('24.1.0');
     });
 
@@ -835,8 +795,7 @@ describe('a Node version that does not exist (bug #31)', function () {
     it('refuses to install it', function () {
         fakeNode();
 
-        // Only the shape was checked, so 99.0.0 was queued, failed in fnm
-        // and left an entry behind.
+        // A shape-only check would queue 99.0.0, fail in fnm and leave an entry behind.
         nodeCall('POST', '/api/node/versions', ['version' => '99.0.0'])
             ->assertUnprocessable()
             ->assertJsonPath('errors.version.0', __('errors/node.version_unknown', ['version' => '99.0.0']));
@@ -847,8 +806,7 @@ describe('a Node version that does not exist (bug #31)', function () {
     it('gives a malformed version one message, not two', function () {
         fakeNode();
 
-        // Found live: "99" was told both that its format is wrong and that
-        // it does not exist.
+        // "99" must not be told both that its format is wrong and that it does not exist.
         nodeCall('POST', '/api/node/versions', ['version' => '99'])
             ->assertUnprocessable()
             ->assertJsonCount(1, 'errors.version');
@@ -861,8 +819,7 @@ describe('a Node version that does not exist (bug #31)', function () {
             'reason' => 'install', 'started_at' => now(), 'finished_at' => now(),
         ]);
 
-        // Remove answered 404 for anything not installed, so this entry
-        // stayed on the screen for good.
+        // A 404 for anything not installed would leave this entry on the screen for good.
         nodeCall('DELETE', '/api/node/versions/20.11.0')->assertNoContent();
 
         expect(RuntimeInstall::where('version', '20.11.0')->exists())->toBeFalse();

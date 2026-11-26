@@ -37,8 +37,7 @@ afterEach(function () {
  * @param  array<int, string>  $failing  redis-cli sub-commands that should fail
  * @param  array<int, string>  $rejected  sub-commands Redis refuses the way the
  *                                        real redis-cli reports it: the error
- *                                        reply on stdout, and exit 0 (measured on
- *                                        redis-cli 7.0.15, 2026-10-23)
+ *                                        reply on stdout, and exit 0
  */
 function fakeRedis(array $failing = [], array $rejected = []): ArrayObject
 {
@@ -126,10 +125,9 @@ it('never puts the password in a command argument', function () {
 });
 
 it('keeps the password off the command line when commands are elevated', function () {
-    // The suite normally runs with sudo off, which hid this: with sudo on,
-    // an elevated command carries its environment as `sudo -n env VAR=value`
-    // arguments, and sudo writes the whole command line to auth.log and the
-    // journal. redis-cli needs no root, so it must never be elevated.
+    // With sudo on, an elevated command carries its environment as `sudo -n env VAR=value`
+    // arguments, and sudo writes the whole command line to auth.log and the journal. redis-cli
+    // needs no root, so it must never be elevated.
     config([
         'server.privilege.sudo' => true,
         'database.redis.default.password' => 'current-secret-value',
@@ -156,11 +154,9 @@ it('authenticates the rewrite from the environment, not from argv', function () 
 
     saveRedisAndApply(['password' => 'sup3r-secret-value'])->assertStatus(202);
 
-    // Two redis-cli processes means two connections, and the second arrives
-    // after auth is required — which is why the rewrite used to fail and the
-    // password was never persisted to redis.conf.
-    // The memory settings are rewritten too; the one that matters is the
-    // rewrite carrying the new credential.
+    // Two redis-cli processes mean two connections, and the second arrives after auth is required
+    // — so the rewrite failed and the password was never persisted to redis.conf.
+    // The memory settings are rewritten too; the one that matters is the new credential.
     $rewrite = collect($runs)->last(fn (array $r) => in_array('rewrite', $r['command'], true));
 
     expect($rewrite['env'])->toBe(['REDISCLI_AUTH' => 'sup3r-secret-value'])
@@ -286,11 +282,9 @@ it('leaves the password alone when the field is absent', function () {
 });
 
 it('returns the password to a caller who could change it', function () {
-    // Reversed by operator decision on 2026-08-31: the panel shows and copies
-    // this the way it already shows a system user's password. The objection is
-    // recorded in RedisSettings' class note -- Redis backs this panel's
-    // sessions, cache and queue, so the credential unlocks the panel rather
-    // than one customer's account.
+    // The panel shows and copies this the way it already shows a system user's password. Redis
+    // backs this panel's sessions, cache and queue, so the credential unlocks the panel rather than
+    // one customer's account (see RedisSettings' class note).
     fakeRedis();
 
     $settings = $this->withHeader('Authorization', 'Bearer '.$this->token)
@@ -321,9 +315,8 @@ it('keeps the env file permissions it found', function () {
 
     saveRedisAndApply(['password' => 'sup3r-secret-value'])->assertStatus(202);
 
-    // Imposing a mode here is how the panel locks itself out of its own
-    // config: force 0640 on a group-writable file and the first write
-    // succeeds while every write after it is refused. Caught live.
+    // Imposing a mode here is how the panel locks itself out of its own config: force 0640 on a
+    // group-writable file and the first write succeeds while every later write is refused.
     expect(fileperms($this->envPath) & 0777)->toBe(0664)
         ->and(is_writable($this->envPath))->toBeTrue();
 });
@@ -358,9 +351,8 @@ it('authenticates with the current password when replacing one', function () {
 
     saveRedisAndApply(['password' => 'a-brand-new-password'])->assertStatus(202);
 
-    // Replacing a password needs the old one; unauthenticated, Redis answers
-    // NOAUTH and the change silently does nothing. Caught live: the first
-    // password applied and every change after it was lost.
+    // Replacing a password needs the old one; unauthenticated, Redis answers NOAUTH and the change
+    // silently does nothing.
     $set = passwordWrites($runs)->first();
 
     expect($set['env'])->toBe(['REDISCLI_AUTH' => 'the-existing-password'])
@@ -371,10 +363,9 @@ it('clears the password only when explicitly asked', function () {
     $runs = fakeRedis();
     chmod($this->envPath, 0664);
 
-    // An empty string never reaches validation intact —
-    // ConvertEmptyStringsToNull rewrites it to null, which is the same shape
-    // as "field omitted". So removal needs its own flag or it is impossible
-    // to express. Found live: a password could be set and never taken off.
+    // An empty string never reaches validation intact — ConvertEmptyStringsToNull rewrites it to
+    // null, the same shape as "field omitted". So removal needs its own flag or it cannot be
+    // expressed.
     saveRedisAndApply(['password' => ''])->assertOk();
     expect(passwordWrites($runs))->toBeEmpty();
 
@@ -386,15 +377,11 @@ it('clears the password only when explicitly asked', function () {
 });
 
 it('refuses the change when the panel cannot reach Redis with its stored credential', function () {
-    // The reported bug. `.env`'s REDIS_PASSWORD drifts from the running server
-    // — a password set outside the panel, a restored redis.conf, an adopted
-    // server — so `CONFIG GET requirepass` answers NOAUTH.
-    //
-    // That used to read as `''`, i.e. "no password is set". The credential
-    // used to authenticate the change was therefore empty, Redis rejected it,
-    // and the whole apply runs after the response — so the user was told "the
-    // Redis password is being applied" and nothing changed, with the reason
-    // only in a log line.
+    // `.env`'s REDIS_PASSWORD can drift from the running server (a password set outside the panel, a
+    // restored redis.conf, an adopted server), so `CONFIG GET requirepass` answers NOAUTH.
+    // That used to read as `''` ("no password is set"): the change was authenticated with an empty
+    // credential, Redis rejected it, and since the apply runs after the response the user was told
+    // "the Redis password is being applied" while nothing changed.
     $runs = fakeRedis(failing: ['config get requirepass']);
 
     saveRedis(['password' => 'NewSecret123'])
@@ -409,11 +396,9 @@ it('refuses the change when the panel cannot reach Redis with its stored credent
 });
 
 it('does not present a stale credential as a working one', function () {
-    // The property this has always protected: the screen must never read as
-    // "all is well" about a Redis the panel cannot actually open. What moved
-    // is where it is said. `has_password` now answers "is the panel configured
-    // with one", which .env can always answer; whether that value still opens
-    // Redis is `password_out_of_sync`, and it is the field that must not lie.
+    // The screen must never read as "all is well" about a Redis the panel cannot open.
+    // `has_password` answers "is the panel configured with one" (which .env can always answer);
+    // whether that value still opens Redis is `password_out_of_sync`, the field that must not lie.
     config(['database.redis.default.password' => 'stale-value']);
     fakeRedis(failing: ['ping']);
 
@@ -441,13 +426,10 @@ it('still reports a password-less Redis as password-less', function () {
 });
 
 it('makes the panel itself use the new password', function () {
-    // Writing `.env` is not applying it. install.sh runs `config:cache`, so the
-    // old password is compiled into bootstrap/cache/config.php — the file the
-    // panel actually reads — and `queue:work` loaded its configuration once at
-    // start. The installer points sessions, cache and the queue at Redis
-    // together, so without this the panel keeps offering the old password to
-    // all of them and Redis answers NOAUTH: a successful password change that
-    // takes the panel down.
+    // Writing `.env` is not applying it: install.sh runs `config:cache`, so the old password stays
+    // compiled into bootstrap/cache/config.php, and `queue:work` loaded its configuration at start.
+    // Sessions, cache and the queue all point at Redis, so without this the panel keeps offering the
+    // old password and Redis answers NOAUTH: a successful change that takes the panel down.
     $runs = fakeRedis();
 
     saveRedis(['password' => 'NewSecret123'])->assertAccepted();
@@ -476,9 +458,8 @@ it('does not refresh the panel for a change that did not stick', function () {
 });
 
 /*
- * FS-C22 #19 (2026-10-23): redis-cli exits 0 when Redis refuses a command, with
- * the error reply on stdout. Every check above used a fake that exited 1, which
- * is not what the real tool does, so a wrong password was never once reported.
+ * redis-cli exits 0 when Redis refuses a command, with the error reply on stdout. A fake that
+ * exits 1 is not what the real tool does, so a wrong password was never reported.
  */
 it('reports a stale credential as out of sync when redis-cli exits 0 on NOAUTH', function () {
     config(['database.redis.default.password' => 'stale-value']);

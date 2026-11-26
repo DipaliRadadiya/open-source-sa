@@ -278,8 +278,8 @@ describe('sources the panel cannot open itself', function () {
     }
 
     /*
-     * Bug #21: /var/log/mongodb is mongodb:mongodb 0750. The MongoDB log was
-     * listed and answered "no permission"; v7 reads every log with sudo.
+     * /var/log/mongodb is mongodb:mongodb 0750: the log was listed and answered "no permission",
+     * so it is read through sudo like every other log.
      */
     it('reads a log through sudo when its directory cannot be entered', function () {
         fakePrivilegedLogs("mongo line\n");
@@ -363,10 +363,9 @@ describe('sources the panel cannot open itself', function () {
     });
 
     /*
-     * QA 2026-11-19: `tail -n` asked for exactly the lines shown, so there was
-     * never one more to prove there was log above them — a 1077-line file read
-     * five lines at a time said `truncated: false`. The fake honours `-n` the
-     * way tail does, or this would measure nothing.
+     * `tail -n` asked for exactly the lines shown, so there was never one more to prove there was
+     * log above them: a 1077-line file read five lines at a time said `truncated: false`. The
+     * fake honours `-n` the way tail does, or this would measure nothing.
      */
     it('says when there are older lines above the ones it read', function () {
         $file = collect(range(1, 12))->map(fn ($n) => "certbot: line {$n}")->all();
@@ -478,11 +477,9 @@ describe('sources the panel cannot open itself', function () {
     });
 
     it('answers 403, not 500, when sudo refuses the reader', function () {
-        // The difference that matters to whoever is looking at the screen: a
-        // grant that predates the binary this needs is a known state with a
-        // known remedy (re-run install.sh), not a crash. Reported like the
-        // unprivileged branch already reports a file it cannot open, so one
-        // unreadable source does not read as a broken page.
+        // A grant that predates the binary this needs is a known state with a known remedy (re-run
+        // install.sh), not a crash. Reported like the unprivileged branch reports a file it cannot
+        // open, so one unreadable source does not read as a broken page.
         Process::fake(function ($process) {
             $command = (array) $process->command;
 
@@ -503,11 +500,9 @@ describe('sources the panel cannot open itself', function () {
     });
 
     it('keeps a source it could not check, rather than hiding it', function () {
-        // Absent and "could not ask" lead to opposite conclusions: one says
-        // this server has no such log, the other says the panel could not
-        // look. Hiding the second reads as the first — an empty Logs screen on
-        // a server whose sudo grant is out of date, and a user concluding
-        // their cron jobs never wrote anything.
+        // Absent and "could not ask" lead to opposite conclusions: one says this server has no such
+        // log, the other that the panel could not look. Hiding the second reads as the first, an
+        // empty Logs screen on a server whose sudo grant is out of date.
         Process::fake(fn () => Process::result(
             errorOutput: 'sudo: a password is required',
             exitCode: 1,
@@ -570,10 +565,9 @@ describe('sources the panel cannot open itself', function () {
 
 describe('a cron job log', function () {
     it('is read through sudo, because the panel account cannot open it', function () {
-        // The file is 0640 owned by the account the job runs as, and its group
-        // is that user's own — so `adm`, which is what lets the panel read
-        // nginx and syslog, does not help. Read as the panel account this is
-        // the one source on the screen that always comes back empty.
+        // The file is 0640 owned by the account the job runs as, with that user's own group, so
+        // `adm` (which lets the panel read nginx and syslog) does not help: read as the panel
+        // account it is the one source that always comes back empty.
         config(['server.cronjob_log_dir' => '/var/log/cronjobs']);
 
         Cronjob::create([
@@ -659,8 +653,7 @@ describe('worker logs', function () {
     });
 
     it('offers one source per worker, named after the worker', function () {
-        // The API already sent `log_identifier` and the worker row already
-        // linked to /logs?source=sv-worker-{id}. No source by that key existed,
+        // The worker row links to /logs?source=sv-worker-{id}, but no source by that key existed,
         // so the one button offering a worker's output led nowhere.
         $logs = collect($this->withHeader('Authorization', "Bearer {$this->token}")
             ->getJson('/api/logs')->assertOk()->json('logs'))->keyBy('key');
@@ -668,11 +661,8 @@ describe('worker logs', function () {
         expect($logs)->toHaveKey('sv-worker-'.$this->worker->slug)
             ->and($logs['sv-worker-'.$this->worker->slug]['label'])->toBe('Shop — Queue')
             ->and($logs['sv-worker-'.$this->worker->slug]['group'])->toBe('worker')
-            // `privileged`, not `journal`. This asserted `journal` until
-            // workers moved from systemd to supervisord: a unit sent its output
-            // to journald, a supervisor program writes `stdout_logfile`. The
-            // test was defending a mechanism that no longer exists, and the
-            // template settles which is right — it names the file.
+            // `privileged`, not `journal`: workers run under supervisord, whose program writes
+            // `stdout_logfile`, and the template names that file.
             ->and($logs['sv-worker-'.$this->worker->slug]['kind'])->toBe('privileged');
     });
 
@@ -682,9 +672,8 @@ describe('worker logs', function () {
             ->assertOk()
             ->assertJsonPath('log.lines', ['worker started']);
 
-        // Same intent as when this read the journal with `-t`: one worker's
-        // output, not everything on the box. Now it is that worker's own file,
-        // read through sudo because `{appRoot}/logs` is root-owned.
+        // One worker's output, not everything on the box: that worker's own file, read through
+        // sudo because `{appRoot}/logs` is root-owned.
         Process::assertRan(fn ($p) => in_array('tail', $p->command, true)
             && collect($p->command)->contains(
                 fn (string $argument) => str_ends_with($argument, 'sv-worker-'.$this->worker->slug.'.log')
@@ -755,10 +744,9 @@ it('marks the logs that record what happened to the machine', function () {
             ->getJson('/api/logs')->assertOk()->json('logs')
     );
 
-    // Clearable by operator decision, and flagged so the confirmation can name
-    // what is being destroyed rather than reusing the sentence for an access
-    // log. The screen must not infer this from the key — the registry decides,
-    // or a second client gets the list wrong.
+    // Clearable, and flagged so the confirmation can name what is being destroyed. The screen
+    // must not infer this from the key: the registry decides, or a second client gets the list
+    // wrong.
     $auth = $logs->firstWhere('key', 'auth');
     expect($auth['clearable'])->toBeTrue()
         ->and($auth['clear_sensitive'])->toBeTrue()
@@ -856,24 +844,16 @@ it('ships a registry whose clear policy matches what the panel documents', funct
     /*
      * The shipped rows, not a fixture.
      *
-     * Every other test here builds its own registry, which is right for
-     * behaviour — and means all of them would stay green if the real
-     * `config/server.php` said something different. That gap let the route
-     * file's comment claim the opposite policy (that the seven audit logs were
-     * "deliberately excluded" and answered 404) for as long as it did: nothing
-     * connected the decision to a test.
-     *
-     * Read straight from config rather than through the API, because this is
-     * about what we ship rather than what one server reports after filtering
-     * to files that exist.
+     * Every other test builds its own registry, so they would all stay green if the real
+     * `config/server.php` said something different. Read straight from config rather than through
+     * the API: this is about what we ship, not what one server reports after filtering.
      */
     // Re-evaluated from the shipped file rather than read through `config()`,
     // which this file's own beforeEach replaces with a fixture — a guard a
     // sibling test can satisfy is not a guard.
     $registry = collect((require config_path('server.php'))['logs']);
 
-    // The operator's decision: these are clearable, and flagged so the screen
-    // confirms with copy that names what is being destroyed.
+    // Clearable, and flagged so the screen confirms with copy that names what is being destroyed.
     $sensitive = $registry->where('sensitive', true);
 
     expect($sensitive->pluck('key')->sort()->values()->all())
@@ -899,9 +879,8 @@ describe('sources the panel account cannot see, as configured for real', functio
     }
 
     it("lists OpenLiteSpeed's own logs, which live in a root-only directory", function () {
-        // /usr/local/lsws/logs is root:nogroup 0750. As plain files the panel
-        // could not see them exist and dropped both from every OLS server's
-        // list (found 2026-09-23). Asked through sudo, they are there.
+        // /usr/local/lsws/logs is root:nogroup 0750. As plain files the panel could not see them
+        // exist and dropped both from every OLS server's list; asked through sudo, they are there.
         config(['server.logs' => shippedLogs(['openlitespeed_access', 'openlitespeed_error'])]);
         Process::fake(fn () => Process::result(output: "1072583\n"));
 

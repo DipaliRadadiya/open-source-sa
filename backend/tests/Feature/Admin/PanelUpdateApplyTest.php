@@ -32,11 +32,8 @@ function applyHeader(): array
 }
 
 /*
- * The apply step cannot be exercised end to end here — it checks out a git tag
- * from a remote and restarts system services. What CAN be pinned down is the
- * script it generates, and these tests do exactly that: the generated bash is
- * the artefact that runs on a user's server, so it is the thing worth
- * asserting line by line.
+ * The apply step cannot run end to end here (it checks out a git tag and restarts services), so
+ * these tests assert the generated bash line by line: it is the artefact that runs on a server.
  */
 describe('the generated update script', function () {
     beforeEach(function () {
@@ -203,45 +200,35 @@ describe('the generated update script', function () {
     });
 
     it('defaults to writing progress outside the repository', function () {
-        // A state file inside the tree is destroyed by the checkout whose
-        // progress it is recording. beforeEach() redirects this to a temp
-        // path for the other tests, so assert the shipped default itself —
-        // that is the value a real installation runs with.
+        // A state file inside the tree is destroyed by the checkout whose progress it records.
+        // beforeEach() redirects it to a temp path, so assert the shipped default itself — the value a
+        // real installation runs with.
         $default = require config_path('panel_update.php');
 
         expect($default['state_dir'])->not->toStartWith(dirname(base_path()));
     });
 
     it('builds as the panel user, because a transient unit has no HOME', function () {
-        // The bug this pins: `systemd-run` starts the update with a minimal
-        // environment and HOME unset. Composer refuses to run at all -- "The
-        // HOME or COMPOSER_HOME environment variable must be set" -- so every
-        // update on every server failed at composer_install and rolled back.
-        // Confirmed on a real box: a transient unit prints an empty $HOME.
+        // `systemd-run` starts the update with a minimal environment and HOME unset, so Composer refuses
+        // to run ("The HOME or COMPOSER_HOME environment variable must be set") and every update rolled
+        // back at composer_install.
         //
-        // Running as root was wrong for a second reason that would have
-        // surfaced the moment the first was fixed: vendor/, node_modules/ and
-        // .next/ would be owned by root under services that run as `panel`,
-        // and Next.js cannot write its cache into a directory it does not own.
+        // Running as root is wrong too: vendor/, node_modules/ and .next/ would be root-owned under
+        // services that run as `panel`, and Next.js cannot write its cache into them.
         $user = config('panel_update.app_user');
 
         expect($this->script)->toContain("sudo -u {$user} -H composer install")
             ->and($this->script)->toContain("sudo -u {$user} -H env \"PATH=")
-            // No bare invocation left behind. Asserted on the line start so a
-            // step that reverts to root fails here rather than at 3am on
-            // somebody's server.
+            // No bare invocation left behind. Asserted on the line start so a step that reverts to root
+            // fails here.
             ->and($this->script)->not->toMatch('/\n\s*composer install/')
             ->and($this->script)->not->toMatch('/\n\s*env "PATH=/');
     });
 
     it('never runs git as root, or the update wedges the box for good', function () {
-        // `git checkout --force` writes every file it touches as the calling
-        // user. Run as root against a tree install.sh chowned to `panel`, one
-        // update left 1331 root-owned files on a real server -- counted on the
-        // box, not estimated. The panel account could then no longer check out
-        // or clean its own repository, so preflight's clean_working_tree failed
-        // for good and every later update was refused before it started. A
-        // single attempt wedged the machine permanently.
+        // `git checkout --force` writes every file as the calling user. Run as root against a tree owned
+        // by `panel`, it left root-owned files the panel could no longer check out or clean, so
+        // preflight's clean_working_tree failed for good and every later update was refused.
         $user = config('panel_update.app_user');
 
         foreach (['rev-parse', 'fetch', 'checkout'] as $verb) {
@@ -251,15 +238,12 @@ describe('the generated update script', function () {
     });
 
     it('runs artisan as the panel account, except the one command needing root', function () {
-        // A successful update still left 50 root-owned files under
-        // backend/storage on the real box: compiled Blade views from
-        // `optimize`, and the dump from `panel:backup-database`. php-fpm runs
-        // as `panel` and cannot overwrite a root-owned view cache; a 0640
-        // root-owned backup is one the panel cannot read back.
+        // A successful update must not leave root-owned files under backend/storage: compiled Blade
+        // views from `optimize` (php-fpm runs as `panel` and cannot overwrite them) and the
+        // `panel:backup-database` dump (a root-owned 0640 backup the panel cannot read back).
         //
-        // migrate is the sharp one -- SQLite writes -wal and -shm beside the
-        // database, and root-owned ones make the panel's own database
-        // unwritable straight after an update it called successful.
+        // migrate is the sharp one: SQLite writes -wal and -shm beside the database, and root-owned
+        // ones make the panel's own database unwritable right after a "successful" update.
         $user = config('panel_update.app_user');
 
         foreach (['migrate --force', 'optimize', 'panel:backup-database', 'artisan up', 'artisan down'] as $call) {
@@ -288,12 +272,10 @@ describe('the generated update script', function () {
     });
 
     it('really reads the repository during a dry run, rather than echoing that too', function () {
-        // A dry run exists to answer "would the update work". Echoing every
-        // command cannot answer it: on a box where git refuses the repository
-        // as dubiously owned — the panel runs as its own user, the update runs
-        // as root through systemd-run, which does not carry root's gitconfig —
-        // a dry run reported `succeeded` while the first real command of a real
-        // update would have failed, and the rollback with it.
+        // A dry run must answer "would the update work", which echoing every command cannot: where git
+        // refuses the repository as dubiously owned (the update runs as root through systemd-run, which
+        // does not carry root's gitconfig), a dry run reported `succeeded` while the first real command
+        // would have failed.
         $dry = app(UpdateScript::class)->render($this->update, '99.0.0', dryRun: true);
 
         expect($dry)->toContain('note preflight_git')
@@ -302,19 +284,12 @@ describe('the generated update script', function () {
 
     it('repairs root-owned files inside .git before fetching', function () {
         /*
-         * Reported from the field and reproduced on a real box:
+         * install.sh hands the tree to the app user, then runs `git config` (and `git fetch` on a
+         * re-run) as root, leaving root-owned files inside .git. Every later fetch as the app user fails
+         * ("cannot open '.git/FETCH_HEAD': Permission denied").
          *
-         *     error: cannot open '.git/FETCH_HEAD': Permission denied
-         *
-         * install.sh hands the tree to the app user and then runs `git config`
-         * — and on a re-run, `git fetch` — as root, leaving root-owned files
-         * inside .git. Every later fetch as the app user then fails on
-         * whichever file root got to first.
-         *
-         * `safe.directory` does not cover it: that forgives git's ownership
-         * check, not the filesystem's permissions. install.sh is fixed too, but
-         * a shipped installer change reaches fresh installs only, so the repair
-         * has to run here — on the boxes that already have the problem.
+         * `safe.directory` does not cover it: that forgives git's ownership check, not file permissions.
+         * The repair has to run here, since an installer fix reaches fresh installs only.
          */
         $script = app(UpdateScript::class)->render($this->update, '99.0.0');
 
@@ -323,17 +298,14 @@ describe('the generated update script', function () {
 
     it('proves git can write, not just read, before maintenance mode', function () {
         /*
-         * `rev-parse HEAD` only reads. It passed on exactly the boxes where the
-         * next command — a fetch, which writes FETCH_HEAD — was about to fail,
-         * so the check answered a different question than the caller asked and
-         * the real failure landed later, mid-update.
+         * `rev-parse HEAD` only reads, so it passed where the next command (a fetch, which writes
+         * FETCH_HEAD) was about to fail; the real failure landed mid-update.
          */
         $script = app(UpdateScript::class)->render($this->update, '99.0.0');
 
         expect($script)->toContain('test -w')
-            // Ordering is the point: after `preflight_git`, and before
-            // maintenance mode. A write test that runs later is just a more
-            // accurate way to fail at the same bad moment.
+            // Ordering is the point: after `preflight_git`, before maintenance mode. A write test that runs
+            // later is just a more accurate way to fail at the same bad moment.
             ->and(strpos($script, 'test -w'))->toBeGreaterThan(strpos($script, 'note preflight_git'))
             ->and(strpos($script, 'test -w'))->toBeLessThan(strpos($script, 'note maintenance_on'));
     });
@@ -377,10 +349,8 @@ describe('version validation', function () {
 
 describe('starting an update', function () {
     it('refuses when the panel is already on the newest version', function () {
-        // Its own release URL. `beforeEach` already faked api.github.com with
-        // v99, and the first matching stub wins, so faking the same host again
-        // here changed nothing — the test passed only while the dev `.env`
-        // pointed PANEL_RELEASES_URL somewhere the fakes did not cover.
+        // Its own release URL: `beforeEach` already faked api.github.com with v99 and the first
+        // matching stub wins, so faking the same host here changed nothing.
         config(['panel_update.releases_url' => 'https://releases.test/latest']);
         Http::fake(['releases.test/*' => Http::response(['tag_name' => 'v0.0.1'])]);
 

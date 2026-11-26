@@ -52,9 +52,8 @@ function backupHeaders(): array
 /**
  * A finished backup on a named destination.
  *
- * Reuses the fixture's application and one target per call is impossible —
- * `backup_targets` is unique on `application_id` — so the target is made once
- * and every backup hangs off it, which is also how a real history looks.
+ * `backup_targets` is unique on `application_id`, so the target is made once and every backup
+ * hangs off it, like a real history.
  */
 function seedBackupWithDestination(string $destination): Backup
 {
@@ -117,8 +116,7 @@ it('edits rather than duplicating when saved twice', function () {
     $this->withHeaders(backupHeaders())->putJson($url, targetPayload())->assertOk();
     $this->withHeaders(backupHeaders())->putJson($url, targetPayload(['frequency' => 'weekly']))->assertOk();
 
-    // The table has a unique on application_id — a second row would be a
-    // constraint violation, not a second schedule.
+    // `application_id` is unique: a second row would be a constraint violation, not a schedule.
     expect(BackupTarget::count())->toBe(1)
         ->and(BackupTarget::first()->frequency)->toBe('weekly');
 });
@@ -133,9 +131,8 @@ it('refuses a retention of zero', function () {
 });
 
 it('refuses an unknown frequency', function () {
-    // `hourly` was the example here until it became a real option. v7 offered
-    // "every 2 days"; this panel deliberately does not, since cron cannot
-    // express it without restarting at the start of every month.
+    // "Every 2 days" is deliberately not offered: cron cannot express it without restarting
+    // at the start of every month.
     $this->withHeaders(backupHeaders())
         ->putJson("/api/applications/{$this->application->id}/backup-target", targetPayload(['frequency' => 'every_2_days']))
         ->assertUnprocessable()
@@ -163,14 +160,11 @@ describe('running a backup', function () {
             // exist until a worker picks it up.
             ->assertStatus(202);
 
-        // The queue, not just the job. `assertPushed` alone passes for a job
-        // sent anywhere, which is how this shipped pointing at a `backups`
-        // queue that no worker consumed — every backup was accepted, stored
-        // and never run, with no error to show for it.
+        // Assert the queue, not just the job: `assertPushed` alone passes for a job sent anywhere
+        // (it once went to a `backups` queue no worker consumed).
         //
-        // Null rather than 'default': naming no queue is what makes the job
-        // land on the connection's default, and it is the bare `queue:work`
-        // in install.sh that drains it.
+        // Null, not 'default': naming no queue lands on the connection's default, which the bare
+        // `queue:work` in install.sh drains.
         Queue::assertPushed(RunBackup::class, fn (RunBackup $job): bool => $job->queue === null);
     });
 
@@ -230,9 +224,8 @@ it('lists backups across every application', function () {
 });
 
 it('sends the uid the archive is stored under', function () {
-    // `id` is an autoincrement that means nothing outside this database, so it
-    // cannot match a row to an object in the bucket — which is what `uid` was
-    // added for (2026-09-09) and then not exposed.
+    // `id` means nothing outside this database, so it cannot match a row to an object in the
+    // bucket; `uid` exists for that and must be exposed.
     $target = BackupTarget::create(array_merge(
         ['application_id' => $this->application->id],
         targetPayload(),
@@ -432,9 +425,8 @@ describe('the next scheduled run', function () {
     it('reports a brand-new target as due, not as scheduled for tomorrow', function () {
         $this->travelTo('2026-03-10 10:00:00');
 
-        // A target that has never run is picked up on the next scheduler
-        // tick, within a minute — so a UI showing only next_run_at would
-        // name tomorrow at exactly the moment the first backup happens.
+        // A target that never ran is picked up on the next scheduler tick (within a minute), so
+        // showing only next_run_at would name tomorrow as the first backup is about to run.
         $this->withHeaders(backupHeaders())
             ->putJson("/api/applications/{$this->application->id}/backup-target", targetPayload())
             ->assertOk()
@@ -498,10 +490,9 @@ describe('the next scheduled run', function () {
 });
 
 describe('the within-a-day frequencies', function () {
-    // The chosen time is one of the runs, the rest fall every N hours around
-    // it. The every-12-hours case at 15:00 is the one that matters: the naive
-    // cron `30 14-23/12` means "from 14:00" and runs once a day, so its next
-    // run would be tomorrow at 14:30, not tonight at 02:30.
+    // The chosen time is one of the runs; the rest fall every N hours around it. Every 12 hours at
+    // 15:00 matters: the naive cron `30 14-23/12` means "from 14:00" and runs once a day, so the
+    // next run would be tomorrow 14:30, not tonight 02:30.
     it('runs at the times the chosen time implies', function (string $frequency, string $time, string $now, string $expected) {
         $this->travelTo($now);
 
@@ -576,16 +567,12 @@ describe('the settings form options', function () {
                 ->assertOk();
         }
 
-        // A site with a database: a Database backup of a site without one is
-        // refused on purpose (bug #33).
+        // A site with a database: a Database backup of a site without one is refused on purpose.
         Database::create(['name' => 'shop', 'engine' => 'mysql', 'application_id' => $this->application->id]);
 
-        // The hosted family only, because this fixture is a PHP site. The other
-        // three describe a container site and are refused here on purpose —
-        // `volumes` on a site with no volumes would upload an empty archive and
-        // report success. Filtered by the `family` the endpoint publishes, so
-        // this stays the same statement it always was: what the form offers for
-        // a given site, the save accepts.
+        // The hosted family only, because this fixture is a PHP site. The container types are
+        // refused here on purpose: `volumes` on a site with no volumes would upload an empty
+        // archive and report success.
         $offered = collect($options['types'])->where('family', 'hosted')->pluck('value');
 
         expect($offered->all())->toBe(['filesystem', 'database', 'full']);
@@ -643,17 +630,13 @@ describe('downloading a backup', function () {
             'manifest' => ['key' => 'a1b2c3.tar.gz'],
         ]);
 
-        // A disk that answers exists()/temporaryUrl() without an S3 endpoint.
-        // Mocked as FilesystemAdapter rather than the Filesystem contract on
-        // purpose: only the adapter declares temporaryUrl (the contract has
-        // no signing), and DestinationDisk::for() returns the contract — an
-        // anonymous stub would fail its return type.
+        // A disk that answers exists()/temporaryUrl() without an S3 endpoint. Mocked as
+        // FilesystemAdapter, not the contract: only the adapter declares temporaryUrl, and
+        // DestinationDisk::for() returns the contract, so an anonymous stub fails its return type.
         $this->fakeDestinationDisk = function (bool $exists = true) {
             $disk = Mockery::mock(FilesystemAdapter::class);
             $disk->shouldReceive('exists')->andReturn($exists);
-            // The controller asks before it signs. It has to: `temporaryUrl()`
-            // throws on every adapter but S3, and that exception escaping was
-            // the 500 four providers out of five used to get.
+            // The controller must ask before it signs: `temporaryUrl()` throws on every adapter but S3.
             $disk->shouldReceive('providesTemporaryUrls')->andReturn(true);
             $disk->shouldReceive('temporaryUrl')
                 ->andReturn('https://bucket.example.com/a1b2c3.tar.gz?X-Amz-Signature=deadbeef');
@@ -683,13 +666,9 @@ describe('downloading a backup', function () {
     });
 
     it('says download is unavailable rather than answering 500', function () {
-        // The regression this exists to hold. A disk that cannot sign URLs —
-        // FTP, SFTP, a service-account Drive — used to reach
-        // `temporaryUrl()` and throw `RuntimeException: This driver does not
-        // support creating temporary URLs`, which the handler turned into a
-        // bare 500. Four providers out of five, for the whole life of the
-        // feature, discovered only when the first Drive backup finally got far
-        // enough to be downloadable.
+        // The regression this guards: a disk that cannot sign URLs (FTP, SFTP, a service-account
+        // Drive) reached `temporaryUrl()` and threw `RuntimeException: This driver does not support
+        // creating temporary URLs`, which became a bare 500.
         $disk = Mockery::mock(FilesystemAdapter::class);
         $disk->shouldReceive('exists')->andReturn(true);
         $disk->shouldReceive('providesTemporaryUrls')->andReturn(false);
@@ -707,8 +686,8 @@ describe('downloading a backup', function () {
             ->assertStatus(422)
             ->assertJsonValidationErrors('backup');
 
-        // Bug #45: the entry was written before the link, so this refusal
-        // used to read "Downloaded" in the Activity Log.
+        // The entry must not be written before the link: this refusal used to read "Downloaded"
+        // in the Activity Log.
         expect(ActivityLog::where('type', 'backup')->where('action', 'downloaded')->exists())->toBeFalse();
     });
 
@@ -993,10 +972,8 @@ describe('the destination on a backup row', function () {
 /*
 | Saying which clock the schedule is in.
 |
-| A backup target's `schedule_time` is a bare "02:00" with no zone attached,
-| and `RunScheduledBackups` resolves it against the APP clock. So on a server
-| set to anything but that clock, the number on the screen is not the time the
-| backup runs — and nothing in the response let a user find that out.
+| `schedule_time` is a bare "02:00" with no zone, and `RunScheduledBackups` resolves it against
+| the APP clock. On a server set to another clock, the number on screen is not when the backup runs.
 */
 
 it('names the timezone its schedule is interpreted in', function () {
@@ -1018,15 +995,10 @@ it('names the timezone its schedule is interpreted in', function () {
 });
 
 it('names the clock the scheduler uses, not the one the server runs on', function () {
-    // 🔴 The guard this feature exists for. Cronjob publishes
-    // `ServerTimezone::get()` because Linux cron really does run on the OS
-    // clock. Backups do not — they run on the app's. Copying Cronjob here
-    // would print "02:00 Asia/Kolkata" for a backup that fires at 02:00 UTC:
-    // a specific, confident, wrong answer, which a user cannot tell from a
-    // right one. Worse than the bare number it replaces.
-    //
-    // This also fails the day someone moves backups to server time and
-    // forgets the label — which is exactly today's bug, one level up.
+    // The guard this feature exists for. Cronjob publishes `ServerTimezone::get()` because Linux
+    // cron runs on the OS clock; backups run on the app's. Copying Cronjob here would print
+    // "02:00 Asia/Kolkata" for a backup that fires at 02:00 UTC: a confident, wrong answer.
+    // It also fails if backups move to server time and the label is not updated.
     $timezoneFile = sys_get_temp_dir().'/sv-oss-tz-'.uniqid();
     file_put_contents($timezoneFile, "Asia/Kolkata\n");
     config(['server.timezone_file' => $timezoneFile]);
@@ -1076,8 +1048,7 @@ describe('a Database backup for a site with no database (bug #33)', function () 
 });
 
 it('tells the form which family each backup type belongs to', function () {
-    // Without this the form would offer six types where the API accepts three,
-    // on a screen whose own contract is that what it offers, the API takes.
+    // Without this the form would offer six types where the API accepts three.
     $types = collect($this->withHeaders(backupHeaders())
         ->getJson('/api/backup-targets/options')
         ->assertOk()
@@ -1095,8 +1066,7 @@ it('tells the form which family each backup type belongs to', function () {
 });
 
 describe('the last backup', function () {
-    // BK-A: "Last backup" showed `last_run_at`, which kept a time after every
-    // backup was deleted. `last_run_at` has to stay (the schedule reads it);
+    // `last_run_at` stays (the schedule reads it) but outlives deleted backups;
     // `last_backup_at` follows the backups that still exist.
     it('names the newest good backup still kept, and clears once none is', function () {
         $good = seedBackupWithDestination('Offsite');

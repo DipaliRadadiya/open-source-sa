@@ -14,25 +14,19 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 /*
- * Docker's networks and volumes, which are server-level because that is what
- * they are: shared objects that outlive any one container.
+ * Docker networks and volumes are server-level: shared objects that outlive any one container.
+ * The refusals are the feature, since Docker's own answers are poor:
  *
- * The refusals are the feature. Docker's own answers are worse than nothing
- * in three specific ways, and each has a test here:
- *
- *  - `network rm` on a network in use says "has active endpoints" and names
- *    neither the network nor what is on it.
- *  - `volume rm` refuses a volume in use, but `-f` does not — and the panel
- *    must never be the thing that deletes a running database.
- *  - `bridge`, `host` and `none` are recreated by Docker on restart, so a
- *    delete is a control that either fails or does damage.
+ *  - `network rm` on a network in use says "has active endpoints" and names neither side.
+ *  - `volume rm` refuses a volume in use, but `-f` does not — the panel must never delete a
+ *    running database.
+ *  - `bridge`, `host` and `none` are recreated by Docker on restart, so deleting them either
+ *    fails or does damage.
  */
 
 /*
- * Prefixed helpers. Pest loads every test file into one process, so a bare
- * `dockerOps()` shares a global namespace with every other suite —
- * `DockerChecksTest` already owns that name, and the collision is a fatal
- * error rather than a failure, so it takes the whole run down.
+ * Prefixed helpers: Pest loads every test file into one process, so a bare `dockerOps()` would
+ * collide with `DockerChecksTest` (a fatal error, not a failure).
  */
 
 /** Answers each `op` from the handler map; records what ran. */
@@ -87,10 +81,9 @@ function dockerAdmin(): User
 }
 
 it('reads size from system df, because volume ls reports N/A', function () {
-    // The size column is the one people actually want, and `docker volume ls`
-    // answers "N/A" for it. `system df -v` carries size AND Links — how many
-    // containers use the volume — which makes "in use" answerable without a
-    // second call per volume.
+    // The size column is the one people want, and `docker volume ls` answers "N/A" for it.
+    // `system df -v` carries size AND Links (how many containers use the volume), which makes
+    // "in use" answerable without a call per volume.
     $ran = [];
     $ops = dockerResourceOps(['docker_volume_df' => fn () => dockerResourceOutput(VOLUME_JSON)], $ran);
 
@@ -106,12 +99,9 @@ it('reads size from system df, because volume ls reports N/A', function () {
 });
 
 it('shows which containers are reachable from the host and which are not', function () {
-    // The whole security story of this stack, and invisible unless said: a
-    // bare `3306/tcp` is exposed to the container network only, while
-    // `127.0.0.1:2368->2368/tcp` is published to the host. The arrow is the
-    // only difference and it is far too easy to read the two as the same.
-    //
-    // Real shapes: Ghost and its MySQL, on one network, differing exactly here.
+    // The security story of this stack: a bare `3306/tcp` is exposed to the container network only,
+    // while `127.0.0.1:2368->2368/tcp` is published to the host. The arrow is the only difference.
+    // Real shapes: Ghost and its MySQL, on one network.
     $ps = '{"Names":"sv-app-7-ghost-1","Ports":"127.0.0.1:2368->2368/tcp"}'
         ."\n".'{"Names":"sv-app-7-db-1","Ports":"3306/tcp, 33060/tcp"}';
 
@@ -187,9 +177,8 @@ it('refuses a name that could arrive as a flag', function () {
 });
 
 it('never passes --force when removing a volume', function () {
-    // `docker volume rm -f` removes a volume that is still attached, which is
-    // how somebody deletes a database while it is running. The panel checks
-    // first and refuses; without this the check would be advisory.
+    // `docker volume rm -f` removes a volume that is still attached (deleting a running database),
+    // so the panel checks first and refuses.
     $ran = [];
     (new DockerResources(dockerResourceOps([], $ran)))->removeVolume('probe-vol');
 
@@ -216,11 +205,9 @@ it('names the containers when refusing to delete a busy network', function () {
     // what is on it, which sends the user to a terminal to find out.
     $admin = dockerAdmin();
 
-    // The container shape `networks()` really returns — `{name, ports,
-    // published}`, not a bare string. This mock said string, and that is the
-    // only reason the refusal read correctly here: the real path imploded an
-    // array of arrays and shipped "still has containers on it: Array". A fake
-    // that has drifted from its subject asserts nothing about the subject.
+    // The container shape `networks()` really returns — `{name, ports, published}`, not a bare
+    // string. A fake that drifts from its subject asserts nothing about it: the real path once
+    // imploded an array of arrays into "still has containers on it: Array".
     $this->mock(DockerResources::class, function ($mock) {
         $mock->shouldReceive('networks')->andReturn([[
             'name' => 'sv-app-6_default', 'built_in' => false,
@@ -253,11 +240,9 @@ it('refuses to delete one of Docker\'s own networks', function () {
 });
 
 it('refuses to delete a network a site is set to join', function () {
-    // The guard the container check cannot make. A STOPPED site is attached to
-    // nothing, so `containers` is empty and every check above passes — and its
-    // compose file still names this network with `external: true`, so the
-    // delete succeeds and the site never starts again. Nothing would connect
-    // that failure to this click.
+    // A STOPPED site is attached to nothing, so `containers` is empty and the checks above pass —
+    // yet its compose file still names this network with `external: true`, so deleting it would
+    // stop the site from ever starting again.
     $admin = dockerAdmin();
 
     $this->mock(DockerResources::class, function ($mock) {
@@ -368,11 +353,8 @@ it('translates every refusal in every locale', function () {
 });
 
 /*
- * Which containers use a volume.
- *
- * "1 container(s)" is a number, and what somebody needs is the name of the thing
- * to go and stop. The source has to be `container inspect`: see the test below
- * about truncation for why `docker ps` cannot answer this.
+ * Which containers use a volume. "1 container(s)" is a count; the user needs the name of the
+ * thing to stop. The source has to be `container inspect` (see the truncation test below).
  */
 
 /** `docker container inspect --format '{{json .}}'` over two containers. */
@@ -422,9 +404,8 @@ it('asks inspect once, not once per volume', function () {
 });
 
 it('does not run inspect at all when there are no containers', function () {
-    // `docker container inspect` with no arguments is an ERROR — "requires at
-    // least 1 argument" — not an empty answer. Unguarded, every load of the
-    // volumes page on an idle box wrote a failed op to the log.
+    // `docker container inspect` with no arguments is an ERROR ("requires at least 1 argument"),
+    // not an empty answer; unguarded, the volumes page on an idle box logged a failed op per load.
     $ran = [];
     $volumes = (new DockerResources(dockerResourceOps([
         'docker_volume_df' => fn () => dockerResourceOutput(VOLUME_JSON),
@@ -436,11 +417,9 @@ it('does not run inspect at all when there are no containers', function () {
 });
 
 it('would match nothing if the names came from docker ps', function () {
-    // THE REASON `volumeContainers()` uses inspect. `docker ps --format`
-    // truncates the mount list: on a real box two different volumes both came
-    // back as `sv-app-7_ghost…`, ellipsis included. This is that string, and it
-    // must not match — a join on a truncated name either finds nothing or, with
-    // two volumes sharing a prefix, finds the wrong one.
+    // Why `volumeContainers()` uses inspect: `docker ps --format` truncates the mount list (two
+    // different volumes both came back as `sv-app-7_ghost…`, ellipsis included). This is that
+    // string, and it must not match — a join on a truncated name finds nothing or the wrong volume.
     $volumes = collect((new DockerResources(dockerResourceOps([
         'docker_volume_df' => fn () => dockerResourceOutput(VOLUME_JSON),
         'docker_ps_ids' => fn () => dockerResourceOutput("abc123\n"),
@@ -453,9 +432,8 @@ it('would match nothing if the names came from docker ps', function () {
 });
 
 it('keeps refusing a volume in use even when it cannot name the containers', function () {
-    // `in_use` reads `Links` from `system df -v`, not the names. If inspect did
-    // not answer, the volume still has users and the delete must still be
-    // refused — falling back to the count rather than deleting data because the
+    // `in_use` reads `Links` from `system df -v`, not the names. If inspect does not answer, the
+    // volume still has users and the delete must still be refused — never delete data because the
     // panel failed to name what is writing it.
     $admin = dockerAdmin();
 
@@ -495,12 +473,9 @@ it('names the containers when refusing to delete a volume', function () {
 });
 
 /*
- * Deleting a volume a site mounts.
- *
- * The most consequential guard on this screen. `Links` counts CONTAINERS, so a
- * stopped site has none and every other check passes — while the volume still
- * holds that site's database. Deleting a network out from under a stopped site
- * breaks a start; deleting its volume destroys the data.
+ * Deleting a volume a site mounts. The most consequential guard on this screen: `Links` counts
+ * CONTAINERS, so a stopped site has none and every other check passes while the volume still
+ * holds that site's database. Deleting a network breaks a start; deleting a volume destroys data.
  */
 
 it('reports which sites mount a volume', function () {
@@ -525,9 +500,8 @@ it('reports which sites mount a volume', function () {
     ])))->volumes());
 
     expect($volumes->firstWhere('name', 'shop-db')['sites'])
-        // One row per MOUNT, not per site: this fixture mounts the same volume at
-        // two paths, and `/var/lib/mysql` versus `/backup` is the difference between
-        // "this is the database" and "this is a copy of it". The table shows both.
+        // One row per MOUNT, not per site: this fixture mounts the same volume at two paths, and
+        // `/var/lib/mysql` versus `/backup` is the difference between the database and a copy of it.
         ->toBe([
             ['id' => $application->id, 'name' => 'Shop', 'path' => '/var/lib/mysql'],
             ['id' => $application->id, 'name' => 'Shop', 'path' => '/backup'],

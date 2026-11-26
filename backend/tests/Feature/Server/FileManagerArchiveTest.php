@@ -22,23 +22,14 @@ use Illuminate\Support\Facades\Queue;
 uses(RefreshDatabase::class);
 
 /*
- * Compressing 18 Ubuntu ISOs — about 110 GB — was reported as "something
- * already exists at that path".
+ * A large `tar -czf` killed at the shared 60 s ceiling leaves a partial archive, so a retry hit
+ * the does-it-exist guard and blamed a naming collision. The timeout must be carried out of
+ * `ServerOps` and the partial file cleaned up.
  *
- * It was not a naming collision. `tar -czf` was killed at the 60 s ceiling
- * every file operation shared, which left a partial `archive.tar.gz` on disk,
- * so the obvious next move (try again) hit the does-it-exist guard and
- * reported *that* as the problem. The real failure had already happened a
- * minute earlier and said nothing: `ServerOps` wrote 'process timed out' into
- * stderr and nothing carried it out, so the exception was the generic
- * "the file operation failed" and the log line an empty message.
- *
- * The ceiling is not ours to raise, either. It belongs to the web server, and
- * the three the panel installs disagree: nginx and Apache allow 300 s, while
- * OpenLiteSpeed's `initTimeout` is 60. A timeout tuned to 300 would work on
- * two of them and, on the third, fail *above* PHP — so the cleanup below
- * would never run. Hence a ceiling under the lowest, and a size check that
- * refuses up front instead.
+ * The ceiling belongs to the web server and the three the panel installs disagree: nginx and
+ * Apache allow 300 s, OpenLiteSpeed's `initTimeout` is 60. A timeout tuned to 300 would fail
+ * above PHP on OLS and skip the cleanup, so the ceiling stays under the lowest and a size check
+ * refuses up front.
  */
 
 function archiveApplication(): Application
@@ -57,16 +48,11 @@ function archiveApplication(): Application
 }
 
 /*
- * Every helper here is prefixed. Pest loads all test files into one process,
- * so a bare `fakeProcess()` shares a global namespace with every other suite —
- * `ProcessKillTest` already owns that name, and the collision is a fatal
- * error rather than a failure, so it takes the whole run down.
+ * Every helper here is prefixed: Pest loads all test files into one process, and a name clash
+ * (`ProcessKillTest` already owns `fakeProcess()`) is a fatal error that takes the run down.
  */
 
-/**
- * A `ProcessResult` whose `output()` is whatever the test needs `find` or
- * `du` to have printed.
- */
+/** A `ProcessResult` whose `output()` is whatever the test needs `find` or `du` to have printed. */
 function archiveFakeProcess(string $stdout): Illuminate\Contracts\Process\ProcessResult
 {
     $process = Mockery::mock(Illuminate\Contracts\Process\ProcessResult::class);
@@ -77,17 +63,12 @@ function archiveFakeProcess(string $stdout): Illuminate\Contracts\Process\Proces
 }
 
 /**
- * A `ServerOps` double that records every command with the ceiling it was
- * given, and answers the existence probes the way a real box would for
- * "compress this directory into a name nothing occupies yet".
+ * A `ServerOps` double that records every command with the ceiling it was given, and answers
+ * the existence probes as a real box would for "compress into a name nothing occupies yet".
  *
- * Mocked at `ServerOps` rather than the Process facade because the thing
- * under test is the argv the browser assembles and which timeout it passes;
- * faking one layer lower would test Laravel's process plumbing instead. The
- * stat answers are stateful for the reason a static fake would be wrong here
- * — the code asks two different questions with the same op name, and a fake
- * that answers both identically makes the collision guard fire and the test
- * assert against a path it never meant to take.
+ * Mocked at `ServerOps` because the thing under test is the argv and the timeout the browser
+ * passes. The stat answers depend on the path: the code asks different questions with the same
+ * op name, and one answer for all would trip the collision guard.
  *
  * @param  array<string, callable>  $handlers  keyed by the `op` context value
  */
@@ -107,12 +88,9 @@ function archiveOps(array &$seen, array $handlers = []): ServerOps
             }
 
             if ($op === 'file_stat') {
-                // Answered by the path, not by a call counter. `compress()`
-                // stats three things — the source, the destination archive,
-                // and the directory the archive lands in — and a fake that
-                // counts calls has to know that number, so it breaks the
-                // moment the method asks one more question. The archive is
-                // the only one that must be absent.
+                // Answered by the path, not a call counter, so it survives `compress()` asking
+                // one more question. Of the source, the archive and its directory, only the
+                // archive must be absent.
                 $target = $command[array_search('find', $command, true) + 1] ?? '';
 
                 return preg_match('/\.(tar\.gz|tgz|zip)$/', $target) === 1
@@ -129,11 +107,8 @@ function archiveOps(array &$seen, array $handlers = []): ServerOps
 
 function archiveBrowser(ServerOps $ops): FileBrowser
 {
-    // `VolumeSizes` is resolved from the container rather than faked: nothing here
-    // measures a container site, so it is never called — but it is a required
-    // dependency, and leaving it out broke this helper the moment the constructor
-    // gained it (three archive tests failing on `ArgumentCountError`, which reads
-    // like an archive bug and is not).
+    // `VolumeSizes` comes from the container, not a fake: nothing here measures a container
+    // site, but it is a required constructor dependency.
     return new FileBrowser($ops, app(PanelDirectory::class), app(VolumeSizes::class));
 }
 
@@ -150,9 +125,7 @@ function archiveOpNamed(array $seen, string $op): ?array
 }
 
 it('carries the timeout out of ServerOps instead of losing it in stderr', function () {
-    // The string 'process timed out' was already being written here; nothing
-    // read it, which is why the log line was `production.ERROR:  {` with an
-    // empty message.
+    // 'process timed out' was written to stderr but nothing read it, leaving an empty log message.
     Process::fake(function () {
         $process = new Symfony\Component\Process\Process(['sleep', '10']);
 
@@ -182,20 +155,16 @@ it('tells the user it timed out rather than that the operation failed', function
 
     expect($timedOutBody['code'])->toBe('server_operation_timed_out')
         ->and($timedOutBody['message'])->toBe(__('errors/server.operation_timed_out'))
-        // And the ordinary failure is untouched — the new branch must not
-        // swallow the message every other file failure relies on.
+        // The ordinary failure is untouched: the timeout branch must not swallow its message.
         ->and($plainBody['code'])->toBe('server_operation_failed')
         ->and($plainBody['message'])->toBe(__('errors/application.file_operation_failed'));
 });
 
-/*
- * The async half: what the endpoint promises, and what it refuses to promise.
- */
+/* The async half: what the endpoint promises, and what it refuses to promise. */
 
 it('accepts the work instead of claiming it is done', function () {
-    // 200 + `compressed: true` is what the synchronous version returned, and
-    // on anything large it was saying that about work that had not happened —
-    // the request died at the web server's ceiling while tar carried on.
+    // A 200 + `compressed: true` would claim work that has not happened: on anything large the
+    // request dies at the web server's ceiling while tar carries on.
     Queue::fake();
 
     $seen = [];
@@ -212,10 +181,8 @@ it('accepts the work instead of claiming it is done', function () {
 });
 
 it('refuses an invalid target before any job exists', function () {
-    // The ordering that matters. Validation is the security boundary and it is
-    // cheap, so it answers inside the request; only the part whose cost scales
-    // with the user's data goes to the queue. A job row created for work that
-    // was never going to be allowed is a row that shows up in the panel as a
+    // Validation is the cheap security boundary and answers inside the request; only the part
+    // that scales with the user's data is queued. A job row for refused work would show as a
     // failure the user did not cause.
     Queue::fake();
 
@@ -244,9 +211,7 @@ it('refuses to overwrite an archive that already exists, before queueing', funct
 });
 
 it('runs one job per target path, however many times the button is pressed', function () {
-    // A held-down button used to start as many operations as it was clicked,
-    // each writing the same archive. Two tars writing one file produce a
-    // corrupt archive and no error at all.
+    // Two tars writing one file produce a corrupt archive and no error.
     $app = archiveApplication();
 
     $first = FileArchiveJob::create([
@@ -258,12 +223,11 @@ it('runs one job per target path, however many times the button is pressed', fun
         'sources' => ['a'], 'target' => 'out.tar.gz', 'status' => FileArchiveStatus::Queued,
     ]);
 
-    // Different rows, same lock — which is the point. Keying on the row id
-    // would give every request its own lock and prevent nothing.
+    // Different rows, same lock: keying on the row id would prevent nothing.
     expect((new RunFileArchive($first->id))->uniqueId())
         ->toBe((new RunFileArchive($second->id))->uniqueId());
 
-    // And a different target is genuinely allowed to run alongside it.
+    // A different target may run alongside it.
     $other = FileArchiveJob::create([
         'application_id' => $app->id, 'operation' => 'compress',
         'sources' => ['a'], 'target' => 'other.tar.gz', 'status' => FileArchiveStatus::Queued,
@@ -274,19 +238,15 @@ it('runs one job per target path, however many times the button is pressed', fun
 });
 
 it('gives the lock an expiry, so a killed worker does not wedge the path forever', function () {
-    // `Illuminate\Bus\UniqueLock` falls back to 0 seconds and RedisLock reads
-    // that as setnx with no TTL. Because the lock is keyed on the target path,
-    // a worker killed outright would mean that path could never be compressed
-    // again — silently, with no error and no failed_jobs row.
+    // `Illuminate\Bus\UniqueLock` falls back to 0 seconds, which RedisLock reads as no TTL: a
+    // worker killed outright would block that path forever, with no failed_jobs row.
     $job = new RunFileArchive(1);
 
     expect($job->uniqueFor())->toBeGreaterThan($job->timeout);
 });
 
 it('keeps the archive job inside its own reservation window', function () {
-    // The property that was violated once already, by raising one literal
-    // without the other. A job that outlives `retry_after` is not retried — it
-    // is dispatched a second time as a fresh reservation, concurrently.
+    // A job that outlives `retry_after` is dispatched a second time, concurrently.
     foreach (['database', 'redis', 'beanstalkd'] as $connection) {
         expect((new RunFileArchive(1))->timeout)
             ->toBeLessThan((int) config("queue.connections.{$connection}.retry_after"), $connection);
@@ -294,9 +254,8 @@ it('keeps the archive job inside its own reservation window', function () {
 });
 
 it('settles a stranded row instead of spinning forever', function () {
-    // A worker killed outright never reaches `failed()`. Without this the row
-    // sits at `running`, the screen shows a spinner that will not resolve, and
-    // the unique lock keeps that path unusable.
+    // A worker killed outright never reaches `failed()`: the row would sit at `running` and the
+    // unique lock would keep that path unusable.
     $app = archiveApplication();
 
     $job = FileArchiveJob::create([
@@ -332,15 +291,14 @@ it('records why it failed, in the viewer locale, and clears the partial archive'
     expect(fn () => archiveBrowser($ops)->runArchiveJob($job))
         ->toThrow(FileOperationException::class);
 
-    // A killed tar has already created its output file. Leaving it is what
-    // made a timeout look like a filename collision on the next attempt.
+    // A killed tar has already created its output file; leaving it makes the retry look like a
+    // filename collision.
     $cleanup = archiveOpNamed($seen, 'file_archive_cleanup');
 
     expect($cleanup)->not->toBeNull()
         ->and($cleanup['command'])->toContain('/home/wplg/wplg/public_html/out.tar.gz');
 
-    // The reason is a stored code, so the sentence is built in the reader's
-    // locale rather than the locale of whoever started the job.
+    // The reason is a stored code, so the sentence is built in the reader's locale.
     $job->update(['status' => FileArchiveStatus::Failed, 'reason' => 'timed_out']);
 
     expect($job->fresh()->message())->toBe(__('errors/application.archive_failed.timed_out'))
@@ -348,8 +306,7 @@ it('records why it failed, in the viewer locale, and clears the partial archive'
 });
 
 it('translates every failure reason in every locale the panel ships', function () {
-    // A missing key renders as the key itself, which reaches the user as
-    // `errors/application.archive_failed.worker` in place of a sentence.
+    // A missing key renders as the key itself, e.g. `errors/application.archive_failed.worker`.
     foreach (['en', 'es', 'fr', 'de', 'hi', 'ja', 'pt', 'ru'] as $locale) {
         foreach (['timed_out', 'command_failed', 'application_missing', 'worker', 'unknown'] as $reason) {
             $key = "errors/application.archive_failed.{$reason}";
@@ -363,9 +320,8 @@ it('translates every failure reason in every locale the panel ships', function (
 });
 
 it('reports bytes written while a compress is still running', function () {
-    // The banner's only real content. `tar` reports nothing about its own
-    // progress and the worker is inside one blocking call for the whole run,
-    // so the size is read at poll time from the file being written.
+    // `tar` reports no progress and the worker blocks on it, so the size is read at poll time
+    // from the file being written.
     $app = archiveApplication();
 
     $job = FileArchiveJob::create([
@@ -385,9 +341,8 @@ it('reports bytes written while a compress is still running', function () {
 });
 
 it('does not claim a size for an extract', function () {
-    // There is no single artefact to measure — extraction writes a tree into
-    // a directory that already had contents. Reporting the target directory's
-    // size would be a number that starts non-zero and means nothing.
+    // Extraction writes a tree into a directory that already had contents, so there is no single
+    // artefact to measure; the target directory's size would start non-zero and mean nothing.
     $app = archiveApplication();
 
     $job = FileArchiveJob::create([

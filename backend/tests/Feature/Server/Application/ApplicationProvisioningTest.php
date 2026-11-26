@@ -31,27 +31,23 @@ beforeEach(function () {
 
     config([
         'server.web_server_drivers.nginx.sites_dir' => '/etc/nginx/sites-enabled',
-        // The real file lives here; sites-enabled holds a symlink to it.
-        // Unset, every assertion about the written config compared against a
-        // path beginning with a bare slash and quietly matched nothing.
+        // The real file lives here; sites-enabled holds a symlink to it. Unset, every assertion about the
+        // written config compared against a path with a bare leading slash and matched nothing.
         'server.web_server_drivers.nginx.sites_available_dir' => '/etc/nginx/sites-available',
     ]);
 });
 
 function makeApp(array $overrides = []): Application
 {
-    // `forceCreate`, because `slug` is not fillable — the create action
-    // assigns it. Through `create()` the slug was silently dropped and every
-    // path in this file came out as `{home}/public_html`, which is the
-    // pre-slug layout no server has used since August.
+    // `forceCreate`, because `slug` is not fillable — the create action assigns it. Through
+    // `create()` the slug was dropped and every path came out as `{home}/public_html`, a layout no
+    // server uses any more.
     return Application::forceCreate(array_merge([
         'system_user_id' => test()->su->id,
         'name' => 'Shop',
-        // Named by slug, never domain. Every real application has one — the
-        // create action assigns it — and `rootPath()` only falls back to the
-        // home directory for rows written before the column existed. Without
-        // it here the fixture described a layout the panel stopped using in
-        // August, and these assertions pinned the old one.
+        // Named by slug, never domain. Every real application has one (the create action assigns it),
+        // and `rootPath()` only falls back to the home directory for rows written before the column
+        // existed.
         'slug' => 'shop',
         'domain' => 'shop.example.com',
         'site_type' => 'php',
@@ -92,10 +88,8 @@ it('creates the directory, writes a tested config and reloads', function () {
     Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/nginx/sites-available/shop.conf']
         && str_contains($p->input, 'server_name shop.example.com')
         && str_contains($p->input, 'root /home/deploy/shop/public_html;')
-        // Its OWN pool socket, named for the slug — not the server-wide
-        // php8.4-fpm.sock. That is the whole point of per-site isolation: a
-        // vhost still pointing at the shared socket is a site running as
-        // www-data with none of its own settings.
+        // Its OWN pool socket, named for the slug, not the server-wide php8.4-fpm.sock: a vhost on the
+        // shared socket is a site running as www-data with none of its own settings.
         && str_contains($p->input, '/run/php/shop.sock'));
     Process::assertRan(fn ($p) => $p->command === ['nginx', '-t']);
     Process::assertRan(fn ($p) => $p->command === ['systemctl', 'reload', 'nginx']);
@@ -183,8 +177,8 @@ function provisionThroughJob(Application $app): Application
 }
 
 it('takes a failed site out of sites-enabled, so the next site still passes its config test', function () {
-    // Ubuntu 22.04, 28 Oct: one site whose config nginx refused, and every
-    // site created after it failed at test_config as well.
+    // One site whose config nginx refuses must not make every site created after it fail at
+    // test_config.
     $disk = provisionDisk('server_name broken.example.com');
 
     $broken = provisionThroughJob(makeApp(['name' => 'Broken', 'slug' => 'broken', 'domain' => 'broken.example.com']));
@@ -292,11 +286,9 @@ it('is idempotent when the job runs twice', function () {
     expect($app->status->value)->toBe('active');
     // mkdir -p and an overwriting tee converge rather than compounding.
     //
-    // The list rather than a count. `harden_php` was added to the provisioner
-    // without this number following it, and a bare `toHaveCount(8)` reports
-    // that as "9 does not match 8" — which says a step was duplicated, the one
-    // thing this test exists to catch, when in fact a step was added. Naming
-    // them means the next addition fails with a diff that says which.
+    // The list rather than a count: a bare `toHaveCount(8)` reports an added step as "9 does not
+    // match 8", which reads as a duplicated step — the one thing this test exists to catch. Naming
+    // them makes the next addition fail with a diff that says which.
     expect($app->steps)->toBe([
         'ensure_account',
         'create_directory',
@@ -328,9 +320,8 @@ it('writes a static config without a php handler', function () {
 
 it('refuses to provision when the web server is not one we can configure', function () {
     Process::fake();
-    // Was `openlitespeed`, which the panel can now configure. The rule this
-    // guards is unchanged — a web server with no driver is refused rather
-    // than guessed at — so it needs a web server that genuinely has none.
+    // A web server with no driver is refused rather than guessed at, so this needs a web server that
+    // genuinely has none.
     ServerCapability::query()->update(['web_server' => 'caddy']);
 
     $app = makeApp();
@@ -366,16 +357,14 @@ it('can retry a failed provision explicitly', function () {
     Queue::assertPushed(ProvisionApplication::class);
     // The previous failure is cleared so the UI doesn't show a stale error.
     expect($app->fresh()->failed_step)->toBeNull()
-        // Measured on a real server: a retried n8n came up Active still
-        // saying "not answering".
+        // A retried n8n came up Active still saying "not answering".
         ->and($app->fresh()->failed_reason)->toBeNull();
 });
 
 /*
- * 2026-11-24, on a fresh OpenLiteSpeed server: Redis refused one connection
- * just as a site was created. The row was saved, the job never queued, the
- * request answered 500 and the site sat at `pending` for ever. The queue here
- * is a real Redis connection to a port nothing listens on — the same refusal.
+ * Redis refusing one connection just as a site is created: the row was saved, the job never
+ * queued, the request answered 500 and the site sat at `pending` for ever. The queue here is a
+ * real Redis connection to a port nothing listens on — the same refusal.
  */
 describe('when the queue refuses the setup job', function () {
     beforeEach(function () {
@@ -510,12 +499,9 @@ it('denies provisioning with view-only access', function () {
 });
 
 /*
- * A new PHP site starts with dangerous functions disabled.
- *
- * The default was `null`, so every freshly created site could call exec,
- * shell_exec, system, passthru, proc_open and popen — what a web shell needs
- * and what almost no application does. Both lists and the UI presets for them
- * already existed; nothing applied either unless someone went looking.
+ * A new PHP site starts with dangerous functions disabled. The default used to be `null`, so
+ * every new site could call exec, shell_exec, system, passthru, proc_open and popen — what a web
+ * shell needs and almost no application does.
  */
 
 function provisionApp(array $overrides = []): Application
@@ -581,8 +567,7 @@ it('does not rewrite the record or the list of a site that already has them (a c
 });
 
 it('turns open_basedir on for a new PHP site, as v7 does', function () {
-    // The column defaults to off, so the model's default alone never reached
-    // a real site — caught on a live server, not by a unit test.
+    // The column defaults to off, so the model's default alone never reached a real site.
     expect(provisionApp()->phpSettings->open_basedir_enabled)->toBeTrue();
 });
 
@@ -609,11 +594,10 @@ it('disables it before the config that carries it is written', function () {
 });
 
 it('leaves a site that already exists exactly as it was', function () {
-    // THE REASON THIS IS NOT IN defaults(). That method fills every value a
-    // site has not set, so putting the list there would reach existing sites
-    // on whatever unrelated event next re-rendered their configuration — a
-    // resync, a domain change, a certificate — and a working site would start
-    // refusing calls it made yesterday with nothing connecting the two.
+    // WHY THIS IS NOT IN defaults(): that method fills every value a site has not set, so the list
+    // would reach existing sites on whatever unrelated event next re-renders their configuration (a
+    // resync, a domain change, a certificate), and a working site would start refusing calls it made
+    // yesterday with nothing connecting the two.
     $existing = makeApp(['slug' => 'old', 'domain' => 'old.example.com']);
 
     expect(ApplicationPhpSettings::query()->where('application_id', $existing->id)->exists())
@@ -631,13 +615,9 @@ it('does not write PHP settings for a site that does not run PHP', function () {
 });
 
 /*
- * The `.env` a container's compose file insists on.
- *
- * `compose.blade.php` declares `env_file` unconditionally, and Compose treats a
- * missing one as fatal — so a container site with no `.env` cannot start. The
- * guard here read `site_type !== 'git'`, which meant no site built from the
- * image/port fields ever got one. It failed at `container_start`, several steps
- * after the step that did not create the file.
+ * The `.env` a container's compose file insists on: `compose.blade.php` declares `env_file`
+ * unconditionally and Compose treats a missing one as fatal, so a container site with no `.env`
+ * cannot start — it fails at `container_start`, several steps after the skipped file creation.
  */
 
 it('creates the env file a container site cannot start without', function () {
@@ -663,20 +643,18 @@ it('creates the env file a container site cannot start without', function () {
 
     $env = $app->fresh()->envPath();
 
-    // The same path the compose file names. Asserting on the rendered file's
-    // string instead would pass while nothing created it — which is exactly how
-    // this shipped.
+    // The same path the compose file names. Asserting on the rendered file's string instead would
+    // pass while nothing created it.
     expect(collect($ran)->contains(
         fn (array $command): bool => in_array('touch', $command, true) && in_array($env, $command, true),
     ))->toBeTrue("nothing touched {$env}");
 });
 
 it('points nginx at the port a pasted compose file publishes, before calling the site active', function () {
-    // write_config renders the vhost with the allocated port; starting the
-    // container then moves app_port to the one the file publishes. Measured
-    // on 2026-10-07: nginx on 3014, the container on 3992, the site `active`
-    // and `running` and a 502 for good, because only the certificate step
-    // rewrote the vhost and it declines a domain not pointed here yet.
+    // write_config renders the vhost with the allocated port; starting the container then moves
+    // app_port to the one the file publishes. Only the certificate step rewrote the vhost, and it
+    // declines a domain not pointed here yet, so the site was `active` and `running` with a 502 for
+    // good (nginx on one port, the container on another).
     $ran = [];
     $vhosts = [];
     Process::fake(function ($process) use (&$ran, &$vhosts) {
@@ -752,10 +730,9 @@ it('still does not create one for a PHP site, which has no use for it', function
 });
 
 /*
- * An install job that died without a word — worker killed, disk full — left the
- * site `provisioning` for good, and Delete refuses a provisioning site, so the
- * user could never remove it (found on a test server whose disk filled,
- * 2026-10-18). Past its own budget nothing can still be installing it.
+ * An install job that died without a word (worker killed, disk full) left the site
+ * `provisioning` for good, and Delete refuses a provisioning site, so the user could never remove
+ * it. Past its own budget nothing can still be installing it.
  */
 describe('a site whose install job died without finishing', function () {
     function provisionDeadline(): int

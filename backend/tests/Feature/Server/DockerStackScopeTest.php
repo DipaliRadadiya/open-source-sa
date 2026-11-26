@@ -16,16 +16,9 @@ uses(RefreshDatabase::class);
 /*
  * A Docker server hosts containers and nothing else.
  *
- * The bug that produced this: the setup page recommended installing MySQL on a
- * Docker box. `DatabaseComponent::recommended()` returned a hardcoded `true`
- * and nothing in the setup catalogue was stack-aware — but the deeper fault was
- * that `capabilities.php` answers **"is PHP installed"**, which is true on
- * every box because the panel is a Laravel application, while the catalogue was
- * reading it as **"may this box host PHP sites"**. The same question until this
- * stack existed; different questions now.
- *
- * Hence `serving_profiles`, recorded per stack and never overwritten by
- * detection.
+ * `capabilities.php` answers **"is PHP installed"**, which is true on every box because the panel
+ * is a Laravel app; the setup catalogue must ask **"may this box host PHP sites"** instead.
+ * Hence `serving_profiles`, recorded per stack and never overwritten by detection.
  */
 
 function recordStack(string $stack): void
@@ -39,11 +32,10 @@ it('keeps php installed and php sites unhosted, which are different answers', fu
 
     $capabilities = app(ServerCapabilities::class);
 
-    // Honest: PHP really is on the box, because the panel needs it. Reporting
-    // false here would be a lie that the PHP screen and the doctor would both
-    // contradict.
+    // PHP really is on the box, because the panel needs it; reporting false would contradict the
+    // PHP screen and the doctor.
     expect($capabilities->current()->can('php'))->toBeTrue()
-        // And yet no PHP site may be built. This pair is the whole change.
+        // And yet no PHP site may be built.
         ->and($capabilities->hosts('php'))->toBeFalse()
         ->and($capabilities->hosts('docker'))->toBeTrue();
 });
@@ -51,8 +43,6 @@ it('keeps php installed and php sites unhosted, which are different answers', fu
 it('records the right profiles for every stack', function () {
     foreach ([
         // Node too: n8n, Node-RED, Uptime Kuma and NodeBB run on these stacks.
-        // The docker merge left it out, which hid all four from every
-        // non-MERN server.
         'lemp' => ['php', 'node', 'static'],
         'lamp' => ['php', 'node', 'static'],
         'ols' => ['php', 'node', 'static'],
@@ -67,11 +57,8 @@ it('records the right profiles for every stack', function () {
 });
 
 it('does not lose the decision when a runtime is installed', function () {
-    // `refresh()` is called whenever the panel installs or removes a runtime,
-    // and it used to write `detectRuntimes()` in place of the whole array —
-    // wiping `serving_profiles`, so a Docker box that installed anything
-    // quietly started offering WordPress again. A recorded decision erased by
-    // an unrelated observation.
+    // `refresh()` runs on every runtime install/removal; overwriting the whole array with
+    // `detectRuntimes()` would wipe `serving_profiles` and make a Docker box offer WordPress again.
     recordStack('docker');
 
     app(ServerCapabilities::class)->refresh();
@@ -81,9 +68,8 @@ it('does not lose the decision when a runtime is installed', function () {
 });
 
 it('is permissive about a server nobody recorded', function () {
-    // A box migrated in from another panel has `stack = null` and is certainly
-    // hosting something. Answering "hosts nothing" would empty the catalogue
-    // on a working server.
+    // A box migrated in from another panel has `stack = null` and is hosting something;
+    // answering "hosts nothing" would empty the catalogue on a working server.
     ServerCapability::query()->delete();
     ServerCapability::create([
         'stack' => null,
@@ -97,10 +83,8 @@ it('is permissive about a server nobody recorded', function () {
 });
 
 it('leaves types this stack will never host out of the grid', function () {
-    // Not shown, because nothing installs a way out and the reason is the same
-    // for every one of them. Rendering seventeen cards that each repeat one
-    // sentence about the server is noise, and a worse screen than the one it
-    // replaced.
+    // Not shown: nothing installs a way out, and seventeen cards repeating one sentence about the
+    // server is noise.
     recordStack('docker');
 
     $names = collect(app(SiteTypeManager::class)->catalog())->pluck('name');
@@ -110,9 +94,7 @@ it('leaves types this stack will never host out of the grid', function () {
 });
 
 it('still refuses a filtered type at the API', function () {
-    // The assertion that keeps the filter honest. Leaving a card out of the
-    // grid is only acceptable while the endpoint says no — otherwise it is a
-    // hidden door rather than a closed one.
+    // Hiding a card is only acceptable while the endpoint says no; otherwise it is a hidden door.
     recordStack('docker');
 
     $manager = app(SiteTypeManager::class);
@@ -124,55 +106,43 @@ it('still refuses a filtered type at the API', function () {
 });
 
 it('still offers PHP site types on a PHP stack', function () {
-    // The regression that would matter most: gating everything is easy, and
-    // gating only the right thing is the job.
+    // Guards against over-gating: only the wrong stacks may be filtered.
     recordStack('lemp');
 
     $wordpress = collect(app(SiteTypeManager::class)->catalog())->firstWhere('name', 'wordpress');
 
-    // Present AND not stack-blocked: the filter must not have eaten the grid
-    // on a stack that does host PHP.
+    // Present AND not stack-blocked: the filter must not eat the grid on a PHP stack.
     expect($wordpress)->not->toBeNull()
         ->and($wordpress['unavailable_code'])->not->toBe(SiteTypeManager::BLOCKED_STACK);
 });
 
 it('leaves the catalog a list on every stack, whichever end it filtered', function (string $stack) {
-    // The filter drops a contiguous run of types, and which end depends on the
-    // stack: a Docker box keeps the leading container types and stays a list by
-    // luck, while every other stack drops them and the survivors used to start
-    // at index 20. That asymmetry is why this is asserted per stack rather than
-    // once — the shape only broke on the stacks nobody tested it on, which was
-    // all of them except Docker.
-    //
-    // A gapped array is a JSON object, and the frontend parses this with
-    // `z.array()`, so the whole create page failed to read.
+    // The filter drops a contiguous run of types, and which end depends on the stack (a Docker
+    // box keeps the leading container types, every other stack drops them), so this is asserted
+    // per stack. A gapped array is a JSON object, and the frontend's `z.array()` would reject it.
     recordStack($stack);
 
     expect(array_is_list(app(SiteTypeManager::class)->catalog()))->toBeTrue();
 })->with(['lemp', 'lamp', 'ols', 'mern', 'docker']);
 
 it('leaves the catalog a list on a server with no recorded stack', function () {
-    // The migrated-in box, which falls on `DEFAULT_PROFILES`. It hosts PHP and
-    // Node and no containers, so it filters the Docker types like a LEMP box
-    // does — and it is the shape the majority of real installs were serving.
+    // The migrated-in box falls on `DEFAULT_PROFILES`: PHP and Node, no containers, so it filters
+    // the Docker types like a LEMP box does.
     ServerCapability::query()->delete();
 
     expect(array_is_list(app(SiteTypeManager::class)->catalog()))->toBeTrue();
 });
 
 it('leaves the site-facing setup rows off a container-only server', function () {
-    // The symptom that started this, and the fix I got wrong the first time.
-    // Marking the database row `recommended => false` left it on the page with
-    // its install button, because `recommended` only decides whether setup
-    // counts as complete. The row has to be absent.
+    // `recommended => false` would leave the database row on the page with its install button:
+    // `recommended` only decides whether setup counts as complete. The row has to be absent.
     recordStack('docker');
 
     $keys = collect(app(SetupCatalog::class)->toArray()['components'])->pluck('key');
 
     expect($keys)->not->toContain('database')
-        // The same reasoning reaches three more rows: extra PHP versions,
-        // extra Node versions and the compiler toolchain all exist for hosted
-        // sites. A container builds its dependencies inside its own image.
+        // Extra PHP versions, extra Node versions and the compiler toolchain exist for hosted
+        // sites; a container builds its dependencies inside its own image.
         ->and($keys)->not->toContain('php')
         ->and($keys)->not->toContain('node')
         ->and($keys)->not->toContain('build_tools')
@@ -182,7 +152,7 @@ it('leaves the site-facing setup rows off a container-only server', function () 
 });
 
 it('keeps every setup row on a stack that hosts sites', function () {
-    // Filtering everything is easy; filtering only the right rows is the job.
+    // Guards against over-filtering: only the container-only stack drops rows.
     recordStack('lemp');
 
     $keys = collect(app(SetupCatalog::class)->toArray()['components'])->pluck('key');
@@ -193,9 +163,7 @@ it('keeps every setup row on a stack that hosts sites', function () {
 });
 
 it('refuses the database API, not merely the screen', function () {
-    // The assertion that makes this real. Hiding the Databases screen while
-    // every endpoint still answers is a worse state than showing it, because
-    // nobody is looking for the thing that still works.
+    // Hiding the Databases screen while every endpoint still answers is worse than showing it.
     $this->seed(PermissionSeeder::class);
     $admin = User::factory()->admin()->create();
 
@@ -227,11 +195,9 @@ it('translates both refusals in every locale', function () {
 /*
  * The network field on the Docker card.
  *
- * It is a `select`, and a `select` the API declares with no options is not an
- * empty chooser — the create form falls back to the runtime version list and
- * offers PHP versions as networks. So the options have to be resolved here, and
- * resolving them costs a `docker network ls`, which must not happen on a box
- * that hosts no containers.
+ * A `select` declared with no options makes the create form fall back to the runtime version
+ * list and offer PHP versions as networks. The options are resolved here, which costs a
+ * `docker network ls` that must not run on a box that hosts no containers.
  */
 
 it('offers the server\'s networks as options on the Docker card', function () {
@@ -249,15 +215,13 @@ it('offers the server\'s networks as options on the Docker card', function () {
         ->and($field['type'])->toBe('select')
         // Never empty when networks exist, or the form renders a version list.
         ->and(collect($field['options'])->pluck('value')->all())->toBe(['ghost-net'])
-        // `bridge` is what an empty choice already means, and `host`/`none`
-        // cannot resolve names — offering them is offering a trap.
+        // `bridge` is what an empty choice already means, and `host`/`none` cannot resolve names.
         ->and(collect($field['options'])->pluck('value'))->not->toContain('bridge');
 });
 
 it('does not ask docker anything on a server that hosts no containers', function () {
-    // `fields()` is serialised for EVERY site type in the catalog listing.
-    // Ungated, this runs `docker network ls` on a LEMP box, on a request that
-    // has nothing to do with Docker, to build options for a card not shown.
+    // `fields()` is serialised for EVERY site type in the catalog listing; ungated, it would run
+    // `docker network ls` on a LEMP box to build options for a card that is not shown.
     recordStack('lemp');
 
     Process::fake();
@@ -268,8 +232,7 @@ it('does not ask docker anything on a server that hosts no containers', function
 });
 
 it('offers the create-new fields on the Docker card', function () {
-    // The form renders what the API declares, so a field that is not here does
-    // not exist to the user however well the endpoint accepts it.
+    // The form renders what the API declares, so an undeclared field does not exist to the user.
     recordStack('docker');
 
     Process::fake(fn () => Process::result(output: ''));
@@ -282,15 +245,13 @@ it('offers the create-new fields on the Docker card', function () {
         ->and($names)->toContain('volume_new')
         ->and($names)->toContain('volume_path');
 
-    // All advanced: the common case is one container that talks to nobody and
-    // keeps nothing, and four wiring fields on the front of the form would imply
-    // decisions most people do not have to make.
+    // All advanced: the common case is one container that talks to nobody and keeps nothing.
     foreach (['docker_network', 'docker_network_new', 'volume_new', 'volume_path'] as $field) {
         expect(collect($docker['fields'])->firstWhere('name', $field)['advanced'])->toBeTrue();
     }
 
-    // And every one of them is labelled — `field()` reads
-    // `application.fields.<name>`, so a missing key renders the raw key path.
+    // Every one is labelled: `field()` reads `application.fields.<name>`, and a missing key
+    // renders the raw key path.
     foreach (['docker_network_new', 'volume_new', 'volume_path'] as $field) {
         $label = collect($docker['fields'])->firstWhere('name', $field)['label'];
         expect($label)->not->toContain('application.fields');
@@ -298,10 +259,8 @@ it('offers the create-new fields on the Docker card', function () {
 });
 
 it('makes the Docker card a choice between two modes, not both at once', function () {
-    // The confusion this fixes: the form showed an image, a port, a network picker, a
-    // "new network" text box, a volume pair AND a compose textarea simultaneously,
-    // with help text reading "leave the picker above empty and type a name here".
-    // They are alternatives, so the form now asks which.
+    // Simple-mode fields and the compose textarea are alternatives, so the form asks which mode
+    // first instead of showing everything at once.
     recordStack('docker');
 
     Process::fake(fn () => Process::result(output: ''));
@@ -313,50 +272,40 @@ it('makes the Docker card a choice between two modes, not both at once', functio
 
     expect($mode)->not->toBeNull()
         ->and($mode['type'])->toBe('select')
-        // Not advanced: it decides which other fields exist, so it cannot be behind
-        // a disclosure.
+        // Not advanced: it decides which other fields exist.
         ->and($mode['advanced'])->toBeFalse()
         ->and(collect($mode['options'])->pluck('value')->all())->toBe(['simple', 'compose']);
 
-    // Every other field declares which mode it belongs to, or it is back to being
-    // shown in both.
+    // Every other field declares its mode, or it is shown in both.
     foreach (['image', 'container_port', 'docker_network', 'docker_network_new', 'volume_new', 'volume_path'] as $name) {
         expect($fields->get($name)['depends_on'] ?? null)->toBe('docker_mode:simple', "{$name} is not gated");
     }
 
     expect($fields->get('compose')['depends_on'] ?? null)->toBe('docker_mode:compose')
-        // And the compose box is no longer behind Advanced: in compose mode it IS
-        // the field.
+        // Not behind Advanced: in compose mode it IS the field.
         ->and($fields->get('compose')['advanced'])->toBeFalse();
 });
 
 it('stores the mode nowhere, because the site already records how it was made', function () {
-    // A column or a setting saying "this was made in compose mode" is a second source
-    // for a fact the compose file already carries, free to drift from it.
+    // A "made in compose mode" column would be a second source for a fact the compose file
+    // already carries, free to drift from it.
     expect((new Application)->getFillable())->not->toContain('docker_mode');
 
     $create = file_get_contents(base_path('app/Actions/Server/Application/CreateApplication.php'));
 
-    // Named as a deliberate exception rather than silently dropped — which is what
-    // the "every declared field is handled" guard exists to force.
+    // Named as a deliberate exception, as the "every declared field is handled" guard requires.
     expect($create)->toContain("\$formOnly = ['docker_mode']");
 });
 
 it('offers the size fields in both modes, and not behind Advanced', function () {
-    // Two decisions pinned here, both of which read as inconsistent next to the
-    // fields around them and are not.
+    // Two decisions pinned here that look inconsistent next to the fields around them:
     //
-    // **No `depends_on`.** Every other simple-mode field declares one, but the
-    // panel's compose override applies `mem_limit` and `cpus` to every service in
-    // a PASTED file too — so gating these on `docker_mode:simple` would take
-    // sizing away from the mode most likely to need it. `registry_id` is here for
-    // the same reason.
+    // **No `depends_on`.** The compose override applies `mem_limit` and `cpus` to every service in
+    // a PASTED file too, so gating on `docker_mode:simple` would remove sizing from compose mode.
+    // `registry_id` is ungated for the same reason.
     //
-    // **Not advanced**, unlike the network and volume fields. Those are advanced
-    // because the common case is a container that talks to nobody, so asking on
-    // the front of the form implies a decision most people do not have to make. A
-    // size is the opposite: it is the first thing anybody deploying a container
-    // looks for, and it was not on this form at all until it was reported missing.
+    // **Not advanced**, unlike the network and volume fields: a size is the first thing anyone
+    // deploying a container looks for.
     recordStack('docker');
 
     Process::fake(fn () => Process::result(output: ''));
@@ -370,14 +319,11 @@ it('offers the size fields in both modes, and not behind Advanced', function () 
         expect($field)->not->toBeNull("{$name} is not offered on the create form")
             ->and($field['advanced'])->toBeFalse("{$name} is hidden behind Advanced")
             ->and($field['depends_on'] ?? null)->toBeNull("{$name} is gated to one mode")
-            // No default on either. A pre-filled CPU value would be a default by
-            // another name, capping every site made through this form.
+            // No default on either: a pre-filled value would cap every site made through this form.
             ->and($field['default'] ?? null)->toBeNull("{$name} arrives pre-filled");
     }
 
-    // The CPU help names what the machine has, rather than describing the rule —
-    // the bound is the host's core count, and "no more than this server has" is
-    // not something anybody can act on without leaving the page.
+    // The CPU help names the host's core count, the actual bound, rather than describing the rule.
     expect($fields->get('cpu_limit')['help'])->toContain((string) app(HostCpus::class)->count());
 });
 
@@ -394,9 +340,8 @@ it('offers the one-click Node applications on LEMP, LAMP and OLS, and on no Dock
 ]);
 
 it('sends the catalog as a JSON list on every stack', function (string $stack) {
-    // `array_filter` keeps keys; with the Docker types first in `all()` the
-    // survivors started at index 20 and json_encode wrote an object, which
-    // the create page cannot read.
+    // `array_filter` keeps keys; a gapped array is encoded as a JSON object, which the create
+    // page cannot read.
     recordStack($stack);
 
     expect(array_is_list(app(SiteTypeManager::class)->catalog()))->toBeTrue();

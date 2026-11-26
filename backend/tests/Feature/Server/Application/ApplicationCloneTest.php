@@ -21,18 +21,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Process;
 
 /**
- * Site Clone: a fully independent duplicate — no ongoing relationship to
- * the source (unlike Staging). What matters here: a source needing a
- * database refuses cleanly when its type has no CloneStrategy, webhook
- * identity is never copied (it has a unique constraint and would create
- * ambiguity), and `provision()`'s installer/process-start steps are
- * skipped so a fresh install never fights the rsync that follows it.
+ * Site Clone: a fully independent duplicate, with no ongoing link to the source (unlike Staging).
+ * A database-needing type without a CloneStrategy refuses cleanly, webhook identity is never
+ * copied (unique constraint), and `provision()`'s installer/process-start steps are skipped so
+ * a fresh install never fights the rsync that follows.
  *
- * Cloning is asynchronous: the request returns 202 with a `SiteClone` record
- * and the work happens in `RunClone` off the queue, because rsyncing a large
- * site outlasts an HTTP request. So these tests assert the handover (202, a
- * pending record) and then run the job, which is the rest of the operation as
- * far as the user is concerned.
+ * Cloning is asynchronous: the request returns 202 with a `SiteClone` and `RunClone` does the
+ * work off the queue. Tests assert the handover (202, pending record), then run the job.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -54,11 +49,7 @@ function cloneHeaders(): array
     return ['Authorization' => 'Bearer '.test()->admin->createToken('t')->plainTextToken];
 }
 
-/**
- * Starts a clone through the API and then runs the queued job, returning the
- * refreshed record. The 202 is only a promise; nothing exists until the job
- * has run.
- */
+/** Starts a clone through the API and returns the refreshed record once the job has run. */
 function runClone(Application $source, string $domain, ?string $name = null): SiteClone
 {
     $payload = array_filter(['domain' => $domain, 'name' => $name]);
@@ -71,13 +62,8 @@ function runClone(Application $source, string $domain, ?string $name = null): Si
 
     $clone = SiteClone::findOrFail($response->json('clone.id'));
 
-    // No second `handle()`. The suite runs QUEUE_CONNECTION=sync, so
-    // `RunClone::dispatch` inside the POST above has already run the whole
-    // clone — calling it again ran every clone twice and asserted on the
-    // second pass. Harmless only while nothing in the flow was unique per
-    // application; the moment the clone started writing its primary domain
-    // row, the second run collided with the first on
-    // `application_domains.domain` and every clone test failed.
+    // No second `handle()`: QUEUE_CONNECTION=sync means the POST above already ran the job, and a
+    // second run collides on `application_domains.domain`.
     return $clone->fresh();
 }
 
@@ -120,8 +106,7 @@ it('clones a static site (no database needed) generically', function () {
         ->and($clone->cloned_from_application_id)->toBe($source->id)
         ->and($clone->status->value)->toBe('active')
         ->and($clone->webhook_enabled)->toBeFalse()
-        // Without a slug the clone provisions into the system user's home,
-        // which is where every other clone for that user would land too.
+        // Without a slug the clone would provision into the system user's home, shared by every clone.
         ->and($clone->slug)->not->toBeNull()
         ->and($clone->slug)->not->toBe($source->slug)
         ->and(ActivityLog::where('type', 'application')->where('action', 'cloned')->exists())->toBeTrue();
@@ -171,9 +156,7 @@ it('rewrites every spelling of the source address, not just its URL (bug #92)', 
     $database = Database::create(['name' => 'shop_db', 'engine' => 'mysql', 'application_id' => $source->id]);
     DatabaseUser::create(['database_id' => $database->id, 'username' => 'shop_user', 'password' => 'secret', 'connection_preference' => 'localhost', 'host' => 'localhost']);
 
-    // A subdomain of the source: the case a plain bare-domain pass would turn
-    // into copy.copy.shop.test, because every address already rewritten
-    // still contains `shop.test`.
+    // A subdomain of the source: a plain bare-domain pass would turn it into copy.copy.shop.test.
     expect(runClone($source, 'copy.shop.test')->status->value)->toBe('completed');
 
     $searched = fn (string $term, bool $regex = false) => Process::assertRan(function ($p) use ($term, $regex) {
@@ -183,7 +166,7 @@ it('rewrites every spelling of the source address, not just its URL (bug #92)', 
             && in_array('--regex', $p->command, true) === $regex;
     });
 
-    // Links saved over http:// pointed at the original — the reported bug.
+    // Links saved over http:// must not keep pointing at the original.
     $searched('http://shop.test');
     $searched('https://shop.test');
     // The block editor's escaped form, and protocol-relative asset URLs.
@@ -208,11 +191,8 @@ it('refuses to clone a database-needing type with no clone recipe', function () 
         'serving_profile' => 'node', 'status' => 'active', 'node_version' => '22', 'app_port' => 4000,
     ]);
 
-    // This used to assert the refusal arriving as a *failed record* after a
-    // 202 — the request accepted work it already knew it could not do, and
-    // the user watched a clone fail for a reason the panel had up front.
-    // `app_clone` is no longer among a database-backed type's features, so
-    // `CheckPermission` closes the route: 404, nothing created, nothing queued.
+    // `app_clone` is not among a database-backed type's features, so `CheckPermission` closes the
+    // route up front: 404, nothing created, nothing queued.
     test()->withHeaders(cloneHeaders())
         ->postJson("/api/applications/{$source->id}/clone", ['domain' => 'forum-clone.test'])
         ->assertNotFound();
@@ -224,10 +204,8 @@ it('refuses to clone a database-needing type with no clone recipe', function () 
 it('still refuses inside the job if a strategy-less clone is ever reached directly', function () {
     fakeCloneServer();
 
-    // Defense in depth. The route is closed above, but `CloneManager`'s own
-    // guard is what protects a clone dispatched by anything that is not that
-    // route — and it is the guard the feature list was derived from, so it
-    // stays covered rather than being trusted because the door is shut.
+    // Defense in depth: the route is closed, but `CloneManager`'s own guard protects clones
+    // dispatched by anything other than that route.
     $source = Application::forceCreate([
         'system_user_id' => $this->systemUser->id,
         'name' => 'Forum Direct',
@@ -285,11 +263,8 @@ it('refuses without manage permission', function () {
 });
 
 /*
- * The failure path, which had no test — every one above fakes a server where
- * nothing goes wrong. A clone creates its target Application row before it
- * provisions, and `domain` is unique, so a row left behind by a failure meant
- * the same clone could never be retried and the panel listed a site that had
- * never been built.
+ * The failure path. A clone creates its target Application row before provisioning and `domain`
+ * is unique, so a row left behind by a failure blocks any retry and lists a site never built.
  */
 describe('when a clone fails partway', function () {
     it('leaves no half-made site behind and lets the same clone be retried', function () {
@@ -310,7 +285,7 @@ describe('when a clone fails partway', function () {
             ->and(Application::where('domain', 'docs-clone.test')->exists())->toBeFalse()
             ->and(Application::where('cloned_from_application_id', $source->id)->exists())->toBeFalse();
 
-        // The whole point: the same domain is free, so the retry works.
+        // The same domain is free again, so the retry works.
         fakeCloneServer();
 
         $retried = runClone($source, 'docs-clone.test');
@@ -329,9 +304,7 @@ describe('when a clone fails partway', function () {
             'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
         ]);
 
-        // Cleaning up must not cost the user the reason — without it the panel
-        // can only say the clone failed, which is the half of the message they
-        // already know.
+        // Cleaning up must keep the failure reason; without it the panel can only say "failed".
         $record = runClone($source, 'docs-clone.test');
 
         expect($record->reason)->not->toBeEmpty();
@@ -387,7 +360,7 @@ describe('when a clone fails partway', function () {
                 return Process::result(output: '1');
             }
 
-            // Written as the site user now, so the command arrives wrapped.
+            // Site-user writes arrive wrapped in `runuser`.
             if (($args[0] ?? '') === 'runuser') {
                 $args = array_slice($args, 4);
             }
@@ -428,9 +401,8 @@ describe('when a clone fails partway', function () {
 });
 
 it('writes the clone\'s wp-config.php as the site user, never as root', function () {
-    // The target is a copy of another site, links included, so a
-    // `wp-config.php` that is a link arrives with it — and root's `tee` and
-    // `chown` followed it (the `.panel` class of bug, 2026-09-29).
+    // The target is a copy of another site, so a `wp-config.php` symlink arrives with it, and
+    // root's `tee`/`chown` would follow the link.
     $ran = [];
     Process::fake(function ($process) use (&$ran) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
@@ -464,16 +436,14 @@ it('writes the clone\'s wp-config.php as the site user, never as root', function
 
     expect($writes)->not->toBeEmpty()
         ->and($writes->every(fn (array $c) => array_slice($c, 0, 5) === ['runuser', '-u', 'siteowner', '--', 'tee']))->toBeTrue()
-        // And no root chown of it afterwards: the user's write made it theirs.
+        // No root chown afterwards: the user's write already made it theirs.
         ->and(collect($ran)->map(fn (array $c) => implode(' ', $c))
             ->contains(fn (string $c) => str_starts_with($c, 'chown ') && str_ends_with($c, '/wp-config.php')))->toBeFalse();
 });
 
 it('gives the clone a primary domain row, not just the mirror column', function () {
-    // The Domains screen reads `application_domains`; `applications.domain` is
-    // only the mirror of whichever row is primary. CreateApplication writes
-    // that row and CloneManager does not go through it, so a clone came up
-    // serving its domain with a completely empty Domains section.
+    // The Domains screen reads `application_domains`; `applications.domain` only mirrors the
+    // primary row, and CloneManager does not go through CreateApplication, which writes it.
     fakeCloneServer();
 
     $source = Application::forceCreate([
@@ -489,16 +459,13 @@ it('gives the clone a primary domain row, not just the mirror column', function 
 
     expect($primary)->not->toBeNull()
         ->and($primary->domain)->toBe('docs-primary-clone.test')
-        // The clone's own domain, not the source's — the mirror column and the
-        // row have to name the same host or the vhost and the screen disagree.
+        // The clone's own domain; the mirror column and the row must name the same host.
         ->and($clone->domain)->toBe($primary->domain);
 });
 
 it('keeps serving its own domain after an alias is added', function () {
-    // This is why the missing row was worse than cosmetic. `serverNames()`
-    // falls back to `applications.domain` *only while the relation is empty*.
-    // With no primary row, adding one alias made the relation non-empty
-    // without the site's own domain in it — and the next vhost dropped it.
+    // `serverNames()` falls back to `applications.domain` only while the relation is empty, so
+    // with no primary row one alias would make the next vhost drop the site's own domain.
     fakeCloneServer();
 
     $source = Application::forceCreate([
@@ -522,13 +489,8 @@ it('keeps serving its own domain after an alias is added', function () {
 });
 
 /*
- * PHP settings travel with the clone.
- *
- * The clone copied `php_version` and stopped there, so a cloned site came up
- * with the interpreter its source used and none of the configuration around
- * it. A site cloned to reproduce a problem did not reproduce the environment
- * the problem lived in, and one cloned as a staging copy ran on different
- * limits than the site it stood in for.
+ * PHP settings travel with the clone: copying only `php_version` would give the clone the same
+ * interpreter but different limits than its source.
  */
 
 function phpSourceApp(array $settings = []): Application
@@ -573,10 +535,8 @@ it('carries the source PHP settings onto the clone', function () {
 });
 
 it('does not re-harden a clone whose source had relaxed the list', function () {
-    // THE INTERACTION. Provisioning fills disable_functions when it is null,
-    // which is right for a new site and wrong for a clone: someone who
-    // relaxed the list to make a plugin work clones a site that works and
-    // must not get one that does not.
+    // Provisioning fills a null disable_functions, which is right for a new site but would break
+    // a clone whose source relaxed the list on purpose.
     fakeCloneServer();
 
     $source = phpSourceApp(['disable_functions' => 'exec']);
@@ -603,9 +563,8 @@ it('carries the provisioned-list record onto the clone so it is judged by the sa
 });
 
 it('keeps an explicitly empty list empty on the clone', function () {
-    // An empty string is an answer, not an absence — "this site disables
-    // nothing", set by someone who meant it. `empty()` instead of a null
-    // check here would re-harden the one site whose owner said no.
+    // An empty string means "this site disables nothing"; an `empty()` check instead of a null
+    // check would re-harden it.
     fakeCloneServer();
 
     $source = phpSourceApp(['disable_functions' => '']);
@@ -617,8 +576,7 @@ it('keeps an explicitly empty list empty on the clone', function () {
 });
 
 it('still hardens a clone whose source had no settings at all', function () {
-    // An older site may predate the settings row entirely. Inheriting nothing
-    // means inheriting nothing to protect it either, so the default applies.
+    // An older site may predate the settings row; with nothing inherited, the default applies.
     fakeCloneServer();
 
     $source = phpSourceApp();
@@ -650,8 +608,7 @@ describe('cloning a git application', function () {
             'serving_profile' => 'php',
             'php_version' => '8.4',
             'status' => 'active',
-            // The shape that broke: the front controller is in public/, so the
-            // served directory is one level below the checkout.
+            // The front controller is in public/, so the served directory is one level below the checkout.
             'web_root' => '/public',
             'git_account_id' => $account->id,
             'repository' => 'octocat/shop-api',
@@ -672,9 +629,8 @@ describe('cloning a git application', function () {
 
         $clone = Application::find($record->target_application_id);
 
-        // `public_html`, not `public_html/public`. The old behaviour copied the
-        // served subdirectory and left the application source, composer.json
-        // and the `.env` — which lives at codePath()/.env — behind.
+        // Copy `public_html`, not `public_html/public`: the source, composer.json and the `.env`
+        // (at codePath()/.env) live above the served directory.
         Process::assertRan(function ($p) use ($source, $clone) {
             if (($p->command[0] ?? '') !== 'rsync') {
                 return false;
@@ -688,10 +644,7 @@ describe('cloning a git application', function () {
         });
     });
 
-    /**
-     * fakeCloneServer(), plus a source `.env` to read and the clone's write
-     * captured.
-     */
+    /** fakeCloneServer(), plus a source `.env` to read and the clone's write captured. */
     function fakeEnvCloneServer(string $sourceEnv): ArrayObject
     {
         $seen = new ArrayObject(['written' => null, 'commands' => []]);
@@ -803,9 +756,8 @@ describe('cloning a git application', function () {
         $record = runClone(gitSource(), 'api-clone.test');
         expect($record->status->value)->toBe('completed');
 
-        // Excluding these made the copy not a working copy: no remote, no
-        // branch, no HEAD, and a Node site that cannot start until something
-        // rebuilds it — which a clone never does.
+        // Excluding these breaks the copy: no remote, branch or HEAD, and a Node site that
+        // cannot start until something rebuilds it.
         Process::assertRan(function ($p) {
             if (($p->command[0] ?? '') !== 'rsync') {
                 return false;
@@ -825,8 +777,7 @@ describe('cloning a git application', function () {
         $clone = Application::find(runClone($source, 'api-clone.test')->target_application_id);
 
         expect($clone->git_account_id)->toBe($source->git_account_id);
-        // The flag the Deployment screen reads to decide whether to demand a
-        // relink. It was true on every git clone.
+        // The flag the Deployment screen reads to decide whether to demand a relink.
         expect($clone->git_account_missing ?? null)->toBeNull();
 
         $payload = ApplicationResource::make($clone->fresh())->resolve();
@@ -839,9 +790,7 @@ describe('cloning a git application', function () {
         $source = gitSource();
         $clone = Application::find(runClone($source, 'api-clone.test')->target_application_id);
 
-        // The files on disk are the source's. A clone saying "never deployed"
-        // while serving deployed code is the Deployment screen lying about the
-        // site in front of you.
+        // The files on disk are the source's, so the clone must not report "never deployed".
         expect($clone->last_commit)->toBe($source->last_commit);
         expect($clone->last_deployed_at)->not->toBeNull();
     });
@@ -860,9 +809,8 @@ describe('cloning a git application', function () {
 
         expect($clone->webhook_enabled)->toBeTrue();
 
-        // Never the source's. The identifier is UNIQUE so it could not be
-        // copied anyway, and sharing the secret would make one `git push`
-        // deploy the original and the clone together.
+        // Never the source's: the identifier is UNIQUE, and a shared secret would let one
+        // `git push` deploy both the original and the clone.
         expect($clone->webhook_identifier)->not->toBeNull()
             ->and($clone->webhook_identifier)->not->toBe($source->webhook_identifier);
         expect($clone->webhook_secret)->not->toBe($source->webhook_secret);
@@ -881,10 +829,8 @@ describe('cloning a git application', function () {
 
         $record = runClone($source, 'api-clone.test');
 
-        // A webhook lives in the repository's settings, and one repository
-        // webhook posts to one URL. Nothing on this box can add the copy's URL
-        // to somebody's GitHub — so the screen has to hand it over at the
-        // moment the clone finishes.
+        // A repository webhook posts to one URL and the panel cannot add the copy's URL to
+        // GitHub, so the screen hands it over the moment the clone finishes.
         $payload = test()->withHeaders(cloneHeaders())
             ->getJson("/api/clones/{$record->id}")
             ->assertOk()
@@ -908,13 +854,12 @@ describe('cloning a git application', function () {
             'webhook_provider' => 'github',
         ]), 'api-clone.test');
 
-        // With the URL and the secret anyone can sign a push and start a
-        // deployment, so it follows the deploy button, not the clone screen.
+        // The URL and secret let anyone sign a push and start a deployment, so they follow the
+        // deploy permission, not the clone screen.
         $viewer = User::factory()->create();
         grantPermission($viewer, 'app_clone', manage: true);
 
-        // runClone() authenticated as the admin, and the guard keeps that
-        // user for the rest of the test unless told to forget it.
+        // runClone() authenticated as the admin; the guard keeps that user unless told to forget it.
         Auth::forgetGuards();
 
         $payload = test()->withHeaders(['Authorization' => 'Bearer '.$viewer->createToken('t')->plainTextToken])
@@ -932,8 +877,7 @@ describe('cloning a git application', function () {
         $record = runClone(gitSource(), 'api-clone.test');
         $clone = Application::find($record->target_application_id);
 
-        // Minting credentials nobody asked for leaves a live endpoint with no
-        // traffic and no reason to exist.
+        // Credentials nobody asked for would leave a live endpoint with no reason to exist.
         expect($clone->webhook_enabled)->toBeFalse();
 
         $payload = test()->withHeaders(cloneHeaders())
@@ -956,8 +900,7 @@ describe('cloning a git application', function () {
 
         runClone($source, 'blog-clone.test');
 
-        // A WordPress install has no checkout to preserve, and its
-        // node_modules is a disposable theme build directory.
+        // A WordPress install has no checkout to preserve; its node_modules is a disposable build dir.
         Process::assertRan(function ($p) {
             if (($p->command[0] ?? '') !== 'rsync') {
                 return false;
@@ -972,9 +915,8 @@ describe('cloning a git application', function () {
 });
 
 /*
- * Bug #91: a cloned one-click Node app (Uptime Kuma) was copied without
- * node_modules, so it could not start — and the clone still said Completed,
- * because the start check asked systemd before the process had time to die.
+ * A cloned Node app copied without node_modules cannot start, and the start check can run before
+ * the process has time to die, so the clone must not report Completed on that alone.
  */
 it('copies node_modules for a Node site, and leaves it out for anything else', function (string $type, string $profile, bool $kept) {
     fakeCloneServer();
@@ -1072,7 +1014,7 @@ describe('frontend QA 2026-09-26 (CL-B1, CL-B2, CL-B4, CL-B5)', function () {
     });
 
     it('stores a reason code and a reference, never the exception text', function () {
-        // The raw message reached the screen as SQL with the database path.
+        // A raw exception message can carry SQL and the database path.
         fakeCloneServer(testPasses: false);
 
         $record = runClone(staticSource(), 'docs-clone.test');
@@ -1209,7 +1151,7 @@ it('rewrites the clone\'s addresses on the site\'s own PHP', function () {
     });
 });
 
-/** `$usable` bytes free above the reserve, on every disk (2026-10-29 space check). */
+/** `$usable` bytes free above the reserve, on every disk. */
 function cloneUsableSpace(int $usable): void
 {
     $folder = Mockery::mock(LocalBackupFolder::class, [app(ServerOps::class), app(HomeDirectoryAccess::class)])->makePartial();

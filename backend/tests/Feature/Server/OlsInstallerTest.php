@@ -1,36 +1,29 @@
 <?php
 
 /*
- * What install.sh's OpenLiteSpeed vhost points at has to exist when it is
- * written.
+ * What install.sh's OpenLiteSpeed vhost points at has to exist when it is written.
  *
- * OpenLiteSpeed resolves a `context`'s `location` while loading the config and
- * refuses one that is not there:
+ * OpenLiteSpeed resolves a `context`'s `location` while loading the config and refuses one that
+ * is not there:
  *
  *   [ERROR] [config:server:vhosts:vhost:panel:context:/_next/static]
  *       path is not accessible: /var/www/panel/frontend/.next/static
  *
- * nginx and Apache resolve per request and never noticed, which is why this
- * shipped: configure_web_server() runs before build_frontend() deliberately —
- * Next inlines NEXT_PUBLIC_* at build time, so the URLs have to be final first
- * — and at that moment .next does not exist. `openlitespeed -t` then failed on
- * a config that was otherwise correct, and the install aborted.
+ * nginx and Apache resolve per request and never notice. configure_web_server() deliberately
+ * runs before build_frontend() (Next inlines NEXT_PUBLIC_* at build time), so `.next` does not
+ * exist yet and `openlitespeed -t` would fail an otherwise correct config.
  *
- * Asserted here rather than in bash because the ordering is invisible at the
- * point it breaks: a future `context` added to write_ols_vhost() is one line,
- * and nothing about writing it suggests a directory has to be made first.
+ * Asserted here rather than in bash because the ordering is invisible where it breaks: a new
+ * `context` in write_ols_vhost() is one line and nothing suggests a directory must exist first.
  */
 
 /**
- * Paths the installer has already created by the time OpenLiteSpeed is
- * configured, listed so that a match against them is a decision rather than a
- * hole in the pattern below.
+ * Paths the installer has already created by the time OpenLiteSpeed is configured, listed so
+ * that a match against them is a decision rather than a hole in the pattern below.
  *
- * Both document roots are the repository's own directories, present since
- * fetch_source(). The fcgi socket is not a path OpenLiteSpeed stats — it is an
- * address for an external app, and configure_fpm() has already made it.
- * Laravel's front controller is a file in the repository, so it is there from
- * fetch_source() on as well.
+ * Both document roots are the repository's own directories, present since fetch_source(). The
+ * fcgi socket is an address for an external app, not a path OpenLiteSpeed stats, and
+ * configure_fpm() has already made it. Laravel's front controller is a repository file.
  */
 const OLS_PREEXISTING_PATHS = [
     '${APP_DIR}/backend/public',
@@ -39,10 +32,8 @@ const OLS_PREEXISTING_PATHS = [
 ];
 
 /**
- * Every function that writes a `location` or `docRoot` into an OpenLiteSpeed
- * vhost. Two vhosts now — the panel proxies to Next, the API serves Laravel —
- * plus the blocks they share, and a path missed in any of them fails the
- * install just as hard.
+ * Every function that writes a `location` or `docRoot` into an OpenLiteSpeed vhost: the panel
+ * and API vhosts plus the blocks they share. A path missed in any of them fails the install.
  */
 const OLS_VHOST_WRITERS = [
     'write_ols_vhost',
@@ -57,12 +48,10 @@ function installerFunction(string $name): array
 {
     $source = installerSource();
 
-    // Up to the next top-level definition rather than to the next `}` on its
-    // own line: these functions write config with heredocs, and a heredoc is
-    // full of closing braces — and comments — at column 0. Reading to the first
-    // of those silently truncated the body to nothing, and every assertion over
-    // it passed vacuously. Overshooting into the next function's doc comment is
-    // the safe direction to be wrong in.
+    // Up to the next top-level definition, not the next `}` at column 0: these functions write
+    // heredocs, which are full of closing braces and comments at column 0. Stopping there
+    // truncated the body to nothing and every assertion passed vacuously. Overshooting into the
+    // next doc comment is the safe direction to be wrong in.
     preg_match(
         '/^'.preg_quote($name, '/').'\(\) \{$(.*?)(?:^[a-z_]+\(\) \{|\z)/ms',
         $source,
@@ -85,10 +74,8 @@ it('creates every directory the OpenLiteSpeed vhost serves from', function () {
 
     expect($created)->not->toBeEmpty();
 
-    // `docRoot ${doc_root}` is a shell variable, not a path. Resolved from its
-    // own assignments rather than skipped: it holds a real directory in each
-    // branch, and skipping it would quietly stop checking the one path every
-    // request to that vhost depends on.
+    // `docRoot ${doc_root}` is a shell variable, not a path. Resolve it from its own assignments
+    // rather than skip it: it holds a real directory in each branch, the one every request needs.
     $docRoots = [];
     preg_match_all('/doc_root="([^"]+)"/', implode("\n", installerFunction('write_ols_vhost')), $m);
     $docRoots = $m[1];
@@ -117,11 +104,9 @@ it('creates every directory the OpenLiteSpeed vhost serves from', function () {
     // way a test like this fails silently.
     expect($served)->not->toBeEmpty();
 
-    // `mkdir -p a/b/c` makes a and a/b as well, so an ancestor of a created
-    // directory counts as created. Matched on path segments rather than as a
-    // substring: `.../public/` is a prefix of `.../public/.well-known` as text
-    // whether or not it is one as a path, and that difference is how a genuinely
-    // uncreated directory would slip through.
+    // `mkdir -p a/b/c` makes a and a/b as well, so an ancestor of a created directory counts as
+    // created. Matched on path segments, not as a substring: `.../public/` is a text prefix of
+    // `.../public/.well-known` either way, and that is how an uncreated directory would slip through.
     $missing = array_values(array_filter(
         array_unique(array_map(fn (string $path) => rtrim($path, '/'), $served)),
         fn (string $path) => ! in_array($path, array_map(
@@ -153,15 +138,13 @@ it('creates them before the config that names them is tested', function () {
 });
 
 /**
- * The `listener Default` block and `virtualHost Example` exactly as
- * OpenLiteSpeed 1.9.2 ships them — no space before either brace, `map Example
- * *` last inside the listener, and a hand-indented closing brace.
+ * The `listener Default` block and `virtualHost Example` exactly as OpenLiteSpeed 1.9.2 ships
+ * them: no space before either brace, `map Example *` last inside the listener, and a
+ * hand-indented closing brace.
  *
- * Copied from the .deb rather than typed from the documentation. Every mistake
- * this installer has made against this file came from writing what the config
- * ought to look like: `listener Default {` with a space matched nothing, and
- * the listener being on :8088 rather than :80 would have registered the panel
- * perfectly on a port nobody was asking for.
+ * Copied from the .deb, not typed from the documentation: `listener Default {` with a space
+ * matched nothing, and a listener on :8088 instead of :80 would register the panel on a port
+ * nobody asks for.
  */
 const OLS_SHIPPED_CONFIG = <<<'CONF'
 virtualHost Example{
@@ -217,10 +200,9 @@ function applyOlsRewrite(string $config): string
 it('takes the shipped Example site out of the config, not just off the listener', function () {
     $result = applyOlsRewrite(OLS_SHIPPED_CONFIG);
 
-    // Removing only the map left the virtualHost defined and still validated on
-    // every config load, where its root-owned document root trips
+    // Removing only the map left the virtualHost defined, and its root-owned document root trips
     //   [WARN] ... Uid of /usr/local/lsws/Example/html/ is 0 ...
-    // on a demo site the installer has already decided is not reachable.
+    // on every config load.
     expect($result)->not->toContain('virtualHost Example')
         ->and($result)->not->toContain('map                      Example');
 
@@ -237,11 +219,9 @@ it('takes the shipped Example site out of the config, not just off the listener'
 });
 
 it('answers for the API hostname as well as the panel one', function () {
-    // nginx and Apache give the API its own server block on ${API_HOST}.
-    // OpenLiteSpeed routes by listener `map`, and every map the installer wrote
-    // named only ${PANEL_HOST} — so with the shipped `map Example *` catch-all
-    // also removed, nothing on the box answered for the API hostname and the
-    // panel would have installed, loaded, and failed every request it made.
+    // nginx and Apache give the API its own server block on ${API_HOST}. OpenLiteSpeed routes by
+    // listener `map`, and every map named only ${PANEL_HOST}: with the shipped `map Example *`
+    // catch-all removed, nothing answered for the API hostname and every panel request failed.
     $maps = implode("\n", installerFunction('ols_listener_maps'));
 
     expect($maps)->toContain('"$PANEL_SLUG" "$PANEL_HOST"')
@@ -260,15 +240,9 @@ it('answers for the API hostname as well as the panel one', function () {
 });
 
 it('keeps the front controller out of the vhost that proxies to Next', function () {
-    // A `rewrite` block is virtual-host scope. In the proxy vhost every SPA
-    // route — /dashboard is not a file under any document root — would match
-    // `RewriteCond %{REQUEST_FILENAME} !-f` and be rewritten to /index.php, so
-    // the panel would answer Laravel's 404 on every page it has.
-    //
-    // OpenLiteSpeed's own manual says not to put document-root rules at vhost
-    // level and to use a context instead; the context this one would go in is
-    // `/`, which is the proxy. So the two roles get two vhosts, exactly as the
-    // Apache stack already splits them.
+    // A `rewrite` block is virtual-host scope: in the proxy vhost every SPA route (/dashboard is
+    // not a file) would match `RewriteCond %{REQUEST_FILENAME} !-f` and be rewritten to
+    // /index.php, so the panel would answer Laravel's 404 everywhere. Hence two vhosts, as on Apache.
     $body = implode("\n", installerFunction('write_ols_vhost'));
 
     // The rewrite is emitted through a variable that only the single-host
@@ -289,11 +263,9 @@ it('keeps the front controller out of the vhost that proxies to Next', function 
 });
 
 it('runs the rewritten /index.php as PHP on a single-host install, not through the proxy', function () {
-    // OpenLiteSpeed picks the context again for the path a rewrite produces.
-    // /index.php is under neither /api nor /sanctum, so with no context of its
-    // own it fell to the catch-all `/` proxy: Next answered every API request
-    // by fetching /api through the same host, and looped until the proxy timed
-    // out. An install with --domain on OpenLiteSpeed never loaded (2026-10-17).
+    // OpenLiteSpeed picks the context again for the path a rewrite produces. /index.php is under
+    // neither /api nor /sanctum, so without its own context it fell to the catch-all `/` proxy
+    // and looped through Next until the proxy timed out.
     $body = implode("\n", installerFunction('write_ols_vhost'));
     $fenced = substr($body, strpos($body, 'if (( SINGLE_HOST )); then'));
 
@@ -309,10 +281,8 @@ it('converges when the installer is re-run', function () {
 });
 
 it('hands the frontend build a tree it can still write to', function () {
-    // .next is created here as root and written by the panel account minutes
-    // later. Without the chown this would trade an OpenLiteSpeed error for a
-    // build one, which is a worse trade — the build failure comes later and
-    // says nothing about permissions.
+    // .next is created here as root but written later by the panel account. Without the chown the
+    // build would fail instead, later and with no hint about permissions.
     $body = implode("\n", installerFunction('ensure_ols_context_paths'));
 
     expect($body)->toContain('chown -R "${APP_USER}:${APP_USER}"')
@@ -320,14 +290,11 @@ it('hands the frontend build a tree it can still write to', function () {
 });
 
 it('installs from the panel exactly what install.sh installs', function () {
-    // "Install PHP 8.3" from the panel installed NOTHING on OpenLiteSpeed.
-    // config/server.php listed the FPM extension names, five of which do not
-    // exist as lsphp packages -- and apt fails a whole transaction on one
-    // missing name, so mysql, pgsql and curl went down with the phantoms.
+    // config/server.php once listed FPM extension names, five of which are not lsphp packages;
+    // apt fails the whole transaction on one missing name, so nothing installed on OpenLiteSpeed.
     //
-    // install.sh's list is the one proven on hardware, so it is the source of
-    // truth and this test is the thing that keeps the two from drifting again.
-    // Whichever a future edit changes, the other has to move with it.
+    // install.sh's list is the one proven on hardware, so it is the source of truth; this test
+    // keeps the two from drifting. Whichever a future edit changes, the other has to move with it.
     preg_match_all(
         '/\$\{lsphp\}-([a-z0-9]+)/',
         implode("\n", installerFunction('install_ols_packages')),
@@ -347,14 +314,11 @@ it('installs from the panel exactly what install.sh installs', function () {
 });
 
 it('never lists an extension that LiteSpeed compiles into the interpreter', function () {
-    // These have no package because they are built in -- verified with
-    // `lsphp84/bin/php -m` on a real server, where all six are loaded on a box
-    // that has none of them installed. Naming one is not a harmless extra: it
-    // is an apt error that takes the whole install with it.
+    // These have no package because they are built in (all six load on a box with none of them
+    // installed). Naming one is not harmless: it is an apt error that takes the whole install down.
     //
-    // `gd` is the nastiest of the six. It resolves as a name with no
-    // installation candidate rather than as unknown, so it looks real in a
-    // search and still kills the transaction.
+    // `gd` is the nastiest: it resolves as a name with no installation candidate rather than as
+    // unknown, so it looks real in a search and still kills the transaction.
     $compiledIn = ['mbstring', 'xml', 'zip', 'gd', 'bcmath', 'soap'];
 
     expect(array_intersect(

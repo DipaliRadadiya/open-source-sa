@@ -199,10 +199,8 @@ describe('preflight', function () {
 });
 
 it('names the files that are blocking an update', function () {
-    // The check that actually stops people used to report nothing: on a real
-    // server it refused every update with an empty detail, and the only way to
-    // learn what was dirty was to SSH in and run `git status`. A blocker the
-    // reader cannot act on is barely better than no blocker at all.
+    // A blocker the admin cannot act on is barely better than none: the detail must name the
+    // dirty files.
     $installed = Mockery::mock(InstalledPanelInfo::class)->makePartial();
     $installed->shouldReceive('localChanges')->andReturn([
         'M backend/config/server.php',
@@ -235,10 +233,8 @@ it('caps the blocking list rather than pasting a whole git status', function () 
 });
 
 it('counts swap toward the memory the frontend build can use', function () {
-    // install.sh adds a swapfile precisely so a 1 GB box can finish `next
-    // build`. Judging that box on MemAvailable alone would refuse an update on
-    // the very servers the installer prepared to survive one -- a build that
-    // finishes slowly is still a build that finishes.
+    // install.sh adds a swapfile so a 1 GB box can finish `next build`. Judging on MemAvailable
+    // alone would refuse updates on exactly the servers the installer prepared.
     $preflight = new UpdatePreflight(Mockery::mock(InstalledPanelInfo::class)->makePartial());
 
     // A 1 GB box with install.sh's swapfile: short on RAM, fine in total.
@@ -287,20 +283,16 @@ it('treats a kernel with no swap support as having no swap', function () {
 });
 
 it('requires enough memory for a build that was measured, not guessed', function () {
-    // 2000MB is OOM-killed during compilation and 2500MB during static
-    // generation; the reported figure must sit above both. The old 768MB
-    // default described a box that could not build at all as having enough.
+    // 2000MB is OOM-killed during compilation and 2500MB during static generation; the reported
+    // figure must sit above both.
     expect(config('panel_update.preflight.min_free_memory_mb'))
         ->toBeGreaterThanOrEqual(2560);
 });
 
 it('reports memory without ever blocking the update on it', function () {
-    // Every other check is a fact that stays true until somebody fixes it.
-    // Free memory is a sample of a number that moves on its own: a backup
-    // running at the wrong moment would disable the update button with no
-    // failure to point at and nothing the admin could do but wait. The reading
-    // is worth showing -- it is the first thing to look at when a build is
-    // killed -- but it is not a verdict.
+    // Free memory is a moving sample, not a fact that stays true until fixed. Gating on it would
+    // disable the update button with nothing for the admin to fix, so show the reading but do
+    // not make it a verdict.
     $preflight = new UpdatePreflight(Mockery::mock(InstalledPanelInfo::class)->makePartial());
 
     expect($preflight->memoryVerdict(100, 0, 2560))
@@ -354,16 +346,9 @@ it('still fails closed when git cannot answer', function () {
 });
 
 it('does not let a finished run nobody watched block the next update', function () {
-    // The row is only advanced by PanelUpdateRunner::reconcile(), and the only
-    // caller is somebody looking at the update page. The run itself is a
-    // detached script that cannot write to the database -- it restarts php-fpm
-    // partway through, which is why progress lives in a file at all.
-    //
-    // So an update that finished unobserved -- tab closed, browser reloaded
-    // into a restarting panel -- left a row saying "running" forever, and every
-    // later press was refused with "An update is already running", for good.
-    // On the test server row #7 said `pending` while its state file had said
-    // `succeeded` for minutes.
+    // The row is only advanced by PanelUpdateRunner::reconcile(), called when somebody looks at
+    // the update page; the detached script cannot write to the database. An update that finished
+    // unobserved left a row saying "running" forever and every later press was refused.
     $dir = storage_path('framework/testing/panel-update');
     is_dir($dir) || mkdir($dir, 0755, true);
     config()->set('panel_update.state_dir', $dir);
@@ -386,8 +371,7 @@ it('does not let a finished run nobody watched block the next update', function 
     try {
         app(QueuePanelUpdate::class)->execute($this->admin, dryRun: true);
     } catch (ValidationException $e) {
-        // Whatever else stops it here -- this checkout is not a panel install
-        // -- it must no longer be the phantom run. That was the permanent one.
+        // Whatever else stops it here, it must no longer be the phantom run.
         expect($e->getMessage())->not->toBe(__('panel_update.errors.in_progress'));
     }
 
@@ -396,11 +380,9 @@ it('does not let a finished run nobody watched block the next update', function 
 });
 
 it('reports the tag it is checked out on, not a file somebody forgot', function () {
-    // v1.0.2 and v1.0.3 were both tagged without bumping VERSION, so both ship
-    // 1.0.1. The health check asserts the version it installed is the version
-    // answering, so an update to either builds for twenty minutes and rolls
-    // back. Three releases out of four got this wrong; the file is maintained
-    // by hand and hand-maintenance is the bug.
+    // A release tagged without bumping VERSION ships the old version; the health check asserts
+    // the installed version is the one answering, so that update rolls back. The file is
+    // maintained by hand, which is the bug.
     $repo = sys_get_temp_dir().'/panel-version-'.bin2hex(random_bytes(4));
     mkdir($repo.'/backend', 0755, true);
     file_put_contents($repo.'/VERSION', "1.0.1\n");
@@ -463,10 +445,8 @@ it('ignores a tag that is not version-shaped', function () {
 });
 
 it('uses the nearest release as the baseline when HEAD is ahead of it', function () {
-    // A branch deployed from main can be newer than the latest release while
-    // VERSION is stale. Reporting the file here offered v1.0.3 as an update
-    // and `checkout --force` downgraded the panel to that older tag. Keep the
-    // distinction in `source`, but compare from the reachable release version.
+    // A branch deployed from main can be newer than the latest release while VERSION is stale.
+    // Keep the distinction in `source`, but compare from the reachable release version.
     $repo = sys_get_temp_dir().'/panel-version-'.bin2hex(random_bytes(4));
     mkdir($repo.'/backend', 0755, true);
     file_put_contents($repo.'/VERSION', "1.0.1\n");
@@ -487,13 +467,9 @@ it('uses the nearest release as the baseline when HEAD is ahead of it', function
 });
 
 it('does not let polling the update page use up the update button', function () {
-    // `throttle:3,1` and `throttle:30,1` looked like two independent limits and
-    // were one. Laravel keys an inline throttle on the route URI and the user,
-    // with no reference to the method or the limit — and GET and POST here are
-    // both `/panel-update`. So every poll spent one of the button's three
-    // attempts, and after three requests of any kind in a minute the update
-    // answered 429 "Too Many Requests". Measured on a real server as a single
-    // counter climbing 1, 2, 3 while two endpoints read it against 30 and 3.
+    // Laravel keys an inline throttle on the route URI and the user, not the method or the
+    // limit, and GET and POST here share `/panel-update`: the two throttles were one counter, so
+    // polling used up the button's attempts and the update answered 429.
     Cache::flush();
 
     // Well past the start limit of 3, nowhere near the check limit of 30.
@@ -503,8 +479,7 @@ it('does not let polling the update page use up the update button', function () 
             ->assertOk();
     }
 
-    // The button must still be pressable. Whatever it answers, it must not be
-    // 429 — that was the bug, and it made the feature unreachable from the UI.
+    // The button must still be pressable: whatever it answers, it must not be 429.
     $response = test()->withHeaders(['Authorization' => 'Bearer '.$this->token])
         ->postJson('/api/admin/panel-update');
 
@@ -512,15 +487,10 @@ it('does not let polling the update page use up the update button', function () 
 });
 
 it('keeps the update routes answering while the panel is down', function () {
-    // `artisan down` is step two of an update, so from that moment every API
-    // call returned 503 — including the progress feed the page polls and the
-    // button itself. The page could not show the run it exists to show, and
-    // pressing update during one answered "Couldn't start the update" when the
-    // truth was "step 12 of 16". Reproduced on a real server twice.
-    //
-    // Driven through the actual maintenance file rather than by asserting on
-    // config: the middleware reads that file, and a list that looks right but
-    // does not match the dispatched URI would pass a config assertion happily.
+    // `artisan down` is step two of an update, yet the progress feed, the page's own reads and
+    // the button must keep answering during it.
+    // Driven through the real maintenance file: the middleware reads it, and a config assertion
+    // would pass a list that does not match the dispatched URI.
     $down = storage_path('framework/down');
     file_put_contents($down, json_encode(['except' => []]));
 
@@ -560,12 +530,9 @@ it('keeps the update routes answering while the panel is down', function () {
 /*
  * Steps that must not cost the whole update.
  *
- * The in-place script runs `artisan` from the release it just checked out, so
- * any step it invokes has to exist *there*. A backfill added in release N does
- * not exist in anything older, and under `set -e` its absence rolled back a
- * release that had already installed, migrated and resynced successfully:
- *
- *   ERROR There are no commands defined in the "firewall" namespace.
+ * The in-place script runs `artisan` from the release it just checked out, so a step added in
+ * release N does not exist in older ones; under `set -e` its absence rolled back an otherwise
+ * good release.
  */
 
 function inPlaceScript(): string
@@ -605,10 +572,8 @@ it('warns rather than going quiet when that backfill is skipped', function () {
 });
 
 it('still refuses a target contained in the live commit', function () {
-    // The guard that should have stopped this update before any of it ran.
-    // Kept asserted here because the fix above makes one symptom of a
-    // downgrade survivable, and a survivable symptom must not become the
-    // reason nobody notices the downgrade.
+    // Kept asserted: the fix above makes a downgrade's symptom survivable, which must not hide
+    // the downgrade itself.
     expect(inPlaceScript())->toContain('merge-base --is-ancestor')
         ->and(inPlaceScript())->toContain('target_not_newer');
 });
@@ -675,10 +640,9 @@ describe('the installed commit after git packs its refs', function () {
 });
 
 /*
- * Bug #6: a fresh install is a shallow clone of main with no tags, so its
- * version is the VERSION file's word — 1.0.14 while main was 369 commits past
- * v1.0.17. The panel offered v1.0.17 (older code), and pressing Update started
- * a run the forward-only guard then refused.
+ * A fresh install is a shallow clone of main with no tags, so its version is the VERSION
+ * file's word, which can trail the latest tag. The panel then offered an older release as an
+ * update, and the forward-only guard refused the run.
  */
 describe('an install whose version is only the file\'s word (bug #6)', function () {
     function installedFromFile(string $committedAt): array
@@ -733,9 +697,8 @@ describe('an install whose version is only the file\'s word (bug #6)', function 
 });
 
 /*
- * Bug #19: sites:resync locks the panel directory with setfacl through the
- * sudo grant, and ran before panel:sudoers. On a server whose grant was older
- * than that, the lock failed and the directory stayed readable.
+ * sites:resync locks the panel directory with setfacl through the sudo grant, so it must run
+ * after panel:sudoers; on an older grant the lock failed and the directory stayed readable.
  */
 it('updates the panel\'s privileges before anything that uses them', function () {
     $script = inPlaceScript();

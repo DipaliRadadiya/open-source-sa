@@ -18,12 +18,9 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Validation\ValidationException;
 
 /**
- * The 8G Firewall: six independently switchable categories, detect vs
- * enforce, and a per-app exceptions/custom-rules list. What matters here:
- * disabling a category actually removes it from the rendered vhost (not
- * just from the UI), the shared nginx maps file is written once per apply,
- * a failed config test rolls back both the columns and the child-table
- * rules together, and rules are never persisted until the test passes.
+ * The 8G Firewall: six switchable categories, detect vs enforce, and per-app exceptions and
+ * custom rules. A disabled category must leave the rendered vhost, the shared nginx maps file
+ * is written once per apply, and a failed config test rolls back columns and rules together.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -123,11 +120,7 @@ it('enables the firewall, writes the shared nginx maps file, and persists the ru
     expect($sharedMapsWrite)->not->toBeNull()
         ->and($sharedMapsWrite['input'])->toContain('map $query_string $bad_querystring_ng');
 
-    // The vhost is named after the slug, not the domain — a domain is mutable
-    // and was never unique, so two sites could claim one and overwrite each
-    // other's config. Matching on 'shop.test' found nothing, and the null went
-    // straight into an array offset.
-    // The rules are in v7's 8g-firewall.conf in the site's conf folder, which the vhost includes.
+    // The rules are in 8g-firewall.conf in the site's conf folder, which the vhost includes.
     $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/conf/nginx/8g-firewall.conf'));
     expect($vhostWrite['input'])
         ->toContain('bad_querystring_ng')
@@ -149,11 +142,7 @@ it('excludes disabled categories from the rendered vhost', function () {
         ])
         ->assertOk();
 
-    // The vhost is named after the slug, not the domain — a domain is mutable
-    // and was never unique, so two sites could claim one and overwrite each
-    // other's config. Matching on 'shop.test' found nothing, and the null went
-    // straight into an array offset.
-    // The rules are in v7's 8g-firewall.conf in the site's conf folder, which the vhost includes.
+    // The rules are in 8g-firewall.conf in the site's conf folder, which the vhost includes.
     $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/conf/nginx/8g-firewall.conf'));
 
     expect($vhostWrite['input'])
@@ -173,11 +162,7 @@ it('logs would-be blocks instead of enforcing in detect mode', function () {
         ->assertOk()
         ->assertJsonPath('application.waf_mode', 'detect');
 
-    // The vhost is named after the slug, not the domain — a domain is mutable
-    // and was never unique, so two sites could claim one and overwrite each
-    // other's config. Matching on 'shop.test' found nothing, and the null went
-    // straight into an array offset.
-    // The rules are in v7's 8g-firewall.conf in the site's conf folder, which the vhost includes.
+    // The rules are in 8g-firewall.conf in the site's conf folder, which the vhost includes.
     $vhostWrite = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/conf/nginx/8g-firewall.conf'));
 
     expect($vhostWrite['input'])
@@ -237,9 +222,8 @@ it('describes every category, not just names it', function () {
     $response = $this->withHeaders(wafHeaders())->getJson('/api/waf-options')->assertOk();
 
     foreach ($response->json('waf_categories') as $category) {
-        // "Bad cookies" is not enough to decide whether switching a category
-        // off is safe, and switching one off to fix a false positive is the
-        // documented normal use of this screen.
+        // A bare title ("Bad cookies") is not enough to decide whether switching a category off
+        // is safe; that is the normal way to fix a false positive.
         expect($category['description'])->not->toBeEmpty()
             ->and($category['description'])->not->toBe($category['title']);
     }
@@ -254,8 +238,7 @@ it('leaves the stored categories alone when the request does not mention them', 
         'categories' => ['request_uri'],
     ])->assertOk();
 
-    // Changing only the mode must not silently switch the other five back on
-    // — including the one the user turned off to fix a false positive.
+    // Changing only the mode must not silently switch the other categories back on.
     $this->withHeaders(wafHeaders())->putJson(wafUrl(), [
         'enabled' => true,
         'mode' => 'detect',
@@ -294,8 +277,7 @@ it('leaves the stored rules alone when the request does not mention them', funct
         'mode' => 'detect',
     ])->assertOk();
 
-    // Same rows, not rewritten ones: re-creating them would reset their
-    // timestamps and make "when did this rule appear" unanswerable.
+    // Same rows, not re-created ones: re-creating would reset their timestamps.
     expect(ApplicationWafRule::orderBy('id')->pluck('id')->all())->toBe($before);
 });
 
@@ -315,17 +297,14 @@ it('offers the detect log only while the firewall is watching', function () {
         'enabled' => true, 'mode' => 'detect',
     ])->assertOk();
 
-    // Watching: this is the whole point of detect mode, and until now the
-    // evidence it produced was unreachable from the panel.
+    // Watching: the whole point of detect mode is that this log can be read.
     expect($keys())->toContain('waf_detect');
 
     $this->withHeaders(wafHeaders())->putJson(wafUrl(), [
         'enabled' => true, 'mode' => 'enforce',
     ])->assertOk();
 
-    // Still listed after enforcing. The flow is detect → read this → add
-    // exceptions → enforce, so hiding it here removed the evidence at the
-    // moment someone acted on it, and GET /logs/{key} 404'd with it.
+    // Still listed after enforcing: the flow is detect → read the log → add exceptions → enforce.
     expect($keys())->toContain('waf_detect');
 
     // Off entirely: nothing writes it and nothing claims to.
@@ -346,11 +325,9 @@ it('reads the detect log from the file the vhost was told to write', function ()
         'enabled' => true, 'mode' => 'detect',
     ])->assertOk();
 
-    // Where nginx was actually configured to log, read back out of the vhost
-    // that was written — not recomputed here, which would only restate the
-    // assumption instead of testing it.
+    // Where nginx was configured to log, read back from the written vhost (not recomputed here).
     $vhost = collect($written)->pluck('input')->first(
-        // `access_log`: the logrotate policy names the file too (LOG-01).
+        // `access_log`: the logrotate policy names the file too.
         fn (string $body): bool => str_contains($body, 'access_log') && str_contains($body, 'waf-detect.log'),
     );
 
@@ -361,22 +338,15 @@ it('reads the detect log from the file the vhost was told to write', function ()
     $readerPath = app(ApplicationLogManager::class)
         ->find($this->application->fresh(), 'waf_detect')['path'] ?? null;
 
-    // These disagreed: the vhost wrote to `panelPath()` while the catalog read
-    // `documentRoot()/.panel`, so detect mode showed an empty file however much
-    // it had matched — and an empty detect log reads as "nothing would be
-    // blocked", which invites enforcing a ruleset nobody has checked.
-    //
-    // The existing test above asserts only that the KEY is offered, which is
-    // exactly why this survived. Comparing the two real sources is the check
-    // that would have caught it.
+    // The two paths must agree: if the panel reads another file, detect mode shows an empty log,
+    // which reads as "nothing would be blocked". Offering the key alone does not prove it.
     expect($writerPath)->not->toBeNull()
         ->and($readerPath)->toBe($writerPath);
 });
 
 /**
- * A web server that cannot enforce the WAF. None of the three can any more —
- * OpenLiteSpeed gained it on 2026-09-30 — but the guard stays for a fourth,
- * so it is tested against a stand-in rather than dropped.
+ * A web server that cannot enforce the WAF. None of the three supported ones is such a server
+ * now, but the guard stays for a future one, so it is tested against a stand-in.
  */
 function webServerWithoutWaf(): void
 {
@@ -393,16 +363,11 @@ it('hides the firewall entirely on a web server that cannot enforce it', functio
     // One server runs one web server, so this is a server-wide fact.
     webServerWithoutWaf();
 
-    // Not in the application's feature list, so it is not in the sidebar the
-    // panel builds from permissions — hidden rather than shown-and-refused,
-    // because there is nothing the user could do here to turn it on.
+    // Not in the feature list, so not in the sidebar: hidden rather than shown-and-refused.
     expect($this->application->fresh()->features())->not->toContain('app_firewall');
 
-    // And CheckPermission 404s the routes off the back of the same list, so
-    // the endpoint does not exist on this server rather than existing and
-    // saying no. Previously this answered 200 and stored waf_enabled: true
-    // while no OLS template references the rules — a green firewall
-    // inspecting nothing.
+    // CheckPermission 404s the routes off the same list. Answering 200 would store
+    // waf_enabled: true while no template references the rules: a firewall inspecting nothing.
     $this->withHeaders(wafHeaders())
         ->putJson(wafUrl(), ['enabled' => true, 'mode' => 'enforce'])
         ->assertNotFound();
@@ -413,10 +378,8 @@ it('hides the firewall entirely on a web server that cannot enforce it', functio
 it('keeps the firewall visible when the web server is not yet known', function () {
     fakeWafWebServer();
 
-    // A freshly provisioned box has no capability row yet, and features() runs
-    // on every sidebar and every application route. Hiding a working screen
-    // because the web server is momentarily unknown is worse than showing one
-    // the manager would refuse — so this fails open.
+    // A fresh box has no capability row yet and features() runs on every application route:
+    // hiding a working screen on an unknown web server is worse than showing one, so fail open.
     ServerCapability::query()->delete();
 
     expect($this->application->fresh()->features())->toContain('app_firewall');
@@ -427,11 +390,9 @@ it('still lets an unsupported web server switch the firewall off', function () {
 
     webServerWithoutWaf();
 
-    // Asserted against the guard rather than through the HTTP stack, because
-    // rendering an OLS vhost needs a real shared config this fake has no way
-    // to provide — and the guard is the part being tested. A site enabled
-    // before this guard existed must stay recoverable: refusing every write
-    // would strand it permanently on.
+    // Asserted against the guard, not the HTTP stack: rendering an OLS vhost needs a real shared
+    // config this fake lacks. A site enabled before the guard must stay recoverable, so
+    // switching off is never refused.
     $refuse = fn (bool $enabled): bool => rescue(
         function () use ($enabled): bool {
             app(Waf8GManager::class)->apply($this->application, $enabled, WafMode::Enforce);
@@ -511,8 +472,8 @@ describe('exceptions and custom rules as written into the config', function () {
     it('matches an exception on the path only on Apache, a block rule on the query too', function () {
         $config = wafVhost(ApacheDriver::class, ['action=upload']);
 
-        // Bug #82: on the query string or the user agent, an exception was a
-        // password anyone could type. Block rules still read the query.
+        // An exception that matches the query string is a password anyone could type. Block rules
+        // still read the query.
         expect($config)->not->toContain('Query_String')
             // Backslashes doubled: Apache's config parser halves them.
             ->and($config)->toContain('SetEnvIfExpr "%{REQUEST_URI} =~ m#action\\\\=upload#i" waf_exception')
@@ -533,8 +494,7 @@ describe('exceptions and custom rules as written into the config', function () {
         'hash (the delimiter)' => ['ab#c', 'xab#cx', 'abc'],
         'regex symbols' => ['(a+)?', 'q=(a+)?', 'q=aa'],
         'percent-brace' => ['%{HTTP_HOST}', 'x=%{HTTP_HOST}', 'x=host'],
-        // Apache collapses `\\` in config arguments; a single escape left
-        // the backslash escaping the next character instead.
+        // Apache collapses `\\` in config arguments; a single escape would escape the next char.
         'backslash' => ['c:\\tmp', 'path=c:\\tmp', 'path=c:tmp'],
     ]);
 
@@ -548,9 +508,8 @@ describe('exceptions and custom rules as written into the config', function () {
 });
 
 /*
- * Bug #82: an exception skips every check. Matched against the query string
- * or the user agent it was a password anyone could type (`?x=mobiquo`), and a
- * one-letter one switched the firewall off for the whole site.
+ * An exception skips every check. Matched against the query string or user agent it would be a
+ * password anyone could type (`?x=mobiquo`), and a one-letter one would switch the firewall off.
  */
 describe('exceptions (bug #82)', function () {
     it('match the path only, on every web server and site kind', function (string $driver, string $profile) {
@@ -558,7 +517,7 @@ describe('exceptions (bug #82)', function () {
         $config = wafVhost($driver, ['mobiquo']);
 
         expect($config)->toContain('mobiquo')
-            // `$request_uri` only in its path-only form (FS-C43).
+            // `$request_uri` only in its path-only form.
             ->not->toMatch('/(\$args|\$http_user_agent|\$request_uri(?! ~\* "\^\[\^\?\]\*)|QUERY_STRING\}|HTTP_USER_AGENT\}) [^\n]*mobiquo/');
     })->with([NginxDriver::class, ApacheDriver::class, OlsDriver::class])->with(['php', 'static', 'node']);
 

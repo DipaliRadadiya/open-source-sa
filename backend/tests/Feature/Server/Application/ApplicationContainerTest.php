@@ -15,14 +15,9 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * The container settings endpoint — and specifically, whether saving one
- * changes the box.
+ * The container settings endpoint: saving a setting must change the box, not just the row.
  *
- * These values exist only as inputs to the compose file. A save that writes the
- * row and stops leaves the panel showing a network the container is not on,
- * until some unrelated deploy happens to rewrite the file. That is the failure
- * these cover: not "did the column change" but "did the compose file change and
- * did compose run".
+ * These values only feed the compose file, so the tests check that compose ran, not the column.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -63,9 +58,7 @@ function containerRecorder(): ArrayObject
 /**
  * Faked per command, and statefully for `network ls`.
  *
- * A blanket `Process::fake()` would answer `docker network ls` with empty
- * output, so the validation rule would report every network missing and the
- * test would be asserting against a box the fake broke.
+ * A blanket `Process::fake()` returns an empty `network ls`, so every network would look missing.
  *
  * @param  list<string>  $networks  what `docker network ls` reports.
  */
@@ -130,15 +123,13 @@ it('saves the network and brings the container up on it', function () {
 
     expect($this->application->fresh()->docker_network)->toBe('ghost-net');
 
-    // The half that a column assertion cannot see: a save that did not run
-    // compose is a panel showing a network the container is not on.
+    // A column assertion cannot see this: the save must also run compose.
     expect(dockerRan(fn (array $args): bool => ($args[1] ?? '') === 'compose' && in_array('up', $args, true)))
         ->toBeTrue();
 });
 
 it('refuses an empty container port rather than rendering port 80 (DS-09)', function () {
-    // Saved, null rendered as `127.0.0.1:{app_port}:80` — a port nothing in
-    // the image listens on, so every request was a 502.
+    // A null port used to render as `127.0.0.1:{app_port}:80`, which nothing listens on (502).
     fakeDockerBox();
 
     $this->withHeaders(containerHeaders())
@@ -151,9 +142,8 @@ it('refuses an empty container port rather than rendering port 80 (DS-09)', func
 });
 
 it('renders no compose file for a site with no container port, rather than one on port 80 (DS-12)', function () {
-    // Create and PUT both refuse a missing port now. This is the weld behind
-    // them: `?: 80` turned a row with none into a container proxied on a
-    // port nothing in the image listens on.
+    // Create and PUT refuse a missing port; this is the second guard. A `?: 80` fallback would
+    // proxy a port nothing in the image listens on.
     fakeDockerBox();
     $this->application->forceFill(['container_port' => null])->save();
 
@@ -177,8 +167,7 @@ it('renders no compose file for a site with no container port, rather than one o
 });
 
 it('lets only someone who may view registries point a site at another credential (DS-12)', function () {
-    // Gated at create by DS-08 and not here, so a stored credential's id was
-    // still an oracle through the update path.
+    // Only create was gated, so a stored credential's id was still an oracle through update.
     fakeDockerBox();
     $credential = fn (string $name): Registry => Registry::forceCreate([
         'name' => $name, 'registry' => 'ghcr.io', 'username' => 'deploy', 'config' => ['token' => 'x'],
@@ -203,17 +192,15 @@ it('lets only someone who may view registries point a site at another credential
     // Nor is pulling anonymously.
     $this->withHeaders($as)->putJson(containerUrl(), ['registry_id' => null])->assertOk();
 
-    // And someone who may view registries may choose one. The guard keeps
-    // the first user it resolved for the rest of the test unless told.
+    // Someone who may view registries may choose one. The guard caches the first user, so reset it.
     app('auth')->forgetGuards();
     $this->withHeaders(containerHeaders())->putJson(containerUrl(), ['registry_id' => $other->id])->assertOk();
     expect($this->application->fresh()->registry_id)->toBe($other->id);
 });
 
 it('refuses a network that is not on this server', function () {
-    // `external: true` makes Compose look the name up, so a name that is not
-    // there is a container that will not start — and the refusal has to arrive
-    // on the field, not on the next deploy.
+    // `external: true` makes Compose look the name up, so an unknown name is a container that will
+    // not start; refuse it on the field, not on the next deploy.
     fakeDockerBox(['ghost-net']);
 
     $this->withHeaders(containerHeaders())
@@ -252,15 +239,9 @@ it('clears the network when asked, and rewrites the file', function () {
 });
 
 it('is refused for a site that is not a container', function () {
-    // The fields have no meaning for a PHP site, and storing them would look
-    // exactly like a feature that works.
-    //
-    // **404, not 422, since these routes moved onto `app_container`.**
-    // `CheckPermission` refuses an `app_*` permission the site's type does not
-    // support, and its own comment gives the reason: for this site the screen does
-    // not exist at all, which is a different statement from "you may not". That is
-    // a better answer than the controller's 422 and it arrives earlier, so the
-    // controller's own check is now belt-and-braces rather than the gate.
+    // The fields mean nothing for a PHP site; storing them would look like a feature that works.
+    // 404, not 422: `CheckPermission` hides an `app_*` screen the site type does not support,
+    // before the controller's own 422 check is reached.
     fakeDockerBox();
     $this->application->forceFill(['site_type' => 'php', 'serving_profile' => 'php'])->save();
 
@@ -272,8 +253,7 @@ it('is refused for a site that is not a container', function () {
 });
 
 it('stores without touching the box when the site is not provisioned', function () {
-    // Nothing on disk to rewrite for a pending site; running compose against
-    // one would be provisioning it as a side effect of saving a form.
+    // Nothing on disk to rewrite for a pending site; running compose would provision it.
     fakeDockerBox();
     $this->application->forceFill(['status' => 'pending'])->save();
 
@@ -314,10 +294,9 @@ it('is refused without the manage permission', function () {
 /*
  * Mounting a volume into the site.
  *
- * The validation here is not paperwork. `/app` is where the generated compose
- * bind-mounts the site's own directory, and a volume over it hides those files
- * from the container while leaving them on disk and in the backup — which looks
- * exactly like deletion and invites a restore that changes nothing.
+ * `/app` is where the generated compose bind-mounts the site's own directory. A volume over it
+ * hides those files from the container while they stay on disk and in the backup, which looks
+ * like deletion.
  */
 
 /** Extends the box fake with a volume list. */
@@ -370,8 +349,7 @@ it('mounts a volume and recreates the container', function () {
 });
 
 it('refuses a mount over the site\'s own files', function () {
-    // The dangerous one. The files stay on the server and in the backup, and the
-    // container serves an empty volume — indistinguishable from deletion.
+    // The dangerous one: the files stay on disk but the container serves an empty volume.
     fakeDockerBoxWithVolumes();
 
     foreach (['/app', '/app/', '/app/public', '/app/storage/uploads'] as $path) {
@@ -385,8 +363,7 @@ it('refuses a mount over the site\'s own files', function () {
 });
 
 it('lets a site created since the fix keep data under /app', function () {
-    // Gotify's `/app/data`. `/app` is no longer where a new site's own files are,
-    // so refusing it would refuse a real image's only data directory.
+    // Gotify's `/app/data`. With its own `site_mount_path`, `/app` is free for the image's data.
     fakeDockerBoxWithVolumes();
     $this->application->forceFill(['site_mount_path' => '/panel-site'])->save();
 
@@ -443,8 +420,7 @@ it('refuses a relative path and a traversal', function () {
 });
 
 it('refuses two volumes at the same path', function () {
-    // Docker keeps one and discards the other without saying which, so the site
-    // would be missing a volume it is configured to have.
+    // Docker silently keeps one of the two, so the site would lack a configured volume.
     fakeDockerBoxWithVolumes(['shop-db', 'shop-other']);
 
     $this->withHeaders(containerHeaders())
@@ -495,21 +471,16 @@ it('clears every mount when given an empty list', function () {
 /*
  * The generated credentials.
  *
- * These are live database passwords. The shape of the feature is the security
- * argument: they are not on the application payload, asking for them is recorded,
- * and the endpoint is gated on `manage` rather than `view` because reading a
- * password is not a read-only act in any sense that matters.
+ * These are live database passwords: kept off the application payload, reads are logged,
+ * and the endpoint needs `manage`, not `view`.
  */
 
 it('does not put the credentials in the application payload', function () {
-    // The whole reason for a separate endpoint. On the resource they would ride in
-    // every application response, every list, and every cache in between.
+    // The reason for a separate endpoint: on the resource they would ride in every response and cache.
     fakeDockerBox();
     $this->application->forceFill(['docker_secrets' => ['MYSQL_ROOT_PASSWORD' => 'supersecretvalue']])->save();
 
-    // The APPLICATION payload is what must not carry it. The secrets endpoint
-    // obviously does — that is its job, and asserting otherwise was this test
-    // being wrong rather than the code.
+    // Only the application payload must not carry it; the secrets endpoint does.
     $body = $this->withHeaders(containerHeaders())
         ->getJson('/api/applications/'.$this->application->id)
         ->assertOk()
@@ -534,8 +505,7 @@ it('returns the credentials from their own endpoint', function () {
 });
 
 it('records who looked', function () {
-    // An audit trail is most of the value: a password that can be read without a
-    // trace is a password nobody can reason about after an incident.
+    // A password that can be read without a trace cannot be audited after an incident.
     fakeDockerBox();
     $this->application->forceFill(['docker_secrets' => ['MYSQL_ROOT_PASSWORD' => 'v']])->save();
 
@@ -546,8 +516,7 @@ it('records who looked', function () {
 });
 
 it('refuses a user without manage', function () {
-    // `manage`, not `view`. Somebody who may look at a site must not thereby be
-    // able to read its database password.
+    // `manage`, not `view`: viewing a site must not expose its database password.
     fakeDockerBox();
     $this->application->forceFill(['docker_secrets' => ['MYSQL_ROOT_PASSWORD' => 'v']])->save();
 
@@ -583,15 +552,10 @@ function containerUrl2(): string
 }
 
 /*
- * The CPU quota, and the one thing it has to get right: refusing at the form.
+ * The CPU quota must be refused at the form.
  *
- * Docker does refuse an over-provisioned quota — measured on the test box, both
- * `docker run --cpus 16` and `cpus: 16` in a compose file answer "range of CPUs is
- * from 0.01 to 4.00, as there are only 4 CPUs available". It refuses at `up`,
- * though, which means without the rule this field saves the row, fails the apply,
- * and leaves the panel displaying a limit the container does not have. The site
- * itself survives — compose refuses before removing the running container — so the
- * only trace is a failure card.
+ * Docker only refuses an over-provisioned quota at `up`. Without the rule the field would save
+ * the row, fail the apply, and leave the panel showing a limit the container does not have.
  */
 
 /** A box with a known number of CPUs, so the bound is not the runner's. */
@@ -635,8 +599,8 @@ it('refuses more CPUs than the server has, and saves nothing', function () {
 });
 
 it('names what the server has rather than saying invalid', function () {
-    // The whole reason this is a rule and not a `numeric|max:` — "must not be
-    // greater than 2" does not tell somebody what their own box is.
+    // Why this is a rule and not `numeric|max:`: "must not be greater than 2" does not say what
+    // the box has.
     fakeDockerBox();
     withCpus(2);
 
@@ -649,8 +613,7 @@ it('names what the server has rather than saying invalid', function () {
 });
 
 it('refuses a quota below the one Docker accepts', function () {
-    // `cpus: 0` is Docker's own spelling of "no limit", so a zero typed into the
-    // field would be a limit that removes limits. Its floor is 0.01.
+    // `cpus: 0` is Docker's spelling of "no limit", so a typed zero would remove limits. Floor: 0.01.
     fakeDockerBox();
     withCpus(4);
 
@@ -665,8 +628,7 @@ it('refuses a quota below the one Docker accepts', function () {
 });
 
 it('clears the quota when the field is emptied', function () {
-    // Null is the answer that means "no limit", and it has to be reachable —
-    // otherwise a limit once set can never be removed except by deleting the site.
+    // Null means "no limit" and must stay reachable, or a limit could only go by deleting the site.
     fakeDockerBox();
     withCpus(4);
     $this->application->forceFill(['cpu_limit' => '2'])->save();
@@ -679,9 +641,7 @@ it('clears the quota when the field is emptied', function () {
 });
 
 it('refuses a memory ceiling Docker would not start the container with', function () {
-    // 6MB is Docker's floor, measured: "Minimum memory limit allowed is 6MB". And
-    // a bare number is bytes, not megabytes — the mistake that used to save fine
-    // and produce a container that would not start.
+    // 6MB is Docker's floor. A bare number is bytes, not megabytes, and would not start.
     fakeDockerBox();
 
     foreach (['2m', '512', '512MB'] as $bad) {
@@ -693,8 +653,7 @@ it('refuses a memory ceiling Docker would not start the container with', functio
 });
 
 it('records the size in the activity log', function () {
-    // A site that was always slow and a site that was made smaller are different
-    // events, and the log is where somebody will look to tell them apart.
+    // The log is where a site that was made smaller is told apart from one that was always slow.
     fakeDockerBox();
     withCpus(4);
 
@@ -709,9 +668,7 @@ it('records the size in the activity log', function () {
 });
 
 it('tells the form how big the server is', function () {
-    // So the field can state the ceiling instead of describing the rule. Its own
-    // endpoint because `/basic-info` is unauthenticated, and the size of the box
-    // is not for anonymous visitors.
+    // Lets the field state the ceiling. Not on `/basic-info`: that is unauthenticated.
     fakeDockerBox();
     withCpus(6);
 
@@ -725,15 +682,10 @@ it('tells the form how big the server is', function () {
 /*
  * "I have saved these."
  *
- * A one-click app's admin password is generated by the panel, and until the
- * first-run card existed the only route to it was a Reveal button two clicks into
- * the site. A password generated and never read is an account nobody can sign into.
- *
- * The acknowledgement is its own endpoint rather than a side effect of reading the
- * values, and that is the whole design: these cannot be rotated from the panel —
- * changing one means rewriting the compose file AND the credential inside the
- * running database — so a card that vanished the moment it rendered would lose an
- * unrecoverable password to a stray page refresh.
+ * A one-click app's admin password is generated by the panel; one never read is an account
+ * nobody can sign into. Acknowledging is its own endpoint, not a side effect of reading: the
+ * values cannot be rotated from the panel (compose file AND the running database would change),
+ * so a card that vanished on render would lose the password to a page refresh.
  */
 
 it('records that somebody saved the credentials', function () {
@@ -750,8 +702,7 @@ it('records that somebody saved the credentials', function () {
 });
 
 it('does not move the date when acknowledged a second time', function () {
-    // The interesting fact is when these stopped being unseen. Overwriting it on
-    // every later click would erase the only answer worth having.
+    // Overwriting it on later clicks would erase when the credentials were first seen.
     fakeDockerBox();
 
     $this->withHeaders(containerHeaders())->postJson(containerUrl().'/secrets/acknowledge')->assertOk();
@@ -765,8 +716,7 @@ it('does not move the date when acknowledged a second time', function () {
 });
 
 it('does not acknowledge as a side effect of reading the credentials', function () {
-    // The load-bearing assertion of the whole feature. If rendering the card marked
-    // it seen, a refresh mid-copy would hide an unrecoverable password for good.
+    // If rendering the card marked it seen, a refresh mid-copy would hide the password for good.
     fakeDockerBox();
     $this->application->forceFill(['docker_secrets' => ['ADMIN_PASSWORD' => 'hunter2']])->save();
 
@@ -776,8 +726,7 @@ it('does not acknowledge as a side effect of reading the credentials', function 
 });
 
 it('refuses to acknowledge without the manage permission', function () {
-    // Same gate as reading them: acknowledging is a statement about values you were
-    // only allowed to see under `manage`.
+    // Same gate as reading them: only `manage` may see the values.
     fakeDockerBox();
 
     $viewer = User::factory()->create();
@@ -800,9 +749,8 @@ it('refuses to acknowledge for a site that is not a container', function () {
 });
 
 it('says a site has unacknowledged credentials in its payload', function () {
-    // What puts the card on the dashboard. A flag about a PERSON, not about the
-    // data: a site whose credentials were rendered and never confirmed still
-    // answers false.
+    // What puts the card on the dashboard. The flag is about the person: credentials rendered but
+    // never confirmed still answer false.
     fakeDockerBox();
     $this->application->forceFill(['docker_secrets' => ['ADMIN_PASSWORD' => 'hunter2']])->save();
 
@@ -817,8 +765,7 @@ it('says a site has unacknowledged credentials in its payload', function () {
 });
 
 it('refuses a mount path that would write new keys into the compose file (DS-08)', function (string $path) {
-    // The update half of the review's exploit: `app_container` manage was
-    // enough to make the container privileged with the host's `/` mounted.
+    // Injected YAML via `app_container` manage could make the container privileged with `/` mounted.
     fakeDockerBoxWithVolumes();
 
     $this->withHeaders(containerHeaders())
