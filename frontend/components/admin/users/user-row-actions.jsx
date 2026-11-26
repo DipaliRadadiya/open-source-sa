@@ -49,6 +49,7 @@ export function UserRowActions({ user, roles = [], rolesFailed = false, currentU
     setImpersonating(true);
     try {
       await impersonateUser(user.id);
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full page load so SSR reads the new session
       window.location.href = "/";
     } catch (error) {
       toast.error(apiMessage(error, t("actions.impersonateFailed")));

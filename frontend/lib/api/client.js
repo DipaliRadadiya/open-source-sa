@@ -52,6 +52,7 @@ api.interceptors.response.use(
     }
 
     if (status === 401 && typeof window !== "undefined") {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full page load so SSR reads the new session
       window.location.href = "/login";
     }
     return Promise.reject(error);

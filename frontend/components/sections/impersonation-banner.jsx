@@ -16,6 +16,7 @@ export function ImpersonationBanner({ username, admin }) {
     setStopping(true);
     try {
       await stopImpersonating();
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full page load so SSR reads the new session
       window.location.href = "/admin/users";
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));

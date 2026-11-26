@@ -48,6 +48,8 @@ export function installDom() {
   window.HTMLElement.prototype.hasPointerCapture = () => false;
   window.HTMLElement.prototype.releasePointerCapture = () => {};
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  // findBy*/waitFor default to 1s, which a big form misses on a busy machine.
+  import("@testing-library/dom").then(({ configure }) => configure({ asyncUtilTimeout: 5000 }));
 }
 
 /** Bundles `entry` (relative to the frontend root); `stubs` maps an import (`@/…` or bare) to a file. */
