@@ -65,7 +65,8 @@ test("CJ-3: menu focus returns to ⋯, and dialogs opened from a menu return to 
 
 test("CJ-4: run-as is editable and sent only when changed", () => {
   const s = read("components/cron-jobs/edit-cronjob-dialog.jsx");
-  assert.match(s, /<RunAsField form=\{form\}/);
+  assert.match(s, /<CronjobFormFields\s+form=\{form\}/);
+  assert.match(read("components/cron-jobs/cronjob-form-fields.jsx"), /<RunAsField form=\{form\}/);
   assert.match(s, /\{ system_user_id: null, username: values\.username\.trim\(\) \}/);
   assert.match(read("lib/schemas/cronjob.js"), /export const updateCronjobSchema = createCronjobSchema;/);
   for (const l of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) {
