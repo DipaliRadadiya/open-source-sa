@@ -31,6 +31,7 @@ beforeEach(() => {
   answer = () => ({ status: 201, data: {} });
   globalThis.__toasts = [];
   globalThis.__toastInfo = [];
+  globalThis.__plainRefreshes = 0;
   globalThis.__workersApi = {
     createWorker: async (...args) => {
       calls.push({ name: "createWorker", args });
@@ -211,6 +212,7 @@ test("create: a worker that did not start shows the add-specific message", async
   const fieldError = await screen.findByText("It exited at once.");
   assert.ok(fieldError.closest("[data-slot=form-item]")?.querySelector('[name="command"]'), "shown under the Command field");
   assert.match((await screen.findByRole("alert")).textContent, /exited with code 1/);
+  assert.equal(globalThis.__plainRefreshes, 0, "nothing changed in the list, so no re-read");
 });
 
 test("create: Cancel closes, and reopening starts empty again", async () => {
@@ -278,6 +280,36 @@ test("edit: a 500 shows the edit-specific failure in the dialog", async () => {
   const alert = await screen.findByRole("alert");
   assert.match(alert.textContent, new RegExp(w.edit.failed.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.deepEqual(closes, []);
+  assert.equal(globalThis.__plainRefreshes, 1, "list re-read after the failed edit");
+});
+
+test("edit: a worker that did not start re-reads the list, so it shows the old command again", async () => {
+  answer = (sent) => {
+    throw {
+      config: { data: JSON.stringify(sent) },
+      response: {
+        status: 422,
+        data: { message: "exited with code 1", reason: "worker_did_not_start", errors: { command: ["It exited at once."] } },
+      },
+    };
+  };
+  mountEdit();
+  type("command", "php artisan nope");
+  submit(w.edit.submit);
+  assert.match((await screen.findByRole("alert")).textContent, /exited with code 1/);
+  assert.ok(await screen.findByText("It exited at once."));
+  assert.equal(globalThis.__plainRefreshes, 1);
+  assert.deepEqual(closes, [], "stays open so the command can be fixed");
+});
+
+test("edit: a plain validation error does not re-read the list", async () => {
+  answer = (sent) => {
+    throw { config: { data: JSON.stringify(sent) }, response: { status: 422, data: { message: "Invalid.", errors: { command: ["The command is not allowed."] } } } };
+  };
+  mountEdit();
+  submit(w.edit.submit);
+  assert.ok(await screen.findByText("The command is not allowed."));
+  assert.equal(globalThis.__plainRefreshes, 0);
 });
 
 test("edit: Cancel throws away typed changes", async () => {

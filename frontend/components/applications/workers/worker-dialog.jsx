@@ -140,6 +140,8 @@ export function WorkerDialog({ worker = null, open, onOpenChange, appId, presets
       handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
       if (error.response?.data?.reason === "worker_did_not_start") {
         form.setError("root.server", { message: apiMessage(error, t(`${mode}.failed`)) });
+        // the server put the old command back; don't let the list show the refused one
+        if (editing) refresh();
       }
       scrollToFirstError();
     }

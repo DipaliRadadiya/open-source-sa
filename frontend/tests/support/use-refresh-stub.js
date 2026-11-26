@@ -3,5 +3,7 @@ export function useRefresh() {
   const refreshAndWait = async () => {
     globalThis.__refreshes = (globalThis.__refreshes ?? 0) + 1;
   };
-  return { pending: false, refresh() {}, refreshThen: (fn) => fn(), refreshAndWait };
+  return { pending: false, refresh() {
+      globalThis.__plainRefreshes = (globalThis.__plainRefreshes ?? 0) + 1;
+    }, refreshThen: (fn) => fn(), refreshAndWait };
 }
