@@ -79,8 +79,7 @@ it('rejects an invalid frequency or a non-safe category', function () {
 });
 
 it('accepts a threshold of 1 to 99 per cent only (bug #25)', function (int $percent, bool $ok) {
-    // A disk is never more than 100% full, so a threshold of 100 never
-    // triggers: a schedule that saved and then never ran.
+    // A disk is never more than 100% full, so a threshold of 100 would never trigger.
     $response = $this->actingAs($this->admin)->putJson('/api/disk-cleaner/schedule', [
         'enabled' => true, 'frequency' => 'daily', 'categories' => ['service_logs'], 'threshold_percent' => $percent,
     ]);
@@ -154,9 +153,7 @@ it('logs an automatic clean under its own verb, with no actor', function () {
 
     $this->artisan('disk-cleaner:run')->assertExitCode(0);
 
-    // A distinct verb, not a property: the activity filters are built from the
-    // lang keys and filter on `action`, so this is the difference between a
-    // filterable "automatic" and something you can only see row by row.
+    // A distinct verb, not a property: the activity filters work on `action`.
     $this->assertDatabaseHas('activity_logs', [
         'type' => 'disk_cleaner',
         'action' => 'auto_cleaned',
@@ -194,10 +191,8 @@ it('records a failed automatic clean instead of failing silently', function () {
 
         return match ($process->command[0] ?? '') {
             'df' => Process::result(output: "fs 1B-blocks Used Avail Cap Mount\n/dev/vda1 {$total} 85000000000 15000000000 85% /\n"),
-            // The category itself fails. The scheduler swallows the exception
-            // so one bad target cannot stop the tick — which is exactly how a
-            // cleaner that fails every night used to look like one that had
-            // never run at all.
+            // The category itself fails; the scheduler swallows it so one bad target
+            // cannot stop the tick.
             'truncate' => Process::result(exitCode: 1, errorOutput: 'permission denied'),
             default => Process::result(exitCode: 0),
         };
@@ -220,7 +215,7 @@ it('records a failed automatic clean instead of failing silently', function () {
         'user_id' => null,
     ]);
 
-    // The `failed` status the runs table has always defined, finally written.
+    // A failed category must still record a `failed` run.
     expect(DiskCleanerRun::where('status', 'failed')->count())->toBe(1);
 });
 
@@ -264,11 +259,8 @@ it('does not run again within the same slot', function () {
 });
 
 /*
-| Saying which clock the schedule is in.
-|
-| The screen used to show "weekly" and nothing else: not the hour (03:00,
-| chosen to stay out of the backups' way) and not the timezone. A bare time
-| reads as local time to everyone who is not on the app's clock.
+| Saying which clock the schedule is in: a bare time reads as local time to everyone who is
+| not on the app's clock, so the next run is shown with its timezone.
 */
 
 it('says when the cleaner next runs, and in which timezone', function () {
@@ -299,14 +291,12 @@ it('promises no next run while the cleaner is switched off', function () {
         ->getJson('/api/disk-cleaner/schedule')
         ->assertOk()
         ->assertJsonPath('schedule.next_run_at', null)
-        // Still named. Which clock the schedule is in is a property of the
-        // feature, not of this row being switched on.
+        // Still named: the timezone belongs to the feature, not to this row being enabled.
         ->assertJsonPath('schedule.timezone', 'UTC');
 });
 
 it('does not run a schedule the minute it is saved', function () {
-    // "Never run" used to mean "due now": saved at 11:12 as hourly, shown
-    // "next run 12:00", it ran at 11:13 (seen live 2026-09-23).
+    // "Never run" must not mean "due now": the first run is the first slot after the save.
     Carbon::setTestNow(Carbon::parse('2026-07-27 10:30:00'));
     fakeDiskAt(85);
     DiskCleanerSchedule::create([

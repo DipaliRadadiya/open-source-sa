@@ -16,9 +16,9 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * One keep choice for the whole clean (Dipali, 2026-10-26): delete all, or
- * keep the last 1/3/7/14/30 days — the same meaning on every category, in a
- * manual clean and on the schedule. No choice = what each category did before.
+ * One keep choice for the whole clean: delete all, or keep the last 1/3/7/14/30 days — the same
+ * meaning on every category, in a manual clean and on the schedule. No choice = each category's
+ * own default.
  */
 
 beforeEach(function () {
@@ -270,8 +270,7 @@ describe('a choice', function () {
     });
 
     it('selects the right rotated archives when run for real', function () {
-        // The age test is the risky part, so the shipped command is run against
-        // a tree shaped like /var/log, the way the binary-log guard is.
+        // The age test is the risky part: run the shipped command against a /var/log-shaped tree.
         $root = $this->logDir.'/varlog';
         dcAgedFile($root.'/nginx/access.log.1', 1, 1);
         dcAgedFile($root.'/nginx/access.log.2.gz', 1, 8);
@@ -357,8 +356,7 @@ describe('the record of a clean', function () {
                 : Process::result();
         });
 
-        // Measured against "no choice" afterwards, the untouched 100 bytes of
-        // today's log would be subtracted from what the clean freed.
+        // Measured against "no choice", today's untouched 100 bytes would be subtracted from freed.
         $this->withHeader('Authorization', "Bearer {$this->token}")
             ->postJson('/api/disk-cleaner/clean', ['categories' => ['service_logs'], 'keep_days' => 7])
             ->assertOk()
@@ -398,22 +396,18 @@ describe('the record of a clean', function () {
     });
 });
 
-// Folded into the disk cleaner create migrations by the 2026-11-25 squash.
 it('creates the keep columns with their tables', function () {
     expect(Schema::hasColumn('disk_cleaner_schedules', 'keep_days'))->toBeTrue()
         ->and(Schema::hasColumn('disk_cleaner_runs', 'keep_days'))->toBeTrue();
 });
 
 it('describes each category in its own words, in every language', function (string $locale) {
-    // 2026-10-26: a scripted edit put the application-logs note under
-    // Temporary files in two languages, and nothing noticed. This catches the
-    // same note landing on two categories; the English wording test below
-    // catches a note that no longer matches its category's behaviour.
+    // Catches one note landing on two categories; the English wording test below catches a note
+    // that no longer matches its category's behaviour.
     $lines = require lang_path("{$locale}/disk-cleaner.php");
     $notes = collect($lines)->except('keep_days')->pluck('note');
 
-    // One note per configured category, counted from the list rather than
-    // typed: docker_images (2026-10-29) made a literal 7 wrong.
+    // One note per configured category, counted from the config rather than a literal.
     expect($notes->duplicates()->all())->toBe([])
         ->and($notes->count())->toBe(count((array) config('server.disk_cleaner.targets')));
 })->with(['en', 'de', 'es', 'fr', 'hi', 'ja', 'pt', 'ru']);

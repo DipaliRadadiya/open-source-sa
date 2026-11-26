@@ -122,14 +122,14 @@ describe('memory', function () {
     });
 
     it('accepts a "2 GB" server, which reports a little less than 2048 MB to the OS', function () {
-        // 1967 MB on a TeamCompute 2 GB plan, measured.
+        // A 2 GB plan reports 1967 MB.
         $run = requirementsRun(['ram' => 1967, 'swap' => 0]);
 
         expect($run['code'])->toBe(0, $run['out']);
     });
 
     it('refuses a 1 GB server, which could not build the panel even with swap', function () {
-        // 960 MB visible on a TeamCompute 1 GB plan.
+        // A 1 GB plan reports 960 MB.
         expectRefused(requirementsRun(['ram' => 960, 'swap' => 2048]), ['Memory: this server has 960 MB of RAM.']);
     });
 });
@@ -163,8 +163,7 @@ describe('swap', function () {
     });
 
     it('adds nothing on a re-run whose swapfile mkswap left 1 MB short', function () {
-        // Found live: a re-run on a 4 GB box with our 1023 MB file promised
-        // "1 MB of swap will be added", while configure_swap() added nothing.
+        // Guards a re-run promising "1 MB of swap will be added" while configure_swap() adds nothing.
         $run = requirementsRun(['ram' => 3915, 'swap' => 1023, 'ours' => 1023, 'var' => installerNumber('MIN_DISK_MB')]);
 
         expect($run['code'])->toBe(0, $run['out'])
@@ -174,8 +173,8 @@ describe('swap', function () {
     });
 
     it('counts only the growth of our own swapfile against the disk', function () {
-        // A 2 GB box from the old 3072 MB budget: our 1104 MB file is replaced
-        // by one that reaches the new budget, so the disk pays the difference.
+        // Our 1104 MB file is replaced by one that reaches the budget, so the disk pays the
+        // difference.
         $add = installerNumber('BUILD_MEMORY_MB') - 1967;
         $grow = $add - 1104;
         $need = installerNumber('MIN_DISK_MB');
@@ -275,8 +274,7 @@ describe('docker', function () {
     });
 
     it('tries the mounts instead of looking for overlay in /proc/filesystems', function () {
-        // An overlay module not loaded yet is not listed there, and a container
-        // cannot modprobe: that check refused an LXD container that ran Docker.
+        // An overlay module not loaded yet is not listed there, and a container cannot modprobe.
         $probe = installerFn('req_docker_kernel');
 
         expect($probe)->not->toContain('/proc/filesystems')
@@ -351,8 +349,7 @@ describe('a build the kernel killed', function () {
     });
 
     it('keeps the installer out of the OOM killer\'s way while the build runs, so it lives to explain', function () {
-        // Seen live: under a MemoryMax the cgroup OOM killer took next-build,
-        // then npm, sudo and the installer's own bash, and nothing was said.
+        // Guards the OOM killer taking the installer's own bash along with the build, silently.
         $build = installerFn('build_frontend');
         $lower = strpos($build, 'echo -900 >"/proc/$BASHPID/oom_score_adj"');
         $reset = strpos($build, 'echo "$adj" >"/proc/$BASHPID/oom_score_adj"');

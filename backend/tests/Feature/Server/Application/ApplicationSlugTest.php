@@ -5,19 +5,13 @@ use App\Models\SystemUser;
 use App\Services\Server\Applications\ApplicationProvisioner;
 
 /**
- * The slug is the only thing `documentRoot()` and every web-server config
- * path are built from, so an application without one resolves to
- * `{$home}//public_html` — the system user's home directory, shared by every
- * site that reaches that state.
+ * The slug is the only thing `documentRoot()` and every web-server config path are built from,
+ * so an application without one resolves to the system user's home directory, shared by every
+ * slugless site: two sites would provision into one directory.
  *
- * The Files page is where it surfaces (`test -d` on the collapsed path fails,
- * so the listing 422s), but the real damage is two sites provisioning into
- * one directory.
- *
- * `slug` is deliberately not fillable — it names the file the panel
- * overwrites, so a client must never choose it — which is exactly why the
- * mass-assignment `Application::create()` calls in CloneManager and
- * StagingManager dropped it without failing.
+ * `slug` is deliberately not fillable (it names files the panel overwrites, so a client must
+ * never choose it), which is why mass-assigned `Application::create()` calls in CloneManager and
+ * StagingManager silently dropped it.
  */
 beforeEach(function () {
     $this->systemUser = SystemUser::create([
@@ -45,8 +39,7 @@ function slugTestApplication(array $attributes = []): Application
 }
 
 it('drops a slug passed through mass assignment', function () {
-    // The property that made the bug silent, asserted so it stays deliberate:
-    // anyone reaching for `create()` here gets no slug, not an error.
+    // Asserted so it stays deliberate: `create()` gets no slug, and no error.
     $application = Application::create([
         'system_user_id' => $this->systemUser->id,
         'name' => 'Company Blog',
@@ -72,11 +65,9 @@ it('collapses the document root onto the system user home without a slug', funct
         'web_root' => '/',
     ]);
 
-    // Documents the failure mode rather than endorsing it: with no slug there
-    // is no per-site directory, so this is the home directory itself and every
-    // slugless site of that user would share it. It no longer produces the
-    // `//` it used to — Application::rootPath() drops the empty segment
-    // instead of concatenating one — but the collapse itself is unchanged.
+    // Documents the failure mode, does not endorse it: with no slug the root is the home directory
+    // itself, shared by every slugless site of that user. `Application::rootPath()` drops the empty
+    // segment, so there is no `//`.
     expect(app(ApplicationProvisioner::class)->documentRoot($application->load('systemUser')))
         ->toBe('/home/siteowner/public_html');
 });
@@ -101,15 +92,13 @@ it('gives every slugged site its own document root', function () {
 it('suffixes a slug that is already taken', function () {
     slugTestApplication(['domain' => 'a.test']);
 
-    // Two different names can slug to the same string, which would put two
-    // sites in one directory.
+    // Two different names can slug to the same string, which would put two sites in one directory.
     expect(Application::uniqueSlug('Company Blog!'))->toBe('company-blog-2');
 });
 
 it('suffixes a derived name so a second clone does not collide', function () {
-    // `applications.name` is unique and "<source> (Clone)" is the same string
-    // every time, so the second clone of one site was a constraint violation
-    // surfacing as a 500 rather than a usable error.
+    // `applications.name` is unique and "<source> (Clone)" repeats, so a second clone would be a
+    // constraint violation (a 500, not a usable error).
     slugTestApplication(['name' => 'Company Blog (Clone)', 'slug' => 'c1', 'domain' => 'c1.test']);
 
     expect(Application::uniqueName('Company Blog (Clone)'))->toBe('Company Blog (Clone) 2');

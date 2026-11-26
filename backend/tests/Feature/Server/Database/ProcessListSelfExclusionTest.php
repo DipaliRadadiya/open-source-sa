@@ -7,18 +7,12 @@ use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\Process;
 
 /*
- * The panel used to appear in its own process list.
+ * The panel must not appear in its own process list: `SHOW FULL PROCESSLIST` and `currentOp`
+ * include the thread running them, which is never idle and whose Stop Query could only fail
+ * (the KILL runs on a new connection).
  *
- * `SHOW FULL PROCESSLIST` includes the thread running it, and `currentOp`
- * includes the operation asking. Neither row is idle, so both survived the
- * active-query filter: a quiet database reported one permanently running
- * query, which was the panel watching itself. Each also got a Stop Query
- * button that could only fail — the KILL runs on a new connection, by which
- * time that thread is gone.
- *
- * These tests assert the exclusion is asked of the server rather than pattern
- * matched out of the results, because an operator running `SHOW FULL
- * PROCESSLIST` by hand is a real thing to see in this list.
+ * The exclusion is asked of the server, not pattern-matched out of the results, because an
+ * operator running `SHOW FULL PROCESSLIST` by hand must stay visible.
  */
 
 beforeEach(function () {
@@ -67,8 +61,7 @@ it('no longer asks for the statement that listed itself', function () {
 });
 
 it('still parses the columns in the order the batch client prints them', function () {
-    // ID USER HOST db COMMAND TIME STATE INFO — NULL selected as the literal
-    // the client would have printed, so the parse is unchanged.
+    // ID USER HOST db COMMAND TIME STATE INFO; NULL is the literal the client prints.
     Process::fake(fn () => Process::result(output: implode("\t", [
         '42', 'shop', 'localhost:33065', 'shop_db', 'Query', '87',
         'Sending data', 'SELECT * FROM orders',
@@ -88,8 +81,7 @@ it('still parses the columns in the order the batch client prints them', functio
 });
 
 it('keeps an operator running the statement themselves visible', function () {
-    // The exclusion is by connection, not by text. Somebody else running this
-    // is a real row and must not be filtered out.
+    // The exclusion is by connection, not by text: somebody else running this is a real row.
     Process::fake(fn () => Process::result(output: implode("\t", [
         '51', 'dba', 'localhost', 'NULL', 'Query', '0', '', 'SHOW FULL PROCESSLIST',
     ])."\n"));
@@ -101,9 +93,8 @@ it('keeps an operator running the statement themselves visible', function () {
 });
 
 it('excludes our own operations from the Mongo process list', function () {
-    // mongosh is handed a temp file that run() unlinks, so the script cannot be
-    // asserted through Process::assertRan the way the SQL statement can. The
-    // source is the artefact that ships, so that is what is pinned.
+    // mongosh gets a temp file that run() unlinks, so the script cannot be asserted through
+    // Process::assertRan; pin the shipped source instead.
     $source = file_get_contents(app_path('Services/Server/Databases/MongoEngine.php'));
 
     expect($source)->toContain('$ownOps: true')
@@ -111,10 +102,8 @@ it('excludes our own operations from the Mongo process list', function () {
 });
 
 it('compares the Mongo connection id as a string, not by object identity', function () {
-    // Two BSON Longs holding the same number are different objects, so `!==`
-    // between them is always true. Comparing them directly would filter
-    // nothing while appearing to work — the same class of bug as the
-    // opcounter concatenation.
+    // Two BSON Longs with the same number are different objects, so `!==` between them is always
+    // true and would filter nothing.
     $source = file_get_contents(app_path('Services/Server/Databases/MongoEngine.php'));
 
     expect($source)->toContain('String(o.connectionId) !== own')

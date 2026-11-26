@@ -21,16 +21,12 @@ use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyTimed
 use Symfony\Component\Process\Process as SymfonyProcess;
 
 /*
- * FS-B3: a WordPress download that never happened — no internet, wordpress.org
- * down, a stalled connection, a bad archive — left the application failed
- * with no reason, so the screen showed "failed at download" plus a log
- * reference and nothing the user could act on.
+ * A WordPress download that never happened (no internet, wordpress.org down, a stalled
+ * connection, a bad archive) must leave the application failed with a reason the user can act on.
  *
- * The reason is the one every failed install already records: `failed_reason`
- * on the application and on its run, read by the frontend as
- * `failed_reason_title`. These tests drive the real provisioning job against a
- * faked server and read the answer back through the API, because that is the
- * path the screen takes.
+ * The reason is the one every failed install records: `failed_reason` on the application and its
+ * run, read by the frontend as `failed_reason_title`. These tests drive the real provisioning
+ * job against a faked server and read the answer back through the API, as the screen does.
  */
 
 beforeEach(function () {

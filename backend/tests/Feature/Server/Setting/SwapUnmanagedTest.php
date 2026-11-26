@@ -8,13 +8,9 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
 /**
- * A server that arrived with its own swap.
- *
- * This class promises to touch "only our own file and its single /etc/fstab
- * line, so a migrated server keeps whatever swap it already had" — and that is
- * the promise these tests are about, because it was not kept. Both checks
- * searched for the managed path as a *substring*, so `/mnt/data/swapfile`
- * matched `/swapfile` and the panel treated somebody else's swap as its own.
+ * A server that arrived with its own swap. SwapSettings must touch only its own file and its
+ * single /etc/fstab line; matching the managed path as a *substring* would make `/mnt/data/swapfile`
+ * count as `/swapfile`.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -26,9 +22,7 @@ beforeEach(function () {
     $this->swapFile = $this->dir.'/swapfile';
     $this->fstab = $this->dir.'/fstab';
 
-    // Somebody else's swap, at a path that *contains* ours — the shape that
-    // made `str_contains` wrong. On a real server this is `/mnt/data/swapfile`
-    // against a managed `/swapfile`.
+    // Somebody else's swap, at a path that *contains* ours (`/mnt/data/swapfile` vs `/swapfile`).
     $this->otherSwap = '/mnt/data'.$this->swapFile;
 
     config([
@@ -63,8 +57,7 @@ it('does not mistake another swap file for its own', function () {
 
     $read = app(SwapSettings::class)->read();
 
-    // The panel manages nothing here. Saying otherwise attributed someone
-    // else's swap to this screen, and made "disable" look like it did nothing.
+    // The panel manages nothing here; it must not claim someone else's swap.
     expect($read['enabled'])->toBeFalse()
         ->and($read['unmanaged'])->toBeTrue()
         ->and($read['size'])->toBe(0);
@@ -99,9 +92,8 @@ it('adds its fstab line even when another swap file is listed there', function (
 
     app(SwapSettings::class)->apply(['size_mb' => 512]);
 
-    // Searching the whole file for the path found `/mnt/data/swapfile`,
-    // concluded our line was already there, and wrote nothing — so swap worked
-    // until the next reboot and then silently did not.
+    // A whole-file search would find `/mnt/data/swapfile`, assume our line exists and write
+    // nothing, so swap would be lost at the next reboot.
     expect($written)->toContain($this->swapFile.' none swap sw 0 0')
         ->and($written)->toContain($this->otherSwap.' none swap sw 0 0');
 });
@@ -128,8 +120,7 @@ it('removes only its own fstab line', function () {
     app(SwapSettings::class)->apply(['size_mb' => 0]);
 
     expect($written)->not->toContain("\n{$this->swapFile} none swap")
-        // Everything else survives, including the blank line and the comment
-        // that merely mentions our path.
+        // Everything else survives, including the blank line and a comment mentioning our path.
         ->and($written)->toContain('UUID=abc / ext4 defaults 0 1')
         ->and($written)->toContain($this->otherSwap.' none swap sw 0 0')
         ->and($written)->toContain('# a comment about')
@@ -142,9 +133,8 @@ it('refuses to rewrite an fstab it could not read', function () {
 
     fakeSwapServer();
 
-    // is_file() is true for a file this process cannot read, and the writer
-    // *replaces* what it read. Treating unreadable as empty would leave an
-    // fstab holding one swap line and nothing else — every other mount gone.
+    // is_file() is true for an unreadable file and the writer *replaces* what it read: treating
+    // it as empty would leave an fstab with one swap line and every other mount gone.
     expect(fn () => app(SwapSettings::class)->apply(['size_mb' => 512]))
         ->toThrow(SettingOperationException::class);
 

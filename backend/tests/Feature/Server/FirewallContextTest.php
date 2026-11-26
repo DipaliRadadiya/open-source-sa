@@ -46,8 +46,6 @@ function firewall(): array
 it('tells the caller its own address, so "only my IP" is one click', function () {
     fakeFirewallEnv();
 
-    // Without it, people leave a port open to everyone rather than go and
-    // find out what their address is.
     expect(firewall()['your_ip'])->toBe('127.0.0.1');
 });
 
@@ -55,9 +53,8 @@ it('reports the SSH port itself, rather than making the UI ask Settings', functi
     File::put("{$this->sshd}/60-panel.conf", "Port 2222\n");
     fakeFirewallEnv();
 
-    // A firewall-only user calling Settings gets a 403 and falls back to 22 —
-    // and being wrong about the SSH port here is how somebody locks
-    // themselves out.
+    // A firewall-only user gets a 403 from Settings and would fall back to 22: a wrong SSH
+    // port is how somebody locks themselves out.
     expect(firewall()['ssh_port'])->toBe(2222);
 
     File::delete("{$this->sshd}/60-panel.conf");
@@ -72,8 +69,7 @@ it('reports what is listening, and where it is bound', function () {
 
     $listening = collect(firewall()['listening'])->keyBy('port');
 
-    // Bound to 0.0.0.0, a rule can expose it; bound to loopback, no rule can.
-    // That distinction is most of the value of showing this at all.
+    // Bound to 0.0.0.0 a rule can expose it; bound to loopback no rule can.
     expect($listening[80]['public'])->toBeTrue()
         ->and($listening[80]['program'])->toBe('nginx')
         ->and($listening[6379]['public'])->toBeFalse()
@@ -81,11 +77,9 @@ it('reports what is listening, and where it is bound', function () {
 });
 
 it('says the program is unknown rather than guessing it from the port', function () {
-    // Unprivileged, `ss` omits the process for anything we do not own.
     fakeFirewallEnv("tcp LISTEN 0 511 0.0.0.0:3306 0.0.0.0:*\n");
 
-    // Naming this "MySQL" because 3306 is conventional would be a guess, and
-    // a wrong name on a firewall screen is worse than no name.
+    // Naming it "MySQL" because 3306 is conventional would be a guess.
     expect(collect(firewall()['listening'])->firstWhere('port', 3306)['program'])->toBeNull();
 });
 
@@ -95,7 +89,6 @@ it('counts a service bound to IPv4 and IPv6 once', function () {
         ."tcp LISTEN 0 511 [::]:443 [::]:*\n"
     );
 
-    // One thing is listening on 443; the screen should say so once.
     expect(collect(firewall()['listening'])->where('port', 443))->toHaveCount(1);
 });
 
@@ -104,8 +97,7 @@ it('names risky ports from what is installed, with a reason', function () {
 
     $risky = collect(firewall()['risky_ports'])->keyBy('port');
 
-    // Derived here rather than hardcoded in the UI: the backend knows which
-    // engines exist and on which port, so the warning is about this server.
+    // Derived from the installed engines, not hardcoded in the UI.
     expect($risky->has(3306))->toBeTrue()
         ->and($risky[3306]['reason'])->toContain('database')
         ->and($risky->has(6379))->toBeTrue();
@@ -122,8 +114,6 @@ it('lets a rule be switched off without losing it', function () {
         ->assertOk()
         ->assertJsonPath('rule.enabled', false);
 
-    // Still here — testing whether a rule matters should not mean deleting it
-    // and hoping it gets retyped correctly.
     expect(FirewallRule::find($rule->id))->not->toBeNull();
 });
 
@@ -144,7 +134,6 @@ it('does not touch the firewall when only the description changes', function () 
         ->putJson("/api/firewall/rules/{$rule->id}", ['description' => 'Application'])
         ->assertOk();
 
-    // Fixing a typo in a label has no business removing a live firewall rule.
     expect(collect($runs)->filter(fn ($c) => ($c[0] ?? '') === 'ufw' && in_array('delete', $c, true)))->toBeEmpty();
 });
 
@@ -168,8 +157,8 @@ it('adds the replacement before removing the original when the rule changes', fu
     $addAt = $ufw->search(fn ($c) => ! in_array('delete', $c, true) && in_array('9090/tcp', $c, true));
     $deleteAt = $ufw->search(fn ($c) => in_array('delete', $c, true));
 
-    // Deleting first leaves a window with neither rule in place; if the add
-    // then failed, a deny rule would have quietly become "allowed".
+    // Deleting first leaves a window with no rule; if the add then failed, a deny would
+    // become "allowed".
     expect($addAt)->not->toBeFalse()
         ->and($deleteAt)->not->toBeFalse()
         ->and($addAt)->toBeLessThan($deleteAt);
@@ -210,7 +199,7 @@ describe('the database warning on a port two engines share', function () {
     }
 
     it('names MySQL on a MySQL server, not the MariaDB that is not there', function () {
-        // MariaDB is listed after MySQL, so it used to win whatever was installed.
+        // MariaDB is listed after MySQL, so a plain "last wins" picks it whatever is installed.
         $risky = riskyWith(['mysql' => true, 'mariadb' => false]);
 
         expect($risky[3306]['label'])->toBe('mysql')
@@ -238,7 +227,7 @@ describe('the database warning on a port two engines share', function () {
 it('names the 3306 preset for the database this server runs', function (bool $mariadb, string $label) {
     $preset = collect(FirewallPresets::all(mariadb: $mariadb))->firstWhere('key', 'mysql');
 
-    // One name, the right one; the key and the rule are the same either way.
+    // Only the label changes; the key and the rule are the same either way.
     expect($preset['label'])->toBe($label)
         ->and($preset['port'])->toBe(3306);
 })->with([

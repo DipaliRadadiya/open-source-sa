@@ -32,8 +32,7 @@ afterEach(fn () => File::deleteDirectory($this->base));
 /**
  * Capture every command the manager runs, and what was piped into it.
  *
- * An ArrayObject rather than an array: the caller holds it while the fake
- * fills it, so it has to be the same object on both sides.
+ * An ArrayObject, not an array: the caller and the fake must share the same object.
  */
 function captureCron(): ArrayObject
 {
@@ -71,8 +70,7 @@ it('redirects a job\'s output to its own log file', function () {
     $written = collect($runs)->firstWhere(fn ($run) => $run['command'][0] === 'tee'
         && str_ends_with($run['command'][1], 'cron.d/nightly-backup'));
 
-    // Cron mails a job's output by default, and a box with no MTA drops it —
-    // so a failing job leaves no trace unless we redirect it ourselves.
+    // Cron mails output by default and a box with no MTA drops it, so redirect it ourselves.
     expect($written['input'])->toContain(">> {$this->base}/logs/nightly-backup.log 2>&1");
 });
 
@@ -84,8 +82,7 @@ it('captures every part of a compound command, not just the last one', function 
     $written = collect($runs)->firstWhere(fn ($run) => $run['command'][0] === 'tee'
         && str_ends_with($run['command'][1], 'cron.d/nightly-backup'));
 
-    // Without the subshell the redirect binds to the last command only, and
-    // everything before it escapes to cron's mail — that is, to nowhere.
+    // Without the subshell the redirect binds to the last command only.
     expect($written['input'])
         ->toContain('( cd /var/www/app && /usr/bin/php artisan backup:run ) >>');
 });
@@ -98,8 +95,7 @@ it('records the exit status, so a silent failure is still visible', function () 
     $written = collect($runs)->firstWhere(fn ($run) => $run['command'][0] === 'tee'
         && str_ends_with($run['command'][1], 'cron.d/nightly-backup'));
 
-    // "Printed nothing" and "failed instantly" look identical in a bare
-    // output log, and the second is the one you need to know about.
+    // "Printed nothing" and "failed instantly" look identical in a bare output log.
     expect($written['input'])->toContain('echo "--- exit=$? pid=$$ at $(date -Is)"');
 });
 
@@ -111,8 +107,7 @@ it('escapes a percent sign, which cron would otherwise treat as end-of-command',
     $written = collect($runs)->firstWhere(fn ($run) => $run['command'][0] === 'tee'
         && str_ends_with($run['command'][1], 'cron.d/nightly-backup'));
 
-    // Unescaped, everything from the % becomes the job's stdin — truncating
-    // the command *and* the redirect, so the breakage is invisible too.
+    // Unescaped, everything from the % becomes the job's stdin, cutting off the redirect too.
     expect($written['input'])->toContain('+\%Y\%m\%d')
         ->and($written['input'])->toContain('2>&1');
 });
@@ -125,13 +120,10 @@ it('creates the log owned by the account the job runs as', function () {
     $commands = collect($runs)->pluck('command');
     $log = "{$this->base}/logs/nightly-backup.log";
 
-    // Cron's `>>` would create it as whoever ran first, in a directory they
-    // may not be able to write to at all.
+    // Cron's `>>` would create it as whoever ran first, maybe in an unwritable directory.
     expect($commands)->toContain(['touch', $log])
-        // The user, no group. `user:user` assumed every account has a group
-        // of its own name — true for root and for panel-created users, false
-        // for the arbitrary accounts this feature accepts (`nobody`'s group is
-        // `nogroup`), where it failed and took the whole creation with it.
+        // The user, no group: `user:user` fails for accounts without a same-named group
+        // (`nobody`'s group is `nogroup`).
         ->and($commands)->toContain(['chown', 'deploy', $log])
         ->and($commands)->toContain(['chmod', '0640', $log]);
 });
@@ -143,21 +135,17 @@ it('installs a rotation policy alongside the very first job', function () {
 
     $rotation = collect($runs)->firstWhere(fn ($run) => $run['command'] === ['tee', "{$this->base}/logrotate-cronjobs"]);
 
-    // Capturing output without bounding it is a disk-fill on a delay: a job
-    // running every minute appends forever.
+    // Unbounded capture is a slow disk-fill: a job running every minute appends forever.
     expect($rotation)->not->toBeNull()
         ->and($rotation['input'])->toContain("{$this->base}/logs/*.log")
-        // The job holds the file open, so rotating by rename would leave it
-        // writing to a file nobody can see.
+        // The job holds the file open, so rotating by rename would leave it writing to a lost file.
         ->and($rotation['input'])->toContain('copytruncate')
         ->and($rotation['input'])->toContain('maxsize');
 });
 
 it('exposes the log through the existing logs endpoints once it has output', function () {
-    // A cron log is 0640 owned by the job's user, so the panel reads it
-    // through sudo rather than opening it directly. The fake serves `tail`
-    // from the same file the test wrote, or this asserts nothing about the
-    // round trip — only that a fake returns what it was told to.
+    // The log is 0640 owned by the job's user, so the panel reads it through sudo. The fake
+    // serves `tail` from the file the test wrote, so the round trip is really exercised.
     Process::fake(function ($process) {
         $command = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
@@ -186,7 +174,7 @@ it('exposes the log through the existing logs endpoints once it has output', fun
     $key = $this->withHeaders(cronHeaders())->getJson('/api/cronjobs')->json('cronjobs.0.log_key');
     expect($key)->toBe('cronjob_nightly-backup');
 
-    // Same reader, same viewer, same polling cursor as every other log.
+    // Same reader and polling cursor as every other log.
     $this->withHeaders(cronHeaders())->getJson("/api/logs/{$key}")
         ->assertOk()
         ->assertJsonPath('log.label', 'Cron — Nightly Backup')
@@ -215,8 +203,7 @@ it('keeps the log when a job is deactivated but removes it when deleted', functi
     $runs = captureCron();
     $this->withHeaders(cronHeaders())->putJson("/api/cronjobs/{$id}", ['active' => false])->assertOk();
 
-    // A paused job's history is exactly what you read to decide whether to
-    // switch it back on.
+    // A paused job's history is what you read to decide whether to switch it back on.
     expect(collect($runs)->pluck('command'))->not->toContain(['rm', '-f', $log]);
 
     $runs = captureCron();

@@ -3,16 +3,12 @@
 use App\Services\Server\Settings\RedisSettings;
 
 /*
- * install.sh's configure_redis(), run for real against a redis-cli that
- * answers the way Redis 7 does for whatever redis.conf says.
+ * install.sh's configure_redis(), run for real against a redis-cli that answers the way Redis 7
+ * does for whatever redis.conf says.
  *
- * Why (2026-10-18, step 14): a server whose redis.conf already had
- * `user default on nopass ~* &* +@all` from an old CONFIG REWRITE. The
- * installer appended `requirepass`, which that ACL line overrides, and then
- * took `redis-cli -a … ping` answering PONG as proof — but redis-cli prints
- * "AUTH failed" and carries on, and the PING works without a password. The
- * panel's .env got a password Redis rejected, and creating the administrator
- * failed with "AUTH <password> called without any password configured".
+ * Guards a redis.conf that already has `user default on nopass ~* &* +@all`: that ACL line
+ * overrides an appended `requirepass`, and `redis-cli -a … ping` still answers PONG (it prints
+ * "AUTH failed" and carries on), so the panel's .env got a password Redis rejected.
  */
 
 /**
@@ -131,7 +127,7 @@ afterEach(function () {
     }
 });
 
-/** The 2026-10-18 server's redis.conf, plus a second user the installer must leave alone. */
+/** A redis.conf with a nopass default user, plus a second user the installer must leave alone. */
 function nopassRedisConf(): string
 {
     return "bind 127.0.0.1 -::1\nport 6379\nuser default on nopass ~* &* +@all\nuser reports on #aaaa ~reports:* +get\n";
@@ -201,8 +197,7 @@ describe('configure_redis', function () {
     });
 
     it('caps memory at 256 MB with a policy the Redis screen accepts while the queue is on Redis', function () {
-        // allkeys-lru, as it wrote before, can evict queued jobs, and the Redis
-        // screen refuses it: the screen could not be saved on a fresh install.
+        // allkeys-lru can evict queued jobs, and the Redis screen refuses it.
         config(['queue.default' => 'redis', 'queue.connections.redis.driver' => 'redis']);
 
         $r = runConfigureRedis("port 6379\n");

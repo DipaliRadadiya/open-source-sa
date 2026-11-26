@@ -14,14 +14,8 @@ use Illuminate\Support\Facades\Process;
 /*
  * Why a failed install failed.
  *
- * Measured on a real server, 2026-09-14: a Node install on a box whose sudo
- * grant did not cover `fnm` reported `reason: unknown` and "The install failed.
- * Quote the reference below to support." — directly above a panel field showing
- * `sudo: a password is required`. The cause was on screen and the panel said it
- * did not know the cause.
- *
- * Two bugs, one line: `$result->denied` was ignored, and the patterns were
- * matched against `output()`, which is stdout, while installers fail on stderr.
+ * A sudo denial must classify as such (not `reason: unknown`), and the patterns must be matched
+ * against stderr, because installers fail on stderr while `output()` is stdout.
  */
 
 function failedResult(string $stdout = '', string $stderr = '', bool $denied = false): ServerOpsResult
@@ -35,9 +29,8 @@ function failedResult(string $stdout = '', string $stderr = '', bool $denied = f
 }
 
 it('names a refused sudo instead of guessing from the output', function () {
-    // ServerOps established this from the sudo call itself. Leaving it to the
-    // regex list would need one pattern per runtime for the same failure, and
-    // the runtime that forgot would say "unknown".
+    // ServerOps knows this from the sudo call itself; a regex per runtime would miss the one that
+    // forgot.
     $reason = app(InstallFailureClassifier::class)->classify(
         'node',
         failedResult(stderr: 'sudo: a password is required', denied: true),
@@ -47,8 +40,7 @@ it('names a refused sudo instead of guessing from the output', function () {
 });
 
 it('reads stderr, where installers actually report failure', function () {
-    // The bug this replaces: apt puts `E:` lines on stderr and the classifier
-    // only ever saw stdout, so a missing package read as "unknown".
+    // apt puts `E:` lines on stderr; a classifier reading only stdout calls a missing package "unknown".
     $reason = app(InstallFailureClassifier::class)->classify(
         'php',
         failedResult(stderr: 'E: Unable to locate package php8.9-fpm'),
@@ -58,8 +50,7 @@ it('reads stderr, where installers actually report failure', function () {
 });
 
 it('still reads stdout, because apt uses both', function () {
-    // "No space left on device" arrives on stdout. Swapping one stream for the
-    // other would have moved the bug rather than fixed it.
+    // "No space left on device" arrives on stdout: both streams must be read.
     $reason = app(InstallFailureClassifier::class)->classify(
         'php',
         failedResult(stdout: 'No space left on device'),
@@ -74,9 +65,8 @@ it('admits it does not know rather than guessing', function () {
 });
 
 it('tells the user which command repairs it, in their own language', function () {
-    // The end of the pipeline: a reason code is only worth having if the
-    // sentence it resolves to is actionable. "Contact support" is not, for a
-    // failure with a one-command fix.
+    // End of the pipeline: the sentence a reason code resolves to must be actionable, not
+    // "Contact support" for a failure with a one-command fix.
     $row = new RuntimeInstall([
         'runtime' => 'node', 'version' => '22.11.0', 'extension' => '',
         'status' => InstallStatus::Failed, 'reason' => 'sudo_denied',
@@ -87,9 +77,8 @@ it('tells the user which command repairs it, in their own language', function ()
 });
 
 it('says the same thing when a PHP extension is refused', function () {
-    // Extension rows resolve to `extension_install_failed`, which does NOT fall
-    // back to `install_failed` — so the key has to exist in both groups, and
-    // this is what says so.
+    // Extension rows resolve to `extension_install_failed`, which does NOT fall back to
+    // `install_failed`, so the key has to exist in both groups.
     $row = new RuntimeInstall([
         'runtime' => 'php', 'version' => '8.4', 'extension' => 'redis',
         'status' => InstallStatus::Failed, 'reason' => 'sudo_denied',
@@ -99,9 +88,8 @@ it('says the same thing when a PHP extension is refused', function () {
 });
 
 /*
- * A failed install used to crash before saying why: the job handed the
- * classifier a string where it takes the ServerOpsResult, a TypeError, so
- * the reason was never recorded and the row was simply abandoned.
+ * The job must hand the classifier a ServerOpsResult: a string is a TypeError and the reason
+ * is never recorded.
  */
 it('records why a failed install failed, instead of crashing on the way', function (string $job, string $runtime, string $reason) {
     Process::fake(fn ($process) => in_array('apt-get', (array) $process->command, true)

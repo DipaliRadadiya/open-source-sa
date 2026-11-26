@@ -3,15 +3,11 @@
 /*
  * install.sh's progress lines, run for real under bash.
  *
- * A long apt run, a wait for Ubuntu's first-boot updates or the frontend build
- * used to print one line and then nothing for up to ten minutes. A ticker now
- * watches the command and prints a full line when there is something to say:
- * which group of packages apt is setting up (apt's own status lines), the
- * wait for Ubuntu's updates every 15 s, and otherwise "still …" after 15 s of
- * silence. Central gets the same lines only when it asks (PROGRESS_ACTIVITY=1).
+ * A ticker watches long commands and prints a line when there is something to say: the group of
+ * packages apt is setting up, the wait for Ubuntu's updates every 15 s, and otherwise "still …"
+ * after 15 s of silence. Central gets the same lines only when it asks (PROGRESS_ACTIVITY=1).
  *
- * The clock is a function (now_s), so these drive the ticker tick by tick
- * without waiting for it.
+ * The clock is a function (now_s), so these drive the ticker tick by tick without waiting.
  */
 
 /**
@@ -218,9 +214,8 @@ describe('the ticker process', function () {
     });
 
     // progress_stop resends TERM until the ticker is gone: a TERM that lands before the ticker
-    // sets its trap is lost (rare, seen under load), and one kill then waited forever. This
-    // only checks the resend loop ends; the race itself is too rare to hit here. The watchdog
-    // ends the run instead of hanging the suite.
+    // sets its trap is lost. This only checks the resend loop ends; the race itself is too rare
+    // to hit here. The watchdog ends the run instead of hanging the suite.
     it('stops even when stopped the moment it starts', function () {
         $run = progressRun('LOG_FILE=$(mktemp); now_s() { date +%s; }; ubuntu_updates_running() { return 1; }
             trap "true" EXIT

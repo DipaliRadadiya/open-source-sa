@@ -8,20 +8,11 @@ use App\Support\RemoteHost;
  * The panel must refuse to connect to loopback and the cloud metadata address
  * however they are spelled.
  *
- * Both rules used to range-check a host *only* when `filter_var` accepted it as
- * a dotted quad. Every other spelling of an address failed that test, fell
- * through to the hostname branch, and was accepted — while the resolver,
- * libcurl and the SSH and FTP clients all read them as addresses via
- * `inet_aton`, which takes short, decimal, hex and octal forms.
- *
- * `0251.0376.0251.0376` is the one that matters most: it is octal for
- * 169.254.169.254, the cloud metadata address, which is the single target
- * these rules exist to deny.
- *
- * Prompted by CVE-2026-69246 (Guzzle). Upgrading Guzzle does not fix this —
- * the advisory says these spellings "remain accepted after the patch" — and
- * FTP and SFTP never went through Guzzle at all, so for those the panel's own
- * check was the only thing standing there.
+ * Resolvers, libcurl and the SSH and FTP clients read short, decimal, hex and octal
+ * spellings as addresses via `inet_aton`, so a check that only range-tests dotted quads
+ * lets them through as hostnames. `0251.0376.0251.0376` (octal for 169.254.169.254, the
+ * cloud metadata address) is the one that matters most. FTP and SFTP never go through
+ * Guzzle, so the panel's own check is the only protection there.
  */
 function hostRuleRefuses(object $rule, string $value): bool
 {
@@ -56,8 +47,7 @@ dataset('forbidden hosts', [
     'IPv6 loopback, written out' => ['0:0:0:0:0:0:0:1'],
     'IPv4 loopback mapped into IPv6' => ['::ffff:127.0.0.1'],
     'link-local' => ['fe80::1'],
-    // The advisory's own example: filter_var refuses it as an IP, libcurl
-    // percent-decodes it to 127.0.0.1 and connects.
+    // filter_var refuses it as an IP, but libcurl percent-decodes it to 127.0.0.1 and connects.
     'percent-encoded loopback' => ['127.0.0.%31'],
 ]);
 
@@ -65,8 +55,7 @@ dataset('forbidden hosts', [
 dataset('permitted hosts', [
     'a public name' => ['backup.example.com'],
     'a deep public name' => ['s3.eu-west-1.amazonaws.com'],
-    // Private LAN is allowed on purpose: a NAS on the same network is the
-    // normal deployment for this feature.
+    // Private LAN is allowed on purpose: a NAS on the same network is a normal deployment.
     'a LAN address' => ['192.168.1.50'],
     'another LAN range' => ['10.0.0.5'],
     'a single-label LAN name' => ['nas'],
@@ -78,8 +67,7 @@ it('refuses every spelling of a forbidden host on a bare host field', function (
 })->with('forbidden hosts');
 
 it('refuses every spelling of a forbidden host in an endpoint URL', function (string $host) {
-    // Same rule set, different surface: this one guards the S3 endpoint and
-    // the self-hosted git URL.
+    // Same rule set, different surface: the S3 endpoint and the self-hosted git URL.
     expect(hostRuleRefuses(new SafeProviderHost, 'https://'.$host))->toBeTrue();
 })->with('forbidden hosts');
 
@@ -92,17 +80,15 @@ it('still accepts a legitimate endpoint URL', function (string $host) {
 })->with('permitted hosts');
 
 it('treats a trailing root dot as the same name', function () {
-    // `example.com.` and `example.com` are one name. Only one of them would
-    // match a suffix check, so the canonicaliser removes the dot — otherwise
-    // `localhost.` walks straight past the block.
+    // `example.com.` and `example.com` are one name; the canonicaliser removes the dot,
+    // otherwise `localhost.` walks past the block.
     expect(hostRuleRefuses(new SafeRemoteHost, 'localhost.'))->toBeTrue();
     expect(RemoteHost::canonical('EXAMPLE.COM.'))->toBe('example.com');
 });
 
 it('refuses a host it cannot interpret rather than guessing at it', function () {
-    // The distinction the rules draw: "malformed" and "blocked" are different
-    // answers, and a spelling nobody has thought of yet must land on the first
-    // one. This is what makes the check fail closed.
+    // "Malformed" and "blocked" are different answers; an unknown spelling must land on
+    // the first, which makes the check fail closed.
     expect(RemoteHost::isUninterpretable('0x7f000001'))->toBeTrue()
         ->and(RemoteHost::isUninterpretable('2130706433'))->toBeTrue()
         ->and(RemoteHost::isUninterpretable('has a space'))->toBeTrue()
@@ -112,8 +98,7 @@ it('refuses a host it cannot interpret rather than guessing at it', function () 
 });
 
 it('does not block a public address just because it is written as an IP', function () {
-    // The rules block ranges, not the act of using an address. A destination
-    // reachable only by IP is a real configuration.
+    // The rules block ranges, not the use of an address: a destination reachable only by IP is valid.
     expect(RemoteHost::isBlocked('8.8.8.8'))->toBeFalse()
         ->and(RemoteHost::isBlocked('203.0.113.10'))->toBeFalse();
 });

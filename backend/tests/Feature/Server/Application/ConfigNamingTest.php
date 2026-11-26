@@ -13,13 +13,10 @@ use Illuminate\Support\Facades\Process;
 /**
  * The web-server config is named after the application, not its domain.
  *
- * A domain is neither unique nor stable. Two applications could claim the same
- * one and silently overwrite each other's vhost — no error, the second site
- * simply replaced the first — and changing a domain left the old file in
- * `sites-enabled` under a name nothing could address any more, still serving.
+ * A domain is neither unique nor stable: two applications sharing one would overwrite each
+ * other's vhost, and changing a domain would orphan the old file in `sites-enabled`.
  *
- * The name is what the user calls the site and is now unique; the slug is that
- * name made into a filename, because a name is free text and a path is not.
+ * The name is unique; the slug is that name made into a filename.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -90,8 +87,7 @@ it('gives two applications on the same domain different config files', function 
     $one = namingApp(['name' => 'Marketing site']);
     $two = namingApp(['name' => 'Docs site']);
 
-    // Nothing stops two applications sharing a domain, and before this they
-    // shared a file: the second silently replaced the first.
+    // Two applications may share a domain; they must not share a file.
     expect($one->domain)->toBe($two->domain)
         ->and(configPathFor($one))->not->toBe(configPathFor($two));
 });
@@ -114,8 +110,7 @@ it('keeps two names that slug to the same string apart', function () {
     $one = namingApp(['name' => 'My Blog']);
     $two = namingApp(['name' => 'my blog']);
 
-    // "My Blog" and "my blog" are different names and both allowed, but they
-    // slug identically — which would have put two sites in one file.
+    // Different names, both allowed, but they slug identically: two sites in one file otherwise.
     expect($one->slug)->toBe('my-blog')
         ->and($two->slug)->toBe('my-blog-2')
         ->and(configPathFor($one))->not->toBe(configPathFor($two));
@@ -127,14 +122,11 @@ it('does not move the config, because a site cannot be renamed', function () {
 
     $ran = fakeNamingServer();
 
-    // The endpoint refuses `name` outright; this goes straight to the action
-    // to prove the action no longer acts on one either, since that is what
-    // used to move the file.
+    // The endpoint refuses `name`; this calls the action directly to prove it ignores one too.
     app(UpdateApplication::class)->execute($app, ['name' => 'Renamed blog']);
 
-    // The slug is the key to six filenames — the vhost, the pool and its
-    // socket, the directory, the logs, the jail, the units — and only the
-    // vhost ever moved. Now nothing does.
+    // The slug keys six filenames (vhost, pool and socket, directory, logs, jail, units):
+    // none moves.
     expect($app->fresh()->slug)->toBe($app->slug)
         ->and(configPathFor($app->fresh()))->toBe($before)
         ->and(count((array) $ran))->toBe(0);
@@ -143,8 +135,7 @@ it('does not move the config, because a site cannot be renamed', function () {
 it('refuses a rename at the endpoint, rather than quietly ignoring it', function () {
     $app = namingApp();
 
-    // Silence would be worse than a refusal: API_REFERENCE used to advertise
-    // this, so a caller following it would get a 200 and no rename.
+    // Silence would be worse than a refusal: a caller would get a 200 and no rename.
     test()->actingAs(test()->admin)
         ->putJson("/api/applications/{$app->id}", ['name' => 'Renamed blog'])
         ->assertStatus(422)
@@ -160,8 +151,8 @@ it('removes the old domain-named config when resyncing an existing install', fun
 
     app(SiteConfigResyncer::class)->run();
 
-    // A site provisioned before this change still has `{domain}.conf` on disk.
-    // Both files loaded means two server blocks claiming the same names.
+    // An older site still has `{domain}.conf` on disk; with both files loaded, two server
+    // blocks would claim the same names.
     $removedLegacy = false;
 
     foreach ($ran as $args) {
@@ -177,7 +168,6 @@ it('still addresses the file a pre-slug row actually has on disk', function () {
     $app = namingApp();
     $app->forceFill(['slug' => null])->save();
 
-    // A row written before the slug column exists. Resolving it to a slug-based
-    // name would point the panel at a file that was never written.
+    // A row from before the slug column: a slug-based name would point at a file never written.
     expect(configPathFor($app->fresh()))->toEndWith('/blog.test.conf');
 });

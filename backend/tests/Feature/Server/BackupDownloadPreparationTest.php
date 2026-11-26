@@ -28,10 +28,8 @@ use League\Flysystem\UnableToReadFile;
 /*
  * Download for backups on SFTP and FTP: prepare, then download.
  *
- * Neither provider has a link a browser can follow, so Download answered "not
- * available for this destination" — and the users of this panel are not going
- * to fetch an archive with FileZilla. The panel now copies the archive to its
- * own disk on the queue and serves that copy for an hour.
+ * Neither provider has a browser link, so the panel copies the archive to its own disk on the
+ * queue and serves that copy for an hour.
  */
 
 const DL_ARCHIVE = "archive-bytes\x00\x01\x02 of a whole site";
@@ -74,8 +72,7 @@ beforeEach(function () {
         'manifest' => ['key' => 'shop/a1b2c3.tar.gz'],
     ]);
 
-    // The archive on the "storage server": a real filesystem, so exists(),
-    // fileSize() and readStream() answer the way the adapters do.
+    // The "storage server" archive: a real filesystem, so the adapter calls answer as in production.
     $this->remote = Storage::fake('dl-remote');
     $this->remote->put('shop/a1b2c3.tar.gz', DL_ARCHIVE);
 
@@ -85,11 +82,9 @@ beforeEach(function () {
     ));
 
     /*
-     * The driver: real SFTP/FTP classes (so `PreparesDownloads` is what it is
-     * in production), with only the network part replaced. `$mode`:
-     * `direct` writes the archive the way downloadTo() does, `fallback`
-     * returns false so the copy comes from readStream(), `refused` throws
-     * what phpseclib throws for a wrong password.
+     * The driver: real SFTP/FTP classes with only the network part replaced. `$mode`:
+     * `direct` writes the archive the way downloadTo() does, `fallback` returns false so the
+     * copy comes from readStream(), `refused` throws what phpseclib throws for a wrong password.
      */
     $this->driverMode = 'direct';
     $this->app->bind(StorageDriverFactory::class, fn () => new class($this) extends StorageDriverFactory
@@ -571,9 +566,8 @@ it('has a migration that can be rolled back', function () {
 });
 
 /*
- * The SFTP adapter's readStream() is `fopen('php://temp')` + `get()` into it,
- * the same whole-archive buffer the FTP one has. The driver must hand
- * phpseclib the destination path instead.
+ * The SFTP adapter's readStream() buffers the whole archive in `php://temp`; the driver must
+ * hand phpseclib the destination path instead.
  */
 it('downloads SFTP archives straight to disk, never through php://temp', function () {
     $method = new ReflectionMethod(SftpDriver::class, 'downloadTo');

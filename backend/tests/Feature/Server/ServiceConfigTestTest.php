@@ -73,10 +73,8 @@ it('uses the OpenLiteSpeed configuration validator', function () {
         ->assertOk()
         ->assertJsonPath('config_test.ok', true);
 
-    // `openlitespeed -t`, which is the only thing OpenLiteSpeed ships that
-    // validates a config. This used to assert `lswsctrl config_test` — a verb
-    // lswsctrl does not have. It prints its usage and exits non-zero, so the
-    // assertion pinned a check that could only ever report failure.
+    // `openlitespeed -t` is the only thing OpenLiteSpeed ships that validates a config;
+    // `lswsctrl` has no config_test verb and would only ever report failure.
     Process::assertRan(fn ($p) => $p->command === ['/usr/local/lsws/bin/openlitespeed', '-t']);
     Process::assertNotRan(fn ($p) => $p->command === ['/usr/local/lsws/bin/lswsctrl', 'status']);
 });
@@ -129,11 +127,9 @@ it('denies a config test without the service permission', function () {
 /*
  * An alias is not a service this panel manages.
  *
- * `configTest` checked `find()` alone, which answers "is this a managed key"
- * — yes for `mysql` on a MariaDB box, where mysql.service is a compatibility
- * alias and no MySQL is installed. The reply was then a 422 about
- * configuration, for a service that is not here. The action path already
- * refuses it; this closes the other half.
+ * `find()` alone answers "is this a managed key", which is yes for `mysql` on a MariaDB box
+ * (mysql.service is a compatibility alias) and would give a 422 about configuration for a
+ * service that is not installed. The action path already refuses it.
  */
 it('refuses a config test for a key that is only an alias of another service', function () {
     Process::fake(fn ($process) => match (true) {
@@ -150,8 +146,7 @@ it('refuses a config test for a key that is only an alias of another service', f
 });
 
 it('refuses a config test for a managed service that is not installed', function () {
-    // Nothing to validate: there is no configuration on this box to be right
-    // or wrong about, so "not found" is the honest answer rather than a
+    // Nothing to validate on this box, so "not found" is the honest answer rather than a
     // sentence about configuration tests.
     Process::fake(fn ($process) => match (true) {
         ($process->command[0] ?? '') === 'systemctl' && ($process->command[1] ?? '') === 'show' => Process::result(
@@ -164,8 +159,7 @@ it('refuses a config test for a managed service that is not installed', function
 });
 
 it('fails a php config test that exits 0 over an ini php could not parse', function () {
-    // Measured with php-fpm8.4 -t on 2026-09-23: exit 0, "test is successful",
-    // and every directive after the error ignored.
+    // php-fpm -t exits 0 with "test is successful" and ignores every directive after the error.
     Process::fake(fn ($process) => match (true) {
         ($process->command[0] ?? '') === 'systemctl' && ($process->command[1] ?? '') === 'show' => Process::result(
             output: systemctlShowOutput($process->command, default: ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']),

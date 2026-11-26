@@ -28,12 +28,11 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /*
- * Backups of a database on its own (2026-10-16; v7's type=database), and
- * archived backups. What matters: a database backup dumps that one database
- * and nothing of any site; a site's database stays with the site; deleting a
- * database archives its backups instead of losing them; a restore saves the
- * database first, replaces only the chosen database, and an archived backup
- * goes only into a database of the same engine.
+ * Backups of a database on its own, and archived backups. What matters: a database backup dumps
+ * that one database and nothing of any site; a site's database stays with the site; deleting a
+ * database archives its backups instead of losing them; a restore saves the database first,
+ * replaces only the chosen database, and an archived backup goes only into a database of the
+ * same engine.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -260,7 +259,7 @@ describe('restoring', function () {
         Queue::assertPushed(RunRestore::class, fn (RunRestore $job) => $job->databaseId === $this->db->id);
     });
 
-    // QA 2026-11-24: two restores sent together left one pending for ever.
+    // Two restores sent together must not leave one pending for ever.
     it('refuses a restore that arrives while the first is being created', function () {
         Queue::fake();
         $backup = dbBackupRow();
@@ -372,10 +371,9 @@ it('serves a database\'s backup only under that database', function () {
 });
 
 /*
- * RC-19 (frontend QA, 16 Oct): a database's own restore carried its database
- * only in the row, never in the response, and GET /restores could not be
- * asked for one database. Its Backups tab lost the restore on reload, and a
- * database restore looked like a deleted site's (both have no application).
+ * A database's own restore must carry its database in the response and GET /restores must be
+ * filterable by database; otherwise a database restore looks like a deleted site's (both have
+ * no application) and the Backups tab loses it on reload.
  */
 describe('finding a database\'s restores', function () {
     function dbRestore(Backup $backup, ?int $databaseId): Restore
@@ -436,9 +434,8 @@ describe('finding a database\'s restores', function () {
 });
 
 /*
- * RC-23 (frontend QA, 17 Oct): database-only schedules had no list — GET
- * /backup-targets returned applications only, so the overview needed one
- * request per database to show which were backed up.
+ * GET /backup-targets must list database-only schedules too, so the overview does not need one
+ * request per database to show which are backed up.
  */
 describe('the overview\'s database rows', function () {
     it('lists databases that are not part of a site, with their schedule and last backup', function () {

@@ -11,15 +11,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 /*
- * Pins the shape `ArchiveVolumesTest` stubs.
- *
- * That test replaces `discover()` with a canned `name => mountpoint` map,
- * because walking real volumes needs a Docker daemon. A stub is only as good as
- * the agreement it stands in for: if `discover()` ever returns a bare list again
- * — which is what it returned before the backup work needed names — the stub
- * keeps passing and the step breaks only on a real server. So the contract is
- * asserted here, against a faked `docker volume ls`, and the two tests fail
- * together or not at all.
+ * Pins the shape `ArchiveVolumesTest` stubs: `ArchiveVolumesTest` replaces `discover()` with a
+ * canned `name => mountpoint` map (real volumes need a Docker daemon), so the contract is
+ * asserted here against a faked `docker volume ls`; otherwise a stub could keep passing while
+ * the real step breaks.
  */
 function volumeListOps(string $stdout, bool $answered = true): ServerOps
 {
@@ -62,8 +57,7 @@ it('returns volume name => mountpoint, which is the shape a backup needs', funct
 
     $discovered = discoverFor($ops, $application);
 
-    // Keys are names. The name is what a restore recreates; the mountpoint is
-    // only what the backup reads.
+    // Keys are names: a restore recreates by name; the mountpoint is only what the backup reads.
     expect(array_keys($discovered))->toBe([
         'sv-app-'.$application->id.'_data',
         'sv-app-'.$application->id.'_cache',
@@ -72,9 +66,8 @@ it('returns volume name => mountpoint, which is the shape a backup needs', funct
 });
 
 it('includes a volume attached by hand that the panel never prefixed', function () {
-    // The two sources are each incomplete: `volume_mounts` holds what somebody
-    // attached on the Container screen, and the prefix covers what the panel
-    // created. A one-click app's volumes appear only in the second.
+    // Two incomplete sources: `volume_mounts` holds hand-attached volumes, the prefix covers
+    // the ones the panel created (a one-click app's appear only there).
     $application = volumeApplication([['volume' => 'brought-my-own', 'path' => '/data']]);
 
     $ops = volumeListOps(implode("\n", [
@@ -90,10 +83,8 @@ it('includes a volume attached by hand that the panel never prefixed', function 
 });
 
 it('never counts another site\'s volumes as this one\'s', function () {
-    // The prefix match is `str_starts_with`, and a false positive is the real
-    // danger here: `sv-app-2_` must not sweep in site 20's volumes, because a
-    // backup that silently includes someone else's data is worse than one that
-    // misses some.
+    // A prefix false positive is the danger: `sv-app-2_` must not sweep in site 20's volumes,
+    // since a backup holding someone else's data is worse than one that misses some.
     $user = SystemUser::create(['username' => 'two', 'home_path' => '/home/two']);
     $site2 = Application::forceCreate([
         'id' => 2, 'system_user_id' => $user->id, 'name' => 'Two', 'slug' => 'two',
@@ -110,18 +101,16 @@ it('never counts another site\'s volumes as this one\'s', function () {
 });
 
 it('answers with nothing when docker could not be asked', function () {
-    // Not an exception: the size job this also feeds runs unattended, and a
-    // daemon that did not answer is not the same as a site with no volumes —
-    // but it is not a reason to fail either. `ArchiveVolumes` records an empty
-    // list, which is visible in the manifest.
+    // Not an exception: the size job runs unattended. `ArchiveVolumes` records an empty list,
+    // visible in the manifest.
     $application = volumeApplication();
 
     expect(discoverFor(volumeListOps('', answered: false), $application))->toBe([]);
 });
 
 it('tells "has none" apart from "could not ask" for the refusals that act on it (S-02)', function () {
-    // A `volumes` backup is refused only on `[]`. Refusing on a daemon that did
-    // not answer would turn a site that has volumes away, with a false reason.
+    // A `volumes` backup is refused only on `[]`; an unanswered daemon must not refuse a site
+    // that has volumes.
     $application = volumeApplication();
     $sizes = fn (ServerOps $ops): VolumeSizes => new VolumeSizes($ops);
 

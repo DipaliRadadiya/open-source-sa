@@ -10,14 +10,12 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Testing\TestResponse;
 
 /**
- * `PUT /applications/{id}/container` for a site that runs its own compose file
- * (RC-31): a 1-Click Recipe app, or a file taken over on the Compose File page.
+ * `PUT /applications/{id}/container` for a site that runs its own compose file: a 1-Click Recipe
+ * app, or a file taken over on the Compose File page.
  *
- * The port, network and volume fields of that form never reach such a site — the
- * supervisor renders the stored file and ignores them — so accepting them answered
- * "saved" and changed nothing. They are refused instead, when the value differs
- * from the one the site already has. The limits and the registry still apply, and a
- * normal Docker site is untouched.
+ * The port, network and volume fields never reach such a site (the supervisor renders the stored
+ * file), so a changed value is refused instead of answering "saved" and doing nothing. Limits and
+ * registry still apply; a normal Docker site is untouched.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -294,8 +292,7 @@ it('accepts the values the site already has, in any order, and leaves them alone
         ->and(test()->application->fresh()->memory_limit)->toBe('768m')
         ->and(ownComposeUpRan())->toBeTrue();
 
-    // Nothing was looked up for the three fields the file owns: they were not
-    // validated, because nothing of them is applied.
+    // The three fields the file owns are not validated, because none of them is applied.
     $lookups = collect(ownRan())->filter(fn (array $args): bool => in_array(($args[1] ?? ''), ['network', 'system'], true));
     expect($lookups)->toHaveCount(0);
 })->with(OWN_KINDS);

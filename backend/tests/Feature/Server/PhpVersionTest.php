@@ -103,9 +103,8 @@ it('restores the previous ini and does not reload when php rejects it', function
 });
 
 /*
- * PHP does not refuse an ini it cannot parse: it warns, exits 0, and ignores
- * every directive after the error. Measured on both stacks on 2026-09-23 — a
- * `max_input_vars = 3000` below an unclosed quote read back as 1000.
+ * PHP does not refuse an ini it cannot parse: it warns, exits 0, and ignores every
+ * directive after the error (a `max_input_vars = 3000` below an unclosed quote read back as 1000).
  */
 it('restores the previous ini when php exits 0 but could not parse it', function () {
     Process::fake(fn ($process) => in_array('-t', $process->command, true)
@@ -119,8 +118,7 @@ it('restores the previous ini when php exits 0 but could not parse it', function
         'contents' => "memory_limit = 512M\nfoo = \"bar\nmax_input_vars = 3000\n",
         'acknowledged' => true,
     ])->assertStatus(422)->assertJsonPath('message', 'PHP rejected that configuration, so the previous one was restored. Nothing was reloaded.')
-        // FS-C17: PHP's own line, so the editor can say where — not the
-        // "test is successful" line printed beside it.
+        // PHP's own line, so the editor can say where, not the "test is successful" line beside it.
         ->assertJsonPath('php_errors', ["PHP:  syntax error, unexpected end of file, expecting TC_DOLLAR_CURLY or TC_QUOTED_STRING or '\"' in /etc/php/8.4/fpm/php.ini on line 4"]);
 
     $ini = "{$this->phpDir}/8.4/fpm/php.ini";
@@ -130,8 +128,8 @@ it('restores the previous ini when php exits 0 but could not parse it', function
 });
 
 it('does not refuse an ini over a php warning that is not a parse error', function () {
-    // A running PHP with a complaint. Failing on these would refuse every save
-    // on a server that already loads a module twice.
+    // A running PHP with a complaint: failing on these would refuse every save on a
+    // server that already loads a module twice.
     Process::fake(fn ($process) => in_array('-t', $process->command, true)
         ? Process::result(errorOutput: "PHP Warning:  Module \"redis\" is already loaded in Unknown on line 0\n")
         : Process::result(exitCode: 0));
@@ -145,8 +143,7 @@ it('does not refuse an ini over a php warning that is not a parse error', functi
 });
 
 it('writes the ini exactly as sent, final newline and indentation included', function () {
-    // The global TrimStrings middleware dropped the last newline on every
-    // save — a file that should have come back byte-identical did not.
+    // The global TrimStrings middleware must not drop the last newline: the file comes back byte-identical.
     Process::fake(['*' => Process::result(exitCode: 0)]);
 
     $contents = "  ; indented comment\nmemory_limit = 512M\n";
@@ -160,8 +157,7 @@ it('writes the ini exactly as sent, final newline and indentation included', fun
 });
 
 it('has a sentence, in every locale, for every PHP error it can raise', function () {
-    // Four of these were deleted in a refactor and never re-added, so a
-    // rejected ini answered with the literal "errors/php.invalid_ini".
+    // A missing key would answer a rejected ini with the literal "errors/php.invalid_ini".
     $source = (string) file_get_contents(app_path('Exceptions/Server/Php/PhpConfigException.php'));
     preg_match_all("/'(errors\/php\.[a-z_]+)'/", $source, $matches);
 
@@ -214,10 +210,9 @@ it('denies editing with view-only access', function () {
 });
 
 /*
- * Bug #28: php.ini is read by the PHP-FPM master, which runs as root, so an
- * `extension=/tmp/x.so` is code run as root at the next reload. Extensions
- * load from PHP's own directory only — which is also where v7 copied the
- * ionCube loader, so a migrated v7 php.ini still saves.
+ * php.ini is read by the PHP-FPM master, which runs as root, so an `extension=/tmp/x.so`
+ * is code run as root at the next reload. Extensions load from PHP's own directory only
+ * (where v7 also copied the ionCube loader, so a migrated v7 php.ini still saves).
  */
 function fakePhpWithExtensionDir(): void
 {
@@ -263,9 +258,8 @@ it('still saves the extension lines a real server has', function (string $line) 
 ]);
 
 /*
- * RC-8 (PHP page redesign, 12 Oct): the server's php.ini could only be edited
- * as the whole raw file. The common settings now have fields of their own;
- * only their lines change, through the same backup / check / rollback.
+ * The common php.ini settings have fields of their own; only their lines change,
+ * through the same backup / check / rollback as the raw editor.
  */
 describe('the common php.ini settings as fields', function () {
     function fakeIni(string $contents, ?ArrayObject $written = null): void

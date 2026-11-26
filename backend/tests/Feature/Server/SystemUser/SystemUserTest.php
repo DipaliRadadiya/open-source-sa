@@ -68,9 +68,8 @@ it('creates a system user with sudo, ssh_access, shell and password set in one c
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->postJson('/api/system-users', [
             'username' => 'deploy',
-            // A login shell, because ssh_access is on: the two together are
-            // now refused, since sshd would authenticate and the session
-            // would close on a shell that denies login.
+            // A login shell, because ssh_access is on: a no-login shell with it is refused,
+            // since sshd would authenticate and then close the session.
             'shell' => '/bin/bash',
             'sudo' => true,
             'ssh_access' => true,
@@ -255,10 +254,9 @@ it('deletes a system user, running userdel', function () {
 });
 
 /*
- * userdel removes a user's own group only when nobody else is in it, and
- * provisioning a site puts the web server's account in it to write the logs.
- * So every deleted user left its group behind and the name could never be
- * reused. Found on a real server (2026-09-24): six deleted users, six groups.
+ * userdel removes a user's own group only when nobody else is in it, and provisioning a site
+ * puts the web server's account in it to write the logs. Without removing it first, every
+ * deleted user left its group behind and the name could never be reused.
  */
 it('empties the user\'s own group before userdel, so the group goes with the user', function () {
     $ran = collect();
@@ -321,8 +319,8 @@ it('allows a non-admin with the system_user permission (pure role-based)', funct
 });
 
 it('refuses a password that would give chpasswd a second line, before anything runs', function () {
-    // chpasswd reads one account per line: this changed qa-bob's password
-    // on a real server (2026-09-23).
+    // chpasswd reads one account per line: a newline in the password could set another
+    // account's password.
     Process::fake();
     $admin = User::factory()->admin()->create();
 

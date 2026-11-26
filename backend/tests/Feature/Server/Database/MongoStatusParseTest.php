@@ -6,20 +6,12 @@ use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\Process;
 
 /*
- * The Query Monitor charted a quiet MongoDB at 33 million queries a second,
- * peaking near 9.3 billion. The counter behind it was summed inside mongosh:
+ * Summing the opcounters inside mongosh concatenated their digits: mongosh keeps them as BSON
+ * `Long` objects, so `+` falls back to `toString()` (0, 1, 0, 0, 50000 gave "010050000", not
+ * 50001) and `||0` does not help because `Long(0)` is truthy.
  *
- *     (o.insert||0)+(o.query||0)+(o.update||0)+(o.delete||0)+(o.command||0)
- *
- * mongosh freezes `promoteLongs: false` into every driver call, so those
- * counters stay BSON `Long` objects. `Long` defines no `Symbol.toPrimitive`
- * and its `valueOf()` returns another object, so `+` never reaches a numeric
- * primitive and falls back to `toString()` — concatenating the digits. The
- * counters 0, 1, 0, 0 and 50000 produced "010050000" rather than 50001, and
- * `||0` did not help because `Long(0)` is a truthy object.
- *
- * These tests pin the parse, not the shell: they feed the exact stdout shapes
- * mongosh produces and assert the totals. The old expression cannot pass them.
+ * These tests pin the parse, not the shell: they feed the stdout shapes mongosh produces and
+ * assert the totals.
  */
 
 beforeEach(function () {
@@ -47,8 +39,8 @@ function mongoEngine(): MongoEngine
 }
 
 it('adds the opcounters instead of gluing their digits together', function () {
-    // connections.current, connections.available, uptime, then the five
-    // opcounters — the exact case that produced "010050000" in production.
+    // connections.current, connections.available, uptime, then the five opcounters; the
+    // counters here are the case that concatenated to "010050000".
     fakeMongoStatus([12, 838848, 3600, 0, 1, 0, 0, 50000]);
 
     $status = mongoEngine()->status();
@@ -60,17 +52,15 @@ it('adds the opcounters instead of gluing their digits together', function () {
 });
 
 it('keeps a zero counter as zero rather than as a digit in a longer number', function () {
-    // Every counter zero must total zero. Concatenation returned "00000",
-    // which casts to 0 as well — so this only means anything alongside the
-    // case above, where the zeros sit between non-zero counters.
+    // Concatenation returned "00000", which casts to 0 as well, so this only means something
+    // next to the case above, where zeros sit between non-zero counters.
     fakeMongoStatus([1, 838848, 60, 0, 0, 0, 0, 0]);
 
     expect(mongoEngine()->status()['queries'])->toBe(0);
 });
 
 it('totals counters of differing digit lengths', function () {
-    // The shape that produced the billions-scale spikes: a counter gaining a
-    // digit shifted every counter left of it and the delta exploded. The sum
+    // A counter gaining a digit shifted every counter left of it and the delta exploded. The sum
     // must depend only on the values, never on how wide they are printed.
     fakeMongoStatus([4, 838848, 7200, 6, 1_037, 12, 3, 999_301]);
 

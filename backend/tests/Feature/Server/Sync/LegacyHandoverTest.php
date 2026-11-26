@@ -83,9 +83,8 @@ function handoverFake(array $options = []): array
             return Process::result(output: '');
         }
 
-        // The agent is found by whatever holds port 43210, then that PID names
-        // its own unit. Shapes copied from a live v7 box, where the agent runs
-        // as `sureshcloud.service` — a name no pattern would have matched.
+        // The agent is found by whatever holds port 43210, then that PID names its own
+        // unit. Shapes copied from a v7 server, whose unit name no pattern would match.
         if (($args[0] ?? '') === 'ss') {
             return Process::result(output: $agentRunning
                 ? "LISTEN 0 4096 *:43210 *:* users:((\"sureshcloud-age\",pid=11684,fd=5))\n"
@@ -123,9 +122,8 @@ it('stops the old agent without going through the old agent', function () {
         ->and(collect($f['ran'])->contains(fn (string $c) => $c === 'systemctl stop sureshcloud.service'))->toBeTrue()
         ->and(collect($f['ran'])->contains(fn (string $c) => $c === 'systemctl disable sureshcloud.service'))->toBeTrue();
 
-    // Never its own teardown: `pm2 unstartup` and `pm2 kill` would stop every
-    // application the user owns. The applications are children of the PM2
-    // daemon, not of the agent.
+    // Never its own teardown: `pm2 unstartup` and `pm2 kill` would stop every application
+    // the user owns, because they are children of the PM2 daemon, not of the agent.
     expect(collect($f['ran'])->contains(fn (string $c) => str_contains($c, 'unstartup')))->toBeFalse()
         ->and(collect($f['ran'])->contains(fn (string $c) => str_contains($c, 'pm2 kill')))->toBeFalse();
 });
@@ -153,9 +151,8 @@ it('writes the boot unit itself rather than scraping pm2 startup', function () {
 
     $unit = collect($f['written'])->first(fn (string $c) => str_contains($c, 'pm2 resurrect'));
 
-    // `pm2 startup` prints a sudo line for a human to paste. The old panel
-    // scraped it with a regex that a Node upgrade or a hyphenated username
-    // defeats — and then ran the empty match, which exits 0.
+    // `pm2 startup` prints a sudo line for a human to paste. Scraping it with a regex breaks
+    // on a Node upgrade or a hyphenated username, and the empty match exits 0.
     expect($unit)->not->toBeNull()
         ->and($unit)->toContain('Environment=PM2_HOME=/home/appuser/.pm2')
         ->and($unit)->toContain('User=appuser');
@@ -171,9 +168,8 @@ it('enables the boot unit but does not start it', function () {
 
     app(LegacyHandover::class)->complete();
 
-    // The daemon is already running — that is what is serving the sites. Its
-    // ExecStart is `pm2 resurrect`, which against a live daemon would start a
-    // second copy of every application in the dump.
+    // The daemon is already serving the sites. Its ExecStart is `pm2 resurrect`, which against
+    // a live daemon would start a second copy of every application in the dump.
     expect(collect($f['ran'])->contains(fn (string $c) => str_contains($c, 'systemctl start pm2-appuser')))->toBeFalse();
 });
 
@@ -191,8 +187,8 @@ it('leaves a working boot unit alone', function () {
 it('rewrites a boot unit whose pm2 a Node upgrade moved', function () {
     adopted();
 
-    // Enabled, but its binary is gone — which is what `n` does to a unit
-    // written when PM2 lived under /usr/lib. It fails at boot, silently.
+    // Enabled but its binary is gone (`n` does this to a unit written when PM2 lived
+    // under /usr/lib): it fails silently at boot.
     $f = handoverFake(['boot_enabled' => true, 'pm2_present' => false]);
 
     app(LegacyHandover::class)->complete();
@@ -209,9 +205,8 @@ it('gives PM2 the log rotation it has never had', function () {
 
     $policy = collect($f['written'])->first(fn (string $c) => str_contains($c, '/.pm2/logs/'));
 
-    // The old panel installed pm2-logrotate into root's daemon while every
-    // application runs under a per-user one, so this has never rotated. On an
-    // old box with a chatty application it is what fills the disk.
+    // pm2-logrotate must go into each user's daemon, not root's: applications run under
+    // per-user daemons, so a root install never rotates their logs and the disk fills.
     expect($policy)->not->toBeNull()
         ->and($policy)->toContain('/home/appuser/.pm2/logs/*.log')
         // PM2 holds its logs open for the life of the daemon.
@@ -256,9 +251,8 @@ it('is reachable by someone who can manage sync', function () {
 });
 
 it('is refused to someone who cannot', function () {
-    // Separate test, not a second request in the one above: the auth guard
-    // caches the user it resolved, so a follow-up call in the same test is
-    // still answered as whoever went first.
+    // Separate test: the auth guard caches the resolved user, so a second request in the
+    // same test is still answered as the first caller.
     adopted();
     $f = handoverFake();
 
@@ -272,8 +266,7 @@ it('is refused to someone who cannot', function () {
 });
 
 it('leaves an activity entry with a sentence, not its key', function () {
-    // The docker/pm2 merge logged this event with no sentence, so the
-    // Activity Log showed `activity.sync.legacy_handover`.
+    // Without a sentence the Activity Log shows the raw key `activity.sync.legacy_handover`.
     adopted();
     handoverFake();
 

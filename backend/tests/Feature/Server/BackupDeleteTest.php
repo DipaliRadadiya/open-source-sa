@@ -14,13 +14,11 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Deleting a backup, and what that has to be careful about.
+ * Deleting a backup.
  *
- * The archive is the thing that matters here, not the row. Delete the row first
- * and a failure leaves an object in somebody's bucket that nothing in the panel
- * knows about — unfindable, undeletable, and billed for every month until a
- * human goes looking. So the order is archive, then row, which is the same order
- * retention already uses.
+ * The archive matters more than the row: deleting the row first would, on failure, leave an
+ * object in the bucket that nothing in the panel knows about. So the order is archive, then
+ * row, the same as retention.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -91,8 +89,7 @@ it('removes the archive as well as the record', function () {
         ->deleteJson("/api/backups/{$backup->id}")
         ->assertNoContent();
 
-    // Both, and in that order. A row deleted without its archive is an object
-    // nobody can find and everybody keeps paying for.
+    // Both, and in that order: a row deleted without its archive orphans the object.
     $this->disk->assertMissing('shop/one.tar.gz');
     expect(Backup::find($backup->id))->toBeNull();
 });
@@ -100,8 +97,7 @@ it('removes the archive as well as the record', function () {
 it('keeps the record when the archive cannot be removed', function () {
     $backup = makeBackup(['key' => 'shop/two.tar.gz']);
 
-    // A destination that refuses. Losing the row here would strand the object
-    // permanently, so the row is the thing worth keeping.
+    // A destination that refuses: keep the row, or the object is stranded for good.
     $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
         app(StorageDriverFactory::class),
         builder: fn (array $config) => new class
@@ -129,8 +125,7 @@ it('deletes cleanly when the archive is already gone', function () {
     $backup = makeBackup(['key' => 'shop/three.tar.gz']);
     $this->disk->delete('shop/three.tar.gz');
 
-    // Someone emptied the bucket by hand. The row must still be removable, or
-    // it is stuck in the list forever.
+    // Someone emptied the bucket by hand: the row must still be removable.
     $this->withHeaders(deleteHeaders())
         ->deleteJson("/api/backups/{$backup->id}")
         ->assertNoContent();
@@ -141,8 +136,7 @@ it('deletes cleanly when the archive is already gone', function () {
 it('refuses to delete a backup that is still running', function () {
     $backup = makeBackup(['status' => BackupStatus::Running->value, 'key' => 'shop/four.tar.gz']);
 
-    // The uploader is writing to this very key. Deleting the row underneath it
-    // would leave the archive behind with nothing pointing at it.
+    // The uploader is writing to this key; deleting the row would orphan the archive.
     $this->withHeaders(deleteHeaders())
         ->deleteJson("/api/backups/{$backup->id}")
         ->assertStatus(422);
@@ -158,13 +152,12 @@ it('records the deletion, including when it was a safety copy', function () {
         ->deleteJson("/api/backups/{$backup->id}")
         ->assertNoContent();
 
-    // A safety backup is the only way back from a restore that went wrong.
-    // Deleting one is allowed — it is an explicit act on the user's own data —
-    // but it has to be findable afterwards.
+    // A safety backup is the way back from a bad restore. Deleting one is allowed, but it must
+    // show up in the activity log.
     $entry = ActivityLog::query()->where('type', 'backup')->where('action', 'deleted')->firstOrFail();
 
     expect($entry->properties['is_safety'])->toBeTrue()
-        // The sentence names the site; it used to show the raw `:name`.
+        // The sentence must name the site, not show the raw `:name`.
         ->and(__('activity.backup.deleted', $entry->properties))->not->toContain(':name')
         ->and(__('activity.backup.deleted', $entry->properties))->toContain($backup->application->name);
 });
@@ -191,8 +184,7 @@ describe('turning backups off for an application', function () {
             ->deleteJson("/api/applications/{$this->application->id}/backup-target")
             ->assertStatus(422);
 
-        // Naming the count rather than cascading quietly: the schedule is
-        // cheap to retype, the archives are somebody's only copy.
+        // Name the count instead of cascading quietly: archives may be the only copy.
         expect($response->json('message'))->toContain('2');
         expect(BackupTarget::find($this->backupTarget->id))->not->toBeNull();
     });
@@ -245,8 +237,6 @@ describe('retention', function () {
                 'enabled' => true,
             ])->assertOk();
 
-        // The setting saved, the screen agreed, and five copies used to stay
-        // exactly where they were until another backup happened to run.
         expect(Backup::where('backup_target_id', $this->backupTarget->id)->count())->toBe(2);
 
         // The newest two survive.
@@ -268,8 +258,7 @@ describe('retention', function () {
                 'enabled' => true,
             ])->assertOk();
 
-        // It is the parachute from a restore that turned out to be wrong.
-        // Retention must never be the thing that removes it.
+        // Safety backups are the way back from a bad restore; retention must never remove them.
         expect(Backup::find($safety->id))->not->toBeNull();
         $this->disk->assertExists('shop/s3.tar.gz');
     });
@@ -302,9 +291,8 @@ describe('retention', function () {
                 'enabled' => true,
             ])->assertOk();
 
-        // A failed run is not one of your copies, so it cannot be counted as
-        // one — but it is also not surplus to be swept up here. Deleting it is
-        // the user's call.
+        // A failed run is not counted as a copy, but it is not surplus either: deleting it is the
+        // user's call.
         expect(Backup::find($failed->id))->not->toBeNull();
     });
 });

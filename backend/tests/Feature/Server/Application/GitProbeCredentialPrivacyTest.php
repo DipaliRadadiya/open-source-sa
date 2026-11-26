@@ -8,12 +8,10 @@ use Illuminate\Support\Facades\Process;
 use Symfony\Component\Process\Process as RealProcess;
 
 /*
- * The root `git ls-remote` probe asked before a git site is created. Its
- * credential used to be written with `tee` into /tmp under the default umask
- * and `chmod 0600`'d afterwards: a watcher on a test server caught it at 0644
- * in between, readable by every local account, other sites' users included.
- * It is private from the moment it exists now — a 0700 directory only root can
- * enter, and a file opened under umask 077 inside it.
+ * The root `git ls-remote` probe asked before a git site is created. Its credential
+ * must be private from the moment it exists (a `chmod` afterwards leaves a window where
+ * every local account can read it): a 0700 directory only root can enter, and a file
+ * opened under umask 077 inside it.
  */
 
 const PROBE_SENTINEL = 'ghp_probe_privacy_FAKE_sentinel';
@@ -31,8 +29,7 @@ beforeEach(function () {
 
 function probeApp(array $overrides = []): Application
 {
-    // The probe gets an unsaved application, the way the create request
-    // builds one before anything exists.
+    // The probe gets an unsaved application, as the create request builds it.
     return (new Application)->forceFill(array_merge([
         'git_account_id' => test()->account->id,
         'repository' => 'octocat/hello',
@@ -86,8 +83,7 @@ it('makes the credential private from the first write: a 0700 directory, then a 
 
     $commands = probeCommands();
 
-    // The directory first, made by root (no runuser: there is no site user
-    // yet), exactly 0700, at a fresh name under the configured base.
+    // The directory first, made by root (no site user yet), exactly 0700, at a fresh name.
     expect($commands[0][0])->toBe('mkdir')
         ->and(array_slice($commands[0], 0, 3))->toBe(['mkdir', '-m', '0700'])
         ->and(count($commands[0]))->toBe(4)
@@ -107,8 +103,7 @@ it('makes the credential private from the first write: a 0700 directory, then a 
         ->and($git)->toContain('credential.interactive=never')
         ->and($git)->toContain('ls-remote');
 
-    // Removed afterwards — the directory it made, nothing more — and that is
-    // the whole run.
+    // Removed afterwards: only the directory it made.
     expect($commands[3])->toBe(['rm', '-rf', $directory])
         ->and($commands)->toHaveCount(4);
 });
@@ -146,7 +141,7 @@ it('creates nothing for a public repository', function () {
 });
 
 it('refuses to write when the directory cannot be made, and leaves whatever is at that path alone', function () {
-    // Something already at the name — a planted symlink, say — or a full disk.
+    // Something already at the name (a planted symlink, say) or a full disk.
     probeFake(fn (array $c) => $c[0] === 'mkdir'
         ? Process::result(errorOutput: 'mkdir: cannot create directory: File exists', exitCode: 1)
         : null);
@@ -210,10 +205,9 @@ it('keeps each provider\'s credential username', function (string $provider, str
 ]);
 
 it('is never readable by anyone but its owner, from the first moment it exists', function () {
-    // The exact commands the probe produces, executed for real (as the test
-    // user, without sudo) in a fresh temporary base — under umask 0, so
-    // nothing here leans on an inherited umask being kind. After every
-    // command, everything under the base is looked at.
+    // The probe's exact commands, run for real (as the test user, without sudo) in a fresh
+    // temporary base under umask 0, so nothing leans on an inherited umask. After every
+    // command, everything under the base is inspected.
     $base = sys_get_temp_dir().'/probe-privacy-'.bin2hex(random_bytes(6));
     mkdir($base, 0755);
     config(['server.git_credential_dir' => $base]);

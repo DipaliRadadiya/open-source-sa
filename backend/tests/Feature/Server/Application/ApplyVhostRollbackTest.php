@@ -9,14 +9,10 @@ use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Support\Facades\Process;
 
 /*
- * What a failed config test puts back.
- *
- * The rollback used to re-render the vhost from the database, which reads as
- * "restore the previous configuration" and is not that. The database already
- * holds the change being applied, so the render reproduced the *rejected*
- * config; and on a site whose file had been edited by hand, it reproduced
- * template output that had never been on disk. These tests pin the difference
- * by making the bytes on disk something no render could produce.
+ * What a failed config test puts back: the bytes that were on disk, not a re-render. The
+ * database already holds the change being applied, so a render would reproduce the *rejected*
+ * config (or template output that was never on disk for a hand-edited file). The tests use
+ * on-disk bytes no render could produce.
  */
 
 beforeEach(function () {
@@ -51,13 +47,9 @@ beforeEach(function () {
 });
 
 /**
- * A server where `cat` answers with `$onDisk`, `nginx -t` passes or fails to
- * order, and every `tee` is recorded.
- *
- * Faked per command rather than with one blanket result: a single
- * `Process::result(exitCode: 0)` would make `cat` "succeed" with empty output,
- * which is the exact state this change exists to stop being mistaken for a
- * readable empty file.
+ * A server where `cat` answers with `$onDisk`, `nginx -t` passes or fails to order, and every
+ * `tee` is recorded. Faked per command: a blanket success would make `cat` "succeed" with empty
+ * output, which must not be mistaken for a readable empty file.
  *
  * @param  string|null  $onDisk  contents `cat` returns, or null to make it fail
  * @param  list<array{path: string, input: string}>  $writes
@@ -86,8 +78,7 @@ function fakeRollbackServer(?string $onDisk, bool $testPasses, array &$writes): 
 }
 
 it('restores the bytes that were on disk, not a fresh render', function () {
-    // Nothing the template can produce, so a re-render cannot pass this test
-    // by coincidence.
+    // Nothing the template can produce, so a re-render cannot pass by coincidence.
     $handEdited = "# edited over ssh by the customer\nserver { listen 80; }\n";
 
     $writes = [];
@@ -114,8 +105,8 @@ it('leaves the file alone when the previous contents could not be read', functio
     $configPath = app(WebServerManager::class)->driver()->configPath($this->application);
     $restores = array_values(array_filter($writes, fn ($w) => $w['path'] === $configPath));
 
-    // Only the apply. Writing an empty string here — because `cat` was refused
-    // rather than because the file was empty — would blank a live vhost.
+    // Only the apply: writing "" because `cat` failed (not because the file was empty) would blank
+    // a live vhost.
     expect($restores)->toHaveCount(1);
 });
 

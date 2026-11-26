@@ -9,24 +9,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
 /*
- * `sudo: a password is required` — reported from a real server on 2026-09-08,
- * from `sudo -n supervisorctl update` during a worker save. supervisord was
- * installed and the program file was written; the panel simply had no grant
- * for the binary, because /etc/sudoers.d on that box predated the release that
- * added it. The user was shown "Server operation failed."
- *
- * The failure is unlike every other one this class reports: nothing ran,
+ * `sudo: a password is required`: the panel has no sudoers grant for a binary, because
+ * /etc/sudoers.d predates the release that added it. Unlike other failures, nothing ran,
  * nothing is broken, and retrying can never help.
  */
 
 beforeEach(function () {
     config()->set('server.transient.attempts', 1);
     config()->set('server.transient.delay_ms', 0);
-    // phpunit.xml turns escalation off for the suite, which is right for every
-    // other test and fatal for this one: with it off nothing is ever run under
-    // sudo, so sudo can never refuse and the whole file would pass while
-    // asserting nothing. The shape being tested only exists on a server that
-    // elevates.
+    // phpunit.xml turns escalation off for the suite; with it off sudo can never refuse and
+    // this file would assert nothing. The shape under test only exists on a server that elevates.
     config()->set('server.privilege.sudo', true);
     $this->ops = app(ServerOps::class);
 });
@@ -70,9 +62,8 @@ it('is not busy, and is not retried', function () {
 it('is not read as an answer', function () {
     Process::fake(fn () => denial());
 
-    // The trap this exists to close: `test -f` exits 1 for "no" and sudo exits
-    // 1 for "you may not ask", and a guard that cannot tell them apart reports
-    // a file as absent while somebody is editing it.
+    // `test -f` exits 1 for "no" and sudo exits 1 for "you may not ask": a guard that cannot
+    // tell them apart reports a file as absent.
     $result = $this->ops->run(['test', '-f', '/etc/passwd'], expectedExitCodes: [1]);
 
     expect($result->answered)->toBeFalse()
@@ -80,9 +71,8 @@ it('is not read as an answer', function () {
 });
 
 it('does not claim a privilege fault for a command it never elevated', function () {
-    // `git` is not in server.privilege.binaries, so this never ran under sudo
-    // and the words came from the tool itself. Reporting a stale grant here
-    // would send the operator to rewrite a file that was never the problem.
+    // `git` is not in server.privilege.binaries, so this never ran under sudo; blaming a
+    // stale grant would send the operator to the wrong file.
     Process::fake(fn () => Process::result(
         errorOutput: "fatal: could not read Username: a password is required\n",
         exitCode: 128,
@@ -92,8 +82,7 @@ it('does not claim a privilege fault for a command it never elevated', function 
 });
 
 it('does not claim a privilege fault when a privileged tool merely prints the words', function () {
-    // stderr from mysql itself, after sudo let it run. Anchoring to lines sudo
-    // prefixed with its own name is what keeps these apart.
+    // stderr from mysql itself, after sudo let it run: only lines prefixed with sudo's own name count.
     Process::fake(fn () => Process::result(
         errorOutput: "ERROR 1045 (28000): Access denied for user 'root'@'localhost' (a password is required)\n",
         exitCode: 1,
@@ -116,10 +105,8 @@ it('names the cause on the admin error dashboard', function () {
     $admin = User::factory()->admin()->create();
     $token = $admin->createToken('test')->plainTextToken;
 
-    // The exact entry the report came in as. It read "Server operation
-    // failed." — ApiErrorLogResource's fallback for an entry whose context
-    // carries no message — beside a command and an exit code that between them
-    // said everything except what to do.
+    // "Server operation failed." is ApiErrorLogResource's fallback for an entry whose context
+    // carries no message; the entry must say what to do instead.
     $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/admin/error-logs')
         ->assertOk()
@@ -137,11 +124,10 @@ it('renders the repair instead of the feature\'s own message', function () {
 
     expect($payload['message'])->toBe(__('errors/server.sudo_denied'))
         ->and($payload['message'])->toContain('panel:sudoers')
-        // Not "the file operation failed on the server": no file operation was
-        // attempted, and the sentence would send the reader to the wrong file.
+        // Not "the file operation failed": no file operation was attempted.
         ->and($payload['message'])->not->toBe(__('errors/application.file_operation_failed'))
         ->and($payload['code'])->toBe('server_sudo_denied')
-        // A fault needing a human, not a retry — so not the 503 busy carries.
+        // A fault needing a human, not a retry, so not the 503 that busy carries.
         ->and($response->getStatusCode())->toBe(500);
 });
 
@@ -163,9 +149,8 @@ it('keeps a refused probe on the admin error dashboard', function () {
 
     Process::fake(fn () => denial());
 
-    // Exit 1 is "no" for `test -f` and also what sudo exits with when it
-    // refuses. Since bug #48 probes log their "no" as info; a refusal must
-    // not ride along with them, or a stale grant vanishes from the screen.
+    // Exit 1 is "no" for `test -f` and also what sudo exits with when it refuses. Probes log
+    // their "no" as info; a refusal must not ride along, or a stale grant vanishes from the screen.
     $this->ops->probe(['test', '-f', '/etc/passwd'], ['feature' => 'application', 'op' => 'env_locate']);
 
     $token = User::factory()->admin()->create()->createToken('test')->plainTextToken;

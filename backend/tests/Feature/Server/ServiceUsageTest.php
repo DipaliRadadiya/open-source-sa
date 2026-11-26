@@ -103,8 +103,8 @@ it('reports no cpu percentage on the first read, rather than a wrong one', funct
     servicesFor();
     Process::fake(['*' => Process::result(output: unitState())]);
 
-    // CPUUsageNSec is cumulative since the unit started; with nothing to
-    // compare against, any number we produced would be a lifetime average.
+    // CPUUsageNSec is cumulative since the unit started; with no previous sample any number would
+    // be a lifetime average.
     expect(fetchServices()['usage']['cpu_percent'])->toBeNull();
 });
 
@@ -171,14 +171,11 @@ it('reads state and usage in a single systemctl call per service', function () {
 
     fetchServices();
 
-    // Usage must not cost a second systemctl probe — it rides along on the
-    // call the list was already making. Capability detection may run an
-    // unrelated `which` probe on a server without a stored capability row.
+    // Usage must not cost a second systemctl probe: it rides along on the call the list already
+    // makes. Capability detection may run an unrelated `which` probe without a stored capability row.
     expect($commands)->toHaveCount(1)
-        // `CanReload` rides along too: whether the panel offers Reload or only
-        // Restart is decided from it (ServiceManager::allowedActions), and
-        // asking systemd a second time for one boolean is the cost this test
-        // exists to prevent.
+        // `CanReload` rides along too: Reload vs Restart is decided from it
+        // (ServiceManager::allowedActions), so it needs no second systemd call.
         ->and($commands[0])->toContain('--property=Id,LoadState,ActiveState,UnitFileState,CanReload,MemoryCurrent,CPUUsageNSec,TasksCurrent,ControlGroup');
 });
 

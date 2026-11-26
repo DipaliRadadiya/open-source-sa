@@ -13,15 +13,12 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * AI Bot Blocker: four plain-language policies, each resolved server-side
- * from `config/ai_bots.php`'s three buckets — training, search and agent.
+ * AI Bot Blocker: four plain-language policies, each resolved server-side from
+ * `config/ai_bots.php`'s three buckets (training, search, agent).
  *
- * What matters here: neither `block_training` nor `block_agents` ever
- * touches the search/citation bots (that's the whole point of the feature
- * over a blunt on/off toggle), `block_agents` sits between the two by
- * blocking live assistants while keeping the site citable, the vhost swap is
- * reversible the same way Basic Auth's and enable/disable's are, and the
- * catalog endpoint never drifts from what the vhost actually blocks.
+ * Neither `block_training` nor `block_agents` may touch the search/citation bots;
+ * `block_agents` blocks live assistants but keeps the site citable; the vhost swap is
+ * reversible like Basic Auth's; the catalog endpoint never drifts from what the vhost blocks.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -132,9 +129,8 @@ it('writes the training bot names into the rendered vhost, not the search ones',
 });
 
 it('blocks live AI assistants but keeps the search crawlers under block_agents', function () {
-    // The reason this policy exists: an assistant fetch costs a request and
-    // returns nothing, while a search crawl is how the site gets cited. One
-    // bucket for both made this position unexpressible.
+    // An assistant fetch costs a request and returns nothing; a search crawl is how the site
+    // gets cited.
     $bots = AiBotPolicy::BlockAgents->blockedBots();
 
     expect($bots)->toContain('ChatGPT-User', 'Claude-User', 'Perplexity-User')
@@ -215,8 +211,7 @@ describe('the opt-outs a user-agent block cannot do', function () {
             expect($policy->blockedBots())->not->toContain('Google-Extended')->not->toContain('Applebot-Extended');
         }
 
-        // v7 included this token in its literal list, even though blocking a
-        // user-agent cannot implement the robots.txt training opt-out.
+        // v7 listed this token although a user-agent block cannot implement the robots.txt opt-out.
         expect(AiBotPolicy::LegacyV7->blockedBots())->toContain('Google-Extended');
     });
 
@@ -262,8 +257,8 @@ it('renders broad legacy matching with a whole-agent Yandex exemption on every s
         ->and(preg_match($regex, 'YandexBot Jasper'))->toBe(0)
         ->and(preg_match($regex, 'Jasper YANDEXBOT'))->toBe(0)
         ->and(preg_match($regex, 'Mozilla Chrome/128.0'))->toBe(0)
-        // v7 names with a space still match, and none reaches the config as
-        // a bare space: OLS's RewriteCond is unquoted (refused live, 2026-10-13).
+        // v7 names with a space still match, and none reaches the config as a bare space:
+        // OLS's RewriteCond is unquoted.
         ->and(preg_match($regex, 'Mozilla (compatible; Hugging Face crawler)'))->toBe(1)
         ->and($match[0])->not->toContain(' ');
 })->with([

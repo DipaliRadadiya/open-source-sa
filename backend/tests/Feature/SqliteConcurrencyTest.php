@@ -4,30 +4,22 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
 /**
- * The panel's default database is a single SQLite file, and every API request
- * writes to it — the rate limiter alone bumps a counter on each one. Under
- * SQLite's default rollback journal a writer locks the whole file, so two
- * concurrent requests produce "database is locked" and a 500. The frontend
- * fires several on every page load, which is how this reached production as
- * 2,154 logged errors.
+ * The panel's default database is a single SQLite file and every API request writes to it (the
+ * rate limiter alone bumps a counter). Under the default rollback journal a writer locks the
+ * whole file, so two concurrent requests give "database is locked" and a 500.
  */
 it('configures sqlite for concurrent access', function () {
     $sqlite = config('database.connections.sqlite');
 
     expect(strtoupper((string) $sqlite['journal_mode']))->toBe('WAL')
-        // Safe pairing with WAL: can lose the last transactions to a power
-        // cut, never corrupts the file.
+        // Safe pairing with WAL: may lose the last transactions to a power cut, never corrupts.
         ->and(strtoupper((string) $sqlite['synchronous']))->toBe('NORMAL')
-        // Meaningful only once WAL removes the deadlock case, where SQLite
-        // returns BUSY immediately without consulting the timeout at all.
+        // Meaningful only once WAL removes the deadlock case, where SQLite returns BUSY at once
+        // without consulting the timeout.
         ->and((int) $sqlite['busy_timeout'])->toBeGreaterThan(0)
-        // And meaningful only with IMMEDIATE. A DEFERRED transaction takes a
-        // read lock first and tries to upgrade on its first write; SQLite
-        // cannot wait for that upgrade without risking deadlock, so it returns
-        // BUSY without ever calling the busy handler — the timeout above is
-        // simply never consulted. Reverting this to DEFERRED brings back
-        // instant "database is locked" errors while every other setting here
-        // still looks correct, which is exactly why it is asserted.
+        // And only with IMMEDIATE: a DEFERRED transaction upgrades its read lock on the first
+        // write, SQLite cannot wait for that without risking deadlock, so it returns BUSY
+        // without calling the busy handler. Every other setting here would still look correct.
         ->and(strtoupper((string) $sqlite['transaction_mode']))->toBe('IMMEDIATE');
 });
 

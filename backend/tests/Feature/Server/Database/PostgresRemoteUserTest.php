@@ -9,10 +9,9 @@ use Illuminate\Support\Facades\Process;
 /*
  * Remote database users on PostgreSQL.
  *
- * A MySQL account carries its own host, so `CREATE USER 'a'@'10.0.0.5'` is the
- * whole grant. A PostgreSQL role is cluster-wide, so the same request is three
- * facts that must agree: a `pg_hba.conf` record, `listen_addresses` bound off
- * the loopback, and an open port. These tests are about the first two.
+ * A MySQL account carries its own host. A PostgreSQL role is cluster-wide, so a remote user
+ * needs three facts that agree: a `pg_hba.conf` record, `listen_addresses` bound off the
+ * loopback, and an open port. These tests cover the first two.
  */
 
 beforeEach(function () {
@@ -21,10 +20,8 @@ beforeEach(function () {
     $this->token = $this->admin->createToken('t')->plainTextToken;
     config(['server.databases.auth_file_dir' => sys_get_temp_dir()]);
 
-    // A holder object, not properties on the test case: Pest's `test()` proxy
-    // returns values, so `test()->state->written[] = ...` is an indirect modification
-    // that silently has no effect. Reading the holder and writing its property
-    // is a direct write and behaves.
+    // A holder object, not properties on the test case: Pest's `test()` proxy returns values, so
+    // `test()->state->written[] = ...` is an indirect modification that silently does nothing.
     $this->state = new stdClass;
     $this->state->hbaPath = '/etc/postgresql/16/main/pg_hba.conf';
     $this->state->hba = "local all postgres peer\nhost all all 127.0.0.1/32 scram-sha-256\n";
@@ -35,9 +32,8 @@ beforeEach(function () {
 /**
  * A PostgreSQL cluster that answers the handful of things this feature asks it.
  *
- * `$this->hba` is the file on disk: a `tee` updates it, so the fake behaves
- * like a filesystem rather than replaying a fixed script — which is what lets a
- * test assert what a *second* write did.
+ * `$this->hba` is the file on disk: a `tee` updates it, so a test can assert what a second
+ * write did.
  */
 function fakeCluster(): void
 {
@@ -146,8 +142,7 @@ it('does not restart a cluster that already listens remotely', function () {
         ])
         ->assertStatus(201);
 
-    // No consent was sent and none was needed — an outage bought for no change
-    // is still an outage.
+    // No consent was sent and none was needed: an outage for no change is still an outage.
     Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'systemctl');
     expect(test()->state->hba)->toContain('203.0.113.4/32');
 });
@@ -169,9 +164,8 @@ it('writes both address families for anywhere', function () {
 });
 
 it('restores the file and never reloads when the result would not parse', function () {
-    // The guard that makes editing somebody's authentication file defensible:
-    // `pg_hba_file_rules` reports on the file as it is on disk, so a broken
-    // result is caught before anything is signalled.
+    // The guard for editing an authentication file: `pg_hba_file_rules` reports the file as on
+    // disk, so a broken result is caught before anything is signalled.
     $original = null;
     Process::fake(function ($process) use (&$original) {
         $command = (array) $process->command;
@@ -249,8 +243,8 @@ it('writes no rule at all for a localhost user', function () {
         ])
         ->assertStatus(201);
 
-    // The cluster's own loopback rule already covers this, and adding a second
-    // one would be the panel taking ownership of access it did not grant.
+    // The cluster's own loopback rule already covers this; a second one would claim access the
+    // panel did not grant.
     expect(test()->state->hba)->not->toContain(PgHbaFile::BEGIN);
     Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'systemctl');
 });

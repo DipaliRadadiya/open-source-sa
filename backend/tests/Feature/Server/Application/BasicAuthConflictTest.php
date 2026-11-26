@@ -10,17 +10,13 @@ use Illuminate\Testing\TestResponse;
  * Password protection may not be put in front of an application whose own
  * client signs in with the `Authorization` header.
  *
- * Verified against a live Node-RED site before this rule existed. HTTP carries
- * one `Authorization` header per request, and both layers need it:
+ * HTTP carries one `Authorization` header per request, and both layers need it:
  *
  *   Authorization: Basic  -> nginx passes, Node-RED answers 401 Bearer
  *   Authorization: Bearer -> nginx answers 401 Basic
  *
- * The token cannot travel any other way either -- `?access_token=` and a
- * cookie were both refused -- so /settings, /flows and /nodes were unreachable
- * in every combination and the editor could not load or deploy a flow. The
- * visible symptom was being asked to sign in twice; the real damage was that
- * the application no longer worked.
+ * The token cannot travel any other way (`?access_token=` and a cookie are refused), so the
+ * application stops working in every combination.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -60,8 +56,7 @@ it('explains why rather than just refusing', function () {
 
     $message = protect($application)->json('errors.enabled.0');
 
-    // The reader has to be able to act on this: it must name the header that
-    // collides and say the application already has its own credentials.
+    // Must name the header that collides and the application, so the reader can act on it.
     expect($message)->toContain('Authorization')
         ->and($message)->toContain('nodered');
 });
@@ -70,17 +65,16 @@ it('still allows protecting an application that uses cookies or sessions', funct
     // WordPress signs in with a cookie, which does not collide.
     $application = Application::factory()->create(['site_type' => 'wordpress']);
 
-    // Not asserting 200: enabling protection writes an htpasswd file and
-    // reloads nginx, which needs a real server. What matters here is that
-    // validation does NOT reject it, so a 422 on `enabled` is the failure.
+    // Not asserting 200: enabling writes an htpasswd file and reloads nginx, which needs a real
+    // server. Only validation matters here: a 422 on `enabled` is the failure.
     $response = protect($application);
 
     expect($response->status())->not->toBe(422);
 });
 
 it('always allows turning protection off', function () {
-    // A site type that cannot be protected must still be able to unprotect --
-    // otherwise an application protected before this rule existed is stuck.
+    // A site type that cannot be protected must still be able to unprotect, or an
+    // already-protected application is stuck.
     $application = Application::factory()->create([
         'site_type' => 'nodered',
         'basic_auth_enabled' => true,
@@ -97,8 +91,7 @@ it('tells the frontend which applications can be protected', function () {
 });
 
 it('defaults every other site type to supported', function () {
-    // The flag is opt-in: a new site type is protectable unless it declares
-    // otherwise, because the collision is the unusual case.
+    // Opt-out flag: a new site type is protectable unless it declares otherwise.
     $manager = app(SiteTypeManager::class);
 
     $conflicting = array_values(array_filter(

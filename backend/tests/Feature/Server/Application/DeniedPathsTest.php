@@ -14,10 +14,9 @@ use Illuminate\Support\Facades\Process;
 /**
  * Paths an application protects with Apache `.htaccess` files.
  *
- * nginx never reads `.htaccess`, and OpenLiteSpeed only where the vhost turns
- * it on, so on both of them Akaunting's `storage/logs/laravel.log` and
- * PrestaShop's `var/logs/prod-*.log` answered 200 to anyone — measured on the
- * test servers. Apache reads the apps' own files and needs nothing.
+ * nginx never reads `.htaccess`, and OpenLiteSpeed only where the vhost turns it on, so
+ * on both the apps' log files (e.g. Akaunting's `storage/logs/laravel.log`) would be
+ * served to anyone. Apache reads the apps' own files and needs nothing.
  */
 beforeEach(function () {
     $this->home = sys_get_temp_dir().'/sv-oss-denied-'.getmypid();
@@ -59,8 +58,7 @@ it('denies what the application protects on Apache, before PHP can run it, on ng
     foreach (app(SiteTypeManager::class)->find($siteType)->deniedPaths() as $pattern) {
         $rule = strpos($config, "location ~* {$pattern} {\n        deny all;");
 
-        // Regex locations are tried in order: after the PHP one, a denied
-        // `.php` (vendor/autoload.php, an upload) would still run.
+        // Regex locations are tried in order: after the PHP one, a denied `.php` would still run.
         expect($rule)->not->toBeFalse()->and($rule)->toBeLessThan($php);
     }
 
@@ -72,8 +70,7 @@ it('denies what the application protects on Apache, before PHP can run it, on ng
 })->with([
     'akaunting' => ['akaunting', ['/storage/logs/laravel.log', '/storage/framework/sessions/abc', '/artisan', '/composer.json', '/vendor/autoload.php', '/config/app.php', '/.env']],
     'prestashop' => ['prestashop', ['/var/logs/prod-2026-09-26.log', '/app/config/parameters.php', '/vendor/autoload.php', '/modules/ps_mbo/vendor/x.php', '/upload/shell.php', '/img/x.php', '/themes/classic/templates/index.tpl', '/composer.lock']],
-    // Bug #14: vendor scripts ran straight from the web on nginx; bin/console
-    // (no .php ending) was still served as a download (re-test 2026-10-05).
+    // Extensionless scripts such as bin/console must be denied too, or they download.
     'mautic' => ['mautic', ['/vendor/symfony/console/Application.php', '/config/local.php', '/app/AppKernel.php', '/plugins/MauticFocusBundle/Config/config.php', '/media/files/shell.php', '/var/logs/mautic_prod-2026-10-04.php', '/var/spool/default/x.message', '/bin/console', '/bin/composer', '/autoload.php', '/importmap.php', '/.env', '/.env.local', '/composer.json']],
 ]);
 
@@ -101,8 +98,7 @@ it('renders them as deny contexts on OpenLiteSpeed', function (string $siteType)
 it('adds nothing for an application that needs nothing', function (string $driver) {
     $config = deniedPathsVhost('wordpress', $driver);
 
-    // v7's three browser-caching locations are always there on nginx (vhosts
-    // the same as v7, 2026-11-08); nothing beyond them.
+    // The three browser-caching locations are always present on nginx; nothing beyond them.
     expect(substr_count($config, 'location ~* ') - substr_count($config, 'location ~* \\.(?:'))->toBe(0)
         // OLS: only the dotfile context it always had.
         ->and(substr_count($config, 'context exp:'))->toBe($driver === 'openlitespeed' ? 1 : 0);
@@ -110,8 +106,8 @@ it('adds nothing for an application that needs nothing', function (string $drive
 
 /*
 | PrestaShop's back office is its own application in `admin<random>/`, and its
-| `.htaccess` sends every path there to that folder's index.php. nginx and OLS
-| sent `/admin…/login` to the shop's front controller instead: 404 (measured).
+| `.htaccess` sends every path there to that folder's index.php, not the shop's
+| front controller.
 */
 
 it('routes PrestaShop\'s back office folder to its own front controller on nginx, after every other rule', function () {
@@ -122,8 +118,7 @@ it('routes PrestaShop\'s back office folder to its own front controller on nginx
 
     expect($admin)->not->toBeFalse()
         ->and($body)->toContain('try_files $uri $uri/ /$frontdir0/index.php$is_args$args;')
-        // First-match regex locations: placed before these, a .php file would
-        // be served as source and a .htaccess or log as plain text.
+        // First-match regex locations: placed before these, a .php file would be served as source.
         ->and($admin)->toBeGreaterThan(strpos($config, 'location ~ [^/]\.php(/|$)'))
         ->and($admin)->toBeGreaterThan(strpos($config, 'location ~ /\.(?!well-known)'))
         ->and($admin)->toBeGreaterThan(strpos($config, 'location ~* \.(log|tpl|twig|sass|yml)$'));
@@ -136,8 +131,7 @@ it('routes PrestaShop\'s back office folder before the shop\'s front controller 
 
     expect($admin)->not->toBeFalse()
         ->and($admin)->toBeLessThan(strpos($config, 'RewriteRule ^/index\.php$ - [L]'))
-        // Real files and folders are served as they are; only the rest goes
-        // to the back office's index.php.
+        // Real files and folders are served as they are; the rest goes to the back office's index.php.
         ->and(substr($config, $admin - 120, 120))->toContain('RewriteCond %{REQUEST_FILENAME} !-f')
         ->and(substr($config, $admin - 120, 120))->toContain('RewriteCond %{REQUEST_FILENAME} !-d');
 });
@@ -158,8 +152,7 @@ it('adds no front controller for a site type without one', function (string $dri
 
 /*
 | Nextcloud's .htaccess routes CalDAV/CardDAV discovery and the rest of
-| /.well-known, and serves .mjs as JavaScript. nginx and OLS answered 404 to
-| discovery and nginx sent .mjs as application/octet-stream (measured).
+| /.well-known, and serves .mjs as JavaScript.
 */
 
 it('routes Nextcloud\'s well-known URIs and module type on nginx, ACME still first', function () {
@@ -190,8 +183,7 @@ it('adds no well-known routing or types for other site types', function (string 
 })->with(['nginx', 'openlitespeed']);
 
 it('uses `http2 on;` on an nginx that has it, and the old listen flag on one that does not', function (string $version, bool $modern) {
-    // 1.28 printed a deprecation warning per site on every `nginx -t` (36 on
-    // an 18-site box); on 1.24 the new directive is a hard error.
+    // nginx 1.28 warns about the old listen flag on every `nginx -t`; on 1.24 `http2 on;` is an error.
     Process::fake(fn ($process) => in_array('-v', $process->command, true)
         ? Process::result(errorOutput: "nginx version: nginx/{$version} (Ubuntu)\n")
         : Process::result(exitCode: 0));
@@ -225,11 +217,8 @@ it('uses `http2 on;` on an nginx that has it, and the old listen flag on one tha
 ]);
 
 /*
- * 2026-11-24, Ubuntu 24.04 (nginx 1.24): `nginx -t` passed but printed
- * "protocol options redefined" once per site, because sites listened with
- * `ssl http2` while sites without a certificate and the catch-all listened
- * with `ssl` only. Every server on port 443 must ask for the same protocol
- * options — measured on the box: all `ssl http2` gave none.
+ * nginx 1.24 prints "protocol options redefined" when port-443 servers listen with
+ * different options (`ssl http2` vs `ssl` only). Every one must ask for the same.
  */
 it('asks for the same protocol options on every port-443 listen it writes', function (string $version) {
     Process::fake(fn ($process) => in_array('-v', $process->command, true)
@@ -259,8 +248,7 @@ it('asks for the same protocol options on every port-443 listen it writes', func
 
     $configs = [$site('withtls', true), $site('notls', false), ...array_values(app(NginxDriver::class)->catchAllConfig()['files'])];
 
-    // The protocol options of each `listen ... 443 ...`, without the
-    // per-server ones (default_server, ipv6only) nginx does not compare.
+    // Protocol options of each `listen ... 443 ...`, minus the per-server ones nginx does not compare.
     $options = collect($configs)
         ->flatMap(fn (string $c) => preg_match_all('/^\s*listen\s+(?:\[::\]:)?443\b([^;]*);/m', $c, $m) ? $m[1] : [])
         ->map(fn (string $o) => trim(preg_replace('/\b(default_server|ipv6only=\S+)\b/', '', $o)))

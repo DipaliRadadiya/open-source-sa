@@ -9,12 +9,9 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /**
- * Bot traffic: which crawlers actually hit this site, and which of them the
- * current settings would block.
+ * Bot traffic: which crawlers actually hit this site, and which the current settings would block.
  *
- * The state that matters most here is the one that is easy to get wrong. A
- * log the panel could not read must never be reported as "no bots visited
- * you" — the user would make a real decision on a fact the panel invented.
+ * A log the panel could not read must never be reported as "no bots visited you".
  * `unavailable`, `empty` and `partial` are three different answers.
  */
 beforeEach(function () {
@@ -104,8 +101,7 @@ it('counts bot hits and says which ones the current settings block', function ()
     expect($response->json('bot_traffic.status'))->toBe('ok')
         ->and($bots['GPTBot']['hits'])->toBe(2)
         ->and($bots['GPTBot']['category'])->toBe('training')
-        // block_training blocks it, and the row says so without the frontend
-        // cross-referencing two lists.
+        // block_training blocks it, and the row says so itself.
         ->and($bots['GPTBot']['blocked'])->toBeTrue()
         ->and($bots['OAI-SearchBot']['hits'])->toBe(1)
         ->and($bots['OAI-SearchBot']['category'])->toBe('search')
@@ -120,8 +116,7 @@ it('reports unavailable rather than empty when the log cannot be read', function
     $this->withHeaders(botTrafficHeaders())
         ->getJson(botTrafficUrl())
         ->assertOk()
-        // The distinction this whole endpoint hinges on: "I could not look"
-        // is not "nothing is there".
+        // "I could not look" is not "nothing is there".
         ->assertJsonPath('bot_traffic.status', 'unavailable')
         ->assertJsonPath('bot_traffic.totals.hits', 0);
 });
@@ -152,10 +147,8 @@ it('ignores hits older than the requested window', function () {
 it('counts a custom blocked bot and labels it custom', function () {
     fakeAccessLog([accessLine('Mozilla/5.0 (compatible; SemrushBot/7~bl)')]);
 
-    // Not in the shipped list — it is only looked for because this site added
-    // it. Leaving custom agents out would mean someone who blocks SemrushBot
-    // cannot see on this screen whether the block is working, which is the
-    // one question the screen exists to answer.
+    // Not in the shipped list; it is looked for only because this site added it, so the owner can
+    // see whether their block works.
     $this->application->botRules()->create(['type' => 'block', 'value' => 'SemrushBot']);
 
     $bots = collect($this->withHeaders(botTrafficHeaders())->getJson(botTrafficUrl())->json('bot_traffic.bots'))->keyBy('bot');
@@ -176,8 +169,7 @@ it('reflects an exemption in the blocked column', function () {
 
     $bots = collect($this->withHeaders(botTrafficHeaders())->getJson(botTrafficUrl())->json('bot_traffic.bots'))->keyBy('bot');
 
-    // "Block everything except Perplexity" is the request this feature exists
-    // for, and the report has to agree with the vhost about it.
+    // "Block everything except Perplexity": the report must agree with the vhost.
     expect($bots['PerplexityBot']['blocked'])->toBeFalse()
         ->and($bots['GPTBot']['blocked'])->toBeTrue();
 });
@@ -195,16 +187,15 @@ it('refuses a user without log access', function () {
     $user = User::factory()->create();
     grantPermission($user, 'app_bot_blocker', view: true, manage: true);
 
-    // Holding the bot-blocker permission is not holding the log permission —
-    // that is the whole reason this endpoint is gated separately.
+    // The bot-blocker permission does not imply the log permission; this endpoint is gated separately.
     $this->withHeaders(['Authorization' => 'Bearer '.$user->createToken('t')->plainTextToken])
         ->getJson(botTrafficUrl())
         ->assertForbidden();
 });
 
 it('counts what the server really refused, not what the settings say now (AB-B)', function () {
-    // Blocked by the current settings, but three of its hits got a 200 —
-    // before the block existed. Only the 403 is a refusal.
+    // Blocked by the current settings, but three hits got a 200 before the block existed. Only
+    // the 403 is a refusal.
     $this->application->forceFill(['ai_bot_policy' => 'block_training'])->save();
     $line = fn (int $status, int $daysAgo) => str_replace('" 200 ', "\" {$status} ", accessLine('GPTBot/1.0', $daysAgo));
 

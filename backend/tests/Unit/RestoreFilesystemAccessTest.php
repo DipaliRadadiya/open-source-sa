@@ -1,20 +1,15 @@
 <?php
 
 /*
- * A restore writes into the site's own directory, and the code doing it runs
- * as the panel's unprivileged queue worker — which has no access there. PHP's
- * native filesystem functions therefore cannot be used on those paths: they
- * either fail with a bare "mkdir(): Permission denied" that names neither the
- * path nor the reason (which is how this was found, mid-restore, in
- * production) or, worse, return false silently and leave a half-unpacked copy
- * of a site sitting next to the live one.
+ * A restore writes into the site's own directory as the panel's unprivileged queue worker,
+ * which has no access there. PHP's native filesystem functions fail with a bare "mkdir():
+ * Permission denied" or, worse, return false silently and leave a half-unpacked copy of a
+ * site next to the live one.
  *
  * Everything touching a site path has to go through ServerOps, which elevates.
  *
- * Asserted statically rather than by running a restore: the behaviour only
- * diverges when the process genuinely lacks permission, so a test suite
- * running as a user who happens to have it would pass either way and prove
- * nothing.
+ * Asserted statically: the behaviour only diverges when the process lacks permission, so a
+ * run as a user who has it would pass either way.
  */
 
 $siteWritingSteps = [
@@ -29,9 +24,8 @@ it('never touches a site directory with PHP\'s own filesystem functions', functi
 
     expect($path)->toBeReadableFile();
 
-    // Comments stripped first: these files explain *why* File:: is banned, and
-    // matching the prose that documents the rule would make the rule
-    // unstatable.
+    // Comments stripped first: these files explain why File:: is banned, and matching that
+    // prose would trip the rule.
     $source = stripPhpComments((string) file_get_contents($path));
 
     // `File::` is the Illuminate facade, which is mkdir()/rmdir()/unlink()
@@ -58,10 +52,9 @@ function stripPhpComments(string $source): string
 }
 
 it('cleans the staging directory through ServerOps, not File::', function () {
-    // The staging directory lives beside the live site, so the runner's own
-    // cleanup is subject to the same rule as the steps. File::deleteDirectory()
-    // there returns false rather than throwing, so getting this wrong is
-    // silent — it leaves behind exactly the partial copy it exists to remove.
+    // The staging directory lives beside the live site, so the runner's cleanup follows the same
+    // rule. File::deleteDirectory() there returns false instead of throwing and leaves the
+    // partial copy behind.
     $source = stripPhpComments(
         (string) file_get_contents(__DIR__.'/../../app/Services/Server/Restores/RestoreRunner.php')
     );

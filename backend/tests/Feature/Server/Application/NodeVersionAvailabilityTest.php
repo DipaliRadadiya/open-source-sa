@@ -11,16 +11,9 @@ use Illuminate\Testing\TestResponse;
 /**
  * A Node site may only be created on a Node version this server actually has.
  *
- * The version was checked for shape, and — once `SupportedNodeVersion` existed
- * — against the range the application runs on. Neither asks the box. Nothing
- * downstream asks it either: the version becomes a path in
- * `NodeRuntime::binaryPath()` that goes straight into the systemd unit's
- * `ExecStart`, and systemd does not stat a binary when a unit is written. So
- * the site was created, reported Active, and answered 502 on every request
- * from a vhost proxying to a port nobody was ever going to listen on.
- *
- * The same hole as `php_version` — see `PhpVersionAvailabilityTest` — one
- * runtime along.
+ * The version becomes a path in `NodeRuntime::binaryPath()` that goes into the systemd unit's
+ * `ExecStart`, and systemd does not stat a binary when a unit is written: a missing version
+ * would give an Active site answering 502. Same check as `PhpVersionAvailabilityTest`.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -44,8 +37,7 @@ beforeEach(function () {
         'server.runtimes.node.dir' => '/opt/fnm',
     ]);
 
-    // One version on the box. `fakeFnm` is redeclared per test that needs a
-    // different answer.
+    // One version installed; tests needing a different answer call `fakeFnm` again.
     fakeFnm(['22.11.0']);
 });
 
@@ -85,8 +77,7 @@ function createNodeVersionSite(array $overrides = []): TestResponse
 }
 
 it('refuses a Node version the server does not have', function () {
-    // Inside Uptime Kuma's supported range, so `SupportedNodeVersion` is happy
-    // — this is the question nothing was asking.
+    // Inside Uptime Kuma's supported range, so only the installed-version check can refuse it.
     createNodeVersionSite(['node_version' => '22.9.0'])
         ->assertJsonValidationErrors('node_version');
 
@@ -100,16 +91,14 @@ it('accepts the version that is installed', function () {
 });
 
 it('still accepts a site that names no version at all', function () {
-    // Null means the server's own Node, resolved at start time rather than
-    // written as a path — refusing it here would break every caller that does
-    // not send the field, which is all four one-click applications.
+    // Null means the server's own Node, resolved at start time; refusing it would break every
+    // caller that omits the field, such as the one-click applications.
     createNodeVersionSite()->assertSuccessful();
 });
 
 it('does not refuse anything when no versions could be detected', function () {
-    // fnm absent is not "no versions installed", and turning it into one would
-    // make a server whose runtime manager cannot be read into a server that
-    // cannot host a Node site at all.
+    // fnm absent is not "no versions installed": an unreadable runtime manager must not make
+    // the server unable to host a Node site.
     fakeFnm([], fnmPresent: false);
 
     createNodeVersionSite(['node_version' => '22.9.0'])->assertSuccessful();

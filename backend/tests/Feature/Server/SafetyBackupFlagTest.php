@@ -18,18 +18,12 @@ uses(RefreshDatabase::class);
 /*
  * A safety backup has to be recognisable as one from the instant it exists.
  *
- * `SafetyBackup` used to call `BackupRunner::run()` and set `is_safety = true`
- * on the row it got back. Everything in between — a multi-gigabyte archive and
- * an upload that can run for an hour — was a window where the flag was false.
+ * The flag must be set when the row is created, not after `BackupRunner::run()` returns: the
+ * archive and upload can take an hour, and a worker that dies in that window leaves a row with
+ * `is_safety = false`.
  *
- * `PruneOldBackups` protects these rows with `where('is_safety', false)`,
- * precisely so retention cannot "remove the parachute at exactly the wrong
- * moment". A row that dies inside the window loses that protection, and a later
- * retention pass deletes it *and* its archive in the bucket.
- *
- * Not hypothetical: on 2026-09-22 an OOM killed the worker mid-run and left
- * restore 5's safety backup reading `is_safety = 0`, with the restore's
- * `safety_backup_id` still null. Both are still in that database.
+ * `PruneOldBackups` protects these rows with `where('is_safety', false)`, so an unflagged row
+ * is later deleted along with its archive in the bucket.
  */
 
 function safetyTarget(): BackupTarget
@@ -52,9 +46,8 @@ function safetyTarget(): BackupTarget
 }
 
 /**
- * A step that reads the row back from the database while the run is still in
- * flight, which is the only way to prove the flag is there *during* the work
- * rather than bolted on at the end.
+ * A step that reads the row back from the database mid-run, proving the flag is there during
+ * the work rather than added at the end.
  */
 function flagSpy(?bool &$seen): BackupStep
 {
@@ -74,9 +67,7 @@ function flagSpy(?bool &$seen): BackupStep
 
         public function run(BackupContext $context): void
         {
-            // Read back, not taken from the in-memory model: a flag that only
-            // exists on the object is no protection at all, because the prune
-            // query runs against the table.
+            // Read back, not taken from the model: the prune query runs against the table.
             $this->seen = (bool) Backup::query()
                 ->whereKey($context->backup->getKey())
                 ->value('is_safety');
@@ -95,8 +86,7 @@ it('flags a safety backup at creation, not after the upload', function () {
 
     (new BackupRunner)->run(safetyTarget(), null, isSafety: true);
 
-    // The window: if this is false, a worker dying mid-upload leaves an
-    // unprotected safety backup.
+    // If this is false, a worker dying mid-upload leaves an unprotected safety backup.
     expect($seen)->toBeTrue();
 });
 
@@ -115,9 +105,8 @@ it('leaves an ordinary backup unflagged', function () {
 it('keeps retention from deleting a safety backup', function () {
     $target = safetyTarget();
 
-    // Retention is 2, and these three are all older than the run doing the
-    // pruning — so without the exemption the safety one is squarely inside the
-    // window that gets deleted.
+    // Retention is 2 and all three rows are older than the pruning run, so without the exemption
+    // the safety one would be deleted.
     $safety = Backup::create([
         'backup_target_id' => $target->id,
         'application_id' => $target->application_id,
@@ -144,8 +133,7 @@ it('keeps retention from deleting a safety backup', function () {
         'status' => BackupStatus::Running,
     ]);
 
-    // A disk that reports every object present and records what it deletes, so
-    // the assertion is about real prune decisions rather than a no-op.
+    // A disk that reports every object present and records what it deletes.
     $deleted = [];
     $filesystem = Mockery::mock(Filesystem::class);
     $filesystem->shouldReceive('exists')->andReturn(true);
@@ -164,7 +152,6 @@ it('keeps retention from deleting a safety backup', function () {
 
     expect(Backup::whereKey($safety->getKey())->exists())->toBeTrue()
         ->and($deleted)->not->toContain('a/safety.tar.gz')
-        // And it genuinely pruned something, or the assertion above passes for
-        // the wrong reason — a prune that did nothing proves nothing.
+        // It really pruned something, or the assertion above proves nothing.
         ->and($deleted)->not->toBeEmpty();
 });

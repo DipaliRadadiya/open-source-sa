@@ -16,8 +16,7 @@ beforeEach(function () {
     $this->base = sys_get_temp_dir().'/sv-oss-diskio-'.getmypid();
     File::deleteDirectory($this->base);
     File::makeDirectory("{$this->base}/proc", 0755, true);
-    // Whole disks only — partitions do not appear here, which is the whole
-    // point of checking against it.
+    // Whole disks only: partitions do not appear in /sys/block.
     foreach (['sda', 'loop0', 'sr0'] as $device) {
         File::makeDirectory("{$this->base}/sys-block/{$device}", 0755, true);
     }
@@ -58,10 +57,8 @@ it('reports a rate, not the counter, so it does not grow with uptime', function 
 
     $io = app(ServerMetrics::class)->live()['disk_io'];
 
-    // /proc/diskstats counters only ever climb. Both reads land in the same
-    // idle instant here, so the honest answer is zero — reporting the raw
-    // counter would show a gigabyte of "current" traffic on a silent disk,
-    // and would keep climbing forever.
+    // The counters only ever climb; two reads in the same idle instant must give zero, not
+    // the raw counter.
     expect($io['read'])->toBe(0)
         ->and($io['write'])->toBe(0)
         ->and($io['read_ops'])->toBe(0)
@@ -71,9 +68,7 @@ it('reports a rate, not the counter, so it does not grow with uptime', function 
 it('converts sectors to bytes at 512 bytes each', function () {
     writeDiskstats(diskstatsLine('sda', 7, 2048, 3, 1024));
 
-    // diskstats reports 512-byte sectors regardless of the device's own
-    // sector size — reading the hardware value here would be wrong on a 4K
-    // drive.
+    // diskstats counts 512-byte sectors whatever the device's own sector size (also on 4K drives).
     $totals = (fn () => $this->diskTotals())->call(app(ServerMetrics::class));
 
     expect($totals['read'])->toBe(1_048_576)      // 2048 × 512 = 1 MB
@@ -92,8 +87,7 @@ it('counts a whole disk once, not again through each of its partitions', functio
         .diskstatsLine('sda15', 20, 400, 10, 200)
     );
 
-    // Only `sda` is in /sys/block; the partitions report the same traffic
-    // again, so summing every line would report it two or three times over.
+    // Only `sda` is in /sys/block; its partitions repeat the same traffic.
     $totals = (fn () => $this->diskTotals())->call(app(ServerMetrics::class));
 
     expect($totals['read'])->toBe(2000 * 512)
@@ -108,8 +102,7 @@ it('ignores loop and optical devices', function () {
         .diskstatsLine('sr0', 500, 50000, 0, 0)
     );
 
-    // Loop devices are mounted files, not hardware; sr0 is the optical drive.
-    // Both are in /sys/block, so the type filter is what excludes them.
+    // Loop devices and the optical drive are in /sys/block, so the type filter excludes them.
     $totals = (fn () => $this->diskTotals())->call(app(ServerMetrics::class));
 
     expect($totals['read'])->toBe(100 * 512)
@@ -126,7 +119,7 @@ it('skips a device-mapper node, whose traffic is already counted underneath', fu
 
     $totals = (fn () => $this->diskTotals())->call(app(ServerMetrics::class));
 
-    // On an LVM box dm-0 maps onto sda — counting both doubles everything.
+    // dm-0 maps onto sda (LVM): counting both would double everything.
     expect($totals['read'])->toBe(100 * 512);
 });
 
@@ -185,8 +178,7 @@ it('does not sleep on the live endpoint, and measures against the previous poll'
     $first = app(ServerMetrics::class)->live();
     $elapsed = microtime(true) - $started;
 
-    // Sleeping once per counter is what made this endpoint cost three
-    // seconds — enough that a few open dashboards exhaust the worker pool.
+    // A sleep per counter makes the endpoint slow enough for open dashboards to exhaust workers.
     expect($elapsed)->toBeLessThan(0.5);
 
     // Nothing to compare the first read against.
@@ -198,8 +190,8 @@ it('does not sleep on the live endpoint, and measures against the previous poll'
 
     writeDiskstats(diskstatsLine('sda', 100, 2048 + 20480, 50, 1024));
 
-    // 20480 sectors × 512 B = 10 MB over 10 s = 1 MB/s. Measured against the
-    // real clock, so the window is 10 s plus the milliseconds this test took.
+    // 20480 sectors × 512 B = 10 MB over 10 s = 1 MB/s; real clock, so the window is a bit
+    // over 10 s.
     expect(app(ServerMetrics::class)->live()['disk_io']['read'])
         ->toEqualWithDelta(1_048_576, 5_000);
 });

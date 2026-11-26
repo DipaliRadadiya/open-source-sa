@@ -87,8 +87,7 @@ it('counts a cluster as one application, not one per worker', function () {
     $application = syncApp();
     $cwd = $application->rootPath().'/public_html';
 
-    // `jlist` returns an entry per worker. The old panel read the first and
-    // reported a quarter of a four-worker cluster.
+    // `jlist` returns an entry per worker; reading only the first under-reports a cluster.
     jlist([
         pm2Process('legacy-api', $cwd, ['exec_mode' => 'cluster_mode']),
         pm2Process('legacy-api', $cwd, ['exec_mode' => 'cluster_mode']),
@@ -132,10 +131,9 @@ it('records the worker count the daemon is actually running', function () {
 });
 
 it('does not let one site swallow another whose path it prefixes', function () {
-    // Slugs make siblings, not nested roots — but `/home/appuser/api` is a
-    // string prefix of `/home/appuser/api-staging`, so a naive `str_starts_with`
-    // hands staging's process to production. The boundary is the trailing
-    // separator, and this is the case that proves it is there.
+    // `/home/appuser/api` is a string prefix of `/home/appuser/api-staging`, so a naive
+    // `str_starts_with` hands staging's process to production; the trailing separator is the
+    // boundary.
     $production = syncApp(['name' => 'API', 'domain' => 'api.test']);
     $staging = syncApp(['name' => 'API Staging', 'domain' => 'staging.test']);
 

@@ -9,11 +9,8 @@ use Illuminate\Support\Facades\Process;
 /**
  * Changing a WordPress site's address, as a certificate does.
  *
- * A staging site pins WP_HOME/WP_SITEURL in wp-config.php, and a constant
- * overrides the option. Updating only the options left a staging site on the
- * http:// it was created with after its certificate was issued, and once the
- * database already held the new address `wp option update` failed, so every
- * `sites:resync` of that site failed too.
+ * A staging site pins WP_HOME/WP_SITEURL in wp-config.php, and a constant overrides the
+ * option, so updating only the options leaves the site on its old http:// address.
  */
 beforeEach(function () {
     $systemUser = SystemUser::create([
@@ -69,9 +66,8 @@ it('rewrites pinned WP_HOME and WP_SITEURL before the options', function () {
             && array_diff(['config', 'set', $constant, 'https://staging.example.com', '--type=constant'], $process->command) === []);
     }
 
-    // Order matters: with the constant still on http://, WordPress reads the
-    // option back as http:// and `option update` fails on a row that already
-    // holds the new address.
+    // Order matters: with the constant still on http://, `option update` fails on a row that
+    // already holds the new address.
     $commands = collect($GLOBALS['wpSyncRan']);
     $lastSet = $commands->search(fn ($c) => in_array('set', $c, true) && in_array('WP_SITEURL', $c, true));
     $firstOption = $commands->search(fn ($c) => in_array('option', $c, true) && in_array('update', $c, true));
@@ -97,8 +93,7 @@ it('writes no constant on a site that does not define one', function () {
 it('fails the address change when a pinned constant cannot be rewritten', function () {
     fakeWpConfig(['WP_HOME', 'WP_SITEURL'], setFails: true);
 
-    // Reporting success here would leave a site the panel calls HTTPS
-    // serving itself as http:// — exactly the state this fix exists to end.
+    // Reporting success would leave a site the panel calls HTTPS serving itself as http://.
     expect(fn () => app(WordPressInstaller::class)->syncUrl($this->application, 'https://staging.example.com'))
         ->toThrow(ProvisioningFailedException::class);
 
@@ -121,9 +116,8 @@ function syncUrlReplacements(): array
 
 describe('links in the content follow the new scheme', function () {
     it('moves the site\'s own http:// links to https:// when a certificate arrives', function () {
-        // A clone or new staging copy is made before its certificate exists,
-        // so every link to itself in posts was http — on a page then served
-        // over https, where browsers block http images as mixed content.
+        // A clone is made before its certificate exists, so its self-links are http:// and
+        // browsers block them as mixed content once the page is served over https.
         fakeWpConfig([], home: 'http://staging.example.com');
 
         app(WordPressInstaller::class)->syncUrl($this->application, 'https://staging.example.com');
@@ -146,8 +140,7 @@ describe('links in the content follow the new scheme', function () {
     });
 
     it('rewrites no content on a resync that changes nothing', function () {
-        // syncUrl() runs on every `sites:resync`; a full-table search-replace
-        // there would be pure waste.
+        // syncUrl() runs on every `sites:resync`; a full-table search-replace would be waste.
         fakeWpConfig([], home: 'https://staging.example.com');
 
         app(WordPressInstaller::class)->syncUrl($this->application, 'https://staging.example.com');
@@ -160,8 +153,7 @@ describe('links in the content follow the new scheme', function () {
         app(WordPressInstaller::class)->syncUrl($this->application, 'https://staging.example.com');
         expect(syncUrlReplacements())->toBe([]);
 
-        // A different host is a domain change, not this; its content is the
-        // business of whatever moved the domain.
+        // A different host is a domain change; whatever moved the domain owns its content.
         fakeWpConfig([], home: 'http://old.example.com');
         app(WordPressInstaller::class)->syncUrl($this->application, 'https://staging.example.com');
         expect(syncUrlReplacements())->toBe([]);

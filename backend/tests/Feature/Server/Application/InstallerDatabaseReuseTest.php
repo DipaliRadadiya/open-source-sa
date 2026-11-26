@@ -10,24 +10,19 @@ use Illuminate\Support\Facades\Process;
 /**
  * Retrying a failed setup must not create a second database.
  *
- * `provisionDatabase()` generated a fresh name and called CreateDatabase every
- * time it ran, without ever asking whether the application already had one. So
- * each press of Retry Setup left another schema and another account behind —
- * on a server where nothing but the panel knows which of them the site uses,
- * and the panel only records the newest.
+ * Otherwise each Retry Setup leaves another schema and account behind, and the
+ * panel only records the newest.
  */
 beforeEach(function () {
-    // Every engine answers. The engine is not what these tests are about, and
-    // an unreachable one would send the create path down the no-engine branch
-    // for reasons unrelated to the behaviour under test.
+    // Every engine answers: an unreachable one would take the no-engine branch,
+    // which is not what these tests are about.
     Process::fake(fn () => Process::result(output: '1'));
 });
 
 /**
- * Provision through the method that does it, rather than the helpers it calls.
- *
- * Same reasoning as CatalogEngineTest: a test that calls the decision helpers
- * directly stays green when the line that *uses* them is deleted.
+ * Provision through the method that does it, rather than the helpers it calls:
+ * a test calling the decision helpers directly stays green when the line that
+ * *uses* them is deleted.
  *
  * @param  array<int, string>  $accepted
  * @return array<string, mixed>
@@ -58,13 +53,12 @@ it('reuses the database already attached to the application', function () {
 
     $context = provisionFor($application);
 
-    // The bug, stated as an assertion: one database, not two.
+    // One database, not two.
     expect(Database::query()->count())->toBe(1)
         ->and(Database::query()->where('application_id', $application->id)->count())->toBe(1);
 
-    // And the installer is handed credentials that actually work — the
-    // password is stored encrypted rather than hashed precisely so it can be
-    // read back for the application's own config file.
+    // The installer gets working credentials: the password is stored encrypted, not
+    // hashed, so it can be read back for the application's config file.
     expect($context['database'])->toBe('shop_xqolim')
         ->and($context['db_user'])->toBe('shop_xqolim')
         ->and($context['db_password'])->toBe('secret-from-the-first-attempt')
@@ -76,8 +70,7 @@ it('still creates a database for an application that has none', function () {
 
     $context = provisionFor($application);
 
-    // The first attempt is unchanged. Without this the fix could be "never
-    // provision a database" and every test above would still pass.
+    // The first attempt still provisions; otherwise "never provision" would pass every test above.
     expect(Database::query()->where('application_id', $application->id)->count())->toBe(1)
         ->and($context['database'])->toStartWith('blog_')
         ->and($context['db_user'])->toBe($context['database'])
@@ -101,9 +94,8 @@ it('gives an adopted database a user rather than a second database', function ()
         ->and($context['database'])->toBe('legacy_data')
         ->and(DatabaseUser::query()->count())->toBe(1);
 
-    // Not named after the database: an adopted one may already have an account
-    // by that name on the engine, which is why the identifier is allocated
-    // through the generator that checks both the panel's rows and the server.
+    // Not named after the database: an adopted one may already have an account by that
+    // name, so the identifier comes from the generator that checks panel rows and server.
     expect($context['db_user'])->toStartWith('legacy_')
         ->and($context['db_password'])->not->toBe('');
 });
@@ -124,9 +116,8 @@ it('refuses an attached database on an engine the application cannot use', funct
         'host' => 'localhost',
     ]);
 
-    // WordPress is MySQL/MariaDB only. Creating a second database beside this
-    // one is the bug; installing against an engine it has no driver for fails
-    // later, further away, in the application's own words.
+    // WordPress is MySQL/MariaDB only: a second database is wrong, and an engine
+    // with no driver would fail later in the application's own words.
     expect(fn () => provisionFor($application, ['mysql', 'mariadb']))
         ->toThrow(
             ProvisioningFailedException::class,
@@ -151,8 +142,7 @@ it('names the mismatch as a reason the user can read', function () {
         expect($e->step)->toBe('create_database')
             ->and($e->reason)->toBe('attached_database_engine_mismatch');
 
-        // Translated, not a raw code shown to somebody: the resource renders
-        // this through `application.failure_reason.<code>`.
+        // The resource renders this through `application.failure_reason.<code>`.
         expect(__('application.failure_reason.'.$e->reason))
             ->not->toBe('application.failure_reason.'.$e->reason);
     }

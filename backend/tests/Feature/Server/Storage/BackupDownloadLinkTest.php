@@ -11,21 +11,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 /*
- * Download answered a raw 500 for four providers out of five.
- *
- * `BackupController::download()` called `$disk->temporaryUrl()` unconditionally
- * and only the S3 adapter implements it, so FTP, SFTP and both Google Drive
- * destinations threw `RuntimeException: This driver does not support creating
- * temporary URLs` — for the whole life of the feature. It surfaced on
- * 2026-09-21, the day the first Drive backup finally got far enough to be
- * downloadable.
- *
- * The fix is a per-driver capability with a null default, mirroring the
- * existing `downloadTo(): bool`. Drive answers with `webContentLink`, which
- * authenticates by browser cookie — so it works for the operator whose Drive
- * holds the archive, and for nobody else. Nothing is shared and no permission
- * is widened; verified against the real 24 GB archive, whose `shared` flag
- * stayed false.
+ * Only the S3 adapter implements `temporaryUrl()`, so the download endpoint threw for FTP, SFTP
+ * and Drive. Each driver now has a `downloadUrl()` capability with a null default. Drive answers
+ * with `webContentLink`, which authenticates by browser cookie: it works for the account that
+ * owns the archive and shares nothing.
  */
 
 /**
@@ -99,9 +88,7 @@ it('hands back the Drive link for an archive in the operator own Drive', functio
 });
 
 it('refuses rather than guessing when two archives share a name', function () {
-    // Two matches would mean two backups share a uid. Handing over whichever
-    // Drive listed first risks restoring the wrong site's data, which is worse
-    // than saying Download is unavailable.
+    // Two matches mean two backups share a uid; guessing could hand out the wrong site's data.
     $driver = new GoogleDriveOauthDriver(
         app(GoogleOauthTokens::class),
         driveReturning([['link' => 'https://a'], ['link' => 'https://b']]),
@@ -111,8 +98,7 @@ it('refuses rather than guessing when two archives share a name', function () {
 });
 
 it('refuses when Google says the account cannot download its own file', function () {
-    // A Workspace policy can forbid this. Handing over the link anyway sends
-    // the operator to a Google error page with no explanation.
+    // A Workspace policy can forbid this; the link would only lead to a Google error page.
     $driver = new GoogleDriveOauthDriver(
         app(GoogleOauthTokens::class),
         driveReturning([['link' => 'https://a', 'canDownload' => false]]),
@@ -122,8 +108,7 @@ it('refuses when Google says the account cannot download its own file', function
 });
 
 it('returns null instead of throwing when Drive is unreachable', function () {
-    // A missing link must degrade to "Download is unavailable". An exception
-    // escaping here would be the same 500 this change exists to remove.
+    // A missing link must degrade to "Download is unavailable", never a 500.
     $workspace = new GoogleDriveWorkspace(function () {
         throw new RuntimeException('invalid_grant');
     });
@@ -134,11 +119,8 @@ it('returns null instead of throwing when Drive is unreachable', function () {
 });
 
 it('leaves S3 to its signed URL and never invents one for FTP or SFTP', function () {
-    // S3 returns null here deliberately: the controller falls through to
-    // `temporaryUrl()`, which is narrower — it carries its own expiry rather
-    // than depending on who the browser is signed in as. FTP and SFTP have no
-    // URL concept at all, and the honest answer is that Download is
-    // unavailable, not a link that cannot work.
+    // S3 returns null on purpose: the controller falls through to `temporaryUrl()`, which carries
+    // its own expiry. FTP and SFTP have no URL concept, so Download is unavailable.
     $factory = app(StorageDriverFactory::class);
 
     foreach (['s3', 'ftp', 'sftp'] as $provider) {

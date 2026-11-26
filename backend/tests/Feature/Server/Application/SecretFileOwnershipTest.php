@@ -9,15 +9,13 @@ use Illuminate\Support\Facades\Process;
 
 /**
  * A marketplace installer writes a file holding database credentials and then
- * immediately runs the application's own CLI against it. Two different accounts
- * have to be able to read that file, and which two depends on the stack:
+ * runs the application's own CLI against it. Two accounts must be able to read it:
  *
  *  - the site user, because that is who the CLI runs as — always;
  *  - the web server's account, but only where PHP runs under the shared,
  *    server-wide pool rather than the site's own.
  *
- * Owning it to one of them locks out the other, and both halves of that have
- * been shipped. This pins the arrangement that satisfies both: **owner is the
+ * Owning it to one of them locks out the other, so this pins: **owner is the
  * site user, group is whoever runs PHP.**
  */
 beforeEach(function () {
@@ -48,9 +46,7 @@ beforeEach(function () {
     ]);
 });
 
-/**
- * The chown applied to the site's own config file, as `owner:group`.
- */
+/** The chown applied to the site's own config file, as `owner:group`. */
 function configOwner(): string
 {
     $runs = new ArrayObject;
@@ -63,10 +59,9 @@ function configOwner(): string
 
     app(ApplicationProvisioner::class)->provision(test()->application);
 
-    // A root chown is only run when the group differs from the site user
-    // (PHP running as www-data). Otherwise the file is the user's because the
-    // user wrote it — `runuser -u <user> -- tee …` — and there is nothing to
-    // chown: root's chown followed a link planted at the path (2026-09-29).
+    // A root chown only runs when the group differs from the site user (PHP as www-data).
+    // Otherwise the user wrote the file (`runuser -u <user> -- tee …`): a root chown would
+    // follow a symlink planted at the path.
     $chown = collect($runs)->first(fn ($command) => ($command[0] ?? '') === 'chown'
         && str_ends_with((string) end($command), '/config.inc.php'));
 
@@ -82,30 +77,21 @@ function configOwner(): string
 }
 
 it('gives an OpenLiteSpeed site its own user, which is what runs its PHP there', function () {
-    // This test used to assert `ownuser:www-data`, on the premise that "no
-    // PHP-FPM means the site stays on the shared, server-wide pool running as
-    // www-data". That premise is false for LSPHP and the vhost says so: the
-    // OpenLiteSpeed template writes `extUser {{ $user }}` / `extGroup`, so the
-    // site's PHP has always run as the site's own user there. There is no
-    // shared pool on that stack to fall back to.
-    //
-    // The rule this file exists for is unchanged — owner is the site user,
-    // group is whoever runs PHP. On OpenLiteSpeed those are the same account,
-    // so handing the group to www-data let an account that runs nothing on
-    // that stack read every secret file.
+    // LSPHP has no shared pool: the OpenLiteSpeed template writes `extUser {{ $user }}` /
+    // `extGroup`, so PHP runs as the site's own user. Owner and group are therefore the
+    // same account; giving the group to www-data would let an account that runs nothing
+    // on that stack read every secret file.
     config(['server.web_server_drivers.nginx.php_stack' => 'lsphp']);
 
     expect(configOwner())->toBe('ownuser:ownuser');
 
-    // And still no pool: `isolated_at` records an FPM pool, which LSPHP never
-    // has. That column staying null is exactly why three separate callers used
-    // to conclude the site did not run as its own user. {@see RuntimeOwnership}
+    // `isolated_at` records an FPM pool, which LSPHP never has, so it stays null.
+    // {@see RuntimeOwnership}
     expect($this->application->fresh()->isolated_at)->toBeNull();
 });
 
 it('keeps an isolated site entirely to its own user', function () {
-    // PHP-FPM: the provisioner gives the site its own pool, running as the
-    // site user, so nobody else needs to be let in at all.
+    // PHP-FPM: the site gets its own pool running as the site user, so nobody else needs access.
     config(['server.web_server_drivers.nginx.php_stack' => 'fpm']);
 
     expect(configOwner())->toBe('ownuser:ownuser')

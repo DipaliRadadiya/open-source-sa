@@ -12,13 +12,9 @@ use Illuminate\Support\Facades\Process;
 /**
  * Restart for an application that runs in containers.
  *
- * A Docker app has no PM2 or systemd unit of its own, so the process endpoint
- * refused it with "does not run a process of its own" and the screen had no
- * way to bounce a stuck container short of Pause + Resume (which does not
- * touch the containers) or a shell. The endpoint now routes a container app's
- * `restart` to `docker compose restart`, and these cover what that must and
- * must not do: restart every container, keep the data, and never touch a box
- * it was not asked to.
+ * A Docker app has no PM2 or systemd unit, so the process endpoint routes its `restart` to
+ * `docker compose restart`. It must restart every container, keep the data, and never touch
+ * a box it was not asked to.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -59,10 +55,9 @@ function restartRecorder(): ArrayObject
 /**
  * A box whose Docker answers per command.
  *
- * Faked per command rather than blanket: `docker info` is the daemon probe,
- * `compose restart` is the action, and `compose ps --status running` is how the
- * result is checked afterwards. A blanket success would pass a restart that
- * brought nothing back.
+ * Faked per command, not blanket: `docker info` is the daemon probe, `compose restart` the
+ * action, `compose ps --status running` the check afterwards. A blanket success would pass a
+ * restart that brought nothing back.
  */
 function fakeRestartBox(bool $daemon = true, bool $restart = true, bool $running = true): void
 {
@@ -125,17 +120,15 @@ it('restarts every container of a container app with compose restart', function 
         ->assertOk()
         ->assertJsonPath('application.id', $this->application->id);
 
-    // Compose's `restart` with no service named restarts all of them, in place:
-    // same containers, same volumes. Not `up`/`down`, which would recreate, and
-    // not `pull`, which would change the image under a person who asked for a
-    // restart.
+    // `restart` with no service named restarts all of them in place. Never `up`/`down` (recreate)
+    // or `pull` (changes the image).
     expect(restartRan('restart'))->toBeTrue()
         ->and(restartRan('up', 'down', 'pull', 'rm', 'create'))->toBeFalse();
 
     $restart = collect(restartRecorder())->first(fn (array $args): bool => in_array('restart', $args, true));
 
-    // This app's own compose project, and no service named after `restart`, which
-    // would restart only that one.
+    // This app's own compose project, and no service named after `restart` (that would restart
+    // only that one).
     expect($restart)->toContain('compose', '-p', 'sv-app-'.$this->application->id)
         ->and(end($restart))->toBe('restart')
         ->and($restart[array_search('-f', $restart) + 1])->toEndWith('/compose.yml');
@@ -185,8 +178,7 @@ it('is refused while the app is still being set up', function (string $status) {
         ->assertStatus(422)
         ->assertJsonPath('message', __('errors/application.container_restart_not_ready', ['name' => 'Ghost']));
 
-    // Nothing was asked of Docker: a pending app has no compose file, and a
-    // provisioning one is mid-`up` — a restart would race it.
+    // Docker is not asked: a pending app has no compose file, and a provisioning one is mid-`up`.
     expect(restartRecorder()->count())->toBe(0)
         ->and(ActivityLog::where('action', 'process_restart')->exists())->toBeFalse();
 })->with(['pending', 'provisioning', 'failed']);
@@ -228,8 +220,8 @@ it('reports a restart that failed, with a reference, and does not log it as done
 });
 
 it('does not call a restart a success when nothing is running afterwards', function () {
-    // `compose restart` exits 0 for services that were already stopped and
-    // stays stopped, so the exit code alone says nothing about the app being up.
+    // `compose restart` exits 0 for services that were already stopped and stay stopped, so the
+    // exit code alone does not prove the app is up.
     fakeRestartBox(running: false);
 
     $response = $this->withHeaders(restartHeaders())

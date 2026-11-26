@@ -13,14 +13,11 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
 /*
- * MySQL/MariaDB root password: set, change or reset (2026-10-17).
+ * MySQL/MariaDB root password: set, change or reset.
  *
- * The fake below is a small model of root's login, not a list of canned
- * answers: socket login works until something takes it away, a password works
- * only if it is the one root has, and the ALTER statements change that state.
- * That is what lets these tests catch the two ways this feature can hurt a
- * server — MariaDB losing socket login, and a password stored that the server
- * never accepted.
+ * The fake below models root's login state (socket login, the current password, the ALTER
+ * statements) rather than canned answers, so the tests catch the two ways this can hurt a
+ * server: MariaDB losing socket login, and storing a password the server never accepted.
  */
 
 final class RootLogin

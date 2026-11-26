@@ -10,15 +10,11 @@ use Illuminate\Testing\TestResponse;
 /*
 | Which site-type changes are allowed, and which are refused with a reason.
 |
-| The asymmetry is the design, not an oversight:
-|
-|   - narrowing to a generic type gives up features and claims nothing, so it
-|     never needs evidence;
-|   - widening turns on features — `app_magic_login` *writes a loader into the
-|     site* — so the disk has to agree;
-|   - a git site cannot be relabelled at all, because its Deployments, Workers
-|     and .env screens come from `method() === 'git'` and removing them does
-|     not stop the workers running or the webhook accepting pushes.
+| The asymmetry is the design:
+|   - narrowing to a generic type gives up features, so it needs no evidence;
+|   - widening turns on features (`app_magic_login` writes a loader into the site), so the disk
+|     has to agree;
+|   - a git site cannot be relabelled: removing its screens would not stop its workers or webhook.
 */
 
 beforeEach(function () {
@@ -82,10 +78,8 @@ it('records that the type was relabelled rather than installed', function () {
 
     $detection = $this->application->fresh()->settings['type_detection'];
 
-    // No installer ran and no file was written. A site type somebody set by
-    // hand and one the panel installed are indistinguishable from the column
-    // alone, and that difference is the first thing worth knowing when a site
-    // misbehaves.
+    // No installer ran and no file was written. The activity log must still tell a hand-set type
+    // from a panel-installed one.
     expect($detection['relabelled'])->toBeTrue()
         ->and($detection['changed_from'])->toBe('php')
         ->and($detection['matched'])->toBe('wp-config.php');
@@ -105,8 +99,7 @@ it('always allows narrowing back to custom php, with no evidence at all', functi
     $this->application->update(['site_type' => 'wordpress']);
     fakeTypeFiles([]);
 
-    // The escape hatch. Requiring proof in this direction would trap a site
-    // whose WordPress has since been deleted.
+    // The escape hatch: requiring proof here would trap a site whose WordPress was deleted.
     changeType('php')->assertOk();
 
     expect($this->application->fresh()->site_type)->toBe('php');
@@ -129,10 +122,8 @@ it('explains the git refusal in terms of what would be orphaned', function () {
     $this->application->update(['site_type' => 'git', 'repository' => 'acme/app', 'branch' => 'main']);
     fakeTypeFiles([$this->application->documentRoot().'/wp-config.php']);
 
-    // Nothing is deleted by a relabel — the workers keep running and the
-    // webhook keeps accepting pushes. Only the screens go. That is the fact
-    // the message has to carry, because "invalid selection" would send the
-    // user looking for a different type instead of a different approach.
+    // A relabel deletes nothing: workers keep running and the webhook keeps accepting pushes, only
+    // the screens go. The message has to say so, not "invalid selection".
     expect(changeType('wordpress')->json('errors.site_type.0'))
         ->toBe(__('application.site_type_change.git_cannot_change'));
 });
@@ -140,10 +131,8 @@ it('explains the git refusal in terms of what would be orphaned', function () {
 it('refuses to turn any site into a git deployment', function () {
     fakeTypeFiles([$this->application->documentRoot().'/artisan']);
 
-    // `artisan` detects as `git` at confidence 80 — the detector's own output
-    // includes a verdict that must never be offered, because a git site needs
-    // a repository, a branch and a deploy script that cannot be conjured from
-    // files already on disk.
+    // `artisan` detects as `git` at confidence 80, a verdict that must never be offered: a git
+    // site needs a repository, branch and deploy script that files on disk cannot supply.
     expect(changeType('git')->assertStatus(422)->json('errors.site_type.0'))
         ->toBe(__('application.site_type_change.git_not_a_target'));
 });
@@ -152,8 +141,7 @@ it('refuses one marketplace application becoming another', function () {
     $this->application->update(['site_type' => 'moodle']);
     fakeTypeFiles([$this->application->documentRoot().'/configuration.php']);
 
-    // A Moodle site is not "actually" Joomla. Whoever is asking has a
-    // different problem.
+    // A Moodle site is not "actually" Joomla.
     expect(changeType('joomla')->assertStatus(422)->json('errors.site_type.0'))
         ->toBe(__('application.site_type_change.only_from_generic'));
 });
@@ -186,28 +174,23 @@ it('republishes the vhost, because OpenLiteSpeed renders the type into it', func
 
     changeType('wordpress')->assertOk();
 
-    // `OlsDriver::viewData()` sets `readsHtaccess` from the site type, because
-    // LiteSpeed Cache talks to the cache module through .htaccess and nothing
-    // else. Relabel without republishing and the user gets the WordPress
-    // screens while the cache integration silently never happens.
+    // `OlsDriver::viewData()` sets `readsHtaccess` from the site type (LiteSpeed Cache works only
+    // through .htaccess). Relabelling without republishing would silently skip the cache integration.
     Process::assertRan(fn ($process) => in_array('-t', $process->command, true)
         || str_contains(implode(' ', $process->command), 'reload')
         || str_contains(implode(' ', $process->command), 'tee'));
 });
 
 it('does not republish a disabled site back online', function () {
-    // `forceFill`, not `update`: `disabled_at` is deliberately not fillable
-    // (the enable/disable actions own it), so `update()` here silently does
-    // nothing and the test would assert against a site that was never
-    // disabled — passing or failing for a reason unrelated to the guard.
+    // `forceFill`, not `update`: `disabled_at` is not fillable (the enable/disable actions own it),
+    // so `update()` would silently leave the site enabled.
     $this->application->forceFill(['disabled_at' => now()])->save();
     fakeTypeFiles([$this->application->documentRoot().'/wp-config.php']);
 
     changeType('wordpress')->assertOk();
 
-    // A disabled site's vhost deliberately points at the disabled page.
-    // Rewriting it here would put the site back online as a side effect of a
-    // relabel.
+    // A disabled site's vhost points at the disabled page; rewriting it would put the site back
+    // online as a side effect of a relabel.
     Process::assertNotRan(fn ($process) => str_contains(implode(' ', $process->command), 'reload'));
 });
 

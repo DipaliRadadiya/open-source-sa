@@ -33,14 +33,8 @@ it('accepts back every value it offers', function () {
 });
 
 it('accepts the timezone the server is currently set to', function () {
-    // The bug this is here for: the form loaded showing Etc/UTC — the real
-    // setting on a fresh Debian box — and then refused to save it, because
-    // the validator used PHP's default identifier list, which omits the
-    // backward-compatible group Etc/* lives in. You could not submit the
-    // form without changing a field you had not come to change.
-    //
-    // The rule this encodes is general: whatever GET hands you must be
-    // something PUT will take back.
+    // Whatever GET hands you must be something PUT takes back. A fresh Debian box reports Etc/UTC,
+    // which PHP's default identifier list omits (the backward-compatible group holds Etc/*).
     $current = app(SettingsManager::class)->find('general')->read()['timezone'];
 
     expect(app(Timezones::class)->accepts($current))->toBeTrue(
@@ -56,8 +50,7 @@ it('offers the backward-compatible names the OS actually uses', function () {
     $values = collect(app(Timezones::class)->grouped())
         ->flatMap(fn (array $group) => collect($group['zones'])->pluck('value'));
 
-    // PHP's default list has zero of these; the OS ships 35 and defaults to
-    // one of them.
+    // PHP's default list has none of these; the OS ships them and defaults to one.
     expect($values)->toContain('Etc/UTC');
 });
 
@@ -65,7 +58,7 @@ it('groups zones by region, with none empty', function () {
     $groups = collect(($this->get)('/api/timezones')->assertOk()->json('timezones'));
 
     expect($groups->pluck('region')->all())->toContain('Africa', 'America', 'Asia', 'Etc', 'Europe', 'Pacific')
-        // 419 in one flat list is not a picker anybody can use.
+        // Hundreds of zones in one flat list are not usable as a picker.
         ->and($groups->every(fn (array $g) => count($g['zones']) > 0))->toBeTrue()
         // Sorted, so the frontend renders them in the order it receives them.
         ->and($groups->pluck('region')->all())->toBe($groups->pluck('region')->sort()->values()->all());
@@ -76,8 +69,7 @@ it('reports the current offset, including the half-hour ones', function () {
         ->flatMap(fn (array $group) => $group['zones'])
         ->keyBy('value');
 
-    // India is +05:30 year round — a picker that only handles whole hours
-    // gets this wrong, and it is a large share of the user base.
+    // India is +05:30 year round: a picker that only handles whole hours gets it wrong.
     expect($zones['Asia/Kolkata']['offset'])->toBe('+05:30')
         ->and($zones['Asia/Kolkata']['offset_minutes'])->toBe(330)
         ->and($zones['Asia/Kolkata']['label'])->toBe('Kolkata');
@@ -112,16 +104,16 @@ it('turns underscores into spaces in the label but not the value', function () {
 it('keeps UTC, as its own region rather than dropping it', function () {
     $groups = collect(($this->get)('/api/timezones')->json('timezones'))->keyBy('region');
 
-    // A single-segment identifier has no region to group under; hiding it
-    // would lose the one zone a server is most likely to be set to.
+    // A single-segment identifier has no region to group under, but hiding it would lose the zone
+    // a server is most likely set to.
     expect($groups->has('UTC'))->toBeTrue()
         ->and($groups['UTC']['zones'][0]['value'])->toBe('UTC')
         ->and($groups['UTC']['zones'][0]['offset'])->toBe('+00:00');
 });
 
 it('is available to any signed-in user, with no feature permission', function () {
-    // Settings, cronjob schedules and backup windows all need this list.
-    // Gating it on any one of those permissions hides it from the others.
+    // Settings, cronjob schedules and backup windows all need this list; gating it on one of those
+    // permissions hides it from the others.
     $user = User::factory()->create();
     $token = $user->createToken('t')->plainTextToken;
 
@@ -161,10 +153,8 @@ it('does not touch the OS for fields that did not change', function () {
         || in_array('set-hostname', $c, true)
         || in_array('set-ntp', $c, true));
 
-    // Only the changed field. The form submits all three every time, and
-    // these commands do not share a privilege level — running an untouched
-    // one can fail the whole request, after an earlier one already took
-    // effect.
+    // Only the changed field. The form submits all three every time and the commands do not share
+    // a privilege level: running an untouched one can fail the request after an earlier one took effect.
     expect($written->values()->all())->toBe([['timedatectl', 'set-timezone', 'Asia/Kolkata']]);
 });
 

@@ -6,11 +6,9 @@ use Illuminate\Support\Facades\Process;
 /**
  * Adoption has to know whether the old panel is still driving this server.
  *
- * Two panels managing one set of applications is not a millisecond race — PM2
- * serialises its own commands — it is two control planes acting on the same
- * state. The concrete loss: the old agent runs `pm2 cleardump` when any of a
- * user's applications is deleted, which empties that user's whole dump, which
- * is what adopted applications rely on to come back at boot.
+ * Two control planes on one set of applications: the old agent runs `pm2 cleardump` when any of
+ * a user's applications is deleted, emptying the dump adopted applications rely on to come
+ * back at boot.
  */
 function agentFake(array $options = []): void
 {
@@ -23,7 +21,7 @@ function agentFake(array $options = []): void
         $args = ($p->command[0] ?? '') === 'sudo' ? array_slice((array) $p->command, 2) : (array) $p->command;
         $line = implode(' ', $args);
 
-        // Real `ss -ltnpH` output shape, copied from a live v7 box.
+        // Real `ss -ltnpH` output shape.
         if (($args[0] ?? '') === 'ss') {
             return Process::result(output: $listening
                 ? "LISTEN 0 4096 *:43210 *:* users:((\"sureshcloud-age\",pid={$pid},fd=5))\n"
@@ -47,9 +45,8 @@ function agentFake(array $options = []): void
 }
 
 it('finds a white-labelled agent no name list would have caught', function () {
-    // A real v7 box runs its agent as `sureshcloud.service`. The unit name is
-    // a build-time `-X main.ServiceName=…`, so matching names cannot work; the
-    // port is hardcoded in the agent's own source and the PID names its unit.
+    // The unit name is a build-time `-X main.ServiceName=…`, so names cannot be matched; the
+    // port is fixed in the agent and the PID names its unit.
     agentFake(['listening' => true, 'unit' => 'sureshcloud.service']);
 
     $detected = app(LegacyAgentDetector::class)->describe();
@@ -60,9 +57,8 @@ it('finds a white-labelled agent no name list would have caught', function () {
 });
 
 it('still reports running when the unit cannot be resolved', function () {
-    // Something holds the port but /proc says nothing useful — a container, a
-    // stray binary. Running is still the honest answer; there is just no unit
-    // to stop.
+    // Something holds the port but /proc names no unit (a container, a stray binary): still
+    // running, just no unit to stop.
     agentFake(['listening' => true, 'unit' => null]);
 
     $detected = app(LegacyAgentDetector::class)->describe();
@@ -85,8 +81,7 @@ it('says nothing is running on a server the old panel never touched', function (
 });
 
 it('reports an installed-but-stopped agent, which is the state adoption wants', function () {
-    // Someone has already taken the old panel out of the picture. Saying
-    // "nothing found" would leave them unsure whether the check even looked.
+    // The old panel is already stopped; "nothing found" would hide that the check looked.
     agentFake(['binary' => '/usr/local/bin/serveravatar-agent']);
 
     $detected = app(LegacyAgentDetector::class)->describe();
@@ -105,17 +100,15 @@ it('does not mistake another service on another port for the agent', function ()
 });
 
 it('never identifies PM2\'s own boot unit as the agent', function () {
-    // Should be impossible now that the unit is derived from whatever holds
-    // 43210 — but the guard stays, because a caller stops what this reports and
-    // `pm2-<user>.service` is the boot hook every adopted application needs.
+    // A caller stops what this reports, and `pm2-<user>.service` is the boot hook every adopted
+    // application needs.
     agentFake(['listening' => true, 'unit' => 'pm2-appuser.service']);
 
     expect(app(LegacyAgentDetector::class)->describe()['unit'])->toBeNull();
 });
 
 it('treats an unreadable server as not-detected rather than crashing', function () {
-    // `ss` missing, systemctl refusing — a check that throws would block
-    // adoption on every server where it could not answer.
+    // `ss` missing or systemctl refusing: a check that throws would block adoption.
     Process::fake(fn () => Process::result(exitCode: 127, errorOutput: 'not found', output: ''));
 
     expect(app(LegacyAgentDetector::class)->running())->toBeFalse();

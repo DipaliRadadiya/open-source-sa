@@ -7,20 +7,14 @@ use App\Services\Server\CommandPipe;
 /**
  * A `CommandPipe` backed by in-memory streams.
  *
- * `ServerOps::stream()` moved from Symfony's `Process` to `proc_open`, which
- * `Process::fake()` cannot see. Without this the download tests did not fail —
- * they started running `sudo runuser … cat` against the machine running the
- * suite, which is the failure mode worth avoiding rather than the one worth
- * asserting on.
+ * `ServerOps::stream()` uses `proc_open`, which `Process::fake()` cannot see; without this the
+ * download tests would run `sudo runuser … cat` against the machine running the suite.
  *
- * It delegates to a resolver rather than holding fixtures of its own, so a
- * suite that has already described a filesystem to `Process::fake()` describes
- * it once. Two fakes with two copies of the same fixture is how a test ends up
- * asserting against a file only one of them can see.
+ * It delegates to a resolver rather than holding fixtures of its own, so a filesystem already
+ * described to `Process::fake()` is described once.
  *
- * Only the spawn is replaced. The select loop, the bounded reads and the
- * backpressure stay real, and are covered against real commands in
- * `StreamDownloadTest` — they are the part that was wrong.
+ * Only the spawn is replaced. The select loop, bounded reads and backpressure stay real and are
+ * covered against real commands in `StreamDownloadTest`.
  */
 class FakeCommandPipe extends CommandPipe
 {

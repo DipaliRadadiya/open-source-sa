@@ -8,24 +8,19 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 /*
- * One bad chunk used to discard the whole upload.
+ * One bad chunk must not discard the whole upload.
  *
- * `GoogleDriveAdapter::upload()` loops `nextChunk()` with no retry and returns
- * `false` on any failure, which Flysystem renders as "Not able to write the
- * file" with no exception underneath — so nothing is logged about the cause,
- * because nothing was ever created. On 2026-09-23 a 102 GB backup died after
- * exactly 35 of ~1048 chunks and took the 14-minute archive with it.
- *
- * The protocol is built for this: ask the session what it holds and carry on.
- * The vendor ships `StreamableUpload::resume()` and calls it from nowhere.
+ * `GoogleDriveAdapter::upload()` loops `nextChunk()` with no retry and returns `false` on
+ * any failure, which Flysystem renders as "Not able to write the file" with no exception.
+ * The protocol supports resuming (ask the session what it holds), and the vendor's
+ * `StreamableUpload::resume()` is never called.
  */
 
 /**
  * A fake `StreamableUpload` that fails on demand and tracks the offset.
  *
- * Stateful on purpose: a fake that always returns the same thing cannot tell
- * "resumed from the committed byte" from "started again from zero", which is
- * the entire behaviour under test. See `feedback_a-static-fake-is-not-a-server`.
+ * Stateful on purpose: a static fake cannot tell "resumed from the committed byte"
+ * from "started again from zero", which is the behaviour under test.
  */
 final class FakeChunkedUpload
 {
@@ -63,8 +58,7 @@ final class FakeChunkedUpload
     {
         $this->resumeCalls++;
 
-        // Google's answer: the committed offset, which is where the last
-        // *successful* chunk ended — not where we thought we were.
+        // Google's answer: where the last *successful* chunk ended, not where we thought we were.
         return false;
     }
 
@@ -78,8 +72,7 @@ it('resumes from the committed offset instead of starting again', function () {
     $chunk = 1000;
     $size = 5000;
 
-    // Chunk 2 fails once. A correct implementation asks where Google got to
-    // and continues from 2000; a naive retry restarts at 0.
+    // Chunk 2 fails once: a correct resume continues from 2000, a naive retry restarts at 0.
     $upload = new FakeChunkedUpload($size, $chunk, failAt: [2]);
 
     $status = false;
@@ -99,15 +92,14 @@ it('resumes from the committed offset instead of starting again', function () {
 
     expect($status)->toBe('DONE')
         ->and($upload->resumeCalls)->toBe(1)
-        // The decisive assertion: every chunk offset appears once and ascends.
-        // A restart would show 0 twice.
+        // Every chunk offset appears once and ascends; a restart would show 0 twice.
         ->and($upload->offsets)->toBe([0, 1000, 2000, 3000, 4000])
         ->and(count(array_unique($upload->offsets)))->toBe(count($upload->offsets));
 });
 
 it('gives up after consecutive failures, not total ones', function () {
-    // A 100 GB archive is ~1048 chunks. A budget of *total* failures would
-    // kill an upload that had recovered from every one of them hours apart.
+    // A 100 GB archive is ~1048 chunks: a budget of *total* failures would kill an
+    // upload that had recovered from each of them.
     $upload = new FakeChunkedUpload(5000, 1000, failAt: [1, 3]);
 
     $status = false;
@@ -130,13 +122,12 @@ it('gives up after consecutive failures, not total ones', function () {
 
     expect($status)->toBe('DONE')
         ->and($upload->resumeCalls)->toBe(2)
-        // Two separate failures, never two in a row — so the counter reset.
+        // Never two failures in a row, so the counter resets.
         ->and($maxSeen)->toBe(1);
 });
 
 it('only Google Drive OAuth claims a resumable upload', function () {
-    // Every other driver returns false, which hands the caller back to
-    // `writeStream()`. A driver that cannot resume must not pretend to.
+    // Every other driver returns false, handing the caller back to `writeStream()`.
     $factory = app(StorageDriverFactory::class);
 
     foreach (['s3', 'ftp', 'sftp'] as $provider) {
@@ -154,8 +145,7 @@ it('only Google Drive OAuth claims a resumable upload', function () {
 });
 
 it('refuses an unconnected Drive destination rather than throwing', function () {
-    // Falling back beats failing: a half-configured destination should reach
-    // `writeStream()` and produce its own honest error there.
+    // A half-configured destination falls back to `writeStream()` and fails with its own error.
     $destination = StorageDestination::create([
         'name' => 'gDrive-unconnected',
         'provider' => 'google_drive_oauth',
@@ -167,8 +157,8 @@ it('refuses an unconnected Drive destination rather than throwing', function () 
 });
 
 it('reports zero-length or missing archives as not-uploaded', function () {
-    // `filesize()` of a missing file is false. Treating that as "uploaded"
-    // would record an artefact key for an object that does not exist.
+    // `filesize()` of a missing file is false; treating that as "uploaded" would record
+    // an artefact key for an object that does not exist.
     $empty = tempnam(sys_get_temp_dir(), 'empty');
 
     expect((new GoogleResumableUpload)->upload('i', 's', 'r', 'f', 'a/b.tar.gz', $empty))

@@ -16,12 +16,12 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /*
- * Import a file into a database, replacing its contents (2026-10-14).
+ * Import a file into a database, replacing its contents.
  *
- * The properties that matter, in the order a run meets them: nothing is
- * dropped before the file has been checked and the database backed up; the
- * file is loaded as the database's own user, never the admin account; a failed
- * load puts the backup back; and every failure says what happened to the data.
+ * The properties that matter, in the order a run meets them: nothing is dropped before the file
+ * has been checked and the database backed up; the file is loaded as the database's own user,
+ * never the admin account; a failed load puts the backup back; and every failure says what
+ * happened to the data.
  */
 
 uses(RefreshDatabase::class);
@@ -45,8 +45,7 @@ beforeEach(function () {
         $input = $process->input;
         $run = ['command' => $command, 'input' => is_resource($input) ? stream_get_contents($input) : (string) $input];
 
-        // The credentials files are deleted the moment the command returns,
-        // so read whichever one this command names now.
+        // The credentials files are deleted when the command returns, so read the one it names now.
         if (preg_match('/--defaults-extra-file=(\S+)/', $command, $m) && is_file($m[1])) {
             $run['auth'] = file_get_contents($m[1]);
         }
@@ -145,8 +144,8 @@ describe('uploading', function () {
     });
 
     /*
-     * The run would refuse anyway — but after the user had sent the whole file.
-     * The admin account is never the fallback: it can write every database.
+     * Refused up front, not after the user has sent the whole file. The admin account is never
+     * the fallback: it can write every database.
      */
     it('refuses before the upload when no user of the database can run it', function (array $user) {
         $this->dbUser->forceFill($user)->save();
@@ -304,8 +303,7 @@ describe('a run', function () {
     });
 
     it('says the backup is in Exports when even putting it back failed', function () {
-        // The backup goes through; every drop after it fails, so the load and
-        // the putting back both fail.
+        // The backup goes through; every drop after it fails, so the load and the restore both fail.
         $this->failOn = 'DROP DATABASE';
         $import = runImport(uploadedImport($this->database, "CREATE TABLE t (id int);\n"));
 
@@ -322,8 +320,8 @@ describe('a run', function () {
     });
 
     it('refuses a cut-off .sql.gz before touching anything, even when what decompresses reads as whole statements', function () {
-        // Every statement is there; only the gzip trailer is missing. gzread()
-        // reads this without complaint, so without the check it loads "fine".
+        // Every statement is there; only the gzip trailer is missing. gzread() reads this without
+        // complaint, so without the check it loads "fine".
         $cut = substr(gzencode("CREATE TABLE a (id int);\nCREATE TABLE b (id int);\n"), 0, -8);
 
         $import = runImport(uploadedImport($this->database, $cut, 'dump.sql.gz'));
@@ -398,10 +396,9 @@ it('reaps an upload abandoned for a day, so the database can be imported into ag
 });
 
 /*
- * The safety copy is the user's choice (Dipali, 2026-10-26). Ticked by default;
- * skipped, the import is faster and takes no extra disk, and a failed load has
- * nothing to put back — which the message must then say, not point at an
- * export that was never made.
+ * The safety copy is the user's choice, ticked by default. Skipped, the import is faster and
+ * takes no extra disk, and a failed load has nothing to put back: the message must say so, not
+ * point at an export that was never made.
  */
 describe('without a safety copy', function () {
 

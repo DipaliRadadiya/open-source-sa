@@ -96,9 +96,9 @@ it('puts the certificate ahead of queued installs when the worker reads the prio
     challengeAnswers();
     fakeRunningWorker($worker);
 
-    // nginx QA #4: a site was active for 22 minutes before its certificate,
-    // queued behind sixteen installs, ran. Only to `high` when the running
-    // worker reads it — a job on an unread queue never runs.
+    // A certificate queued behind a long line of installs left the site without HTTPS for
+    // minutes. It goes to `high` only when the running worker reads it: a job on an unread
+    // queue never runs.
     app(AutoIssueCertificate::class)->attempt($this->application);
 
     Queue::assertPushed(IssueCertificate::class, fn (IssueCertificate $job) => $job->queue === $queue);
@@ -191,11 +191,9 @@ it('cannot break the provision it runs at the end of', function () {
 });
 
 /*
- * Bug #52: Blank PHP, Static, Git, Staging and Clone sites reach this step
- * straight after `systemctl reload`, which returns before the new workers take
- * over — the first challenge fetch got the old workers' 404, and no
- * certificate was issued. Measured on the nginx test server: minutes later the
- * same check passed. One-click apps, installing for a while first, never hit it.
+ * Blank PHP, Static, Git, Staging and Clone sites reach this step straight after
+ * `systemctl reload`, which returns before the new workers take over: the first challenge
+ * fetch got the old workers' 404 and no certificate was issued.
  */
 it('asks again when the web server has not picked up the new site yet', function () {
     pointDnsHere();
@@ -257,9 +255,8 @@ it('checks a domain pointed elsewhere once, so a new site does not wait for noth
 });
 
 it('says HTTPS is on its way while the certificate it queued has not been served yet (DS-14)', function (?CertificateStatus $status, bool $pending) {
-    // DS-11: n8n, freshrss, it-tools, stirling-pdf and adminer went active
-    // 10–60 s before their certificate was served, and https:// failed the
-    // TLS handshake in between with nothing in the API to say why.
+    // An app can go active seconds before its certificate is served, and https:// fails the TLS
+    // handshake in between with nothing in the API to say why.
     if ($status !== null) {
         Certificate::create([
             'application_id' => $this->application->id,

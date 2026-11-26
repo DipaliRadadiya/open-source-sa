@@ -17,14 +17,11 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Process;
 
 /**
- * DS-03: creating a Docker site from an image takes what the image says.
- *
- * The container port used to default to 80 and be free text, so users typed a
- * server port (8082) and got a 502 behind a panel saying Running. Now an empty
- * port is read from the image's EXPOSE, a typed one that the image does not
- * declare is accepted with a warning, and an image that declares none is
- * refused with a question. Env vars and any number of volumes can be given at
- * create, and the image's VOLUMEs are the default volumes.
+ * Creating a Docker site from an image takes what the image says: an empty port is read from
+ * the image's EXPOSE, a typed one the image does not declare is accepted with a warning (a
+ * wrong container port gives a 502 behind a panel saying Running), and an image that declares
+ * none is refused with a question. Env vars and any number of volumes can be given at create,
+ * and the image's VOLUMEs are the default volumes.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -103,8 +100,7 @@ it('refuses, with a question, an image that declares no port', function () {
 });
 
 it('never falls back to 80', function () {
-    // The default that started this: with inspection off and no port typed,
-    // the answer is a question, not port 80.
+    // With inspection off and no port typed, the answer is a question, not port 80.
     config(['server.docker.images.inspect_on_create' => false]);
 
     createDocker()->assertStatus(422)->assertJsonValidationErrors('container_port');
@@ -295,9 +291,8 @@ it('quotes env values so Compose reads back exactly what was typed', function (s
 ]);
 
 /*
- * DS-08: a mount path is written into the generated compose file as YAML, and
- * nothing validates that file after it is rendered. A newline in a path was a
- * new key — the payloads below are the exact ones from the security review.
+ * A mount path is written into the generated compose file as YAML, and nothing validates that
+ * file after it is rendered, so a newline in a path would become a new key.
  */
 
 it('refuses a volume path that would write new keys into the compose file', function (string $path) {
@@ -316,8 +311,8 @@ it('refuses a volume path that would write new keys into the compose file', func
 ]);
 
 it('refuses a trailing newline in the rule itself, where TrimStrings does not reach', function () {
-    // A request trims it away; an image's VOLUME and a row written by code do
-    // not pass through middleware. PCRE's `$` alone accepts one trailing `\n`.
+    // A request trims it away; an image's VOLUME and a row written by code do not pass through
+    // middleware. PCRE's `$` alone accepts one trailing `\n`.
     $failed = false;
     (new ContainerMountPath)->validate('path', "/data\n", function () use (&$failed): void {
         $failed = true;
@@ -336,8 +331,8 @@ it('refuses the same payload in the single volume field', function () {
 });
 
 it('drops an image VOLUME that would write new keys into the compose file', function () {
-    // No request field needed: the panel used to insert the registry's text
-    // itself. Dropped rather than refused — the user did not type it.
+    // No request field needed: the panel inserts the registry's text itself. Dropped rather than
+    // refused, since the user did not type it.
     imageSays(['exposed_ports' => [80], 'suggested_port' => 80, 'volumes' => [
         "/data\n      - /:/hostfs",
         '/config',
@@ -373,9 +368,8 @@ it('refuses a stored registry credential to a user who cannot view registries', 
 });
 
 /*
- * DS-09: a setting the image will not start without is checked here, not only
- * in the form. Deleting the row in the form got past it, and Umami was created
- * without DATABASE_URL and crash-looped on `TypeError: Invalid URL`.
+ * A setting the image will not start without is checked here, not only in the form: deleting
+ * the row in the form must not get past it (Umami crash-loops without DATABASE_URL).
  */
 
 it('refuses an image created without a setting it cannot start without', function (array $env) {
@@ -393,8 +387,7 @@ it('refuses an image created without a setting it cannot start without', functio
 ]);
 
 it('asks for it even when the registry cannot be read', function () {
-    // The table is config: it needs no registry, and a port typed by hand
-    // must not be the way round it.
+    // The table is config: it needs no registry, and a port typed by hand must not bypass it.
     config(['server.docker.images.inspect_on_create' => false]);
 
     createDocker(['image' => 'umamisoftware/umami:latest', 'container_port' => 3000])

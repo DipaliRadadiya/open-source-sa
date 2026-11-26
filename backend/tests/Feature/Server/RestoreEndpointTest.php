@@ -14,15 +14,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 
 /*
- * The guardrails. Every one of these is a way someone could destroy a site by
- * accident, and the endpoint exists as much to refuse as to accept.
+ * The guardrails: each is a way someone could destroy a site by accident, and the endpoint
+ * exists as much to refuse as to accept.
  */
 
 beforeEach(function () {
     Queue::fake();
 
-    // The Administrator role is defined as "every permission", so without a
-    // catalog it grants nothing and every route below answers 403.
+    // The Administrator role is "every permission", so without a catalog every route answers 403.
     $this->seed(PermissionSeeder::class);
     $this->admin = User::factory()->admin()->create();
 
@@ -78,10 +77,7 @@ it('starts a restore when the domain is typed correctly', function () {
         ->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'endpoint.test'])
         ->assertStatus(202);
 
-    // Counted from the configured pipeline rather than written out, because the
-    // number is not the point and a literal here only records how many steps
-    // existed the day it was typed — it went stale the moment `RestoreVolumes`
-    // was added, failing a test about typing a domain name.
+    // Counted from the configured pipeline: a literal goes stale whenever a step is added.
     expect($response->json('restore.status'))->toBe('pending')
         ->and($response->json('restore.total_steps'))
         ->toBe(count((array) config('server.backups.restore_steps')));
@@ -112,9 +108,7 @@ it('refuses without a confirmation at all', function () {
 });
 
 it('refuses to restore a backup that was never verified', function () {
-    // We could not prove this artefact arrived intact. Overwriting a working
-    // site with it would be trading something known-good for something we
-    // already know we cannot vouch for.
+    // The artefact's integrity is unproven; overwriting a working site with it is not worth the risk.
     $backup = endpointBackup(['status' => 'failed', 'verified_at' => null]);
 
     $this->actingAs($this->admin)
@@ -135,8 +129,7 @@ it('refuses a second restore while one is running', function () {
         'status' => 'running',
     ]);
 
-    // Two restores writing the same site directory at once is the one thing
-    // worse than none.
+    // Two restores writing the same site directory at once are worse than none.
     $this->actingAs($this->admin)
         ->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'endpoint.test'])
         ->assertStatus(422)
@@ -144,11 +137,9 @@ it('refuses a second restore while one is running', function () {
 });
 
 /*
- * QA 2026-11-24: two restores sent together both passed the request's check,
- * both created a pending row, and the queue dropped the second job (one per
- * site). That row stayed pending for ever and blocked restores, deletion and
- * scheduled backups. The other request is simulated by creating its row right
- * after this request's check has run — the window the race lived in.
+ * Two restores sent together both pass the request's check and create a pending row, and the
+ * queue drops the second job (one per site), leaving that row pending for ever. The other
+ * request is simulated by creating its row right after this request's check has run.
  */
 it('refuses a second restore that arrives while the first is being created', function () {
     $backup = endpointBackup();
@@ -203,9 +194,8 @@ it('refuses to restore a database from a files-only backup', function () {
 });
 
 describe('a full backup of a site with no database (2026-10-18)', function () {
-    // The dump step records `databases: []` for a site with nothing to dump.
-    // A full restore of that used to pass these checks, take a safety backup,
-    // put the files back and then fail at "Restoring the database".
+    // The dump step records `databases: []` for a site with nothing to dump; a full restore of
+    // that must be refused up front, not fail at "Restoring the database".
     function noDatabaseBackup(): Backup
     {
         return endpointBackup(['manifest' => ['key' => 'backups/endpoint.test/x.tar.gz', 'databases' => []]]);
@@ -242,8 +232,7 @@ describe('a full backup of a site with no database (2026-10-18)', function () {
     });
 
     it('treats a backup from before the manifest recorded databases as having one', function () {
-        // Older rows have no `databases` key: keep the old behaviour rather
-        // than refuse restores that used to work.
+        // Older rows have no `databases` key: keep working rather than refuse them.
         $backup = endpointBackup();
 
         $this->actingAs($this->admin)
@@ -267,8 +256,8 @@ it('always aims the restore at the backup\'s own application', function () {
 
     $backup = endpointBackup();
 
-    // The request cannot redirect a restore at another site — that would write
-    // one customer's database over another's.
+    // The request cannot redirect a restore at another site, which would overwrite another
+    // customer's database.
     $this->actingAs($this->admin)
         ->postJson("/api/backups/{$backup->id}/restore", [
             'confirm' => 'endpoint.test',
@@ -284,8 +273,7 @@ describe('permissions', function () {
         $user = User::factory()->create();
         grantPermission($user, 'backup', view: true, manage: false);
 
-        // Setting a schedule and replacing a live site with last Tuesday are
-        // different decisions.
+        // Setting a schedule and replacing a live site with an old backup are different decisions.
         $this->actingAs($user)
             ->postJson('/api/backups/'.endpointBackup()->id.'/restore', ['confirm' => 'endpoint.test'])
             ->assertForbidden();

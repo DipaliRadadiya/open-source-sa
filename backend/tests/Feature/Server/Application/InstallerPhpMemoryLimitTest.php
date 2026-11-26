@@ -10,17 +10,11 @@ use Illuminate\Support\Facades\Process;
 
 /**
  * An application's own CLI runs under a memory limit the panel sets, rather
- * than under whatever the interpreter's ini happens to say.
+ * than under whatever the interpreter's ini says.
  *
- * Mautic on OpenLiteSpeed is the case that found this: "Allowed memory size of
- * 134217728 bytes exhausted" -- exactly 128M -- from Symfony's container
- * compile. The same command on nginx never failed, because Debian's CLI ini
- * carries `memory_limit = -1` while LiteSpeed's lsphp loads its production ini
- * at 128M. Nothing in the panel chose either number.
- *
- * Every PHP site type here runs a CLI step, so the guard that matters most is
- * the last one in this file: not that Mautic passes the flag, but that an
- * installer cannot reach the interpreter without it.
+ * Debian's CLI ini has `memory_limit = -1` while LiteSpeed's lsphp uses 128M, so
+ * Mautic's container compile ran out of memory on OpenLiteSpeed only. The last
+ * test guards that no installer can reach the interpreter without the flag.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -83,8 +77,7 @@ function memoryLimitRuns(): ArrayObject
  * The console command, as a flat list of arguments.
  *
  * `runAsSiteUser` wraps the command in `runuser`, so the interpreter is not at
- * position zero -- the assertion is about the flag sitting *before* the script,
- * which is the only place PHP reads `-d`.
+ * position zero; PHP only reads `-d` before the script.
  *
  * @param  ArrayObject<int, array<string, mixed>>  $runs
  * @return array<int, string>
@@ -116,8 +109,8 @@ it('installs Mautic with an explicit memory limit', function () {
 it('applies the limit to every CLI step, not only the install', function () {
     $runs = memoryLimitRuns();
 
-    // The install is the step that ran out of memory; the verification query
-    // right after it boots the same Symfony kernel and would fail identically.
+    // The verification query right after the install boots the same Symfony kernel,
+    // so it needs the flag too.
     foreach (['mautic:install', 'doctrine:query:sql'] as $command) {
         expect(mauticConsoleRun($runs, $command))->toContain('memory_limit=512M');
     }
@@ -138,10 +131,8 @@ it('leaves no installer able to reach the interpreter without a limit', function
         ->filter(function (string $path) {
             $source = (string) file_get_contents($path);
 
-            // `AbstractPhpInstaller` is the one place that may ask the PHP
-            // stack for a path; every other installer has to go through it.
-            // A Node installer asking the Node runtime is a different question
-            // and not this rule's business.
+            // `AbstractPhpInstaller` is the one place that may ask the PHP stack for a
+            // path; every other installer goes through it. Node installers are exempt.
             return basename($path) !== 'AbstractPhpInstaller.php'
                 && (str_contains($source, 'phpBinary(') || str_contains($source, 'stack->binaryPath('));
         })
@@ -153,9 +144,8 @@ it('leaves no installer able to reach the interpreter without a limit', function
 });
 
 it('keeps the limit out of the site-type list', function () {
-    // `ProvisioningBudget` reads the keys of `server.installers` as site types,
-    // so a scalar added there would become a one-click application with no
-    // driver. The key lives at the top level for that reason.
+    // `ProvisioningBudget` reads the keys of `server.installers` as site types, so a
+    // scalar there would become an application with no driver. The key stays top level.
     expect(config('server.installer_php_memory_limit'))->toBe('512M')
         ->and(array_keys((array) config('server.installers')))
         ->not->toContain('installer_php_memory_limit')

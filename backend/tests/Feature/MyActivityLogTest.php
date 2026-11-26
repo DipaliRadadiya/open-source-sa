@@ -177,16 +177,9 @@ it('does not require admin access to view own activity log', function () {
 /*
  * A property the sentence cannot substitute must not take the screen down.
  *
- * 🔴 Found on the test box, not here: `GET /activity-log` answered **500 for the
- * whole log**. `Translator::makeReplacements()` calls `ucfirst()` on every value, so
- * one row whose properties hold an ARRAY is a `TypeError` inside the framework —
- * `mb_substr(): Argument #1 ($string) must be of type string, array given` — and it
- * fails the response, not the row.
- *
- * Three Docker events do it: `container_secrets_viewed` records which credential
- * KEYS were handed over, and `docker_resources_removed` records what it `removed`
- * and what it `kept`. 516 rows of them already existed, so no change to what gets
- * recorded could have fixed a single one.
+ * `Translator::makeReplacements()` calls `ucfirst()` on every value, so a row whose properties
+ * hold an ARRAY is a `TypeError` that fails the whole response, not just the row. Docker events
+ * `container_secrets_viewed` and `docker_resources_removed` record arrays.
  */
 
 it('renders a row whose properties hold an array, instead of failing the whole log', function () {
@@ -205,18 +198,14 @@ it('renders a row whose properties hold an array, instead of failing the whole l
 
     $row = collect($response->json('activity_log'))->firstWhere('action', 'container_secrets_viewed');
 
-    // The sentence for this event does not name the keys — it is "Viewed the
-    // container credentials for :name" — so the assertion is that the row RENDERS,
-    // not that the list appears. The array still has to be survivable: it reaches
-    // `__()` as a replacement whether the sentence uses it or not, which is the
-    // whole bug.
+    // The sentence does not name the keys, so the assertion is that the row RENDERS. The array
+    // still reaches `__()` as a replacement whether the sentence uses it or not.
     expect($row['description'])->toBe('Viewed the container credentials for Shop')
         ->and($row['description'])->not->toContain('Array');
 });
 
 it('reads out a list the sentence does name', function () {
-    // Where a sentence DOES use the array, joining beats counting: "which volumes
-    // were removed" is the question, and `2` is not an answer to it.
+    // Where a sentence uses the array, it is joined, not counted.
     $user = User::factory()->create(['username' => 'listprops', 'password' => bcrypt('Password123')]);
 
     ActivityLog::create([
@@ -239,8 +228,7 @@ it('reads out a list the sentence does name', function () {
 });
 
 it('says so in words when the list is empty', function () {
-    // `:removed` substituting to nothing reads as a broken sentence rather than a
-    // true one — "Removed  from Shop" with a hole in it.
+    // An empty `:removed` would leave a hole in the sentence ("Removed  from Shop").
     $user = User::factory()->create(['username' => 'emptyprops', 'password' => bcrypt('Password123')]);
 
     ActivityLog::create([
@@ -254,14 +242,12 @@ it('says so in words when the list is empty', function () {
         ->getJson('/api/activity-log')->assertOk()->json('activity_log'))
         ->firstWhere('action', 'container_secrets_viewed');
 
-    // Nothing to assert in the sentence itself — it does not name the list — so
-    // the contract is that an empty array is as survivable as a full one.
+    // The sentence does not name the list; an empty array must be as survivable as a full one.
     expect($row['description'])->toBe('Viewed the container credentials for Shop');
 });
 
 it('renders a false boolean as a word rather than a gap', function () {
-    // PHP casts `false` to `''`, so `rolled_back` on a save that did not roll back
-    // left a hole mid-sentence.
+    // PHP casts `false` to `''`, which would leave a hole mid-sentence.
     $user = User::factory()->create(['username' => 'boolprops', 'password' => bcrypt('Password123')]);
 
     ActivityLog::create([

@@ -10,15 +10,11 @@ use Illuminate\Support\Facades\Process;
 uses(RefreshDatabase::class);
 
 /*
- * A database could only be linked to an application in the request that
- * created it: `StoreDatabaseRequest` accepts `application_id` and nothing else
- * ever wrote the column again. So a database created on its own — or adopted
- * from a brownfield server, which cannot set it at all — was excluded from that
- * site's backups permanently, with no way to correct it.
+ * A database can be attached to an application after creation (adopted brownfield databases
+ * cannot set `application_id` at creation).
  *
- * The link is not cosmetic. `Backups\Steps\DumpDatabase` dumps exactly the
- * attached databases; staging, cloning and restoring each find "the
- * application's database" through this column.
+ * The link is not cosmetic: `Backups\Steps\DumpDatabase` dumps exactly the attached databases,
+ * and staging, cloning and restoring find "the application's database" through this column.
  */
 
 beforeEach(function () {
@@ -61,9 +57,7 @@ it('moves a database from one application to another', function () {
 });
 
 /*
- * An absent key must not be read as "detach". `present` is what makes the
- * difference between a client forgetting a field and a client asking for
- * something.
+ * An absent key must not be read as "detach": `present` tells a forgotten field from a request.
  */
 it('rejects a request that omits application_id rather than detaching', function () {
     $this->db->update(['application_id' => $this->site->id]);
@@ -117,9 +111,8 @@ it('refuses MySQL for NodeBB, which speaks MongoDB only', function () {
 });
 
 /*
- * A type that needs no database of its own — custom PHP, static, a git deploy —
- * declares no engines. The panel does not know what the user's own code
- * connects to, so it does not get an opinion.
+ * A type that needs no database of its own (custom PHP, static, git deploy) declares no engines;
+ * the panel cannot know what the user's code connects to, so it allows any.
  */
 it('allows any engine on a type that declares none', function () {
     $mongo = Database::create(['name' => 'anything', 'engine' => 'mongodb']);
@@ -154,9 +147,6 @@ it('records the attach and the detach in the activity log', function () {
     $this->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'detached']);
 });
 
-/*
- * The point of the whole feature: what an application's own screen asks.
- */
 it('lists the databases attached to one application', function () {
     $this->db->update(['application_id' => $this->site->id]);
     Database::create(['name' => 'elsewhere', 'engine' => 'mysql']);
@@ -170,8 +160,8 @@ it('lists the databases attached to one application', function () {
 it('lists only unattached databases for the attach picker', function () {
     Database::create(['name' => 'taken', 'engine' => 'mysql', 'application_id' => $this->site->id]);
 
-    // `attached=0` arrives as the string "0", which is truthy in PHP — the
-    // filter is worthless if it is read with a truthiness check.
+    // `attached=0` arrives as the string "0", which is truthy in PHP: it must not be read with a
+    // truthiness check.
     $this->getJson('/api/databases?filter[attached]=0')
         ->assertOk()
         ->assertJsonCount(1, 'databases')

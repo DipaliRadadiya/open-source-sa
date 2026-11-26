@@ -10,22 +10,16 @@ use Illuminate\Support\Facades\Process;
 /**
  * A vhost may not name a directory that does not exist yet.
  *
- * Every template — nginx, Apache and all three OpenLiteSpeed ones — declares a
- * context for `{challenge_root}/.well-known/acme-challenge`, and the only thing
- * that created that directory was `IssueCertificate`. So on a server where no
- * certificate had ever been requested, every site's configuration pointed at a
- * path that was not there.
+ * Every template (nginx, Apache, OpenLiteSpeed) declares a context for
+ * `{challenge_root}/.well-known/acme-challenge`, so the directory must exist before the vhost
+ * is written, not only once `IssueCertificate` runs.
  *
- * On nginx and Apache a location is resolved per request, so this stayed
- * invisible until issuance failed. **OpenLiteSpeed resolves a context's
- * location when the configuration is loaded**, and install.sh already hit this
- * for the panel's own vhost — its `ensure_ols_context_paths()` exists for this
- * exact reason. Sites were left out of that lesson.
+ * nginx and Apache resolve a location per request; **OpenLiteSpeed resolves a context's
+ * location when the configuration is loaded**, so a missing directory breaks the config test.
  */
 beforeEach(function () {
-    // OpenLiteSpeed's driver reads the shared config back before registering a
-    // site, so a blank `cat` would fail on a missing listener before reaching
-    // what this file is about.
+    // OpenLiteSpeed's driver reads the shared config back before registering a site; a blank
+    // `cat` would fail on a missing listener first.
     Process::fake(fn ($process) => ($process->command[0] ?? '') === 'cat'
         ? Process::result(output: "serverName x\n\nlistener Default {\n  address *:80\n}\n")
         : Process::result(output: ''));
@@ -70,9 +64,7 @@ it('creates the ACME challenge directory before writing a vhost that names it', 
 
     driverFor($webServer, $stack)->apply($application, $application->documentRoot());
 
-    // `install -d`, the same command certbot's own preparation uses — one
-    // definition of what that directory is, rather than a second `mkdir` here
-    // that could drift from it in mode or path.
+    // `install -d`, the same command certbot's preparation uses, so mode and path cannot drift.
     Process::assertRan(fn ($process): bool => str_contains(
         is_array($process->command) ? implode(' ', $process->command) : (string) $process->command,
         '/var/www/.well-known-acme/.well-known/acme-challenge',
@@ -80,7 +72,6 @@ it('creates the ACME challenge directory before writing a vhost that names it', 
 })->with([
     ['nginx', 'lemp'],
     ['apache', 'lamp'],
-    // The one where it is not merely untidy: OLS reads the location at
-    // config-load time, so a missing directory reaches the config test.
+    // OLS reads the location at config-load time, so a missing directory fails the config test.
     ['openlitespeed', 'ols'],
 ]);

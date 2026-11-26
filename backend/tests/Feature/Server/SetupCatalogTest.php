@@ -34,8 +34,8 @@ function fakeBareServer(): void
         in_array('fnm', $process->command, true) => Process::result(exitCode: 1),
         ($process->command[0] ?? '') === 'which' => Process::result(exitCode: 1),
         ($process->command[0] ?? '') === 'dpkg-query' => Process::result(output: 'unknown ok not-installed'),
-        // No Docker either: the catch-all below answers 0 to `command -v`, which
-        // would put a Docker row on every bare server.
+        // No Docker either: the catch-all below answers 0 to `command -v` and would add a
+        // Docker row.
         isDockerPresenceProbe($process) => Process::result(exitCode: 1),
         default => Process::result(exitCode: 0),
     });
@@ -93,8 +93,7 @@ it('lists every component with a detected state', function () {
 });
 
 it('derives percent from the components rather than hard-coding it', function () {
-    // The commercial panel hard-codes a number per branch, which can go backwards
-    // and drifts the moment a step is added. This has to be arithmetic.
+    // Arithmetic, not a number per branch: a fixed number drifts as soon as a step is added.
     fakeBareServer();
 
     $setup = fetchSetup();
@@ -123,10 +122,8 @@ it('offers one engine choice per database, with MariaDB recommended', function (
     expect($options['mariadb']['recommended'])->toBeTrue();
     expect($options['mariadb']['action']['endpoint'])->toBe('/api/databases/engines/mariadb');
 
-    // MongoDB was the last engine that was operable but not installable — it
-    // needed its own apt repository, which MongoDbInstaller now adds. It is a
-    // real button, and not the recommended one: MariaDB stays the default
-    // because Ubuntu packages it directly.
+    // MongoDB is installable (MongoDbInstaller adds its apt repository) but not recommended:
+    // MariaDB stays the default because Ubuntu packages it directly.
     expect($options['mongodb']['installable'])->toBeTrue();
     expect($options['mongodb']['action']['endpoint'])->toBe('/api/databases/engines/mongodb');
     expect($options['mongodb']['recommended'])->toBeFalse();
@@ -193,8 +190,7 @@ it('shows an in-flight install as installing, naming it in the viewer locale', f
 });
 
 it('surfaces a failure with a retry rather than hiding it', function () {
-    // The commercial panel deletes the record and the error message on failure.
-    // Here the panel *is* the server — there is nowhere to go back to.
+    // The record and its error message must survive a failure: there is nowhere else to look.
     fakeBareServer();
 
     RuntimeInstall::create([
@@ -211,8 +207,7 @@ it('surfaces a failure with a retry rather than hiding it', function () {
 });
 
 it('lets detection win over a stale progress row', function () {
-    // Otherwise a row left at `installing` for something now present shows a
-    // spinner that never resolves.
+    // Otherwise a row left at `installing` for something now present spins forever.
     Process::fake(fn ($process) => match (true) {
         ($process->command[0] ?? '') === 'mysql' => Process::result(output: '10.11.14-MariaDB'),
         default => Process::result(exitCode: 0),
@@ -234,9 +229,7 @@ it('lets detection win over a stale progress row', function () {
 });
 
 it('is complete when the recommended set is present, not when everything is', function () {
-    // Nothing here is required — the installer already put the web server, PHP and
-    // Node in place, so the panel works from first boot. Blocking a wizard on
-    // optional extras would be blocking people over preferences.
+    // Nothing here is required: the installer already put the web server, PHP and Node in place.
     fakeBareServer();
 
     expect(fetchSetup()['complete'])->toBeFalse();
@@ -257,8 +250,7 @@ it('needs the setting permission to read', function () {
 });
 
 it('lets a user with only view access read it', function () {
-    // Reporting what the box has is a read. Installing is what needs `manage`,
-    // and that lives on the endpoints this page points at.
+    // Reporting what the server has is a read; installing needs `manage` on other endpoints.
     fakeBareServer();
     $viewer = User::factory()->create();
     grantPermission($viewer, 'setting');
@@ -269,8 +261,7 @@ it('lets a user with only view access read it', function () {
 });
 
 it('offers wp-cli only where PHP sites are hosted', function () {
-    // WpCliComponent predated `applies()` on the contract; without it the
-    // class could not even be loaded and every Setup page was a fatal error.
+    // WpCliComponent must implement `applies()` from the contract, or every Setup page is fatal.
     fakeBareServer();
 
     expect(collect(fetchSetup()['components'])->pluck('key'))->toContain('wp_cli');
@@ -376,7 +367,7 @@ it('lists Docker on another stack only when it is installed there', function () 
 });
 
 it('keeps Docker out of the recommended set, so existing servers do not become incomplete', function () {
-    // Counting it would mark every existing server's setup unfinished overnight.
+    // Counting it would mark every existing server's setup unfinished.
     recordStackForSetup('docker');
     fakeDockerServer(present: false);
 

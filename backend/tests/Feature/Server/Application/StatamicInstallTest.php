@@ -61,8 +61,7 @@ function installStatamic(): ArrayObject
 it('creates no database, because the content lives in files', function () {
     installStatamic();
 
-    // A database would sit empty and its credentials would be a secret
-    // nobody needs.
+    // A database would sit empty and its credentials would be a secret nobody needs.
     expect(Database::where('application_id', $this->application->id)->count())->toBe(0);
 });
 
@@ -76,11 +75,9 @@ it('serves from public/, not the project root', function () {
 
     expect($composer)->toContain('statamic/statamic');
 
-    // Built one level above what is served — but not *into* the project root,
-    // which already holds public/ and would make Composer refuse. It is copied
-    // there instead.
-    // As the site user: root's `cp` wrote through a link planted at the
-    // destination (the `.panel` class of bug, 2026-09-29).
+    // Built one level above what is served, not *into* the project root (it already holds
+    // public/, so Composer would refuse); copied there instead.
+    // As the site user: root's `cp` would write through a link planted at the destination.
     $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'runuser'
         && ($run['command'][4] ?? '') === 'cp'
         && in_array($this->projectRoot, $run['command'], true));
@@ -119,9 +116,8 @@ it('passes the password as an option, which is the one place we do', function ()
     $install = collect(installStatamic())
         ->first(fn ($run) => in_array('make:user', $run['command'], true));
 
-    // Statamic's only non-interactive path takes --password; its interactive
-    // one uses Laravel Prompts, which refuses a pipe and throws. Measured,
-    // not assumed — so this is a deliberate exception, not an oversight.
+    // Statamic's only non-interactive path takes --password; its interactive one uses Laravel
+    // Prompts, which refuses a pipe and throws. A deliberate exception.
     expect($install['command'])->toContain('--password=StatamicPass1!')
         ->and($install['command'])->toContain('--super')
         ->and($install['command'])->toContain('admin@example.com');
@@ -136,10 +132,8 @@ it('runs make:user from the project root as the site user', function () {
 });
 
 it('points APP_URL at the site, not the example file\'s localhost', function () {
-    // `composer create-project` copies Statamic's .env.example, which ships
-    // APP_URL=http://localhost:8000. It is the one value in that file only the
-    // panel knows, and Laravel builds password resets, queued mail, sitemaps
-    // and Statamic's own asset and control-panel URLs from it.
+    // `composer create-project` copies .env.example with APP_URL=http://localhost:8000. Only the
+    // panel knows the real value, and Laravel builds password resets, mail and sitemap URLs from it.
     $runs = installStatamic();
 
     $written = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'tee'
@@ -163,9 +157,8 @@ it('sets it before the first user is made, so the first login lands on the site'
 });
 
 it('follows the domain when it changes, and clears the config cache that would outlive it', function () {
-    // A compiled bootstrap/cache/config.php is read *instead of* .env, so
-    // without the clear the site serves the old URL from a file that no longer
-    // says it.
+    // A compiled bootstrap/cache/config.php is read *instead of* .env, so without the clear the
+    // site keeps serving the old URL.
     $runs = new ArrayObject;
 
     Process::fake(function ($process) use ($runs) {
@@ -181,17 +174,16 @@ it('follows the domain when it changes, and clears the config cache that would o
     $written = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'tee');
 
     expect($written['input'])->toContain('APP_URL=https://new.example.com')
-        // The rest of the file is the user's and is not rebuilt from parsed
-        // pairs — comments and ordering would not survive that.
+        // The rest of the file is the user's; rebuilding it from parsed pairs would lose comments
+        // and ordering.
         ->and($written['input'])->toContain('APP_NAME=Statamic');
 
     expect(collect($runs)->contains(fn ($run) => in_array('config:clear', $run['command'], true)))->toBeTrue();
 });
 
 it('gives the project root to the site user before copying into it as them', function () {
-    // The web root is `public_html/public`, so the provisioner leaves
-    // `public_html` root-owned; the user's `cp` was refused on every file and
-    // every Composer install failed at extract (found live 2026-09-29).
+    // The web root is `public_html/public`, so the provisioner leaves `public_html` root-owned
+    // and the user's `cp` would be refused on every file.
     $commands = collect(installStatamic())->pluck('command')->values();
 
     $chown = $commands->search(fn (array $c) => $c === ['chown', '-h', 'statuser:statuser', test()->projectRoot]);
@@ -217,9 +209,8 @@ it('takes world access off the .env once everything that writes it has run', fun
 });
 
 /*
- * Bug #68: Statamic's .env.example ships APP_ENV=local and APP_DEBUG=true,
- * and a live site in debug mode shows stack traces to any visitor. v7 sets
- * production mode.
+ * Statamic's .env.example ships APP_ENV=local and APP_DEBUG=true, and a live site in debug mode
+ * shows stack traces to any visitor.
  */
 it('installs in production mode, not with the example file\'s debug on', function () {
     $runs = installStatamic();

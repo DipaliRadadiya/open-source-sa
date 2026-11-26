@@ -3,16 +3,12 @@
 /**
  * The PHP location must reach scripts addressed with a path appended.
  *
- * Reported as "Moodle installs fine, then the domain shows an unstyled page".
- * Moodle uses slash arguments: every stylesheet and script is requested as
- * `/theme/styles.php/boost/<rev>/all`. Against `location ~ \.php$` — anchored
- * at the end — that URL does not match the PHP block at all. It falls through
- * to `location /`, `try_files` hands it to index.php, and the browser gets
- * HTML where it asked for CSS.
+ * Moodle uses slash arguments (`/theme/styles.php/boost/<rev>/all`); against an end-anchored
+ * `location ~ \.php$` that URL falls through to `location /` and index.php, so the browser
+ * gets HTML where it asked for CSS.
  *
- * Asserted against the location's own regex rather than a live nginx, because
- * the question is purely whether the pattern matches the URL, and nginx
- * compiles these with PCRE — the same engine running this test.
+ * Asserted against the location's own regex rather than a live nginx: nginx compiles these
+ * with PCRE, the same engine running this test.
  */
 function nginxPhpLocationPattern(): string
 {
@@ -27,16 +23,14 @@ function nginxPhpLocationPattern(): string
 }
 
 it('finds the php location it is meant to be checking', function () {
-    // Without this the assertions below run against an empty pattern and pass
-    // for the wrong reason.
+    // Otherwise the assertions below run against an empty pattern and pass for the wrong reason.
     expect(nginxPhpLocationPattern())->not->toBe('');
 });
 
 it('routes path-info script URLs to PHP, not to index.php', function () {
     $pattern = '#'.nginxPhpLocationPattern().'#';
 
-    // Moodle's slash arguments — the reported failure. Also how several other
-    // applications address their own entry points.
+    // Moodle's slash arguments; other applications address their entry points the same way.
     expect(preg_match($pattern, '/theme/styles.php/boost/1700000000/all'))->toBe(1)
         ->and(preg_match($pattern, '/theme/javascript.php/boost/1700000000/all'))->toBe(1)
         ->and(preg_match($pattern, '/pluginfile.php/1/course/overviewfiles/logo.png'))->toBe(1);
@@ -52,8 +46,7 @@ it('still routes ordinary php requests', function () {
 it('does not hand PHP a request that only mentions .php in a filename', function () {
     $pattern = '#'.nginxPhpLocationPattern().'#';
 
-    // Widening the pattern must not start matching uploads that merely contain
-    // the string. `.php.txt` is not a PHP request and never was.
+    // The widened pattern must not match uploads that merely contain the string.
     expect(preg_match($pattern, '/uploads/notes.php.txt'))->toBe(0);
 });
 
@@ -62,9 +55,7 @@ it('keeps the guard that a widened pattern depends on', function () {
         base_path('resources/views/server/vhosts/nginx/php.blade.php')
     );
 
-    // Matching more URLs is only safe because the distro snippet refuses to
-    // pass a script that does not exist on disk. Losing that include while
-    // keeping the wider location would turn this into an execution hole, so
-    // the two are pinned together.
+    // The wider location is only safe because the distro snippet refuses to pass a script that
+    // is not on disk; losing that include would open an execution hole.
     expect($source)->toContain('include snippets/fastcgi-php.conf;');
 });

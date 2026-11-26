@@ -72,21 +72,10 @@ function akauntingRun(ArrayObject $runs): array
 it('passes both passwords as options, because this version will not read a pipe', function () {
     $install = akauntingRun(installAkaunting());
 
-    // Every other installer here keeps secrets off argv, and so did this one:
-    // the passwords were answered on stdin, on the reasoning that Akaunting's
-    // `secret()` reached Symfony's question helper, which reads a pipe.
-    //
-    // Upstream has since moved to Laravel Prompts, which sees stdin is not a
-    // TTY and returns the default without reading it. Because this installer
-    // always fetches the LATEST release, that turned a correct assumption into
-    // a silent failure with no code change on our side: the install ran with an
-    // empty database password and died at "Could not connect to the database",
-    // blaming credentials it had never been handed.
-    //
-    // So this is a deliberate exception rather than an oversight, and it is
-    // asserted so nobody restores the stdin form by reading the rule and not
-    // the reason. The exposure is real: `ps` shows these to every user on the
-    // box for the life of the process.
+    // A deliberate exception to "secrets stay off argv": Akaunting now uses Laravel Prompts, which
+    // sees stdin is not a TTY and returns the default without reading it, so passwords sent on
+    // stdin were silently ignored (empty DB password, "Could not connect to the database").
+    // The exposure is real: `ps` shows these to every user on the box while the process runs.
     expect($install['command'])->toContain('--db-password='.Database::first()->users()->first()->password)
         ->and($install['command'])->toContain('--admin-password=AkauntPass1!')
         // Nothing is left on stdin to be read.
@@ -96,11 +85,8 @@ it('passes both passwords as options, because this version will not read a pipe'
 it('passes --no-interaction, now that nothing is left to ask', function () {
     $install = akauntingRun(installAkaunting());
 
-    // This used to be forbidden: with a value missing, `--no-interaction`
-    // turns a question into a hard error, and the questions were how the
-    // secrets got in. With every value supplied there is nothing to ask, and
-    // it is the difference between a version that changes its prompting again
-    // failing immediately and one that hangs until the timeout.
+    // With every value supplied there is nothing to ask, so a future prompting change fails
+    // immediately instead of hanging until the timeout.
     expect($install['command'])->toContain('--no-interaction');
 });
 
@@ -134,11 +120,8 @@ it('runs from the site directory as the site user', function () {
 });
 
 it('follows the domain when a certificate is issued, and clears the cached config', function () {
-    // Akaunting is Laravel, so APP_URL is what it builds absolute links from
-    // where there is no request to infer them — every emailed invoice link and
-    // everything the queue generates. Left on the http:// address the site was
-    // installed at, a shop behind a fresh certificate keeps mailing customers
-    // links to an address they are not being asked to trust.
+    // APP_URL is what Akaunting builds absolute links from where there is no request (emailed
+    // invoices, queued jobs). Left on the old http:// address, mails keep linking to it.
     $runs = new ArrayObject;
 
     Process::fake(function ($process) use ($runs) {

@@ -8,14 +8,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 /*
- * Sidebar labels come from `nav.*`, resolved in the viewer's locale at read
- * time. The `permissions.title` column is only reached when a permission has no
- * nav key — a fallback that fires for none of them today, which is exactly what
- * lets it drift unnoticed: the catalog said "Logs" and "Backup" for months
- * while the screen showed "System Logs" and "Backups".
+ * Sidebar labels come from `nav.*`, resolved in the viewer's locale at read time. The
+ * `permissions.title` column is only a fallback for a permission with no nav key, which fires
+ * for none today, so it can drift unnoticed.
  *
- * These pin both halves: that the fallback stays unreachable, and that it says
- * the same thing as the label it would replace if it ever were reached.
+ * These pin both halves: the fallback stays unreachable, and it says the same as the label it
+ * would replace.
  */
 
 /** @return array<int, string> */
@@ -37,8 +35,8 @@ it('has a nav key for every permission, in every locale', function () {
 });
 
 /*
- * The reverse direction. A key left behind after a permission is renamed or
- * removed is a translated string nothing renders, and eight copies of it.
+ * The reverse direction: a key left behind after a permission is renamed or removed is a
+ * translated string nothing renders.
  */
 it('has no nav key without a permission behind it', function () {
     $names = collect(app(PermissionCatalog::class)->items())->pluck('name')->all();
@@ -49,8 +47,7 @@ it('has no nav key without a permission behind it', function () {
 });
 
 /*
- * Not a style rule — a drift check. The column is invisible, so nothing else
- * would ever tell us the two disagree.
+ * Not a style rule, a drift check: the column is invisible, so nothing else shows a mismatch.
  */
 it('keeps the unreachable fallback saying what the English label says', function () {
     foreach (app(PermissionCatalog::class)->items() as $item) {
@@ -62,9 +59,8 @@ it('keeps the unreachable fallback saying what the English label says', function
 });
 
 /*
- * The plural rename itself. A list page is named for the things it lists —
- * every app-level key already did this ("Workers", "Files", "Backups") while
- * the server-level ones did not, so the two halves of one file disagreed.
+ * A list page is named for the things it lists ("Workers", "Files", "Backups"), at app and
+ * server level alike.
  */
 it('names a list page in the plural', function () {
     $this->seed(PermissionSeeder::class);
@@ -83,9 +79,8 @@ it('names a list page in the plural', function () {
 });
 
 /*
- * Singular where the page is one thing, so a later sweep does not "fix" these
- * into plurals that would be wrong. A firewall contains rules but is one
- * firewall; an environment is one file; fail2ban is a product name.
+ * Singular where the page is one thing, so a later sweep does not pluralise them: a firewall
+ * is one firewall, an environment is one file, fail2ban is a product name.
  */
 it('leaves a page that is not a list in the singular', function () {
     $this->seed(PermissionSeeder::class);
@@ -97,9 +92,8 @@ it('leaves a page that is not a list in the singular', function () {
 });
 
 /*
- * Japanese does not mark plural on nouns, so its labels are unchanged by this
- * work. Asserted so a future "translate the plurals" pass does not invent forms
- * the language does not have.
+ * Japanese does not mark plural on nouns; asserted so a "translate the plurals" pass does not
+ * invent forms the language lacks.
  */
 it('leaves Japanese unpluralised', function () {
     expect(trans('nav.application', [], 'ja'))->toBe('アプリケーション')

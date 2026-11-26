@@ -23,18 +23,15 @@ const HAND_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QhandyBASE64keyForT
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
 
-    // sync() now writes through ServerOps/ManagedFile (mkdir, tee) rather than
-    // File::put, so the fake has to perform the ones that produce state the
-    // tests assert on — otherwise authorized_keys never appears and the
-    // assertions below would be checking nothing at all.
+    // sync() writes through ServerOps/ManagedFile (mkdir, tee), so the fake must perform the
+    // commands that produce state the tests assert on, or authorized_keys never appears.
     $this->ran = [];
 
     Process::fake(function ($process) {
         $cmd = $process->command;
         $this->ran[] = $cmd;
 
-        // sync() runs every step as the user; the fake acts on the command
-        // underneath the `runuser -u <user> --` prefix.
+        // sync() runs every step as the user; the fake acts on the command after `runuser -u <user> --`.
         if (($cmd[0] ?? '') === 'runuser') {
             $cmd = array_slice($cmd, 4);
         }
@@ -153,9 +150,8 @@ it('removes an SSH key and rewrites authorized_keys', function () {
 });
 
 it('writes authorized_keys as the user, never as root', function () {
-    // The user owns ~/.ssh and decides what every name in it points at. As
-    // root, a planted `authorized_keys -> /root/.ssh/authorized_keys` had the
-    // panel write the user's keys into root's file — reproduced 2026-09-23.
+    // The user owns ~/.ssh and decides what every name in it points at. As root, a planted
+    // `authorized_keys -> /root/.ssh/authorized_keys` would make the panel write into root's file.
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->postJson("/api/system-users/{$this->su->id}/ssh-keys", ['name' => 'laptop', 'public_key' => TEST_KEY])
         ->assertCreated();
@@ -173,8 +169,7 @@ it('writes authorized_keys as the user, never as root', function () {
 });
 
 it('refuses a public key that carries a second line', function () {
-    // authorized_keys is line-oriented: the panel would list one key and
-    // fingerprint while sshd honoured two — reproduced 2026-09-23.
+    // authorized_keys is line-oriented: the panel would list one key while sshd honoured two.
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->postJson("/api/system-users/{$this->su->id}/ssh-keys", [
             'name' => 'laptop',
@@ -196,9 +191,8 @@ function withBlob(string $key, string $blob): string
 }
 
 /*
- * QA 2026-11-19: a key cut short while copying is still valid base64 and still
- * starts with its type. It was saved and written to authorized_keys, and sshd
- * never logged anyone in with it.
+ * A key cut short while copying is still valid base64 and still starts with its type,
+ * but sshd never accepts it.
  */
 it('refuses a key that was cut short', function (callable $cut) {
     $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -229,8 +223,7 @@ it('refuses a key whose blob is not the type it claims to be', function () {
 });
 
 it('does not keep a key row when writing authorized_keys fails', function () {
-    // Seen live: a refused write left the panel listing a key the server
-    // never received.
+    // A refused write must not leave the panel listing a key the server never received.
     Process::fake(fn ($p) => in_array('tee', $p->command, true)
         ? Process::result(exitCode: 1, errorOutput: 'Permission denied')
         : Process::result());
@@ -244,8 +237,7 @@ it('does not keep a key row when writing authorized_keys fails', function () {
 });
 
 it('keeps the key row when rewriting authorized_keys after a removal fails', function () {
-    // The key is still on the server and still grants access; the panel must
-    // not say it is gone.
+    // The key is still on the server and still grants access; the panel must not say it is gone.
     $key = $this->su->sshKeys()->create([
         'name' => 'laptop',
         'public_key' => TEST_KEY,
@@ -264,9 +256,8 @@ it('keeps the key row when rewriting authorized_keys after a removal fails', fun
 });
 
 /*
-| SU-03: sync() wrote the panel's keys over the whole file, so a key added by
-| hand on the server — often the one the admin logs in with — vanished the
-| next time a key was added or removed in the panel.
+| sync() must not write the panel's keys over the whole file: a key added by hand
+| (often the admin's own) would vanish on the next change in the panel.
 */
 
 function writeAuthorizedKeys(string $content): string
@@ -301,8 +292,7 @@ it('keeps keys and lines added by hand when a key is added and removed', functio
 });
 
 it('removes a deleted key from a file written before the panel marked its block', function () {
-    // The old sync wrote bare lines: the panel's keys are indistinguishable
-    // from hand-added ones there, except by being the panel's.
+    // The old sync wrote bare lines, so the panel's keys looked like hand-added ones.
     $file = writeAuthorizedKeys(TEST_KEY."\n".TEST_KEY_2."\n".HAND_KEY."\n");
 
     foreach ([['keep', TEST_KEY], ['drop', TEST_KEY_2]] as [$name, $key]) {

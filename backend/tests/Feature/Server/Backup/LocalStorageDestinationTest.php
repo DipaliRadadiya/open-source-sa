@@ -24,10 +24,9 @@ use Illuminate\Testing\TestResponse;
 use Symfony\Component\Process\Process as RealProcess;
 
 /*
- * #14 (support list, 2026-10-27): backups kept in a folder on this server.
- * The folder is the panel's and private, made only when the user saves, and
- * a backup that would leave the disk too full is refused — before it starts
- * (estimate) and before it is stored (real size).
+ * Backups kept in a folder on this server. The folder is the panel's and private, made only
+ * when the user saves, and a backup that would leave the disk too full is refused: before it
+ * starts (estimate) and before it is stored (real size).
  */
 
 beforeEach(function () {
@@ -219,8 +218,8 @@ describe('saving a destination: the folder', function () {
 });
 
 /*
- * RC-39: the Add-storage form takes the roots and the starting folder from the
- * panel, so the form cannot drift from the rule it is checked against.
+ * The Add-storage form takes the roots and the starting folder from the panel, so the form
+ * cannot drift from the rule it is checked against.
  */
 it('lists where a folder on this server may go, and the default, beside the destinations', function () {
     config([
@@ -431,8 +430,8 @@ describe('a whole backup to this server', function () {
         expect($failed->status)->toBe(BackupStatus::Failed)
             ->and($failed->reason)->toBe('not_enough_space')
             ->and($failed->error_class)->toBe('local_no_space')
-            // Which process ran it (2026-11-24): lets a run whose worker died
-            // be cleared once it has, not after the 65-minute guess.
+            // Which process ran it: lets a run whose worker died be cleared at once, not after
+            // the 65-minute guess.
             ->and($failed->fresh()->worker_pid)->toBe(getmypid())
             ->and($failed->fresh()->worker_started)->not->toBeNull()
             // Refused at the first step: nothing was archived.
@@ -471,8 +470,7 @@ describe('the space check before every backup (2026-10-29)', function () {
             'system_user_id' => $user->id, 'name' => 'Site', 'slug' => 'site', 'domain' => 'site.test',
             'site_type' => 'php', 'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/',
         ]);
-        // The archive is built on this server before it goes anywhere, so a
-        // bucket does not make this server's disk any bigger.
+        // The archive is built on this server first, so a bucket adds no disk space.
         $this->bucket = StorageDestination::create([
             'name' => 'Bucket', 'provider' => 's3',
             'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'b', 'access_key' => 'k', 'secret_key' => 's'],

@@ -10,17 +10,10 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /**
- * A card whose PHP range nothing on the server can reach.
+ * A card whose PHP range nothing on the server can reach: it must not say "available" and then
+ * refuse the filled-in form.
  *
- * Found on an OpenLiteSpeed server on Ubuntu 26.04, 2026-09-26: PrestaShop then
- * ran on 7.2 – 8.1, LiteSpeed publishes lsphp82 – lsphp85 for that release, and
- * the card said "available". The form was filled in and refused with "choose a
- * version in the range". And `POST /php/versions {"version":"8.1"}` — the only
- * way out it pointed at — queued a job that failed minutes later saying the
- * repository was misconfigured, about a repository that was fine.
- *
- * PrestaShop itself now installs a release chosen by PHP and reaches 8.5, so
- * these use Mautic (8.2 – 8.5) on a box that has only 8.1.
+ * Uses Mautic (8.2 – 8.5) on a box that has only 8.1.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -128,8 +121,7 @@ it('leaves a type with no PHP range alone', function () {
 });
 
 it('reads the package index only when nothing installed fits', function () {
-    // Every range in the catalog is reachable from 8.1 or 8.4, so the catalog
-    // must not pay an apt-cache call per type to find that out.
+    // Every range in the catalog is reachable from 8.1 or 8.4, so no apt-cache call per type.
     installedPhp(['8.1', '8.4']);
     phpIndexOffers(['8.1', '8.4']);
 
@@ -143,8 +135,8 @@ it('refuses to create the type, with the reason the card showed', function () {
     $user = SystemUser::create(['username' => 'shopowner', 'home_path' => '/home/shopowner']);
 
     $reason = phpAvailabilityCatalog()['mautic']['unavailable_reason'];
-    // Without this, a catalog that blocks nothing gives null here and null in
-    // the response, and the comparison below passes about nothing.
+    // A catalog that blocks nothing gives null here and in the response, and the comparison
+    // below would pass vacuously.
     expect($reason)->toBeString()->not->toBeEmpty();
 
     $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
@@ -180,8 +172,8 @@ it('still installs a version the index has', function () {
 });
 
 it('accepts an installed version without asking the index', function () {
-    // Asking again is how a half-installed version gets completed, and the
-    // index lists only what is not installed.
+    // Asking again completes a half-installed version, and the index lists only what is not
+    // installed.
     Queue::fake();
     phpIndexOffers([]);
 

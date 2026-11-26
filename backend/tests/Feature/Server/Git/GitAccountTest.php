@@ -15,8 +15,7 @@ beforeEach(function () {
     $this->admin = User::factory()->admin()->create();
     $this->token = $this->admin->createToken('t')->plainTextToken;
 
-    // No test may reach a real provider — an unfaked call is a bug, not a
-    // silent network round-trip.
+    // An unfaked call is a bug, not a silent network round-trip.
     Http::preventStrayRequests();
 });
 
@@ -230,9 +229,8 @@ it('maps only allow-listed repository fields from the provider', function () {
 });
 
 it('tells people which token permissions deploy on push needs (bug #70)', function () {
-    // A Bitbucket token that can add a webhook but not delete one left
-    // deploy on push firing after it was switched off; GitLab's read_api
-    // cannot add a webhook at all.
+    // A Bitbucket token that can add a webhook but not delete one leaves deploy on push firing
+    // after it is switched off; GitLab's read_api cannot add one at all.
     expect(__('git.token_help.bitbucket'))->toContain('delete')
         ->and(__('git.token_help.gitlab'))->toContain('"api"');
 });
@@ -243,8 +241,7 @@ it('leaves out GitLab projects scheduled for deletion (bug #44)', function () {
     Http::fake([
         'gitlab.com/api/v4/projects*' => Http::response([
             ['path_with_namespace' => 'dev/live', 'name' => 'live', 'visibility' => 'private', 'default_branch' => 'main', 'web_url' => 'https://gitlab.com/dev/live'],
-            // Kept by GitLab for days before it really goes; both field names
-            // GitLab has used.
+            // GitLab keeps these for days before deleting; it has used both field names.
             ['path_with_namespace' => 'dev/going', 'name' => 'going', 'visibility' => 'private', 'marked_for_deletion_on' => '2026-10-01'],
             ['path_with_namespace' => 'dev/gone', 'name' => 'gone', 'visibility' => 'private', 'marked_for_deletion_at' => '2026-10-01'],
         ], 200),

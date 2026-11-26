@@ -11,13 +11,11 @@ use Illuminate\Support\Facades\Process;
 
 /**
  * The app badge answers "does the app's main part work?", not "is every
- * container perfect?" (health badge, 2026-11-03).
+ * container perfect?".
  *
- * The case this exists for: Supabase on a server whose containers cannot
- * reach the internet. Its optional Edge Functions container never became
- * healthy, the other nine served Studio, Auth and Storage, and the badge said
- * Failed without naming anything. A recipe service marked `optional` now
- * reports in `health_warnings`; every other container still turns it red,
+ * Example: Supabase's optional Edge Functions container stays unhealthy without
+ * internet while the other nine serve the site. A recipe service marked `optional`
+ * reports in `health_warnings`; every other container still turns the badge red,
  * and the red one is named.
  */
 beforeEach(function () {
@@ -120,8 +118,7 @@ describe('a one-click app with an optional helper', function () {
     })->with(['running', null]);
 
     it('reads running and names the helper when only an optional one is unhealthy', function (?string $stored) {
-        // Live on TeamCompute: functions could not fetch jsr.io and stayed
-        // unhealthy, the site worked, the badge said Failed.
+        // functions cannot fetch jsr.io and stays unhealthy while the site works.
         $this->application->forceFill(['container_status' => $stored])->save();
         fakeDockerContainers(supabaseContainers(['functions' => ['running', 'Up 4 minutes (unhealthy)']]), 'sv-app-'.$this->application->id);
 
@@ -149,7 +146,7 @@ describe('a one-click app with an optional helper', function () {
     ]);
 
     it('keeps a starting helper starting', function () {
-        // "Not healthy yet" is not a problem, and not healthy either.
+        // "Not healthy yet" is neither a problem nor healthy.
         fakeDockerContainers(supabaseContainers(['functions' => ['running', 'Up 5 seconds (health: starting)']]), 'sv-app-'.$this->application->id);
 
         $shown = healthResource($this->application->fresh());
@@ -169,8 +166,8 @@ describe('a one-click app with an optional helper', function () {
     })->with(['running', null]);
 
     it('fails for any essential service, not only the role-app one', function () {
-        // `auth` is role worker, and Supabase without it has no login: only
-        // an explicit `optional` makes a service a helper.
+        // `auth` is role worker, and Supabase has no login without it: only an
+        // explicit `optional` makes a service a helper.
         fakeDockerContainers(supabaseContainers(['auth' => ['restarting', 'Restarting (1) 2 seconds ago']]), 'sv-app-'.$this->application->id);
 
         $shown = healthResource($this->application->fresh());
@@ -180,11 +177,8 @@ describe('a one-click app with an optional helper', function () {
     });
 
     it('fails when the main part has stopped while its helpers keep running', function (?string $stored, string $status) {
-        // The status=running read hid a stopped container, so a kong stopped
-        // by hand next to nine running helpers read green over a dead site.
-        // Exit 0 too: a `docker stop` that kong handles cleanly exits 0, and
-        // every recipe service is `unless-stopped`, so none of them is a job
-        // that is meant to finish.
+        // A stopped kong beside running helpers must not read green. Exit 0 counts too:
+        // `docker stop` exits 0 when handled cleanly, and no recipe service is a job meant to finish.
         $this->application->forceFill(['container_status' => $stored])->save();
         fakeDockerContainers(supabaseContainers(['kong' => ['exited', $status]]), 'sv-app-'.$this->application->id);
 

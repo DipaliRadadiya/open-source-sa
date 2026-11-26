@@ -16,19 +16,13 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * A backup is an address: a key *and* a destination. The row recorded only the
- * key, and reached the destination through its target — which is editable.
+ * A backup is an address: a key *and* a destination, recorded on the row itself.
  *
- * So repointing a target moved history. Every archive written before the change
- * started resolving to a bucket it was never in, and each reader failed
- * differently: download said "missing", restore looked in the wrong bucket
- * *after* taking a safety backup, delete removed the row while the object
- * stayed, and retention did the same silently on every scheduled run.
+ * Reaching the destination through the (editable) target would make repointing it
+ * move history: downloads, restores, deletes and retention would hit the wrong bucket.
  *
- * These tests use two fake disks and pick between them on the destination's own
- * credentials, because a single shared fake — which is what the other backup
- * tests use — cannot tell a right bucket from a wrong one and would pass
- * against the bug.
+ * Two fake disks are picked by the destination's own credentials, because a single
+ * shared fake cannot tell a right bucket from a wrong one.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -62,9 +56,7 @@ beforeEach(function () {
     $this->oldDisk = Storage::fake('old-bucket');
     $this->newDisk = Storage::fake('new-bucket');
 
-    // Discriminates on the credentials DestinationDisk::config() builds, so
-    // asking for the wrong destination gets the wrong bucket — exactly as it
-    // would in production.
+    // Discriminates on the credentials DestinationDisk::config() builds, as in production.
     $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
         app(StorageDriverFactory::class),
         builder: fn (array $config) => $config['key'] === 'old-key' ? $this->oldDisk : $this->newDisk,
@@ -100,8 +92,7 @@ function backupWrittenBeforeRepoint(string $key = 'backups/shop/archive.tar.gz')
 }
 
 it('records the destination it was written to when the backup is created', function () {
-    // Stamped in the model's creating hook rather than by the caller, so the
-    // one creation site cannot be the reason it is right.
+    // Stamped in the model's creating hook, not by the caller.
     $backup = Backup::create([
         'backup_target_id' => $this->backupTarget->id,
         'application_id' => $this->application->id,
@@ -115,9 +106,8 @@ it('records the destination it was written to when the backup is created', funct
 it('downloads an old backup from where it was actually written', function () {
     $backup = backupWrittenBeforeRepoint();
 
-    // Before this was recorded, `exists()` was asked of the NEW bucket, which
-    // has never held this key — so a perfectly good archive answered
-    // "download_missing" and the panel looked broken.
+    // `exists()` must be asked of the OLD bucket, not the new one, or a good archive
+    // answers "download_missing".
     $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
         ->getJson("/api/backups/{$backup->id}/download")
         ->assertSuccessful()
@@ -129,8 +119,7 @@ it('deletes the archive from the old destination, not the new one', function () 
 
     app(DeleteBackup::class)->execute($backup, $this->admin->id);
 
-    // The row going while the object stays is the orphan case: billed forever,
-    // with nothing in the panel pointing at it.
+    // Row gone while the object stays is the orphan case: billed, and invisible in the panel.
     expect($this->oldDisk->exists('backups/shop/archive.tar.gz'))->toBeFalse()
         ->and(Backup::query()->whereKey($backup->id)->exists())->toBeFalse();
 });
@@ -141,17 +130,13 @@ it('names the destination the archive is on, not the one configured today', func
     $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
         ->getJson("/api/backups?filter[application_id]={$this->application->id}")
         ->assertSuccessful()
-        // The history screen exists to answer where a backup went. Reading it
-        // through the target relabelled every past row with today's provider.
+        // History must show where a backup went, not today's target provider.
         ->assertJsonPath('backups.0.storage_destination_name', 'Old Provider');
 });
 
 it('prunes each old archive from its own destination', function () {
-    // The unattended one, and the worst of the four. Retention built a single
-    // disk from the target and used it for every expired row: after a repoint
-    // it asked the NEW bucket about an OLD key, got false, deleted nothing —
-    // and removed the row anyway. Silent, on every scheduled run, and the
-    // object is left with nothing in the panel pointing at it.
+    // Unattended, so the worst case: retention must use each row's own disk, or after a
+    // repoint it deletes the row while the object stays.
     $old = backupWrittenBeforeRepoint('backups/shop/old.tar.gz');
 
     // Retention of 1, so `$old` is surplus once the current run verifies.

@@ -88,8 +88,8 @@ it('leaves the databases alone when the flag is absent', function () {
         ->assertOk()
         ->assertExactJson(['deleted' => true]);
 
-    // Still there, and detached rather than orphaned: `application_id` is
-    // `nullOnDelete`, so the row stays reachable from the Databases screen.
+    // Detached, not orphaned: `application_id` is `nullOnDelete`, so the row stays
+    // reachable from the Databases screen.
     expect(Application::find($app->id))->toBeNull()
         ->and(Database::find($database->id))->not->toBeNull()
         ->and(Database::find($database->id)->application_id)->toBeNull();
@@ -136,8 +136,7 @@ it('deletes the site and then its databases when asked', function () {
         ->assertJsonPath('deleted', true)
         ->assertJsonPath('databases.deleted', ['shop_live'])
         ->assertJsonPath('databases.failed', [])
-        // No warning on a clean delete — it would read as a warning about
-        // nothing.
+        // No warning on a clean delete.
         ->assertJsonMissingPath('message');
 
     expect(Application::find($app->id))->toBeNull()
@@ -145,15 +144,13 @@ it('deletes the site and then its databases when asked', function () {
         // Cascade, so the account goes with its database.
         ->and(DatabaseUser::find($dbUser->id))->toBeNull();
 
-    // Site first, database after. Reversed, a failed site delete would leave a
-    // live site whose data had already been dropped.
+    // Site first, database after: reversed, a failed site delete leaves a live site without its data.
     expect(array_search('site', $order, true))->toBeLessThan(array_search('database', $order, true));
 });
 
 it('takes every database even when one of them fails', function () {
-    // Independent, not one `foreach` inside one `try`: the first failure used
-    // to end the loop in `removeBackups`, and one unreachable target orphaned
-    // everything behind it.
+    // Independent, not one `foreach` inside one `try`: one unreachable target must not
+    // orphan everything behind it in `removeBackups`.
     Process::fake(function ($process) {
         $sql = (string) ($process->input ?? '');
 
@@ -163,30 +160,26 @@ it('takes every database even when one of them fails', function () {
     });
 
     $app = siteForDeletion();
-    // Two attached databases are refused on the attach endpoint, but brownfield
-    // adoption and rows written before that cap exists can still produce them.
+    // The attach endpoint refuses two databases, but adoption and older rows can still produce them.
     $logs = databaseAttachedTo($app, 'shop_logs');
     $live = databaseAttachedTo($app, 'shop_live');
 
     $response = test()->withHeaders(siteDeleteHeaders())
         ->deleteJson("/api/applications/{$app->id}?remove_databases=true")
-        // 200, not 500: the site really is gone, and an error status would
-        // tell the panel nothing happened when most of it did.
+        // 200, not 500: the site really is gone.
         ->assertOk()
         ->assertJsonPath('deleted', true)
         ->assertJsonPath('databases.deleted', ['shop_live'])
         ->assertJsonPath('databases.failed.0.name', 'shop_logs')
         ->assertJsonPath('databases.failed.0.engine', 'mysql');
 
-    // Named in the message, so the panel can say what is left behind without
-    // the backend hardcoding English.
+    // Named in the message, so the panel can say what is left behind without hardcoded English.
     expect($response->json('message'))->toContain('shop_logs')
         ->and($response->json('databases.failed.0.reference'))->not->toBeEmpty();
 
     expect(Application::find($app->id))->toBeNull()
         ->and(Database::find($live->id))->toBeNull()
-        // Kept, deliberately: `DeleteDatabase` leaves the row so the same
-        // delete can be retried from the Databases screen until it finishes.
+        // `DeleteDatabase` leaves the row so the delete can be retried from the Databases screen.
         ->and(Database::find($logs->id))->not->toBeNull();
 });
 
@@ -223,12 +216,10 @@ it('refuses the flag for someone who can delete sites but not databases', functi
         ->deleteJson("/api/applications/{$app->id}?remove_databases=true")
         ->assertForbidden();
 
-    // The refusal arrives before anything is removed — a 403 here means the
-    // site is still there, not that it went and the database stayed.
+    // The refusal comes before anything is removed: a 403 means the site is still there.
     expect(Application::find($app->id))->not->toBeNull()
         ->and(Database::find($database->id))->not->toBeNull()
-        // Not the default "This action is unauthorized", which would describe
-        // deleting the site — the thing this caller is allowed to do.
+        // Not the default "This action is unauthorized": this caller may delete the site.
         ->and($response->json('message'))->toContain('databases');
 
     Process::assertNothingRan();
@@ -255,9 +246,7 @@ it('rejects a flag that is not a boolean', function () {
     Process::fake();
     $app = siteForDeletion();
 
-    // `remove_files` had no validation at all until this endpoint took a
-    // FormRequest: `boolean()` reads anything it does not recognise as false,
-    // so a typo silently meant "keep" and nothing said so.
+    // `boolean()` reads anything it does not recognise as false, so a typo would silently mean "keep".
     test()->withHeaders(siteDeleteHeaders())
         ->deleteJson("/api/applications/{$app->id}?remove_databases=maybe")
         ->assertStatus(422)

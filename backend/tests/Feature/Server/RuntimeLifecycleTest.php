@@ -159,30 +159,18 @@ it('never makes a network call while answering a request', function () {
 });
 
 it('is primed by both the installer and the panel update script', function () {
-    /*
-     * 🔴 The npm-catalogue bug, one table over, found before it could bite.
-     *
-     * The Node picker now hides versions the project has ended support for,
-     * and it reads "ended support" from this table. An empty table means
-     * unknown, and unknown is deliberately treated as "keep offering it" — so
-     * a panel with no lifecycle data offers every dead release as though it
-     * were fine. Until this change the only thing that filled the table was a
-     * daily schedule, so every fresh install and every update spent up to a
-     * day in exactly that state, which is how a one-click n8n install ended in
-     * a C++ compiler error on Node 21.
-     */
+    // The Node picker hides ended versions based on this table. An empty table means "unknown" and
+    // keeps offering them, so it must be filled at install/update, not only by the daily schedule.
     expect(file_get_contents(base_path('../install.sh')))->toContain('artisan runtimes:refresh-lifecycle')
         ->and(UpdateScript::STEPS)->toContain('refresh_lifecycle_catalogue');
 
-    // After `migrate`, because the table it writes to has to exist first.
+    // After `migrate`: the table must exist first.
     $steps = array_flip(UpdateScript::STEPS);
     expect($steps['refresh_lifecycle_catalogue'])->toBeGreaterThan($steps['migrate']);
 });
 
 it('does not fail an install or an update when github is unreachable', function () {
-    // Same trade as the npm catalogue: a panel that refuses to finish
-    // updating because someone else's API was down is worse than one that
-    // briefly offers a dead Node version. Both call sites guard the exit
+    // An update must not fail because someone else's API is down. Both call sites guard the exit
     // code, and the command itself must not report failure either.
     Http::fake(fn () => Http::response('', 500));
 

@@ -1,18 +1,13 @@
 <?php
 
 /*
- * install.sh running beside Ubuntu's first-boot updates.
+ * install.sh running beside Ubuntu's first-boot updates (unattended-upgrades is never
+ * interrupted; the install copes with it):
  *
- * With every package installed in one block (InstallerAptPhaseTest), Ubuntu's
- * unattended-upgrades now runs while the panel is configured and built. Never
- * interrupted; instead the install copes with what it can do to us:
- *
- *  - memory: a small server waits for the updates before building; a larger
- *    one builds beside them as the process the kernel stops first, and builds
- *    again alone if it was stopped;
+ *  - memory: a small server waits for the updates before building; a larger one builds beside
+ *    them as the process the kernel stops first, and builds again alone if it was stopped;
  *  - a restart by their needrestart hook: certbot and the Redis probe retry;
- *  - the end: "done" is said as soon as the panel works, with a note while
- *    the updates are still going.
+ *  - the end: "done" is said as soon as the panel works, with a note while updates still run.
  */
 
 /** @return array{code: int, out: string} */
@@ -236,10 +231,8 @@ describe('the end of the install', function () {
 });
 
 it('keeps needrestart from restarting the queue worker, for good', function () {
-    // Live (2026-11-02): needrestart, run by Ubuntu's updates, restarted the
-    // queue worker while it ran a MariaDB install that was waiting for the
-    // lock those same updates held. The worker drains before it stops, so each
-    // waited for the other until the install gave up.
+    // A needrestart restart of the queue worker deadlocks with an install waiting on the apt
+    // lock: the worker drains before it stops.
     $dir = sys_get_temp_dir().'/installer-nr-'.bin2hex(random_bytes(4));
     mkdir($dir);
 

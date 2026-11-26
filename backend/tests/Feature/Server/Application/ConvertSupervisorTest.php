@@ -11,10 +11,9 @@ use Illuminate\Support\Facades\Process;
 /**
  * Moving an adopted application off the old panel's daemon onto a unit.
  *
- * Adoption cannot do this — taking a server over must not restart a customer's
- * site — so it is a separate, explicit choice. It restarts the application, and
- * the only thing that makes that acceptable is that it puts everything back if
- * the new supervisor cannot serve a page.
+ * Adoption must not restart a customer's site, so this is a separate, explicit choice. It
+ * restarts the application, which is acceptable only because it puts everything back if the new
+ * supervisor cannot serve a page.
  */
 beforeEach(function () {
     ServerCapability::query()->delete();
@@ -106,8 +105,7 @@ it('discards the old definition only after the new one serves a page', function 
     $readiness = $order->search(fn (string $c) => str_starts_with($c, 'curl'));
     $delete = $order->search(fn (string $c) => str_contains($c, 'pm2 delete legacy-api'));
 
-    // Until `pm2 delete` runs, the daemon still holds a complete definition of
-    // this application — and that definition is the rollback.
+    // Until `pm2 delete` runs, the daemon's definition of the application is the rollback.
     expect($readiness)->not->toBeFalse()
         ->and($delete)->not->toBeFalse()
         ->and($delete)->toBeGreaterThan($readiness);
@@ -127,8 +125,8 @@ it('records the new mode and forgets the daemon\'s name for it', function () {
 it('puts the application back under PM2 when the unit will not serve', function () {
     $application = convertibleApp();
 
-    // The unit starts and stays up; the application answers 502. This is the
-    // case `is-active` cannot see and the whole reason readiness is checked.
+    // The unit stays up but the application answers 502: `is-active` cannot see this, which is
+    // why readiness is checked.
     $ran = convertFake(['readiness' => '502']);
 
     expect(fn () => app(ConvertSupervisor::class)->toSystemd($application, '/home/appuser/api.test'))
@@ -155,12 +153,9 @@ it('never deletes the PM2 definition it might have to roll back to', function ()
 it('removes the half-built unit before reverting the mode', function () {
     $application = convertibleApp();
 
-    // Readiness, not start, so `apply()` succeeded and did not clean up after
-    // itself — the unit is live and only this rollback can take it out.
-    //
-    // `ProcessSupervisor::remove()` routes on the mode. Reverting first would
-    // send the removal to the PM2 driver and leave our unit enabled on disk —
-    // starting a second copy of this application at the next boot.
+    // `apply()` succeeded, so the unit is live and only this rollback can remove it.
+    // `ProcessSupervisor::remove()` routes on the mode: reverting first would send the removal to
+    // the PM2 driver and leave the unit enabled, starting a second copy at the next boot.
     $ran = convertFake(['readiness' => '503']);
 
     expect(fn () => app(ConvertSupervisor::class)->toSystemd($application, '/home/appuser/api.test'))
@@ -179,10 +174,8 @@ it('removes the half-built unit before reverting the mode', function () {
 });
 
 it('refuses an application with no entrypoint systemd could execute', function () {
-    // The old panel stored `npm run start` and rewrote it on the way to PM2, so
-    // many adopted applications have nothing that could go in an ExecStart.
-    // Guessing one by reading package.json is how an adopted site fails to
-    // come back; the user supplies it.
+    // Many adopted applications have no command that could go in an ExecStart (the old panel
+    // stored `npm run start` and rewrote it for PM2). Never guess one from package.json.
     $application = convertibleApp(['start_command' => null]);
 
     Process::fake();

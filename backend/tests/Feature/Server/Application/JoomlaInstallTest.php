@@ -100,9 +100,8 @@ it('unpacks without stripping, because the package has no wrapping directory', f
 
     $tar = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'tar')['command'];
 
-    // Joomla's entries start at `administrator/`. Stripping a component would
-    // discard the top-level directories and scatter their contents across the
-    // web root.
+    // Joomla's entries start at `administrator/`; stripping a component would scatter their
+    // contents across the web root.
     expect($tar)->not->toContain('--strip-components=1');
 });
 
@@ -145,9 +144,8 @@ it('answers the prompts admin-first, which is the reverse of Nextcloud\'s order'
 
     $lines = explode("\n", joomlaInstallRun($runs)['input']);
 
-    // Joomla asks for the admin password (4th field) before the database one
-    // (9th). Reversed, the install succeeds with the two swapped and the user
-    // is locked out of a site that otherwise looks fine.
+    // Joomla asks for the admin password (4th field) before the database one (9th). Reversed,
+    // the install succeeds with the two swapped and the user is locked out.
     expect($lines[0])->toBe('JoomlaPassw0rd!')
         ->and($lines[1])->not->toBe('JoomlaPassw0rd!')
         ->and($lines[1])->not->toBe('');
@@ -157,8 +155,7 @@ it('passes every non-secret option so Joomla has nothing else to ask about', fun
     fakeJoomlaReleases();
     $command = joomlaInstallRun(installJoomla())['command'];
 
-    // Anything omitted becomes a prompt, and a prompt with nothing to answer
-    // it hangs the install until the timeout.
+    // Anything omitted becomes a prompt, which hangs the install until the timeout.
     expect($command)->toContain('--site-name=My Joomla Site')
         ->and($command)->toContain('--admin-user=Jane Admin')
         ->and($command)->toContain('--admin-username=jadmin')
@@ -188,8 +185,7 @@ it('generates a table prefix when none is given', function () {
 });
 
 it('starts the table prefix with a letter, which Joomla requires', function () {
-    // Joomla refuses `42k4p_` ("must start with a letter"). Every random draw
-    // here is digits, the worst case the old `Str::random(5)` could produce.
+    // Joomla refuses `42k4p_` ("must start with a letter"); an all-digit draw is the worst case.
     Str::createRandomStringsUsing(fn (int $length) => str_repeat('4', $length));
     fakeJoomlaReleases();
 
@@ -208,8 +204,7 @@ it('tells Joomla to speak PostgreSQL when that is the database it was given', fu
     fakeJoomlaReleases();
     $command = joomlaInstallRun(installJoomla('postgresql'))['command'];
 
-    // `pgsql` is one of the three values Joomla's own db_type field declares
-    // as supported; mysqli is not a superset of it.
+    // `pgsql` is one of the db_type values Joomla declares supported; mysqli is not a superset.
     expect($command)->toContain('--db-type=pgsql')
         ->not->toContain('--db-type=mysqli');
 });
@@ -218,13 +213,10 @@ it('carries a moved port inside the host, because Joomla has no --db-port', func
     fakeJoomlaReleases();
     $command = joomlaInstallRun(installJoomla(null, 25060))['command'];
 
-    // Joomla's setup form defines no db_port field at all; its own docs say a
-    // non-standard port "can be specified by adding it to the end of the host
-    // name". 25060 comes off the connection record, not a literal here.
+    // Joomla's setup form has no db_port field; a non-standard port is appended to the host
+    // name. 25060 comes off the connection record.
     expect($command)->toContain('--db-host=127.0.0.1:25060')
-        // Proof the option really is absent from the CLI rather than just
-        // unused: passing one would be silently ignored, which is the failure
-        // this shape exists to avoid.
+        // The option is absent from the CLI, not just unused: passing one would be silently ignored.
         ->and(collect($command)->contains(fn ($a) => str_starts_with((string) $a, '--db-port')))
         ->toBeFalse();
 });
@@ -237,9 +229,8 @@ it('carries a moved PostgreSQL port the same way', function () {
 });
 
 it('leaves a stock host bare, as every existing Joomla site has it', function () {
-    // 3306 is what Joomla's driver assumes, and Joomla treats `host` and
-    // `host:3306` as two distinct connections to the same server — so naming
-    // the default is not free, and saying nothing is what works today.
+    // 3306 is what Joomla's driver assumes, and it treats `host` and `host:3306` as two distinct
+    // connections, so the default port is left unnamed.
     fakeJoomlaReleases();
     $command = joomlaInstallRun(installJoomla())['command'];
 
