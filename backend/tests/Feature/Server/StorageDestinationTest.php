@@ -26,11 +26,13 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use League\Flysystem\Ftp\UnableToAuthenticate as FtpUnableToAuthenticate;
 use League\Flysystem\Ftp\UnableToResolveConnectionRoot;
 use League\Flysystem\PhpseclibV3\UnableToEstablishAuthenticityOfHost;
 use League\Flysystem\UnableToWriteFile;
 use phpseclib3\Crypt\EC;
+use Ramsey\Uuid\Uuid;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -1410,6 +1412,22 @@ describe('S3 failure classification', function () {
     it('does not call an unrelated S3 error a credentials problem', function () {
         expect(probeS3With(s3ErrorResponse(500, 'InternalError'))['error_class'])
             ->not->toBe('invalid_credentials');
+    });
+
+    // The error message holds the probe key's random UUID; one containing "403" made an
+    // unreachable host read as a credentials problem, now and then.
+    it('is not fooled by a 403 inside the probe key', function () {
+        Str::createUuidsUsing(fn () => Uuid::fromString('0b8c4031-aaaa-4bbb-8ccc-1234567890ab'));
+
+        try {
+            expect(probeS3With(curlFailure(7))['error_class'])->toBe('unreachable');
+        } finally {
+            Str::createUuidsNormally();
+        }
+    });
+
+    it('still reads a 403 Forbidden status as a credentials problem', function () {
+        expect(probeS3With(new Response(403, [], ''))['error_class'])->toBe('invalid_credentials');
     });
 });
 
