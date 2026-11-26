@@ -216,6 +216,26 @@ describe('the ticker process', function () {
             ->and($pid)->toBeGreaterThan(0)
             ->and(file_exists("/proc/{$pid}"))->toBeFalse();
     });
+
+    // progress_stop resends TERM until the ticker is gone: a TERM that lands before the ticker
+    // sets its trap is lost (rare, seen under load), and one kill then waited forever. This
+    // only checks the resend loop ends; the race itself is too rare to hit here. The watchdog
+    // ends the run instead of hanging the suite.
+    it('stops even when stopped the moment it starts', function () {
+        $run = progressRun('LOG_FILE=$(mktemp); now_s() { date +%s; }; ubuntu_updates_running() { return 1; }
+            trap "true" EXIT
+            ( exec >/dev/null 2>&1; for _ in $(seq 1 300); do sleep 0.1; done; kill -KILL $$ $(pgrep -P $$) ) &
+            wd=$!
+            for i in $(seq 1 40); do
+                progress_start "testing" heartbeat >/dev/null 2>&1
+                progress_stop
+            done
+            kill "$wd"
+            rm -f "$LOG_FILE"
+            echo DONE', ...[...TICKER_FUNCTIONS, 'progress_start', 'progress_stop']);
+
+        expect($run['out'])->toBe('DONE');
+    });
 });
 
 describe('wait_for_apt_lock', function () {

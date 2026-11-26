@@ -605,7 +605,19 @@ progress_start() {
 
 progress_stop() {
     [[ -n "${PROGRESS_PID:-}" ]] || return 0
-    kill "$PROGRESS_PID" 2>/dev/null || true
+    local state tries=0
+    # A TERM that lands before the ticker has set its trap is lost, and the wait below would
+    # then never return. So send it until the ticker has exited (a zombie still takes kill).
+    while kill "$PROGRESS_PID" 2>/dev/null; do
+        state=""
+        read -r _ _ state _ 2>/dev/null </proc/"$PROGRESS_PID"/stat || break
+        [[ "$state" == Z ]] && break
+        if (( ++tries >= 50 )); then
+            kill -KILL "$PROGRESS_PID" 2>/dev/null || true
+            break
+        fi
+        sleep 0.1
+    done
     wait "$PROGRESS_PID" 2>/dev/null || true
     PROGRESS_PID=""
 }
