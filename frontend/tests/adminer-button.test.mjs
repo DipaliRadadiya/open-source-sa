@@ -34,16 +34,19 @@ test("no database user, no sign-in", () => {
 });
 
 test("the button follows phpMyAdmin's flow: manage only, tab only on the URL, a picker for several", () => {
-  const button = read("components/databases/adminer-button.jsx");
+  const button = read("components/databases/db-tool-button.jsx");
+  const adminer = read("components/databases/adminer-button.jsx");
   assert.match(button, /if \(state === "hidden" \|\| !canManage\) return null;/);
   const body = button.slice(button.indexOf("async function open("));
-  const call = body.indexOf("await adminerSso(");
+  const call = body.indexOf("await tool.sso(");
+  assert.match(adminer, /sso: adminerSso/);
   const tab = body.indexOf("openUrlInNewTab(url)");
   assert.ok(call !== -1 && tab > call, "the tab must open only once the URL is known");
   assert.match(button, /sites !== null && sites\.length > 1/);
   assert.match(button, /onSelect=\{\(\) => open\(site\.id\)\}/);
   assert.match(button, /onClick=\{\(\) => open\(\)\}/);
-  assert.match(button, /\/applications\/create\?type=adminer/);
+  assert.match(adminer, /type: "adminer"/);
+  assert.match(button, /\/applications\/create\?type=\$\{tool\.type\}/);
 });
 
 test("the API call and the lookup match the endpoint", () => {

@@ -64,12 +64,14 @@ test("the install link matches the create page's own parameter", () => {
     path.join(root, "components/databases/phpmyadmin-button.jsx"),
     "utf8",
   );
+  const shared = fs.readFileSync(path.join(root, "components/databases/db-tool-button.jsx"), "utf8");
   const page = fs.readFileSync(
     path.join(root, "app/(app)/applications/create/page.jsx"),
     "utf8",
   );
 
-  assert.match(button, /\/applications\/create\?type=phpmyadmin/, "the button no longer links with ?type=");
+  assert.match(button, /type: "phpmyadmin"/, "the button no longer links with ?type=");
+  assert.match(shared, /\/applications\/create\?type=\$\{tool\.type\}/, "the button no longer links with ?type=");
   assert.match(page, /sp\?\.type/, "the create page no longer reads ?type=");
   assert.match(page, /siteTypes\.some/, "the create page no longer validates ?type= against the real list");
 });
@@ -114,7 +116,7 @@ test("the schema never invents a user count the API did not send", () => {
 // --- The picker, added when the SSO endpoint learned `application_id` ---
 
 test("a server with several installations is asked which one, not guessed at", () => {
-  const button = fs.readFileSync(path.join(root, "components/databases/phpmyadmin-button.jsx"), "utf8");
+  const button = fs.readFileSync(path.join(root, "components/databases/db-tool-button.jsx"), "utf8");
   assert.match(
     button,
     /sites !== null && sites\.length > 1/,
@@ -124,7 +126,7 @@ test("a server with several installations is asked which one, not guessed at", (
 });
 
 test("the plain button does not hand its click event to the site id", () => {
-  const button = fs.readFileSync(path.join(root, "components/databases/phpmyadmin-button.jsx"), "utf8");
+  const button = fs.readFileSync(path.join(root, "components/databases/db-tool-button.jsx"), "utf8");
   assert.match(
     button,
     /onClick=\{\(\) => open\(\)\}/,
@@ -135,9 +137,9 @@ test("the plain button does not hand its click event to the site id", () => {
 test("no tab opens until the phpMyAdmin URL exists (Krishna, 2026-09-29)", () => {
   // The old flow opened about:blank on the click and held it through the SSO
   // call. The button now carries the wait and the tab opens onto phpMyAdmin.
-  const button = fs.readFileSync(path.join(root, "components/databases/phpmyadmin-button.jsx"), "utf8");
+  const button = fs.readFileSync(path.join(root, "components/databases/db-tool-button.jsx"), "utf8");
   const body = button.slice(button.indexOf("async function open("));
-  const firstAwait = body.indexOf("await phpmyadminSso(");
+  const firstAwait = body.indexOf("await tool.sso(");
   const openTab = body.indexOf("openUrlInNewTab(url)");
   // Straight onto phpMyAdmin — an empty tab navigated later still showed about:blank.
   assert.doesNotMatch(button, /openBlankTab|paintPlaceholder|location\.replace/);

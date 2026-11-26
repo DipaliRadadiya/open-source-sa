@@ -256,7 +256,7 @@ test("File delete starts with Permanently delete ticked, single and bulk", () =>
 });
 
 test("View-only database and system-user roles: withheld secrets read as withheld, phpMyAdmin hidden (backend 30ef82b9)", () => {
-  assert.match(read("components/databases/phpmyadmin-button.jsx"), /if \(state === "hidden" \|\| !canManage\) return null;/);
+  assert.match(read("components/databases/db-tool-button.jsx"), /if \(state === "hidden" \|\| !canManage\) return null;/);
   assert.match(read("components/databases/connection-details.jsx"), /withheld: !canManage && !user\.password && user\.password_known !== false/);
   assert.match(read("components/databases/database-users.jsx"), /!canManage && user\.password_known \? \([\s\S]{0,200}t\("passwordWithheld"\)/);
   assert.match(read("components/system-users/system-users-table.jsx"), /!\(row\.original\.password_known \?\? row\.original\.password\)/);

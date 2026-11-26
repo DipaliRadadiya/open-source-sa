@@ -1,0 +1,198 @@
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import {
+  DisabledReasonProvider,
+  ReasonTooltip,
+} from "@/components/ui/reason-tooltip";
+import { toast } from "sonner";
+import Link from "@/components/ui/app-link";
+import { ChevronDown, Download, Loader2 } from "lucide-react";
+import { userCount } from "@/lib/databases/phpmyadmin-state";
+import { openUrlInNewTab } from "@/lib/browser/new-tab";
+import { apiMessage } from "@/lib/api/error-message";
+import { Button } from "@/components/ui/button";
+import { MenuItemHint } from "@/components/data-table/menu-item-hint";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// Shared by the phpMyAdmin and Adminer buttons. tool = { name, namespace, type, Icon, sso, stateOf }.
+// The SSO token lasts 60s and works once, so navigate straight there.
+export function DbToolButton({
+  tool,
+  database,
+  canManage,
+  compact = false,
+  menuItem = false,
+  variant = "outline",
+  size = "sm",
+  // null means the lookup failed, not none.
+  sites = null,
+}) {
+  const t = useTranslations(tool.namespace);
+  const { Icon } = tool;
+  const [opening, setOpening] = useState(false);
+  const installed = sites === null ? null : sites.length > 0;
+
+  const state = tool.stateOf({
+    engine: database.engine,
+    driver: database.driver,
+    installed,
+    users: userCount(database),
+  });
+
+  if (state === "hidden" || !canManage) return null;
+
+  const Action = menuItem ? DropdownMenuItem : Button;
+  const actionProps = menuItem ? {} : { variant, size };
+
+  if (state === "install") {
+    return (
+      <Action asChild {...actionProps}>
+        <Link href={`/applications/create?type=${tool.type}`}>
+          <Download className="size-4" />
+          {t("install")}
+        </Link>
+      </Action>
+    );
+  }
+
+  if (state === "needs-user") {
+    if (menuItem) {
+      return (
+        <MenuItemHint hint={t("needsUser")}>
+          <DropdownMenuItem disabled>
+            <Icon className="size-4" />
+            {t("open")}
+          </DropdownMenuItem>
+        </MenuItemHint>
+      );
+    }
+    return (
+      <ReasonTooltip reason={t("needsUser")}>
+        <Button type="button" variant={variant} size={size} disabled>
+          <Icon className="size-4" />
+          {compact ? tool.name : t("open")}
+        </Button>
+      </ReasonTooltip>
+    );
+  }
+
+  async function open(applicationId) {
+    setOpening(true);
+    try {
+      const { data } = await tool.sso(database.id, undefined, applicationId);
+      const url = data?.redirect_url;
+      if (!url) throw new Error("no url");
+
+      openUrlInNewTab(url);
+    } catch (error) {
+      toast.error(apiMessage(error, t("failed")));
+    } finally {
+      setOpening(false);
+    }
+  }
+
+  const icon = opening ? (
+    <Loader2 className="size-4 animate-spin" />
+  ) : (
+    <Icon className="size-4" />
+  );
+
+  const label = opening ? t("signingShort") : compact && !menuItem ? tool.name : t("open");
+
+  const select = (event, siteId) => {
+    event.preventDefault();
+    open(siteId);
+  };
+
+  if (sites !== null && sites.length > 1) {
+    if (menuItem) {
+      return (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger disabled={opening}>
+            {icon}
+            {label}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent className="max-w-[min(20rem,90vw)]">
+              <DropdownMenuLabel>{t("choose")}</DropdownMenuLabel>
+              {sites.map((site) => (
+                <DropdownMenuItem
+                  key={site.id}
+                  disabled={opening}
+                  onSelect={(event) => select(event, site.id)}
+                  className="font-mono text-xs wrap-anywhere"
+                >
+                  {site.domain}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+      );
+    }
+    return (
+      <DisabledReasonProvider denied={!canManage}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant={variant}
+              size={size}
+              disabled={!canManage || opening}
+            >
+              {icon}
+              {label}
+              <ChevronDown className="size-4 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-w-[min(20rem,90vw)]">
+            <DropdownMenuLabel>{t("choose")}</DropdownMenuLabel>
+            {sites.map((site) => (
+              <DropdownMenuItem
+                key={site.id}
+                onSelect={() => open(site.id)}
+                className="font-mono text-xs wrap-anywhere"
+              >
+                {site.domain}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </DisabledReasonProvider>
+    );
+  }
+
+  if (menuItem) {
+    return (
+      <DropdownMenuItem disabled={opening} onSelect={select}>
+        {icon}
+        {label}
+      </DropdownMenuItem>
+    );
+  }
+
+  return (
+    <DisabledReasonProvider denied={!canManage}>
+      <Button
+        type="button"
+        variant={variant}
+        size={size}
+        onClick={() => open()}
+        disabled={!canManage || opening}
+      >
+        {icon}
+        {label}
+      </Button>
+    </DisabledReasonProvider>
+  );
+}
