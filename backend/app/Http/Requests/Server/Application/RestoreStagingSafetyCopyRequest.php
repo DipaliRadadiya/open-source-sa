@@ -5,7 +5,7 @@ namespace App\Http\Requests\Server\Application;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * ST-B3: put a pre-push copy of the live database back. Overwrites the live
+ * Put a pre-push copy of the live database back. Overwrites the live
  * database, so the same `app_staging` manage a push needs.
  */
 class RestoreStagingSafetyCopyRequest extends FormRequest

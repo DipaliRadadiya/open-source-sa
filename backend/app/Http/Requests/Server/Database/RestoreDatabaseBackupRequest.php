@@ -36,7 +36,7 @@ class RestoreDatabaseBackupRequest extends FormRequest
             // asks for the domain.
             'confirm' => ['required', 'string'],
             // Back the database up before replacing it, so the restore can be
-            // undone. The user's choice since 2026-10-29; on by default.
+            // undone. On by default.
             'safety_copy' => ['sometimes', 'boolean'],
         ];
     }

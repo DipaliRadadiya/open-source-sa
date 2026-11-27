@@ -13,7 +13,7 @@ use Throwable;
  *
  * A run killed outright (a reboot, a restarted worker, the job's own time
  * limit) cannot say why, so the row only ever read "never reported back"
- * and support had nothing to tell the user (2026-10-29, Dipali). Two things
+ * and support had nothing to tell the user. Two things
  * on the box outlive the run and can be compared with when it started: the
  * boot time and when the queue worker last started. Either one being later
  * than the run's start is the answer. Neither is a guess dressed up: when

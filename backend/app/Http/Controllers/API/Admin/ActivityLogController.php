@@ -52,7 +52,7 @@ class ActivityLogController extends Controller
             $query->where('type', $type);
         }
 
-        // FS-C15 / OLD-18.
+        // Kind: created, changed, removed or failed.
         if ($kind = $request->input('filter.kind')) {
             $kinds->apply($query, $kind);
         }

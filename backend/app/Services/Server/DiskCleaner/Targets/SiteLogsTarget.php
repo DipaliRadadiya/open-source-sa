@@ -10,15 +10,13 @@ use App\Services\Server\DiskCleaner\TruncateLogsTarget;
  * Every hosted site's current log files, in `{home}/{slug}/logs` on every
  * web server ({@see Application::logsPath()}).
  *
- * The cleaner used to look for these under /usr/local/lsws/conf/vhosts/*,
- * where they have not lived since the 2026-09-22 move to one logs directory
- * per site — so no site's logs were ever cleaned, on any stack.
+ * They are not under /usr/local/lsws/conf/vhosts/*: each site has one logs
+ * directory, whatever the stack.
  *
- * Schedulable since 2026-10-26 (Dipali, for servers whose disks fill up). It
- * was manual-only because emptying a site's logs removes its visitor and error
- * history; the keep choice is what makes a schedule acceptable — "keep 7 days"
- * leaves every file still being written and only drops the rotated copies
- * older than a week.
+ * Schedulable, for servers whose disks fill up. Emptying a site's logs removes
+ * its visitor and error history; the keep choice is what makes a schedule
+ * acceptable — "keep 7 days" leaves every file still being written and only
+ * drops the rotated copies older than a week.
  *
  * The rotated copies are its own: {@see ApplicationLogRotation} keeps 14 days
  * of up to 50 MB each beside the current files, and nothing else cleans them —

@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Queue;
  * refusal and the backup cannot disagree about whether a site has volumes.
  */
 beforeEach(function () {
-    // The real recipe, so the fixture is the site the bug was found on.
+    // The real recipe, so the fixture is a real site without volumes.
     expect(app(SiteTypeManager::class)->find('ittools')?->volumeRoles())->toBe([]);
 
     $this->seed(PermissionSeeder::class);

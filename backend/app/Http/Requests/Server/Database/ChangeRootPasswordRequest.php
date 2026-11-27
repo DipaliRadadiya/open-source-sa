@@ -12,7 +12,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * characters are not — a newline cannot be typed back into a client prompt.
  *
  * `current_password` is optional, and used only when the panel cannot reach
- * root any other way (RC-26): a server moved from v7 whose root has a password
+ * root any other way: a server moved from v7 whose root has a password
  * the panel never stored. It goes into a 0600 option file for that one sign-in
  * and is never stored or logged. No control characters there either: a line
  * break would end the option file's password line and start another option.

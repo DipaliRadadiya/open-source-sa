@@ -66,8 +66,8 @@ class AdoptDatabases
     }
 
     /**
-     * Record the accounts that already have rights on an adopted database
-     * (bug #34): it showed 0 users, and deleting it left them behind with
+     * Record the accounts that already have rights on an adopted database,
+     * so it does not show 0 users and deleting it does not leave them behind with
      * their rights. The same record Server Sync makes for a user, through the
      * same code — no password (the engine holds only a hash).
      *

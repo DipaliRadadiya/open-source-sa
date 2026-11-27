@@ -4,8 +4,8 @@ use App\Models\User;
 
 /*
  * Laravel's throttle answers "Too Many Attempts." in English whatever the
- * user's language, and says nothing about when to try again. Found on the
- * login form 2026-10-01.
+ * user's language, and says nothing about when to try again. The login form
+ * is where that shows.
  */
 
 function exhaustLogin(string $username, ?string $language = null)

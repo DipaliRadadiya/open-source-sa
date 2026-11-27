@@ -3,7 +3,7 @@
 namespace App\Services\Server\Php;
 
 /**
- * The few php.ini settings the PHP page offers as a form (RC-8, 2026-10-20),
+ * The few php.ini settings the PHP page offers as a form,
  * read from and written into the server's own php.ini text.
  *
  * Everything else in the file is left exactly as it was: only the lines that

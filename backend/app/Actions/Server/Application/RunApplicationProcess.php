@@ -27,7 +27,7 @@ class RunApplicationProcess
     public function execute(Application $application, string $action): ServerOpsResult
     {
         $result = match ($action) {
-            // Persisted across a reboot, in both directions (bug #99): Stop
+            // Persisted across a reboot, in both directions: Stop
             // only stopped the process, its unit stayed enabled, and the next
             // boot brought back an application the screen said would stay
             // offline "until it is started again".

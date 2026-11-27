@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
 /*
- * Bug #22: a failed CREATE USER or password change put the password into the
+ * A failed CREATE USER or password change put the password into the
  * server log and onto Admin → Error logs, because the engine repeats the
  * statement in its error message and stderr was logged as it came.
  */

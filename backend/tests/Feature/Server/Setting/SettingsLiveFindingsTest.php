@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
 /**
- * Settings, as they behaved on a real OpenLiteSpeed server on 2026-09-23.
+ * Settings, as they behaved on a real OpenLiteSpeed server.
  *
  * Each test here is one thing that went wrong there. The fakes are built so
  * the bug is reproducible, not so the fix is easy: a swap request the disk

@@ -29,7 +29,7 @@ class IndexBackupsRequest extends FormRequest
     {
         return [
             'filter.application_id' => ['sometimes', 'integer', Rule::exists('applications', 'id')],
-            // Added 2026-10-16: a database's own backups, archived backups (of
+            // A database's own backups, archived backups (of
             // a database since deleted), and either by engine — what a restore
             // of an archived backup into another database picks from.
             'filter.database_id' => ['sometimes', 'integer', Rule::exists('databases', 'id')],

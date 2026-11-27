@@ -123,8 +123,8 @@ it('filters by application type — static site does not show workers or php', f
 });
 
 it('shows the .env and magic-login screens only to who may manage them', function (string $siteType, string $screen) {
-    // Operator decision 2026-09-29: a view grant alone does not put these in
-    // the sidebar — there is nothing on them for a viewer to do. The routes
+    // A view grant alone does not put these in the sidebar — there is nothing
+    // on them for a viewer to do. The routes
     // enforce the same rule (VisiblePermissions::MANAGE_ONLY).
     $site = Application::factory()->create(['system_user_id' => $this->systemUser->id, 'site_type' => $siteType]);
 

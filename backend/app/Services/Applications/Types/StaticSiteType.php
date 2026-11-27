@@ -30,7 +30,7 @@ class StaticSiteType extends AbstractSiteType
 
     /**
      * The plain starting point for anyone bringing their own code, so it
-     * sits under Popular next to Git (Dipali, 2026-11-05). It stays in the
+     * sits under Popular next to Git. It stays in the
      * Development category too: Popular is a filter, not a category.
      */
     public function popular(): bool

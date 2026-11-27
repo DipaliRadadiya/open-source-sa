@@ -9,10 +9,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 /*
- * `site_mount_path` (DS-01). Null is the `/app` container sites were first
+ * `site_mount_path`. Null is the `/app` container sites were first
  * created with, so a site with no recorded path must still render `/app`,
  * while a site that has one renders its own path. Asserted on the compose
- * file the site is deployed with, not on the column (DS-09).
+ * file the site is deployed with, not on the column.
  */
 
 function mountedAt(Application $application): string

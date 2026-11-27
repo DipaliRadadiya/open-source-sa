@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 use Throwable;
 
 /**
- * Closes bug #35 on databases made before the fix.
+ * Restricts connections on databases made before new ones were restricted.
  *
  * PostgreSQL grants CONNECT on every new database to PUBLIC, so one site's
  * user could open another site's database and list its tables. New databases

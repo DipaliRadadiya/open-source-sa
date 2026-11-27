@@ -53,7 +53,7 @@ it('validates registration input', function () {
 it('refuses a second first-admin that got past the request check at the same time', function () {
     // RegisterRequest::authorize() runs before the account is created, so two
     // sign-ups arriving together on a fresh panel both passed it. The action
-    // asks again under a lock (found in code review 2026-09-29).
+    // asks again under a lock.
     $this->seed(PermissionSeeder::class);
     $register = app(RegisterFirstAdmin::class);
 

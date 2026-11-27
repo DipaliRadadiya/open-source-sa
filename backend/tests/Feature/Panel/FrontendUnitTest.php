@@ -10,7 +10,7 @@ use App\Services\Panel\UpdateScript;
 use Illuminate\Support\Facades\Process;
 
 /*
- * Bug #15: the panel's web interface listened on every address. Next's
+ * The panel's web interface listened on every address. Next's
  * standalone server binds `HOSTNAME || '0.0.0.0'`, and the unit set only PORT.
  */
 

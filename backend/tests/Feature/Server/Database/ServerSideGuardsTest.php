@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /*
- * FS-C14: guards that existed only in the frontend. The API took each of these
+ * Guards that existed only in the frontend. The API took each of these
  * from anything that called it directly — another client, a second tab, a
  * script — and the screen hiding a button was the only thing in the way.
  */

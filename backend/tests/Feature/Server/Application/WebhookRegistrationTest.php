@@ -239,9 +239,9 @@ describe('gitlab and bitbucket', function () {
 
 describe('a provider that will not let the hook go', function () {
     it('says so when switching off, instead of reporting a clean switch-off', function () {
-        // A Bitbucket API token with write:webhook but not delete:webhook
-        // (the real answer, 2026-09-28): the panel could add the hook and not
-        // remove it, and the screen said "off" while every push kept coming.
+        // A Bitbucket API token with write:webhook but not delete:webhook: the
+        // panel could add the hook and not remove it, and the screen said "off"
+        // while every push kept coming.
         Http::fake(['api.bitbucket.org/*' => Http::response([
             'type' => 'error',
             'error' => ['message' => 'Your credentials lack one or more required privilege scopes.'],

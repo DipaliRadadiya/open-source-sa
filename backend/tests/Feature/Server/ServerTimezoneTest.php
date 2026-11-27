@@ -3,10 +3,9 @@
 use App\Support\ServerTimezone;
 
 /*
- * RC-1 (2026-10-20): `timedatectl set-timezone Asia/Kolkata` repoints
- * /etc/localtime and, on Ubuntu 24.04, leaves /etc/timezone saying Etc/UTC
- * (measured on a test server). Read in that order, every cron job said
- * "Etc/UTC" while it ran 5½ hours earlier.
+ * `timedatectl set-timezone Asia/Kolkata` repoints /etc/localtime and, on
+ * Ubuntu 24.04, leaves /etc/timezone saying Etc/UTC. Read in that order,
+ * every cron job would say "Etc/UTC" while it ran 5½ hours earlier.
  */
 beforeEach(function () {
     $this->tzDir = sys_get_temp_dir().'/sv-oss-tzlink-'.bin2hex(random_bytes(4));
@@ -52,10 +51,10 @@ it('says UTC when neither names a zone', function () {
 });
 
 /*
- * OLD-4 (2026-10-22): the zone was memoised for the life of the process, and
- * the queue worker lives for days — a PHP version installed after a timezone
- * change was given the zone the worker first read. No forget() here: that is
- * exactly what a long-lived worker never calls.
+ * The zone is not memoised for the life of the process, and the queue worker
+ * lives for days — a PHP version installed after a timezone change would be
+ * given the zone the worker first read. No forget() here: that is exactly
+ * what a long-lived worker never calls.
  */
 it('follows a timezone change in the same process without being told', function () {
     symlink('/usr/share/zoneinfo/Etc/UTC', $this->tzDir.'/localtime');

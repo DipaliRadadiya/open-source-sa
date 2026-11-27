@@ -11,7 +11,7 @@ use Throwable;
  *
  * It was not asked at all: `not a key` saved fine, and the failure arrived at
  * the connection test — or, for a destination nobody tested, at the first
- * backup. Measured with phpseclib 3 (2026-09-23): garbage and a passphrase-
+ * backup. With phpseclib 3, garbage and a passphrase-
  * protected key given no passphrase fail with the *same* "Unable to read key",
  * so whether the key is encrypted is read from the key itself, and a pasted
  * public key — the most common mistake — gets its own answer.

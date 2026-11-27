@@ -11,8 +11,7 @@ use Illuminate\Support\Str;
 /*
  * A PHP-FPM reload kills every request in flight unless
  * process_control_timeout lets it wait — and the panel reloads on every site
- * change. Measured on the nginx test server 2026-10-01: 502 without the file,
- * 200 with it.
+ * change. In-flight requests get 502 without the file and 200 with it.
  */
 
 function graceFor(string $stack): FpmReloadGrace

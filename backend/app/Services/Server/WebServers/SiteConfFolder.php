@@ -14,7 +14,7 @@ use App\Services\Server\ServerOps;
  * — the user, or a hacked site — could then add web server config, and
  * `access_log /etc/cron.d/x` is root code. So the folder and what is in it are
  * root's here: the rules keep working exactly as they did, and the site user
- * can read them but no longer change them (Dipali, 2026-11-08, D1a).
+ * can read them but no longer change them.
  *
  * Links are removed, never followed: a link the user planted where the folder
  * should be would otherwise point root's `chown -R` anywhere on the box.

@@ -87,8 +87,7 @@ class UpdateApplication implements ShouldBeUnique, ShouldQueue
 
             // Not `application.updated`: that is the settings save, and two
             // events sharing one key shared one sentence — the one asking for
-            // `:from` and `:to`, shown on every settings save without them
-            // (FS-C22 #21).
+            // `:from` and `:to`, shown on every settings save without them.
             $activity->log('application.update_completed', $application, [
                 'name' => $application->name,
                 'from' => $update->from_version,

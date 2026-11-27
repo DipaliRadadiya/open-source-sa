@@ -9,8 +9,7 @@ use Throwable;
 
 /**
  * The branding Central publishes, read from its public site settings
- * (`GET {central}/api/v1/site-settings`, no login), for the panel to show
- * (2026-10-20, operator's call).
+ * (`GET {central}/api/v1/site-settings`, no login), for the panel to show.
  *
  * Central is the one place a reseller sets their name, logo and colour; the
  * panel used to carry its own copy in .env. Every value is checked before it is

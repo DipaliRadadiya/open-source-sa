@@ -9,7 +9,7 @@ use Illuminate\Http\JsonResponse;
 class BrandingController extends Controller
 {
     /**
-     * The panel's branding, Central's where Central publishes it (2026-10-20).
+     * The panel's branding, Central's where Central publishes it.
      *
      * Same shape as before, so nothing that reads it has to change: Central's
      * name, logo, icon, favicon and colour replace the panel's own one by one,

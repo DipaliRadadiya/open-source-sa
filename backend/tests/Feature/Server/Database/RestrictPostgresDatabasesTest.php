@@ -5,7 +5,7 @@ use App\Models\DatabaseUser;
 use Illuminate\Support\Facades\Process;
 
 /*
- * Bug #35 on databases made before the fix: PUBLIC could CONNECT, so one
+ * Databases made before the fix: PUBLIC could CONNECT, so one
  * site's user could open another site's database. `databases:restrict-postgres`
  * revokes that, keeping every role that really uses each database.
  *

@@ -7,7 +7,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /*
- * Deleting several system users at once (v7's bulk delete, 2026-10-17).
+ * Deleting several system users at once (v7's bulk delete).
  *
  * Each one goes through the single delete, so what matters here is that a
  * refusal for one account is reported beside it and does not stop the others —

@@ -18,12 +18,10 @@ class RestoreEnvironmentRequest extends FormRequest
         return [
             // A name from the backups list, verbatim. It becomes half a path,
             // so anything else is refused rather than sanitised — as a 422.
-            // It used to reach the service unvalidated and come back as a 500
-            // with an error logged (found live 2026-09-29).
             'backup' => ['required', 'string', 'max:64', 'regex:'.ApplicationEnvironment::BACKUP_NAME],
             'restart' => ['sometimes', 'boolean'],
             // Keep a copy of what this replaces, so it can be put back. The
-            // user's choice since 2026-10-29; on unless they turn it off.
+            // user's choice; on unless they turn it off.
             'safety_copy' => ['sometimes', 'boolean'],
         ];
     }

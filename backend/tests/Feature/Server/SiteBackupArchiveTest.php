@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 
 /*
- * Deleting a site archives its backups (2026-10-16, the follow-up to database
- * backups). Before, the rows went with the site and the archives stayed in the
+ * Deleting a site archives its backups. Before, the rows went with the site
+ * and the archives stayed in the
  * bucket with nothing in the panel pointing at them — unlisted, unbillable to
  * anyone's attention, and unrecoverable from the panel.
  */

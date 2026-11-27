@@ -8,8 +8,7 @@ use Illuminate\Support\Facades\Process;
 
 /*
 | Two rules switched off at the same moment both answered 200 and one stayed
-| in ufw (frontend QA FS-C24, reproduced on Ubuntu 26.04). Every ufw change
-| now waits for the one before it.
+| in ufw. Every ufw change now waits for the one before it.
 */
 
 beforeEach(function () {
@@ -47,7 +46,7 @@ it('releases the lock after each change, so the next one runs', function () {
 });
 
 it('does not guess the default policy when ufw does not state it', function () {
-    // An inactive ufw prints only "Status: inactive" (OLD-1).
+    // An inactive ufw prints only "Status: inactive".
     Process::fake(['*' => Process::result(output: "Status: inactive\n")]);
 
     expect(app(UfwFirewall::class)->status())

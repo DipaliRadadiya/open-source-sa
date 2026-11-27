@@ -30,8 +30,8 @@ class ApplicationAvailabilityException extends ServerOperationException
      * refused for a reason the panel already knows and has already put into
      * words — the container keeps restarting, the registry refused the pull.
      * The generic "failed on the server" threw that away and left a reference
-     * only someone with the server-ops log can use; found in Docker QA, where
-     * the user had no way to tell "wait a minute" from "something is broken".
+     * only someone with the server-ops log can use, so the user could not tell
+     * "wait a minute" from "something is broken".
      *
      * Only a reason with its own sentence in `application.failure_reason` is
      * shown. Some steps put free text in `reason` rather than a code, and an

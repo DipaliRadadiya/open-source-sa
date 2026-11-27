@@ -23,7 +23,7 @@ class AddSshKey
         $fingerprint = $this->keys->fingerprint($data['public_key']);
 
         // The same key again is the key already there, returned unchanged —
-        // not a 422 (2026-10-28). Central sends a key to every user it should
+        // not a 422. Central sends a key to every user it should
         // be on; "already there" is the answer it wants, the same one git
         // accounts and storage give. `wasRecentlyCreated` stays false, which
         // is how a caller tells the two apart.
@@ -35,9 +35,9 @@ class AddSshKey
 
         // One transaction around the row and the write: sync() renders the
         // file from the rows, so the row has to exist first — and if the write
-        // is refused, the row must not outlive it. It did: the panel listed a
-        // key the server never received (2026-09-23, a planted symlink the
-        // now user-run write correctly refused).
+        // is refused, the row must not outlive it, or the panel would list a
+        // key the server never received (a planted symlink the user-run write
+        // refuses, for one).
         $key = DB::transaction(function () use ($systemUser, $data, $fingerprint): SshKey {
             $key = $systemUser->sshKeys()->create([
                 'name' => $data['name'],

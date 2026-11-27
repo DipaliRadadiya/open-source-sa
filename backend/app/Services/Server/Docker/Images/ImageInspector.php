@@ -27,7 +27,7 @@ class ImageInspector
     public function __construct(private RegistryClient $registry) {}
 
     /**
-     * @return array<string, mixed> the DS-02 inspect contract
+     * @return array<string, mixed> the inspect contract
      *
      * @throws ImageLookupException when the registry could not be asked
      */

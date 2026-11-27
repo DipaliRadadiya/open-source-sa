@@ -17,8 +17,8 @@ use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Support\Facades\Process;
 
 /*
- * Point 4 of the v7 names plan (Dipali, 2026-11-11): a site's bot blocker,
- * 8G firewall and — on Apache — force HTTPS are written as v7 writes them,
+ * A site's bot blocker, 8G firewall and — on Apache — force HTTPS are
+ * written as v7 writes them,
  * one file each in the site's conf folder, which the vhost loads. On a site
  * from v7 those files are v7's own and keep working: v8 never writes over a
  * file it did not write, and moves v7's aside only when the owner changes

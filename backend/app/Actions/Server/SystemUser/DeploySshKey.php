@@ -8,7 +8,7 @@ use App\Services\Server\Firewall\SshLockoutGuard;
 
 /**
  * One public key onto several system users at once — what central's "put my
- * key on this server" needs (2026-10-28).
+ * key on this server" needs.
  *
  * Each user is its own add, through {@see AddSshKey}, so each keeps every
  * rule a single add has (written as the user, row and file together). One

@@ -18,9 +18,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 /*
- * RC-20 (Krishna, 17 Oct): long jobs disappeared from view once the user left
- * the page that started them, and there was no single place to ask what is
- * running. GET /operations lists them all, cut down to what the role may see.
+ * Long jobs stay in view once the user leaves the page that started them:
+ * GET /operations lists them all, cut down to what the role may see.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -112,9 +111,9 @@ it('needs a signed-in user', function () {
 });
 
 /*
- * RC-36: the top bar polls `?active=1` every 5 s. A backup that started and
- * finished between two polls was never seen running, so the "finished" toast
- * never fired. `finished_after` adds what ended since the last poll.
+ * The top bar polls `?active=1` every 5 s. A backup that started and
+ * finished between two polls would never be seen running, so the "finished"
+ * toast would never fire. `finished_after` adds what ended since the last poll.
  */
 it('adds work that finished after the given moment to the active list, and nothing older', function () {
     $poll = now()->subSeconds(5);

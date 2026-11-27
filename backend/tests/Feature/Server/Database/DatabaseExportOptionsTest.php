@@ -15,8 +15,8 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Export options (Dipali, 2026-10-26): a user's SQL export is gzipped, and an
- * export stays until the user deletes it — nothing deletes one on a schedule.
+ * Export options: a user's SQL export is gzipped, and an export stays until
+ * the user deletes it — nothing deletes one on a schedule.
  */
 
 uses(RefreshDatabase::class);
@@ -71,9 +71,8 @@ describe('an export is the user\'s to delete', function () {
     beforeEach(fn () => Queue::fake());
 
     /*
-     * Dipali, 2026-10-26: exports are not deleted on a schedule. A choice of
-     * days was built and taken back the same day; an old client still sending
-     * one gets an ordinary export that stays until the user deletes it.
+     * Exports are not deleted on a schedule: a client still sending a number
+     * of days gets an ordinary export that stays until the user deletes it.
      */
     it('keeps every export until the user deletes it, whatever a client sends', function () {
         $this->postJson("/api/databases/{$this->db->id}/export", ['keep_days' => 1])
@@ -84,8 +83,8 @@ describe('an export is the user\'s to delete', function () {
     });
 
     it('has no scheduled job that deletes exports, safety copies included', function () {
-        // Dipali, 2026-10-26: an import's safety copy is the user's to delete
-        // too; RC-14's week-long removal was taken back.
+        // An import's safety copy is the user's to delete too; nothing
+        // removes it after a set time.
         $commands = collect(app(Schedule::class)->events())->map(fn ($e) => (string) $e->command);
 
         expect($commands->filter(fn (string $c) => str_contains($c, 'exports:prune')))->toBeEmpty();
@@ -147,9 +146,7 @@ describe('compressed exports', function () {
     });
 });
 
-// Folded into the create migrations by the 2026-11-25 squash: imports have
-// their safety-copy switch, and exports never had the expiry column that was
-// added and dropped again.
+// Imports have their safety-copy switch, and exports have no expiry column.
 it('creates the import safety-copy column and no export expiry', function () {
     expect(Schema::hasColumn('database_imports', 'safety_copy'))->toBeTrue()
         ->and(Schema::hasColumn('database_exports', 'expires_at'))->toBeFalse();

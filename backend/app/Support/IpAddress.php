@@ -3,7 +3,7 @@
 namespace App\Support;
 
 /**
- * One spelling per address (F2B-01, old QA list).
+ * One spelling per address.
  *
  * fail2ban turns `::ffff:1.2.3.4` into `1.2.3.4` before banning, so a guard
  * that compared strings let the mapped form through: banning

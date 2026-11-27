@@ -15,7 +15,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
 /**
- * Installs wp-cli from the setup page (bug #4).
+ * Installs wp-cli from the setup page.
  *
  * Queued because it is a download from GitHub, and `$tries = 1` like every
  * other server install: a retry repeats a failure someone needs to read.

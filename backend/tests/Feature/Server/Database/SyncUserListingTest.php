@@ -8,9 +8,8 @@ use Illuminate\Support\Facades\Process;
 
 /*
  * The accounts Server Sync offers as database users. Both engines got this
- * wrong on a real server (2026-09-24): MariaDB offered none at all, and
- * PostgreSQL offered every login role for every database, the superusers
- * included.
+ * wrong: MariaDB offered none at all, and PostgreSQL offered every login role
+ * for every database, the superusers included.
  */
 beforeEach(function () {
     config(['server.databases.auth_file_dir' => sys_get_temp_dir()]);

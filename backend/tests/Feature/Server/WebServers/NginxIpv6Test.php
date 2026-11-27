@@ -16,12 +16,11 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\View;
 
 /*
- * A follow-up to installer review finding P1. The installer learned to leave
- * out its [::] listens on a host booted with ipv6.disable=1, but every nginx
- * site template the panel renders still had them. On such a host (live,
- * 2026-11-03) creating a static site failed at its config test with
+ * The installer leaves out its [::] listens on a host booted with
+ * ipv6.disable=1, and so must every nginx site template the panel renders. On
+ * such a host, creating a static site would fail at its config test with
  * "socket() [::]:80 failed (97: Address family not supported by protocol)",
- * and so did the catch-all, on [::]:443.
+ * and so would the catch-all, on [::]:443.
  */
 
 beforeEach(function () {

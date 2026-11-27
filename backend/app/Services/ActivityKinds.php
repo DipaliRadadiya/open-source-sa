@@ -7,8 +7,7 @@ use Illuminate\Support\Str;
 
 /**
  * What kind of thing an activity row records — something made, changed,
- * removed, or an attempt that failed (FS-C15) — and whether it is a
- * security event (OLD-18).
+ * removed, or an attempt that failed — and whether it is a security event.
  *
  * Read from the action's name, which already says it: every failure ends in
  * `failed`, every removal in `deleted`/`removed`/… The filter turns a kind

@@ -9,7 +9,7 @@ use Illuminate\Contracts\Events\ShouldHandleEventsAfterCommit;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Keeps the container login map in step with the database (RC-28).
+ * Keeps the container login map in step with the database.
  *
  * Every way the map can change is a write to one of two models: a Docker app
  * created (including a clone or a staging copy), deleted, given a new compose

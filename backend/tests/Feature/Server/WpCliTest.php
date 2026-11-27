@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /**
- * Bug #4: the health check said wp-cli was missing and to "install it from
+ * The health check said wp-cli was missing and to "install it from
  * the setup page", and the setup page had no way to. v7 has the step.
  */
 beforeEach(function () {

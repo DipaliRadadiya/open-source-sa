@@ -8,7 +8,7 @@ use Symfony\Component\Process\Exception\ProcessTimedOutException as SymfonyTimed
 use Symfony\Component\Process\Process as SymfonyProcess;
 
 /*
- * RC-13 (frontend QA, 14 Oct): GET /api/health and the admin panel-update
+ * GET /api/health and the admin panel-update
  * screen answered 500 ProcessTimedOutException for a minute while the
  * frontend was being rebuilt on the same box. A git command that runs out of
  * time is "could not tell", not a broken panel.

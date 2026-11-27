@@ -236,7 +236,7 @@ it('revokes a deleted user\'s tokens', function () {
 it('refuses to remove the last administrator', function () {
     // Deleting yourself is refused, but demoting yourself was not: an only
     // administrator could clear their own flag and leave nobody able to reach
-    // the admin area (found in code review 2026-09-29).
+    // the admin area.
     $admin = User::factory()->admin()->create(['username' => 'onlyadmin']);
 
     $this->actingAs($admin)
@@ -249,8 +249,8 @@ it('refuses to remove the last administrator', function () {
 
 it('refuses an administrator removing their own rights, even when another remains', function () {
     // The frontend locks its own checkbox, but the API allowed it, and the
-    // dialog's second request (role sync) then 403s as a non-admin
-    // (frontend QA FS-C1, 2026-09-29). Another administrator can do it.
+    // dialog's second request (role sync) then 403s as a non-admin.
+    // Another administrator can do it.
     $admin = User::factory()->admin()->create(['username' => 'steppingdown']);
     $other = User::factory()->admin()->create();
 
@@ -270,7 +270,7 @@ it('refuses an administrator removing their own rights, even when another remain
 
 it('refuses usernames with letters outside ASCII', function () {
     // `alpha_dash` alone accepts `qäadmin`, which the form then refuses to
-    // show back as valid (frontend QA FS-A6).
+    // show back as valid.
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)

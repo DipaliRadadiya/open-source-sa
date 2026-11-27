@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Bans in one application's own jail (FS-C45).
+ * Bans in one application's own jail.
  *
  * The application's Fail2ban page could configure its jail and never see what
  * it caught: the list, ban and unban were server-level only, behind the

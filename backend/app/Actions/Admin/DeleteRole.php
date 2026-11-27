@@ -17,7 +17,7 @@ class DeleteRole
         // user's roles both refuse an empty list. Deleting the role was the
         // one way round that: the pivot rows cascade, so a user whose only
         // role this was kept their login and lost every permission, with
-        // nothing on screen saying why (found 2026-10-01). Refused while any
+        // nothing on screen saying why. Refused while any
         // such user exists, naming them, so they are given another role
         // first. Users who hold other roles too just lose this one, which is
         // what the delete dialog tells the admin.

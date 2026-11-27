@@ -6,8 +6,7 @@ use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
 /**
- * Root refused the panel, and only root's current password would get it in
- * (RC-26, 2026-11-05).
+ * Root refused the panel, and only root's current password would get it in.
  *
  * Shaped like a validation error under `current_password`, plus a `reason`
  * (as FileRefusedException): the root-password dialog asks for the current

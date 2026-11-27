@@ -182,7 +182,7 @@ function imgMemos(): array
  * The contract: the frontend is built against exactly these keys.
  */
 
-it('inspects a Hub image through its manifest list and returns the DS-02 contract', function () {
+it('inspects a Hub image through its manifest list and returns the inspect contract', function () {
     imgRegistry(['docker.io/neosmemo/memos:0.31.0' => ['index' => [
         'arm64' => imgConfig(['ExposedPorts' => ['9999/tcp' => []]], [], 'arm64'),
         'amd64' => imgMemos(),

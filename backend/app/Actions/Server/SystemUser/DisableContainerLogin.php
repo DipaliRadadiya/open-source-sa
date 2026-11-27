@@ -10,7 +10,7 @@ use App\Services\Server\AppShell\AppShellFiles;
 use App\Services\Server\ServerOps;
 
 /**
- * Turn container login off (RC-28): the user leaves `sv-app-shell`, and with
+ * Turn container login off: the user leaves `sv-app-shell`, and with
  * it the forced command. Nothing else changes — if SSH access is still on,
  * their next login is an ordinary one on the server, exactly as the System
  * Users screen says.

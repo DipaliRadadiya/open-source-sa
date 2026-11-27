@@ -8,7 +8,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /*
- * FS-C45: an application's Fail2ban page can see and change what its own jail
+ * An application's Fail2ban page can see and change what its own jail
  * has banned, under the application's permission — and only in that jail.
  */
 

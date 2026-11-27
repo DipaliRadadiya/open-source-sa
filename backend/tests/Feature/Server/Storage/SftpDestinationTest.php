@@ -12,8 +12,7 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use phpseclib3\Crypt\EC;
 
 /*
- * SFTP destinations, from testing one end to end on a real server
- * (2026-09-23).
+ * SFTP destinations, from testing one end to end on a real server.
  */
 
 beforeEach(function () {

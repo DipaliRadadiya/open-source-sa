@@ -4,7 +4,7 @@ namespace App\Support;
 
 /**
  * "Is the process that started this still the one running?" — asked of a
- * backup whose worker may have been killed (QA, 2026-11-24).
+ * backup whose worker may have been killed.
  *
  * Errs towards alive. The only answers that count as gone are the kernel
  * saying no such process (ESRCH), or a process under that PID that started

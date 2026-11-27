@@ -30,13 +30,12 @@ class DeleteApplication
         // a site from being deleted, and the failure is logged.
         $this->webhooks->unregister($application);
 
-        // Its backups are archived, not deleted (decision 2026-10-16, the same
-        // as a database's): kept with the site's domain, listed and
-        // downloadable, until someone deletes them. Until now the rows went
-        // with the site and the archives stayed in the bucket with nothing in
-        // the panel pointing at them. Detached from the target first — the
-        // target cascades with the site, and `backups.backup_target_id`
-        // cascades from the target.
+        // Its backups are archived, not deleted (the same as a database's):
+        // kept with the site's domain, listed and downloadable, until someone
+        // deletes them. Otherwise the archives would stay in the bucket with
+        // nothing in the panel pointing at them. Detached from the target
+        // first — the target cascades with the site, and
+        // `backups.backup_target_id` cascades from the target.
         $archived = Backup::query()->where('application_id', $application->id)->update([
             'backup_target_id' => null,
             'application_id' => null,

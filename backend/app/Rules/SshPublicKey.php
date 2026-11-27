@@ -11,7 +11,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
  *
  * Well-formed is not enough: a DSA key, or RSA under 2048 bits, was accepted,
  * written to authorized_keys and listed — and then refused by sshd at login,
- * with nothing in the panel saying why (2026-10-28). Each gets its own
+ * with nothing in the panel saying why. Each gets its own
  * message, because "not a key" and "a key we refuse" are different mistakes.
  */
 class SshPublicKey implements ValidationRule

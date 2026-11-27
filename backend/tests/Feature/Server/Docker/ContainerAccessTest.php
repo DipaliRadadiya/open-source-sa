@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 
 /**
- * `GET /applications/{id}/container/access` (RC-23): what the Command-line access
+ * `GET /applications/{id}/container/access`: what the Command-line access
  * card needs to write `ssh -t <user>@<host> 'sudo docker exec -it <name> sh'`.
  *
  * The container names come out of the STORED compose file, not out of `docker ps`:
@@ -270,8 +270,8 @@ it('reads the SSH port once and not on every page view', function () {
 
 it('ships its YAML parser in a production install', function () {
     // The panel is installed and updated with `composer install --no-dev`. The parser
-    // was a dev dependency, so every test here passed while a live box answered 500
-    // with `Class "Symfony\Component\Yaml\Yaml" not found` (found on the RC-23 check).
+    // must not be a dev dependency: every test here would pass while a production
+    // install answered 500 with `Class "Symfony\Component\Yaml\Yaml" not found`.
     $composer = json_decode((string) file_get_contents(base_path('composer.json')), true);
 
     expect($composer['require'])->toHaveKey('symfony/yaml')

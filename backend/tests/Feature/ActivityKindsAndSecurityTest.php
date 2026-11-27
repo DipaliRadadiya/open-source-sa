@@ -9,7 +9,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Str;
 
 /*
- * FS-C11, FS-C15, OLD-16/17/18: the server log's filters for non-admins, a
+ * The server log's filters for non-admins, a
  * filter by kind of event, failed sign-ins recorded, last sign-in on each
  * user, and a security-events filter.
  */

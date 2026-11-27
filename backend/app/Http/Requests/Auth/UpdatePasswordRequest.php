@@ -19,7 +19,7 @@ class UpdatePasswordRequest extends FormRequest
     {
         return [
             'current_password' => ['required', 'current_password'],
-            // Bug #2: the same password was accepted as a "change".
+            // The same password was accepted as a "change".
             'password' => ['required', 'confirmed', 'different:current_password', Password::defaults()],
         ];
     }

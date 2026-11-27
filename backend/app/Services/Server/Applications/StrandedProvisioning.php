@@ -11,13 +11,12 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Closes out a site whose install job is provably gone (2026-10-18).
+ * Closes out a site whose install job is provably gone.
  *
  * A site leaves `provisioning` when the job finishes, fails, or
  * `ProvisionApplication::failed()` runs. None of these happens when the worker
- * dies without warning, or when it cannot write the answer: on a test server
- * whose disk filled, three Docker installs died and stayed `provisioning` for
- * good. Delete refuses a provisioning site, so the user could never remove one
+ * dies without warning, or when it cannot write the answer (a full disk,
+ * say): the site stays `provisioning` for good. Delete refuses a provisioning site, so the user could never remove one
  * either — "the server is busy", indefinitely, with nothing to do about it.
  *
  * Only a site whose job really started (`provisioning_started_at`), and only

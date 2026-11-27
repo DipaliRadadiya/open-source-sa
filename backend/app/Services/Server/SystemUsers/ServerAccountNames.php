@@ -9,7 +9,7 @@ use App\Services\Server\ServerOps;
  *
  * Both, because `useradd` refuses either: it makes a group of the same name,
  * so `docker`, `sudo` or `lxd` — groups with no user — fail with
- * "group … exists" (RC-27, 2026-10-22). Asking only `getent passwd` let the
+ * "group … exists". Asking only `getent passwd` let the
  * panel accept such a name and then lose it inside the provisioning job.
  */
 class ServerAccountNames

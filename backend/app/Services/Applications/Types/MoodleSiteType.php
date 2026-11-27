@@ -73,7 +73,7 @@ class MoodleSiteType extends AbstractSiteType
     }
 
     /**
-     * Moodle 5.0.9+, measured 2026-09-18.
+     * Moodle 5.0.9+.
      *
      * 🔴 **Pinned, not latest.** `server.installers.moodle.download_url` is
      * `stable500`, so the panel installs the 5.0 line however new Moodle gets.

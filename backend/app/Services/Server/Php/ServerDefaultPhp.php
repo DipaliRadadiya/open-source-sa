@@ -10,8 +10,8 @@ use App\Services\Server\Runtimes\PhpRuntime;
  * "Make default" on the PHP screen moves the `php` command
  * (`PhpRuntime::default()`), while new sites went on starting from
  * `server.default_php_version` — written once by install.sh. After making 8.3
- * the default the create form still offered 8.4 (operator's call 2026-10-01:
- * one default, meaning the same thing everywhere). Existing sites are never
+ * the default the create form still offered 8.4 (one default, meaning the
+ * same thing everywhere). Existing sites are never
  * moved: each stores its own version.
  *
  * The configured value is the fallback for when the server has no default the

@@ -4,10 +4,9 @@ use Illuminate\Support\Facades\View;
 
 /**
  * WP-CLI adds a constant that is not in wp-config.php yet just above
- * WordPress's "That's all, stop editing!" marker. The template had none, so
- * on every WordPress site the panel installed, `wp config set` of any new
- * constant failed ("Could not process the 'wp-config.php' transformation") --
- * found on the nginx test server, 2026-10-02.
+ * WordPress's "That's all, stop editing!" marker. Without it, `wp config set`
+ * of any new constant fails ("Could not process the 'wp-config.php'
+ * transformation").
  */
 function renderedWpConfig(): string
 {

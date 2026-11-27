@@ -23,8 +23,8 @@ class UpdatePhpIniRequest extends FormRequest
             // starting, so it should never be reachable by an accidental
             // request.
             'acknowledged' => ['accepted'],
-            // Keep the current php.ini as php.ini.panel-bak. The user's choice
-            // since 2026-10-29; on unless they turn it off.
+            // Keep the current php.ini as php.ini.panel-bak. On unless they turn
+            // it off.
             'safety_copy' => ['sometimes', 'boolean'],
         ];
     }

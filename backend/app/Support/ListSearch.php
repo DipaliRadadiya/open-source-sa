@@ -27,7 +27,7 @@ class ListSearch
 
         // What was typed is matched as text: `%` and `_` are LIKE wildcards,
         // so a search for `shop_db` also found `shopxdb` and `%` found every
-        // row (QA, 2026-11-19). `!` is the escape character because SQLite has
+        // row. `!` is the escape character because SQLite has
         // none by default and a backslash means different things in MySQL
         // and PostgreSQL string literals.
         $like = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';

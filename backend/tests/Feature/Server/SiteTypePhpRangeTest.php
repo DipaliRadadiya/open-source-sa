@@ -7,13 +7,10 @@ use Illuminate\Support\Facades\Validator;
 /*
 | The PHP range each site type publishes.
 |
-| 🔴 Until 2026-09-18 not one of these had a test, which is why three of them
-| were wrong or missing without anything going red.
-|
-| Every number below was measured on that date from the artifact the panel
-| actually downloads — not from the vendor's newest documentation, which
-| describes a release we may not install. That distinction is the whole reason
-| this file exists:
+| Every number below is measured from the artifact the panel actually
+| downloads — not from the vendor's newest documentation, which describes a
+| release we may not install. That distinction is the whole reason this file
+| exists:
 |
 |   - PrestaShop's stable feed serves 8.2.1; there is no 9.x in it at all.
 |   - Moodle is pinned to `stable500`, so 5.0, not whatever is newest.
@@ -47,12 +44,12 @@ it('publishes the range its installed release declares', function (string $type,
 })->with('published ranges');
 
 it('gives PrestaShop the union of the two branches it can install', function () {
-    // Measured from each release's install/install_version.php, 2026-09-26:
+    // Measured from each release's install/install_version.php:
     // 9.1.5 runs on 8.1 – 8.5, 8.2.8 on 7.2.5 – 8.1. The installer picks per
-    // site PHP (PrestaShopInstallTest), which is the only reason the old 8.1
-    // ceiling may go: on 2026-09-08 a shop on 8.5 died in
-    // ProxyCacheWarmer->warmUp() because it was given PrestaShop 8. 8.5 now
-    // gets 9. Raising this past 8.5 needs a release that says so.
+    // site PHP (PrestaShopInstallTest), which is the only reason an 8.1
+    // ceiling is not needed: PrestaShop 8 on PHP 8.5 dies in
+    // ProxyCacheWarmer->warmUp(), so 8.5 gets 9. Raising this past 8.5 needs
+    // a release that says so.
     $range = app(SiteTypeManager::class)->find('prestashop')?->supportedPhpRange();
 
     expect($range['min'])->toBe('7.2')

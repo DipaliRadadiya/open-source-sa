@@ -20,9 +20,9 @@ use Illuminate\Support\Number;
 use Illuminate\Validation\ValidationException;
 
 /*
- * 2026-10-29 (Dipali): before an action that writes a lot to the disk is
- * accepted, the panel asks whether it fits, and refuses there and then with
- * the numbers — nothing queued, nothing changed.
+ * Before an action that writes a lot to the disk is accepted, the panel asks
+ * whether it fits, and refuses there and then with the numbers — nothing
+ * queued, nothing changed.
  */
 
 beforeEach(function () {

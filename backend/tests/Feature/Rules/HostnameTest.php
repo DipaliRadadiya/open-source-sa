@@ -4,8 +4,8 @@ use App\Rules\Hostname;
 use Illuminate\Support\Facades\Validator;
 
 /*
- * Bug #9: creating a site, staging or clone accepted `-bad-.example.com` and
- * `qa..example.com`; bug #11: the same pattern refused a punycode top-level
+ * Creating a site, staging or clone accepted `-bad-.example.com` and
+ * `qa..example.com`, and the same pattern refused a punycode top-level
  * domain. One rule for every place a site's hostname is entered.
  */
 

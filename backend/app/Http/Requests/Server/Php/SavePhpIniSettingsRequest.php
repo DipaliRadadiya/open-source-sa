@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 /**
- * RC-8: the common php.ini settings of one PHP version, as a form. The same
+ * The common php.ini settings of one PHP version, as a form. The same
  * vocabulary as the per-application PHP settings (`128M`, `1G`, `-1`).
  */
 class SavePhpIniSettingsRequest extends FormRequest
@@ -32,8 +32,8 @@ class SavePhpIniSettingsRequest extends FormRequest
             'max_execution_time' => ['sometimes', 'integer', 'min:0', 'max:3600'],
             'max_input_time' => ['sometimes', 'integer', 'min:-1', 'max:3600'],
             'max_input_vars' => ['sometimes', 'integer', 'min:100', 'max:100000'],
-            // Keep the current php.ini as php.ini.panel-bak. The user's choice
-            // since 2026-10-29; on unless they turn it off.
+            // Keep the current php.ini as php.ini.panel-bak. The user's choice;
+            // on unless they turn it off.
             'safety_copy' => ['sometimes', 'boolean'],
         ];
     }

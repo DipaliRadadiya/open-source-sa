@@ -21,7 +21,7 @@ function runForReal(array $command): RealProcess
 }
 
 /**
- * Putting container login on a server (RC-28): the group, the root helper, the
+ * Putting container login on a server: the group, the root helper, the
  * login wrapper, one sudoers rule and the sshd Match block.
  *
  * Two of those can lock people out of a remote server, so they are checked by

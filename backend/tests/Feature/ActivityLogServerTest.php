@@ -9,8 +9,7 @@ use Illuminate\Support\Facades\Lang;
 /*
  * The server activity log, and search across all three logs.
  *
- * Found testing the live panel (2026-09-23): the server log showed 96 of the
- * server's 216 events. It kept its own list of types — nine of the `server`
+ * The server log kept its own list of types — nine of the `server`
  * scope's nineteen — so PHP, system users, build tools and every site and
  * database event never reached anyone without admin access.
  */

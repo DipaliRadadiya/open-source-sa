@@ -7,7 +7,7 @@ use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
 /**
- * FS-B10: the backup asked for before a staging push did not finish, so the
+ * The backup asked for before a staging push did not finish, so the
  * push was not started. Names the backup row so the screen can link to its
  * reason rather than repeat a generic sentence.
  */

@@ -15,9 +15,8 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * What v7's vhosts did that v8's had dropped (compared line by line against
- * real v7 servers, 2026-11-08). Dipali: vhosts the same as v7, so a site moved
- * from v7 behaves as it did once v8 rewrites its vhost.
+ * What v7's vhosts did that v8's had dropped: vhosts the same as v7, so a site
+ * moved from v7 behaves as it did once v8 rewrites its vhost.
  */
 
 beforeEach(function () {
@@ -131,7 +130,6 @@ it('renders a Node site\'s own v7 location block instead of the default proxy', 
     expect($default)->toContain('proxy_pass http://127.0.0.1:3000;')->toContain('@restarting');
 });
 
-// Folded into create_applications by the 2026-11-25 squash.
 it('creates the nginx_location column with the applications table', function () {
     expect(Schema::hasColumn('applications', 'nginx_location'))->toBeTrue();
 });

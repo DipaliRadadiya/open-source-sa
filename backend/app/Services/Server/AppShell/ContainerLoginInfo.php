@@ -7,7 +7,7 @@ use App\Models\SystemUser;
 use App\Services\Recipes\RecipeRegistry;
 
 /**
- * The container-login half of the Command-line access card (RC-28).
+ * The container-login half of the Command-line access card.
  *
  * Everything here is about the app's OWN system user, the one way in: whether
  * container login is on for it, and the exact lines to type. The strings are

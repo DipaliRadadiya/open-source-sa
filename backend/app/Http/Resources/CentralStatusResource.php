@@ -15,8 +15,8 @@ class CentralStatusResource extends JsonResource
             'token' => $this->resource['enabled']
                 ? $this->resource['masked']
                 : null,
-            // Enabled is "a key exists"; connected is "Central has used it"
-            // (bug #49). Between the two the screen says it is waiting.
+            // Enabled is "a key exists"; connected is "Central has used it".
+            // Between the two the screen says it is waiting.
             'connected' => $this->resource['enabled'] && $this->resource['last_used_at'] !== null,
             'last_used_at' => $this->resource['enabled'] && $this->resource['last_used_at'] !== null
                 ? Carbon::parse($this->resource['last_used_at'])->toIso8601String()

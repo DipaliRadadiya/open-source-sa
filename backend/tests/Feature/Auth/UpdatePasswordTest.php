@@ -49,7 +49,7 @@ it('revokes all existing tokens when password changes', function () {
     expect($user->fresh()->tokens()->count())->toBe(1);
 });
 
-// Bug #2: the same password was accepted as a change.
+// The same password was accepted as a change.
 it('refuses a new password that is the current one', function () {
     $user = User::factory()->create(['password' => bcrypt('OldPassword123')]);
     $token = $user->createToken('test')->plainTextToken;

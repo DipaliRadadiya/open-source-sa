@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Routes the central panel may not call (bug #50).
+ * Routes the central panel may not call.
  *
  * Central signs in as an administrator, so on its own it could reset an
  * administrator's password, create a new administrator or hand out roles —

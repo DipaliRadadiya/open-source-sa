@@ -7,14 +7,12 @@ use Illuminate\Support\Facades\Process;
 /*
  * A container that could not bind its published host port.
  *
- * Found in Docker QA on a real box (.115, 2026-10-30): a pasted file publishing
- * 80 was accepted and then failed at "Container start" with `failed_reason` null,
- * so the page showed only a support reference. The form now refuses a port that
+ * A pasted file publishing 80 was accepted and then failed at "Container start"
+ * with `failed_reason` null, so the page showed only a support reference. The form now refuses a port that
  * is listened on; this names the failure for the race and for anything that
  * reaches the server another way.
  *
- * **Both strings were captured on that box** (Docker 29.9.2), not written from
- * memory.
+ * **Both strings are real Docker 29.9.2 output**, not written from memory.
  */
 
 function portFailure(string $step, string $errorOutput): ?string

@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\Process;
  * The firewall rule a remote database user gets. It was opened as a `default`
  * rule — the origin of the panel's own SSH/HTTP rules — so it could not be
  * removed while the firewall was on, and nothing ever closed it: deleting the
- * user left the database port open to that address for good (nginx test box,
- * 2026-09-26).
+ * user left the database port open to that address for good.
  */
 
 beforeEach(function () {
@@ -132,7 +131,7 @@ it('still protects the panel\'s own seeded rules', function () {
 });
 
 it('leaves no rule behind when ufw refuses it', function () {
-    // The add-on to MY-01: the user was rolled back, the panel's row was not,
+    // Follow-up to the rollback case: the user was rolled back, the panel's row was not,
     // and ufw — which never had the rule — refused to delete it, so it was
     // stuck on the Firewall screen for good.
     config(['server.transient.delay_ms' => 0]);

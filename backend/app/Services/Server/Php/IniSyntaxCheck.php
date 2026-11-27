@@ -12,7 +12,7 @@ use App\Services\Server\ServerOpsResult;
  *     PHP:  syntax error, unexpected end of file, expecting ... on line 4
  *
  * and exits 0 — and then runs with every directive **after** the error
- * ignored. Measured on both stacks (2026-09-23): `lsphp -c php.ini -v` and
+ * ignored. On both stacks `lsphp -c php.ini -v` and
  * `php-fpm8.4 -t` each passed a file with an unclosed quote, and a
  * `max_input_vars = 3000` below it read back as the default 1000. So a config
  * test read by exit code alone let the ini editor save that file, reload, and

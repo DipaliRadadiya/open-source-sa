@@ -19,7 +19,7 @@ class TimezoneController extends Controller
      */
     public function index(Request $request, Timezones $timezones): JsonResponse
     {
-        // `?for=php`: only the zones PHP's date.timezone accepts (FS-B8).
+        // `?for=php`: only the zones PHP's date.timezone accepts.
         return response()->json(['timezones' => $timezones->grouped($request->query('for') === 'php')]);
     }
 }

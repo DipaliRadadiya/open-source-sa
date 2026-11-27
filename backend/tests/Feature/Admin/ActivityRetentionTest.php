@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /*
- * 2026-10-29 (Dipali): the activity log grew forever. An admin chooses how
+ * The activity log would grow forever, so an admin chooses how
  * long it is kept — 3, 6, 12 or 24 months, or everything (the default) — and
  * a daily clean-up deletes what is older.
  */

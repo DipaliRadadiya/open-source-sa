@@ -23,8 +23,8 @@ class RestoreFileBackupRequest extends FormRequest
             // FileBrowser::restoreBackup() against exactly what backup()
             // writes, and anything else is refused rather than sanitised.
             'backup' => ['required', 'string', 'max:255'],
-            // Keep a copy of what this replaces, so it can be put back. The
-            // user's choice since 2026-10-29; on unless they turn it off.
+            // Keep a copy of what this replaces, so it can be put back.
+            // On unless they turn it off.
             'safety_copy' => ['sometimes', 'boolean'],
         ];
     }

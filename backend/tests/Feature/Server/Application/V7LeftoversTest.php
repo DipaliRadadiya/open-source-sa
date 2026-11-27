@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Process;
 
 /**
  * v7's own AI-blocker and 7G/8G files for a site, moved aside the first time
- * the owner changes that setting in v8 (Dipali, 2026-10-13). Only files at
+ * the owner changes that setting in v8. Only files at
  * v7's exact paths for this site, carrying v7's marker for it, never through
  * a link, and put back if the web server's config test then fails.
  */

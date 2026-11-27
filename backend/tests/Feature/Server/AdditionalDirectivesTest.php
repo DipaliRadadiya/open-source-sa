@@ -69,7 +69,7 @@ it('retains supported v7 FPM directives in both stack renderings without accepti
         ->and($parser->forFpm($text))->toBe($text)
         ->and($parser->forIni($text))->toBe("display_errors = Off\nsession.name = V7SESSION")
         // The process manager has its own fields: a pm line is refused, and
-        // never written — not as a pool knob, nor as a PHP setting (2026-10-13).
+        // never written — not as a pool knob, nor as a PHP setting.
         ->and($parser->forFpm('pm.max_children = 20'))->toBe('')
         ->and($parser->refusal('pm.max_children = 20')['reason'])->toBe('directive_pm')
         ->and($parser->refusal('[other-pool]'))->not->toBeNull();

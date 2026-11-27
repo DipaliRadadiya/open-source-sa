@@ -39,9 +39,9 @@ class CreateStagingRequest extends FormRequest
     /**
      * What the site itself rules out, as a 422 the user can read.
      *
-     * Bug #88: both cases reached StagingManager, which can only throw a
+     * Both cases reached StagingManager, which can only throw a
      * generic 500 with a reference, for something that is not a server
-     * failure at all. Bug #89: nothing refused a staging copy of a staging
+     * failure at all. And nothing refused a staging copy of a staging
      * copy, which outlives the first one as a normal-looking site that still
      * swallows every email and hides from search engines.
      *

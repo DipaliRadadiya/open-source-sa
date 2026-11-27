@@ -19,9 +19,8 @@ use Illuminate\Support\Facades\Process;
  * but put it in the site's home, owned by the site user (who could then write
  * web server configuration), and on nginx included it *after* the PHP location,
  * so its "block PHP in uploads" rule never matched: regex locations are
- * first-match, and `/wp-content/uploads/x.php` went to PHP. Measured on
- * 2026-10-02 with a throwaway nginx: 502 (reached PHP) in v7's order, 403 with
- * the include first.
+ * first-match, and `/wp-content/uploads/x.php` went to PHP (502 in v7's order,
+ * 403 with the include first).
  */
 beforeEach(function () {
     config(['server.site_rules_root' => '/etc/panel-site-rules']);

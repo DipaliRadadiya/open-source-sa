@@ -14,10 +14,9 @@ use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Support\Facades\Process;
 
 /*
- * v7 vs v8, 2026-11-11 (Dipali: every stack the same as v7). Three things v7's
- * servers do that v8's did not: use the visitor's address from Cloudflare,
- * compress CSS/JS/JSON on nginx, and keep `www` in Apache's HTTP → HTTPS
- * redirect. Compared on the real v7 and v8 servers' files.
+ * v7 vs v8: every stack behaves the same as v7. Three things v7's servers do
+ * that v8's did not: use the visitor's address from Cloudflare, compress
+ * CSS/JS/JSON on nginx, and keep `www` in Apache's HTTP → HTTPS redirect.
  */
 
 function realIpServer(string $webServer): void

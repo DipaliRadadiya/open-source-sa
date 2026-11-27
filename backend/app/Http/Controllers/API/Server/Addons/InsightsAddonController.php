@@ -93,7 +93,7 @@ class InsightsAddonController extends Controller
      * Reports that are one object or one series rather than a list, and so
      * take no --limit. The toolkit refuses a flag a command does not define,
      * so a `?limit=` sent to one of these is ignored here rather than passed
-     * on (found live: every one of these answered 502).
+     * on (otherwise every one of these answers 502).
      */
     private const UNLIMITED = [
         'dashboard:stats', 'dashboard:top-records', 'dashboard:daily-log-count', 'dashboard:bot-vs-human',

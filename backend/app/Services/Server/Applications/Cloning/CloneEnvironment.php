@@ -3,7 +3,7 @@
 namespace App\Services\Server\Applications\Cloning;
 
 /**
- * A git site's `.env`, pointed at its clone instead of its source (CLN-01).
+ * A git site's `.env`, pointed at its clone instead of its source.
  *
  * Values only, matched exactly: a value that IS the source's database name,
  * user or password becomes the clone's. Keys are not guessed — DB_DATABASE,

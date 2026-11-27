@@ -17,7 +17,7 @@ use Throwable;
  * A copy of one database for a clone: a new database and user of its own on
  * the same engine, holding the source's data, linked to the clone.
  *
- * Shared by the WordPress recipe and the git clone (CLN-01), which needed the
+ * Shared by the WordPress recipe and the git clone, which needed the
  * same three steps — and a clone that shares its source's database is not a
  * copy: every change made "on the copy" lands on the live site.
  */

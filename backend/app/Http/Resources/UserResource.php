@@ -21,7 +21,7 @@ class UserResource extends JsonResource
                 'id' => $role->id,
                 'name' => $role->name,
             ])->all()),
-            // OLD-17: null until the user's first sign-in after this was added.
+            // Null until the user's first sign-in.
             'last_login_at' => $this->last_login_at?->toIso8601String(),
             'last_login_at_human' => $this->last_login_at?->diffForHumans(),
             'last_login_ip' => $this->last_login_ip,

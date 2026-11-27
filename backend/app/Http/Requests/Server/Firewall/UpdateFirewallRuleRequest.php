@@ -59,8 +59,8 @@ class UpdateFirewallRuleRequest extends FormRequest
 
     /**
      * ufw refuses a port range without a protocol ("Must specify 'tcp' or
-     * 'udp' with multiple ports"), and the panel answered that with a 500
-     * (frontend QA FS-C22). Refused here with a reason instead.
+     * 'udp' with multiple ports"), and the panel answered that with a 500.
+     * Refused here with a reason instead.
      */
     private function rangeNeedsOneProtocol(): \Closure
     {

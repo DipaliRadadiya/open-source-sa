@@ -10,8 +10,7 @@ use InvalidArgumentException;
  * `chpasswd` reads a *list* — every line on stdin is another account. So a
  * password carrying a newline is not one password, it is a second
  * instruction: `Secret123\nroot:Owned12345` sets this user's password AND
- * root's. Reproduced on a real server (2026-09-23): changing one user's
- * password changed another's.
+ * root's.
  *
  * The FormRequests refuse control characters, and that is where a person
  * gets told. This is the second guard, at the only place the bytes turn

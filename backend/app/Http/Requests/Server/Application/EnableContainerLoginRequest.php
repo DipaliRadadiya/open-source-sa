@@ -12,7 +12,7 @@ use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Validator;
 
 /**
- * `POST /applications/{application}/container/access` (RC-28).
+ * `POST /applications/{application}/container/access`.
  *
  * The key and the password follow the System Users rules exactly — the same
  * key check, the same password policy — because they end up in the same

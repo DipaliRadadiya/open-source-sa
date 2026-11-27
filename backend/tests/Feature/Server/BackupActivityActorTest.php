@@ -17,7 +17,7 @@ use App\Services\Server\Restores\RestoreRunner;
 use Illuminate\Support\Str;
 
 /*
- * Bug #46. Backups and restores run on the queue with nobody signed in, so
+ * Backups and restores run on the queue with nobody signed in, so
  * their Activity Log entries were written without the person who pressed the
  * button: anonymous in the panel-wide log and missing from that person's own.
  * And Undo, a restore of the safety backup, read as an ordinary restore.

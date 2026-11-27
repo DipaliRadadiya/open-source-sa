@@ -5,10 +5,10 @@ use App\Services\Server\WebServers\CatchAllSite;
 use Illuminate\Support\Facades\Process;
 
 /*
- * Bug #55: a domain no site claims was answered by the first site the web
- * server loaded — on the nginx and Apache test servers, a customer's
- * Akaunting site with its certificate — and on OpenLiteSpeed by the panel's
- * certificate. v7 has a neutral default; this is the panel's.
+ * A domain no site claims was answered by the first site the web server
+ * loaded — on nginx and Apache, a customer's site with its certificate — and
+ * on OpenLiteSpeed by the panel's certificate. v7 has a neutral default; this
+ * is the panel's.
  */
 
 function catchAllServer(string $webServer): void
@@ -102,7 +102,7 @@ function catchAllDisk(array $files = [], string $nginx = '1.28.3', bool $testPas
     return $state;
 }
 
-// v7's names (Dipali, 2026-11-11): what v7 has, where v7 has it.
+// v7's names: what v7 has, where v7 has it.
 const NGINX_CATCH_ALL = '/etc/nginx/sites-available/default';
 const NGINX_CATCH_ALL_SSL = '/etc/nginx/sites-available/000-default-ssl.conf';
 const NGINX_CATCH_ALL_LINK = '/etc/nginx/sites-enabled/default';

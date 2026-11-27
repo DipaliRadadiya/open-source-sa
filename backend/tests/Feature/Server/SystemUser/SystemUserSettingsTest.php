@@ -102,10 +102,10 @@ it('revokes sudo, running gpasswd', function () {
 });
 
 /*
- * FS-C22 #16 (2026-10-23): `admin` also grants sudo (the default sudoers on
- * older Ubuntu, servers moved from v7), and Server Sync counts it. Turning sudo
- * off removed only `sudo`: a user in `admin` alone got a failing gpasswd, one
- * in both kept sudo while the panel said off.
+ * `admin` also grants sudo (the default sudoers on older Ubuntu, servers moved
+ * from v7), and Server Sync counts it. Turning sudo off must remove both
+ * groups: a user in `admin` alone would get a failing gpasswd, one in both
+ * would keep sudo while the panel said off.
  */
 it('takes sudo away from a user who has it only through admin', function () {
     $groups = ['admin', 'www-data'];
@@ -246,8 +246,8 @@ it('denies a viewer (no manage permission) from changing settings', function () 
 });
 
 it('refuses a password with a line break, and never runs chpasswd', function () {
-    // `Password123\nqa-bob:BobHijacked999` changed ANOTHER user's password on
-    // a real server (2026-09-23): chpasswd reads one account per line.
+    // `Password123\nqa-bob:BobHijacked999` would change ANOTHER user's
+    // password: chpasswd reads one account per line.
     Process::fake();
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
@@ -271,7 +271,7 @@ it('will not build a second chpasswd line even when validation is skipped', func
 
 it('refuses a shell this server does not have installed', function () {
     // usermod -s accepts a path that does not exist, and the user can then
-    // never log in — zsh on a stock Ubuntu, reproduced 2026-09-23.
+    // never log in — zsh on a stock Ubuntu, for one.
     Process::fake();
     $this->app->instance(InstalledShells::class, new class extends InstalledShells
     {

@@ -13,7 +13,7 @@ use App\Services\Server\ServerOps;
  * wp-config.php with `wp_` hardcoded. A site installed with another prefix
  * (a common hardening step, and the panel's own installer accepts one) came
  * out pointing at tables that do not exist: WordPress offered to install
- * itself again (frontend QA CL-B5).
+ * itself again.
  */
 class WordPressTablePrefix
 {

@@ -13,9 +13,8 @@ use Illuminate\Support\Facades\Process;
 /*
  * v7 loads every `*.conf` in `{site}/conf/{web server}/` from the vhost: its
  * own bot blocker, 8G firewall and Apache force-HTTPS live there, and so do
- * users' own rules. v8 did not load it, so the first time v8 rewrote a site
- * moved from v7 all of that stopped working, silently (seen on real v7 and v8
- * servers, 2026-11-08). Dipali: vhosts the same as v7. The folder is loaded
+ * users' own rules. If v8 did not load it, the first time v8 rewrote a site
+ * moved from v7 all of that would stop working, silently. The folder is loaded
  * where v7 loads it and is root's, so the rules keep working and the site user
  * can no longer write web server config that runs as root.
  */

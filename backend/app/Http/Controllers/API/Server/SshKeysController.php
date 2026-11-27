@@ -15,9 +15,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * SSH keys across every system user on this server — for central's key list
- * (2026-10-28), where a key is known by its fingerprint, not by this panel's
- * row id. Per-user screens keep using /system-users/{id}/ssh-keys.
+ * SSH keys across every system user on this server — for central's key list,
+ * where a key is known by its fingerprint, not by this panel's row id. Per-user screens keep using /system-users/{id}/ssh-keys.
  *
  * Only keys added through the panel. Keys put into authorized_keys by hand,
  * and root's or the provider's keys, are never listed or touched here.

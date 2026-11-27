@@ -9,7 +9,7 @@ use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 
 /**
- * The activity log's "delete entries older than" choice (2026-10-29).
+ * The activity log's "delete entries older than" choice.
  */
 class ActivityRetentionController extends Controller
 {

@@ -26,7 +26,7 @@ class RemoveSshKey
             $key->delete();
 
             // Named, so a file written before the panel's block existed loses
-            // this key too instead of keeping it as if added by hand (SU-03).
+            // this key too instead of keeping it as if added by hand.
             $this->keys->sync($systemUser, $key->public_key);
         });
 

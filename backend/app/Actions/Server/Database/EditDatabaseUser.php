@@ -28,7 +28,7 @@ class EditDatabaseUser
      */
     public function execute(DatabaseUser $user, array $data): DatabaseUser
     {
-        // FS-C14(a): the panel's own account (and the engines' built-in
+        // The panel's own account (and the engines' built-in
         // ones). Removing or renaming it breaks every database operation
         // with no way back through the panel — the screen only hid it.
         if ($this->manager->isSystemUser($user->username)) {
@@ -48,7 +48,7 @@ class EditDatabaseUser
         $renamed = $newUsername !== $user->username || $newHost !== $user->host;
         $passwordChanged = ! empty($data['password']);
 
-        // Bug #25: renaming onto a name the server already has failed inside
+        // Renaming onto a name the server already has failed inside
         // the engine as a 500. Asked first, as adding a user already does —
         // and only for a new name: a role's host is not part of it on
         // PostgreSQL, so a host-only change would find the user itself.

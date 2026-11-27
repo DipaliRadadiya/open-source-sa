@@ -21,7 +21,7 @@ class DatabaseMonitorController extends Controller
 
         $own = $this->panelUsername($manager, $engine);
 
-        // `is_panel` (FS-C14b): the panel's own connection, which must not get
+        // `is_panel`: the panel's own connection, which must not get
         // a Stop button. Said here so the screen does not have to work it out.
         $processes = array_map(
             fn (array $process): array => $process + ['is_panel' => $this->isPanel($process, $own)],
@@ -39,7 +39,7 @@ class DatabaseMonitorController extends Controller
         $engine = $request->engine();
         $own = $this->panelUsername($manager, $engine);
 
-        // FS-C14(b): refused, not only hidden. Killing the panel's own
+        // Refused, not only hidden. Killing the panel's own
         // connection fails whatever it was doing for somebody.
         $target = collect($manager->engine($engine)->processes())->first(fn (array $p): bool => (string) $p['id'] === $id);
 

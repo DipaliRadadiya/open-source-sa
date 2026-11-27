@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\Process;
 use Symfony\Component\Process\Process as RealProcess;
 
 /*
- * #4 (support list, 2026-10-27): "Run now" starts a cron job once, in the
- * background, as its own account, and its run lands in the job's history.
+ * "Run now" starts a cron job once, in the background, as its own account, and
+ * its run lands in the job's history.
  */
 
 beforeEach(function () {

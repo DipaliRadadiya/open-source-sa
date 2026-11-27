@@ -9,9 +9,8 @@ use Illuminate\Support\Facades\Process;
  * MongoDB's createCollection does not fail on a database that already exists:
  * it adds to it. The panel's name check only asks its own table, so a database
  * on the server it did not know about was taken for a new one, and when the
- * initial user then failed, the create's cleanup dropped it, data and all
- * (live-reproduced 2026-11-06, reports/api-live-1106). The create now asks the
- * server in the same script and refuses.
+ * initial user then failed, the create's cleanup dropped it, data and all. The
+ * create now asks the server in the same script and refuses.
  */
 
 beforeEach(function () {

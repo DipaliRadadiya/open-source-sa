@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Process;
  * functions it calls. The option table is a JSON file, and delete_option()
  * answers true only when there was a row, as WordPress's does.
  *
- * Bug #97: the token was deleted before it was checked, so anyone posting
+ * The token was deleted before it was checked, so anyone posting
  * the field with any value cancelled the administrator's pending login.
  */
 

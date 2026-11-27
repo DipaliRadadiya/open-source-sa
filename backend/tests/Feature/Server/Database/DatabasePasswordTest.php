@@ -2,7 +2,7 @@
 
 use App\Services\Server\Databases\DatabasePassword;
 
-// FS-C22: PrestaShop cut a generated password at `=`; `+` is a space in a URL.
+// PrestaShop cuts a generated password at `=`; `+` is a space in a URL.
 it('generates passwords with no separator characters', function () {
     $passwords = implode('', array_map(fn () => DatabasePassword::generate(), range(1, 500)));
 

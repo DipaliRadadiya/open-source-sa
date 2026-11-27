@@ -8,7 +8,7 @@ use App\Services\Server\WebServers\NginxDriver;
 use App\Services\Server\WebServers\OlsDriver;
 
 /*
- * Bug #75: WordPress runs its scheduled work by requesting its own
+ * WordPress runs its scheduled work by requesting its own
  * wp-cron.php over HTTP, and Password Protection answered that request with
  * the 401 every visitor gets, so nothing scheduled ever ran. Each web server
  * now lets that one path through without a password, and only from this

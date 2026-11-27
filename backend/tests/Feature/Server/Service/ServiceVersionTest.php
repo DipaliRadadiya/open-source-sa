@@ -9,10 +9,9 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
 /*
- * The Services screen shows each service's installed version beside its name
- * (Dipali, 2026-10-27: support asked for installed package versions; just the
- * version, on the existing screen). One dpkg-query, null when there is no
- * package to read.
+ * The Services screen shows each service's installed version beside its name:
+ * just the version, on the existing screen. One dpkg-query, null when there is
+ * no package to read.
  */
 
 beforeEach(function () {

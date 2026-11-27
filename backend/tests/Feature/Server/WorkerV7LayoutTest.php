@@ -35,7 +35,7 @@ class V7WorkerHost
                 return Process::result(errorOutput: 'simulated failure', exitCode: 1);
             }
             // The adopted-program re-check before a remove lists one exact
-            // name without following links (FS-C22 #14).
+            // name without following links.
             if ($args[0] === 'find' && in_array('-name', $args, true)) {
                 $name = $args[array_search('-name', $args, true) + 1];
 
@@ -307,7 +307,7 @@ it('restores an operator-stopped legacy worker without starting it after failure
 
 it('discovers and adopts a canonical v7 file with an indented program header', function () {
     // A site type with a Workers screen: Sync attributes workers to no other
-    // (FS-C22 #14). The fixture's `custom` is not a registered type.
+    // type. The fixture's `custom` is not a registered type.
     $this->workerApplication->forceFill(['site_type' => 'php'])->save();
     $root = $this->workerApplication->rootPath();
     Process::fake(function ($process) use ($root) {

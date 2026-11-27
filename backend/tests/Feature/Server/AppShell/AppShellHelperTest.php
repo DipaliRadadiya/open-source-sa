@@ -5,7 +5,7 @@ use function PanelAppShell\plan;
 use function PanelAppShell\unsafe;
 
 /**
- * The root helper's decisions (RC-28): what an app user's SSH command turns
+ * The root helper's decisions: what an app user's SSH command turns
  * into. These are the real functions from resources/app-shell/helper.php,
  * loaded as a library, so the file installed on servers is the file tested.
  *

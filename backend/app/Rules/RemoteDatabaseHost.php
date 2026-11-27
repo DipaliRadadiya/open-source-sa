@@ -9,7 +9,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * The address a remote database user may connect from: one IPv4 address or
  * an IPv4 range.
  *
- * Bug #37: a shape-only regex took 999.1.1.1. The database accepted the user,
+ * A shape-only regex took 999.1.1.1. The database accepted the user,
  * ufw refused the rule with a 500, and the half-made rule could not be
  * deleted. Like v7, an address that is not remote at all is refused too —
  * 0.0.0.0, a /0 and loopback have their own choices ("Anywhere", "Local").

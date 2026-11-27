@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 
 /**
- * The container login map (RC-28): the root-only file that says which
+ * The container login map: the root-only file that says which
  * containers each system user may log in to. Built from the database and each
  * app's stored compose, rebuilt whenever an app or its owner changes, and
  * written through a temporary file and a rename.

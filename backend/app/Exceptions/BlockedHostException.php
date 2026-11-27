@@ -6,7 +6,7 @@ use RuntimeException;
 
 /**
  * A name that resolves to an address the panel must never connect to
- * (loopback, link-local, cloud metadata), found at connect time (bug #34).
+ * (loopback, link-local, cloud metadata), found at connect time.
  */
 class BlockedHostException extends RuntimeException
 {

@@ -6,8 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Installing or removing the ionCube loader. Its one field is whether to keep
- * a recovery copy of the files it changes until the change has held
- * (2026-10-29, the user's choice); off, they are held in memory instead.
+ * a recovery copy of the files it changes until the change has held;
+ * off, they are held in memory instead.
  */
 class IonCubeRequest extends FormRequest
 {

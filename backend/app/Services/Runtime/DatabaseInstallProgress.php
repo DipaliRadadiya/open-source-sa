@@ -19,10 +19,9 @@ class DatabaseInstallProgress
     public const STEPS = [
         'queued',
         // ServerOps::apt() reports it while another package manager holds the
-        // lock — on a fresh server, Ubuntu's first-boot updates. Missing here
-        // until 2026-11-02, so the first wait threw "Unknown database install
-        // step" and failed an install that only had to wait: found by
-        // installing MariaDB right after the installer said done.
+        // lock — on a fresh server, Ubuntu's first-boot updates. It must be
+        // listed here, or the first wait throws "Unknown database install
+        // step" and fails an install that only had to wait.
         'waiting_for_package_manager',
         'checking_conflicts',
         'preparing_repository',

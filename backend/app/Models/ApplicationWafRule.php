@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ApplicationWafRule extends Model
 {
     /**
-     * The shortest exception the firewall honours (bug #82). An exception
+     * The shortest exception the firewall honours. An exception
      * skips every check for any path containing it, so `a` or `/` switched
      * the firewall off for the whole site.
      */

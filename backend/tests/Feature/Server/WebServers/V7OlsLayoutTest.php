@@ -11,10 +11,10 @@ use Illuminate\Support\Facades\Process;
 /*
  * A v7 OpenLiteSpeed server: `httpd_config.conf` loads `/etc/<brand>-ols/*.conf`,
  * each a `virtualhost` wrapper that includes `<name>/main.conf`, on v7's own
- * `Default` and `DefaultHttps` listeners. v8 used to write main.conf AND its
- * own `virtualHost` + map regions on a second :443 listener, so the site was
- * defined twice (seen on a real v7 server, 2026-11-08). Now the wrapper is
- * written the v7 way and the shared regions are left alone.
+ * `Default` and `DefaultHttps` listeners. Writing main.conf AND its own
+ * `virtualHost` + map regions on a second :443 listener would define the site
+ * twice, so the wrapper is written the v7 way and the shared regions are left
+ * alone.
  */
 
 beforeEach(function () {

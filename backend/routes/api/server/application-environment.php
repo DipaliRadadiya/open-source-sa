@@ -16,11 +16,11 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Manage, including reads: the `.env` screen is shown only to who may edit it
-// (operator decision 2026-09-29; see VisiblePermissions::MANAGE_ONLY).
+// (see VisiblePermissions::MANAGE_ONLY).
 Route::get('/applications/{application}/environment', [ApplicationEnvironmentController::class, 'show'])
     ->middleware('permission:app_environment,manage');
 
-// ENV-1: the save's own checks, before saving. Manage, like the save: the
+// The save's own checks, before saving. Manage, like the save: the
 // body is the whole file, secrets included.
 Route::post('/applications/{application}/environment/check', [ApplicationEnvironmentController::class, 'check'])
     ->middleware(['permission:app_environment,manage', 'throttle:60,1']);

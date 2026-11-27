@@ -11,7 +11,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Http;
 
 /*
- * Bug #34: the host checks judged only the text typed, so a name that
+ * The host checks judged only the text typed, so a name that
  * resolves to loopback or the cloud metadata address — `127.0.0.1.nip.io` is
  * a public wildcard DNS name for 127.0.0.1 — passed, and the panel connected
  * to itself. Names are now resolved when saved and again when connecting,

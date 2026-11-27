@@ -5,7 +5,7 @@ namespace App\Exceptions\Server\Application;
 use RuntimeException;
 
 /**
- * fail2ban loaded the site's jail on reload and refused it (bug #95).
+ * fail2ban loaded the site's jail on reload and refused it.
  *
  * `fail2ban-client -t` passes configs the running daemon then rejects: a
  * failregex with no <HOST>, a maxretry that is not a number. The panel puts

@@ -17,7 +17,7 @@ class DeleteSystemUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // FS-C31: end the account's SSH sessions and processes first.
+            // End the account's SSH sessions and processes first.
             'end_sessions' => ['sometimes', 'boolean'],
         ];
     }

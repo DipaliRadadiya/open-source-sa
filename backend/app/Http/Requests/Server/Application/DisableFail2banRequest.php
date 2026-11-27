@@ -6,8 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Turning a site's fail2ban jail off. Its one field is whether to keep the
- * files being removed until the reload has held (2026-10-29, the user's
- * choice); off, they are held in memory instead.
+ * files being removed until the reload has held; off, they are held in
+ * memory instead.
  */
 class DisableFail2banRequest extends FormRequest
 {

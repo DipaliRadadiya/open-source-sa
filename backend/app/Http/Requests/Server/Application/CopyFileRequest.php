@@ -24,7 +24,7 @@ class CopyFileRequest extends FormRequest
             // A full target path when one file is named, a destination
             // directory when a selection is: twelve sources cannot share one
             // new name.
-            // Keyed on `paths`, not on each other (2026-10-29): the application's
+            // Keyed on `paths`, not on each other: the application's
             // own folder is the empty path, which arrives as null, so
             // `required_with`/`required_without` read "move these into the top
             // folder" as "no destination given" and refused it.

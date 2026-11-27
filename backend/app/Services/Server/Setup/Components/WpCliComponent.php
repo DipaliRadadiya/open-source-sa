@@ -8,7 +8,7 @@ use App\Services\Server\WpCli\WpCli;
 
 /**
  * wp-cli. The first WordPress install fetches it anyway; this row is for the
- * health check, which reports it missing and sends the user here (bug #4).
+ * health check, which reports it missing and sends the user here.
  *
  * Not recommended: `complete` is about the recommended set, and adding a row
  * to it would mark every existing server's setup unfinished overnight.

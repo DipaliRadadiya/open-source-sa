@@ -6,19 +6,17 @@ use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 /**
- * A hostname a site can be served on (bug #9).
+ * A hostname a site can be served on.
  *
- * Creating a site, a staging copy or a clone, and changing a site's domain,
- * each checked `^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$` — which let `-bad-.example.com`
- * and `qa..example.com` through to a vhost and a certificate request, while
- * adding an alias domain already checked each label. One rule now, for all of
- * them: every label 1–63 characters of letters, digits and hyphens, never
- * starting or ending with a hyphen; at most 253 characters; and a last label
- * that is a real top-level domain — letters, or punycode (`xn--p1ai`, which
- * the old pattern refused: bug #11).
+ * One rule for creating a site, a staging copy or a clone, changing a site's
+ * domain and adding an alias domain: every label 1–63 characters of letters,
+ * digits and hyphens, never starting or ending with a hyphen (so
+ * `-bad-.example.com` and `qa..example.com` never reach a vhost or a
+ * certificate request); at most 253 characters; and a last label that is a
+ * real top-level domain — letters, or punycode (`xn--p1ai`).
  *
  * An address made only of digits is an IP and gets its own message: the
- * server's IP then served this site instead of a 404 (bug #54).
+ * server's IP would otherwise serve this site instead of a 404.
  */
 class Hostname implements ValidationRule
 {

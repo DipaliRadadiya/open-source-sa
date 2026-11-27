@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Process;
 use Symfony\Component\Process\Process as RealProcess;
 
 /*
- * #4 (support list, 2026-10-27): a cron job's last run, its run history and
- * whether it is running, read back out of the markers its log already has.
+ * A cron job's last run, its run history and whether it is running, read back
+ * out of the markers its log already has.
  */
 
 beforeEach(function () {
@@ -354,7 +354,7 @@ describe('last run in the list and on a job', function () {
             return Process::result(output: $real->getOutput(), exitCode: $real->getExitCode());
         });
 
-        // The start is outside the window and is read back on its own (RC-38):
+        // The start is outside the window and is read back on its own:
         // start lines only, never the 200 lines of output.
         expect(app(CronjobHistory::class)->latest([$job])[$job->id])
             ->toMatchArray(['status' => 'succeeded', 'started_at' => '27-10-2026 01:00:00', 'duration_seconds' => 9, 'manual' => false])

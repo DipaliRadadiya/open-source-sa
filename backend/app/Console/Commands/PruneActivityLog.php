@@ -7,9 +7,8 @@ use App\Services\ActivityLogger;
 use Illuminate\Console\Command;
 
 /**
- * The daily clean-up behind the activity log's "keep for" choice
- * (2026-10-29). Does nothing while the choice is "keep everything", the
- * default.
+ * The daily clean-up behind the activity log's "keep for" choice. Does
+ * nothing while the choice is "keep everything", the default.
  */
 class PruneActivityLog extends Command
 {

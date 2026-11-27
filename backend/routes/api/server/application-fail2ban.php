@@ -18,7 +18,7 @@ Route::get('/applications/{application}/fail2ban', [ApplicationFail2banControlle
 Route::delete('/applications/{application}/fail2ban', [ApplicationFail2banController::class, 'destroy'])
     ->middleware(['permission:app_fail2ban,manage', 'throttle:10,1']);
 
-// FS-C45: what this application's own jail has banned, and ban/unban there,
+// What this application's own jail has banned, and ban/unban there,
 // under the application's permission rather than the server's.
 Route::get('/applications/{application}/fail2ban/bans', [ApplicationFail2banBanController::class, 'index'])
     ->middleware('permission:app_fail2ban');

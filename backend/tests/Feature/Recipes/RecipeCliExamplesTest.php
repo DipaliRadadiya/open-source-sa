@@ -5,7 +5,7 @@ use App\Services\Recipes\RecipeRegistry;
 use App\Services\Recipes\RecipeSchema;
 
 /**
- * `cli_examples` (RC-28): optional commands a recipe offers on the
+ * `cli_examples`: optional commands a recipe offers on the
  * Command-line access card, each run in the app's main container. They are
  * pasted into a terminal as part of an `ssh` one-liner, so each must be one
  * short line.
@@ -45,7 +45,7 @@ it('refuses cli_examples that are not short single-line label and command pairs'
     'too many' => [array_fill(0, 11, ['label' => 'List', 'command' => 'ls'])],
 ]);
 
-it('ships OpenClaw\'s browser approval commands, in the form RC-17 verified', function () {
+it('ships OpenClaw\'s browser approval commands, in the verified form', function () {
     $recipe = app(RecipeRegistry::class)->find('openclaw');
 
     expect($recipe->cliExamples)->toBe([

@@ -31,7 +31,7 @@ class AuthenticateUser
     }
 
     /**
-     * OLD-16: a failed sign-in is a security event, and none was recorded.
+     * A failed sign-in is a security event, and none was recorded.
      *
      * On a real account the row is that account's — it shows in their own
      * history, which is where "someone tried my password" belongs. For a

@@ -22,7 +22,7 @@ class BasicInfoController extends Controller
                 // the sign-up screen hidden on a panel with no administrator
                 // and no other way in.
                 'registration_open' => User::query()->where('is_system', false)->doesntExist(),
-                // The version /health reports (bug #51). config('app.version')
+                // The version /health reports. config('app.version')
                 // is a 1.0.0 default nothing updates, so the two disagreed.
                 'app_version' => $installed->versionNumber(),
                 'locales_available' => config('app.available_locales'),

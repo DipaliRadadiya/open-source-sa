@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 
 /**
- * Container login for a Docker app's own system user (RC-28): the RC-23 access
- * endpoint grows the app owner's state and the exact lines to type, and gains
- * POST (turn it on) and DELETE (turn it off).
+ * Container login for a Docker app's own system user: the access endpoint
+ * grows the app owner's state and the exact lines to type, and gains POST (turn
+ * it on) and DELETE (turn it off).
  */
 const LOGIN_TEST_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyForTestingPurposesAXyz deploy@host';
 
@@ -99,7 +99,7 @@ function loginRan(array $command): bool
 }
 
 describe('GET', function () {
-    it('describes the owner and the exact lines to type, keeping the RC-23 fields', function () {
+    it('describes the owner and the exact lines to type, keeping the earlier fields', function () {
         $response = $this->withHeaders(loginHeaders())->getJson(loginUrl())->assertOk();
 
         expect($response->json())->toHaveKeys(['host', 'ssh_port', 'project', 'containers', 'ssh_users'])

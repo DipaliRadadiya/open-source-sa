@@ -8,8 +8,7 @@ namespace App\Services\Server\WebServers;
  * Ubuntu's nginx.conf turns gzip on and leaves the other gzip lines commented,
  * so only `text/html` was compressed — CSS, JavaScript and JSON went out at
  * full size. v7's nginx.conf is Ubuntu's with five of those lines switched on
- * (`gzip_vary` stays commented); this makes the same change in the same file
- * (Dipali, 2026-11-11: v7's places).
+ * (`gzip_vary` stays commented); this makes the same change in the same file.
  *
  * Only a line nothing sets yet: a second one at the http level is a duplicate
  * nginx refuses, and a server from v7 has them all already. A commented line
@@ -28,7 +27,7 @@ class NginxCompression
         'gzip_types' => 'text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript',
     ];
 
-    /** Where the panel wrote these before it used v7's place (2026-11-11). */
+    /** Where the panel wrote these before it used v7's place. */
     private const LEGACY = '/etc/nginx/conf.d/panel-gzip.conf';
 
     public function __construct(

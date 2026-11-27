@@ -19,7 +19,7 @@ class ExtractFileRequest extends FormRequest
     {
         return [
             'path' => ['required', 'string', 'max:1024', new SafeRelativePath],
-            // `present`, not `required` (2026-10-29): the application's own
+            // `present`, not `required`: the application's own
             // folder is the empty path — what the dialog's "Application folder"
             // sends — and `required` refused it, so an archive could not be
             // unpacked there at all. A request that leaves `target` out is

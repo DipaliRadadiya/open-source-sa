@@ -30,7 +30,7 @@ function olsCapabilityDocs(): array
 it('does not tell anyone the bot blocker is unavailable on OpenLiteSpeed', function () {
     // Guarded by what the templates actually do, so this test stops applying
     // by itself if the bot rules are ever removed from them.
-    // In v7's per-site file since 2026-11-11, which every OLS vhost includes.
+    // In v7's per-site file, which every OLS vhost includes.
     expect(file_get_contents(resource_path('views/server/vhosts/openlitespeed/_ai-bot-blocker.blade.php')))->toContain('botBlock');
 
     foreach (['php', 'static', 'node'] as $template) {
@@ -46,8 +46,7 @@ it('does not tell anyone the bot blocker is unavailable on OpenLiteSpeed', funct
 });
 
 it('no longer tells anyone the WAF is unavailable on OpenLiteSpeed', function () {
-    // It was the one real gap until 2026-09-30; the docs said so, and must
-    // stop saying so now that the driver renders the rules.
+    // The docs must not call it a gap now that the driver renders the rules.
     expect(app(OlsDriver::class)->supportsWaf())->toBeTrue();
 
     foreach (olsCapabilityDocs() as $file => $contents) {

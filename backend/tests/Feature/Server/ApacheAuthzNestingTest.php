@@ -7,7 +7,7 @@
  * `<RequireAny>` it "has no effect" — and Apache does not ignore it, it fails
  * the whole config test. The WAF's enforce block nested a `<RequireNone>`
  * straight in a `<RequireAny>`, so turning the WAF on for any Apache site
- * answered 500 and changed nothing (found on the Apache test box).
+ * answered 500 and changed nothing.
  *
  * Read from the template source, because the nesting is fixed text: the
  * Blade conditionals only add or drop leaf `Require` lines inside it.
@@ -24,8 +24,8 @@ function apacheTemplateSources(): array
 }
 
 it('finds the Apache templates that carry authorization blocks', function () {
-    // `RequireAll`: the firewall's RequireNone left the vhost for v7's
-    // 8g-firewall.conf (a rewrite, 2026-11-11); Basic Auth is still here.
+    // `RequireAll`: the firewall's RequireNone lives in 8g-firewall.conf, not
+    // the vhost; Basic Auth is still here.
     $withAuthz = array_filter(apacheTemplateSources(), fn (string $source) => str_contains($source, '<RequireAll>'));
 
     // Without this, an empty glob makes the check below vacuous.

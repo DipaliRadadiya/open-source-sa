@@ -23,7 +23,7 @@ class RenameFileRequest extends FormRequest
         return array_merge($this->pathRules(), [
             // Renaming is single-path by nature; a selection can only be
             // moved, so it names a destination directory instead.
-            // Keyed on `paths`, not on each other (2026-10-29): the application's
+            // Keyed on `paths`, not on each other: the application's
             // own folder is the empty path, which arrives as null, so
             // `required_with`/`required_without` read "move these into the top
             // folder" as "no destination given" and refused it.

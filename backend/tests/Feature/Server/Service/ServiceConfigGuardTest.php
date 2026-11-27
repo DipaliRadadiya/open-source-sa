@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 
 /*
- * Bug #11: restarting nginx over a broken config took nginx down — and with it
+ * Restarting nginx over a broken config took nginx down — and with it
  * every site and the panel itself, which is served by the same nginx. A
  * restart, start or reload now runs the service's own config test first.
  */
@@ -70,8 +70,8 @@ it('refuses to restart nginx when its configuration test fails', function (strin
 it('restarts nginx after its configuration test passes', function () {
     fakeGuardedServices();
 
-    // 202: the panel's own web server restarts after the answer is sent
-    // (2026-11-24); the test still comes first, inside the request.
+    // 202: the panel's own web server restarts after the answer is sent;
+    // the test still comes first, inside the request.
     $this->withHeaders(guardHeaders())->putJson('/api/services/nginx', ['action' => 'restart'])->assertStatus(202);
 
     $ran = collect($this->ran->getArrayCopy());

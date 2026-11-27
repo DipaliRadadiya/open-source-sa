@@ -15,9 +15,8 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /*
- * 8G on OpenLiteSpeed (2026-09-30): the same ruleset as Apache, rendered as
- * rewrite conditions in the site's vhconf. Every trap below was hit on the
- * OLS test server before it was written down.
+ * 8G on OpenLiteSpeed: the same ruleset as Apache, rendered as rewrite
+ * conditions in the site's vhconf.
  */
 
 beforeEach(function () {
@@ -110,18 +109,18 @@ describe('the rendered vhost', function () {
         $config = olsVhost('enforce', ['mobiquo'], ['bad-path'], ['query_string', 'cookie']);
 
         expect($config)
-            // Bug #82: the path only — not the query, not the user agent.
+            // The path only — not the query, not the user agent.
             ->toContain("RewriteCond %{REQUEST_URI} mobiquo [NC]\n  RewriteRule ^ - [E=waf_exception:1]")
             ->not->toContain('RewriteCond %{QUERY_STRING} mobiquo')
             ->toContain('RewriteCond %{HTTP_COOKIE} (?:<|>|\\\'|%0A|%0D|%27|%00) [NC]')
             ->toContain('RewriteCond %{REQUEST_URI} bad\-path [NC,OR]')
             ->toContain("  RewriteCond %{ENV:waf_exception} !=1\n  RewriteCond %{ENV:waf_block} !^$\n  RewriteRule ^ - [E=waf_would:1,F,L]")
-            // Each rule names itself, for the log line (bug #84).
+            // Each rule names itself, for the log line.
             ->toContain('RewriteRule ^ - [E=waf_block:cookie]')
             ->toContain('RewriteRule ^ - [E=waf_block:custom_rule]')
             // Only the categories that are on.
             ->not->toContain('%{HTTP_USER_AGENT} (?:')
-            // Blocking is logged too (bug #84): it used to leave no record.
+            // Blocking is logged too, not only detection.
             ->toContain('waf=%{waf_would}e reason=%{waf_block}e');
     });
 

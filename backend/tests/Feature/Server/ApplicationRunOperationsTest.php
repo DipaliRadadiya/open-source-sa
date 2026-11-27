@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * D3 (Docker tester list, 2026-11-03): Background jobs stayed empty while a
- * 1-click install or a Pull and redeploy ran — `GET /operations` answered
+ * Background jobs stayed empty while a 1-click install or a Pull and redeploy
+ * ran — `GET /operations` answered
  * `[]` in every poll. Installs (any site type) and container redeploys are
  * now kinds of their own, read like every other kind.
  */

@@ -13,7 +13,7 @@ use App\Services\Server\Applications\GitDeployer;
 use Illuminate\Support\Facades\Process;
 
 /*
- * FS-C22 #1: every git command in a deploy ran as root, inside a repository
+ * Every git command in a deploy ran as root, inside a repository
  * the site user owns. `.git/config` is theirs to write, and git executes some
  * of what it says (`core.fsmonitor`, `core.sshCommand`, hooks) — so the next
  * deploy or webhook ran the site user's commands as root. Root's global

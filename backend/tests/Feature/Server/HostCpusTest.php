@@ -3,7 +3,7 @@
 use App\Services\Server\HostCpus;
 
 /*
- * OLD-2 (frontend QA): the core count was the number of times the word
+ * The core count was the number of times the word
  * "processor" appeared in /proc/cpuinfo, so a model name containing it
  * doubled the answer.
  */

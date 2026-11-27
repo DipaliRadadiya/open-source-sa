@@ -32,8 +32,7 @@ class UpdateUserRequest extends FormRequest
      * Deleting your own account is already refused, so deletion can never
      * remove the last one — but demotion could: an only administrator could
      * clear their own flag, and with registration closed nobody could reach
-     * the admin area again short of editing the database (found in code
-     * review 2026-09-29).
+     * the admin area again short of editing the database.
      */
     public function after(): array
     {

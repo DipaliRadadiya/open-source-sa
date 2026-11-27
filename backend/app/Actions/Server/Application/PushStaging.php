@@ -21,7 +21,7 @@ class PushStaging
     ) {}
 
     /**
-     * @param  bool  $backup  FS-B10: take a backup of the live site through its
+     * @param  bool  $backup  Take a backup of the live site through its
      *                        own backup setup first. The push starts only if
      *                        that backup verified — a push that went ahead
      *                        after a failed backup would leave the user
@@ -34,7 +34,7 @@ class PushStaging
 
         $this->staging->push($production, $mode, $safetyCopy);
 
-        // One sentence per mode (ST-B4): the mode was a raw code inside the
+        // One sentence per mode: the mode was a raw code inside the
         // sentence — "Pushed staging to my-blog (full)" — in every language.
         // `staging_pushed` stays for rows written before.
         // The actor passed on: this runs on the queue, where no one is signed in.

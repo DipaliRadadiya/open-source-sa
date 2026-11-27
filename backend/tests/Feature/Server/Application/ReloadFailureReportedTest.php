@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\Process;
 
 /*
  * A config that passed `nginx -t` and then failed to reload is not live. Five
- * callers ran the reload and answered 200 whatever it said (2026-11-07 review;
- * only ApplyVhost checked). They now save what is on disk and say the web
+ * callers ran the reload and answered 200 whatever it said (only
+ * ApplyVhost checked). They now save what is on disk and say the web
  * server did not reload, instead of reporting a change the server is not
  * serving.
  */

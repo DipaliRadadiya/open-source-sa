@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 class OperationController extends Controller
 {
     /**
-     * Every long job, running now and recently finished, in one list (RC-20).
+     * Every long job, running now and recently finished, in one list.
      * One endpoint rather than one per kind: a header polling eleven of them
      * would spend the whole per-minute API budget on its own.
      */

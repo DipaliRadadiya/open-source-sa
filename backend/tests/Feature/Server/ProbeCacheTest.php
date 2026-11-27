@@ -7,7 +7,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /*
- * FS-C46: the read-only screens that ask the server keep the answer for a
+ * The read-only screens that ask the server keep the answer for a
  * short while, and anything the panel does that changes it clears it.
  */
 

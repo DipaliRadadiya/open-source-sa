@@ -5,7 +5,7 @@ use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\Process;
 
 /*
- * FS-B3: a download that never happened — wordpress.org unreachable — was
+ * A download that never happened — wordpress.org unreachable — was
  * saved with no reason, so the user saw only "download" and could not tell a
  * broken installer from a network that will be back in a minute.
  */

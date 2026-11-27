@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Date;
  * Query Monitor chart, then prunes past the retention window (bounded like
  * server_metrics). Only engines that are installed and reachable are
  * sampled — installed first, and without a probe, because probing an engine
- * that is not there logs into whatever owns its port (bug #22).
+ * that is not there logs into whatever owns its port.
  */
 class SampleDbMetrics extends Command
 {

@@ -41,7 +41,7 @@ class DeleteStorageDestination
             ]);
         }
 
-        // A database on its own has a schedule too (2026-10-16), and the same
+        // A database on its own has a schedule too, and the same
         // foreign key refused it as a 500 naming nothing.
         $databases = Database::query()
             ->whereHas('backupTarget', fn ($query) => $query->where('storage_destination_id', $destination->getKey()))

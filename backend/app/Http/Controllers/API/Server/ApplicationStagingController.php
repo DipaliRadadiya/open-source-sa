@@ -33,7 +33,7 @@ class ApplicationStagingController extends Controller
             'staging' => $application->staging
                 ? ApplicationResource::make($application->staging->load('systemUser'))->resolve()
                 : null,
-            // RC-16: the last push or update-from-live, so the page shows a
+            // The last push or update-from-live, so the page shows a
             // run in progress — and how the last one ended — after a reload.
             'latest_run' => $latest ? StagingRunResource::make($latest)->resolve() : null,
         ]);
@@ -41,7 +41,7 @@ class ApplicationStagingController extends Controller
 
     public function store(CreateStagingRequest $request, Application $application, CreateStaging $action, DiskSpaceCheck $space, SizeEstimate $sizes): JsonResponse
     {
-        // Room for a copy of the site and its database first (2026-10-29).
+        // Room for a copy of the site and its database first.
         $space->require(
             (int) $sizes->sum($sizes->files($application), $sizes->databases($application)),
             $application->rootPath(),
@@ -72,7 +72,7 @@ class ApplicationStagingController extends Controller
     }
 
     /**
-     * Push staging onto production — on the queue (RC-16). `202` with the run;
+     * Push staging onto production — on the queue. `202` with the run;
      * poll `GET …/staging/runs/{run}`. Refused here, not in the job, when
      * something is already pushing or restoring the site, so a double click
      * gets an answer rather than a second run that would fail.
@@ -109,7 +109,7 @@ class ApplicationStagingController extends Controller
             throw ValidationException::withMessages(['mode' => [__('backup.errors.restore_already_running')]]);
         }
 
-        // Room first (2026-10-29): the files set aside while they are replaced,
+        // Room first: the files set aside while they are replaced,
         // the copy of the database being replaced when the safety copy is on,
         // and the live site's backup when one was asked for.
         $target = $kind === 'push' ? $application : $staging;
@@ -143,8 +143,8 @@ class ApplicationStagingController extends Controller
     }
 
     /**
-     * ST-B3: the copies of the live database each push saves before replacing
-     * it, newest first. The newest three are kept.
+     * The copies of the live database each push saves before replacing it,
+     * newest first. The newest three are kept.
      */
     public function safetyCopies(Application $application, StagingManager $staging): JsonResponse
     {

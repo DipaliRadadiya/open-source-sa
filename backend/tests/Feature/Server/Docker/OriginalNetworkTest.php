@@ -16,7 +16,7 @@ uses(RefreshDatabase::class);
 
 /*
  * Moving a container site to another network leaves the one Compose made for it
- * at create behind for good (BUG-5): `compose up` stops using `<project>_default`
+ * at create behind for good: `compose up` stops using `<project>_default`
  * and never removes it. It is released as soon as the move has been applied —
  * and only when it is provably the site's own and unused.
  */

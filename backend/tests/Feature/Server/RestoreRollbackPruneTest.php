@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 
 /*
- * The site copy a failed restore leaves beside the site (2026-10-18). The
+ * The site copy a failed restore leaves beside the site. The
  * runner tidies only after a restore that worked, so these stayed for good.
  * Kept a week, then removed — but never where it could be the only copy.
  */

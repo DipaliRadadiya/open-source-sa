@@ -11,8 +11,7 @@ use Illuminate\Support\Sleep;
  *
  * For the server-level settings a graceful restart does not pick up: the
  * trusted addresses behind "Use Client IP in Header" were still the old ones
- * after `lswsctrl restart`, and right after a cold start (measured on a real
- * server, 2026-11-11). The same sequence as OlsWebAdmin::restartCold(), which
+ * after `lswsctrl restart`, and right after a cold start. The same sequence as OlsWebAdmin::restartCold(), which
  * runs as root; this one goes through ServerOps so `sites:resync` can run it as
  * the panel's own account (systemctl, ps and kill are all in its grant). Costs
  * the sites a few seconds.

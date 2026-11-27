@@ -9,7 +9,7 @@ use Illuminate\Validation\Validator;
 /**
  * Who a cron job may run as.
  *
- * Bug #16: typing `root` in "Runs as" gave anyone allowed to manage cron
+ * Typing `root` in "Runs as" gave anyone allowed to manage cron
  * jobs a root shell on the server. The panel admin keeps what v7 allowed —
  * any account — and jobs moved over from v7 are adopted, not posted here, so
  * they keep running. Everyone else may only pick the panel's System Users.

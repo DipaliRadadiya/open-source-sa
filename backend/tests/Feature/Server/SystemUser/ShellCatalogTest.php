@@ -128,8 +128,8 @@ describe('a system user in the API', function () {
 
 it('does not offer a shell this server does not have', function () {
     // Offered and accepted, zsh left a user unable to log in on a stock
-    // Ubuntu (2026-09-23). Hidden rather than flagged, so a picker that
-    // renders the list as-is cannot offer it.
+    // Ubuntu. Hidden rather than flagged, so a picker that renders the list
+    // as-is cannot offer it.
     $this->app->instance(InstalledShells::class, new class extends InstalledShells
     {
         public function isInstalled(string $path): bool

@@ -20,11 +20,9 @@ class ChmodFileRequest extends FormRequest
     public function rules(): array
     {
         return array_merge($this->pathRules(), [
-            // Exactly 3 octal digits — no setuid/setgid/sticky. See
-            // FileBrowser::chmod() for why a fourth digit is refused.
-            // OLD-26: a leading sticky (1) or setgid (2) digit is accepted —
-            // 1777 and 2775 are ordinary folder modes. Setuid (4–7) is not:
-            // it lets anyone who can run the file run it as the site's user.
+            // 3 octal digits, optionally led by sticky (1) or setgid (2): 1777 and 2775 are ordinary
+            // folder modes. Setuid (4–7) is refused: it lets anyone who can run the file run it as
+            // the site's user (see FileBrowser::chmod()).
             'mode' => ['required', 'string', 'regex:/^[0-3]?[0-7]{3}$/'],
         ]);
     }

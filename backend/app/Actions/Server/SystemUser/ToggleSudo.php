@@ -58,8 +58,7 @@ class ToggleSudo
     /**
      * Leave every sudo-granting group the user is in, then check that none is
      * left. A user only in `admin` used to get `gpasswd -d user sudo`, which
-     * fails ("not a member"); one in both kept `admin` and with it sudo
-     * (FS-C22 #16, 2026-10-23).
+     * fails ("not a member"); one in both kept `admin` and with it sudo.
      */
     private function revoke(SystemUser $systemUser): void
     {

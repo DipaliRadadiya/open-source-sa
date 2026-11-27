@@ -36,12 +36,12 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        // No real DNS in tests: a host check resolves names (bug #34), and a
+        // No real DNS in tests: a host check resolves names, and a
         // lookup per validation would make the suite slow and depend on the
         // network. A test about resolution sets its own answers.
         RemoteHost::resolveUsing(fn (): array => []);
 
-        // No real TLS handshakes either (FTP-01): an FTPS certificate reads as
+        // No real TLS handshakes either: an FTPS certificate reads as
         // "nothing to record" unless a test says what the server presents.
         $this->app->instance(FtpsCertificate::class, new FtpsCertificate(fn (): ?string => null));
 

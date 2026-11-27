@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Image discovery for the Docker create form (DS-02): search Docker Hub, list
+ * Image discovery for the Docker create form: search Docker Hub, list
  * an image's versions, and read what an image needs — all from registry APIs,
  * never by pulling.
  *

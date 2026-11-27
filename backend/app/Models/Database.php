@@ -46,7 +46,7 @@ class Database extends Model
 
     /**
      * Its own backup schedule — only for a database with no site. A site's
-     * database is backed up by the site's target (2026-10-16 decision).
+     * database is backed up by the site's target.
      */
     public function backupTarget(): HasOne
     {
@@ -58,7 +58,7 @@ class Database extends Model
         return $this->hasMany(Backup::class);
     }
 
-    /** The newest backup of this database on its own (RC-23). */
+    /** The newest backup of this database on its own. */
     public function latestBackup(): HasOne
     {
         return $this->hasOne(Backup::class)->latestOfMany();

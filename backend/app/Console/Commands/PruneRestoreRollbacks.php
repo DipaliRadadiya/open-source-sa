@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 
 /**
  * Removes the `.rollback-{id}` copy a failed restore left beside a site, a week
- * after it failed (2026-10-18).
+ * after it failed.
  *
  * Nothing removed these: the runner tidies only after a restore that worked.
  * Each is a whole copy of the site. The rules that keep one that is still

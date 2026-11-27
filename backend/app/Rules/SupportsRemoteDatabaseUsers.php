@@ -16,10 +16,9 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * without it.
  *
  * So this refuses rather than lets the value through. Storing a preference no
- * code applies is the failure the OpenLiteSpeed PHP screen shipped with on
- * 2026-09-03: a 200, a saved setting, and no effect on the server. The user
- * finds out from the application, much later, and has no reason to suspect the
- * field they set.
+ * code applies gives a 200, a saved setting, and no effect on the server. The
+ * user finds out from the application, much later, and has no reason to
+ * suspect the field they set.
  *
  * A rule rather than three copies of an `if`, because `connection_preference`
  * is accepted by three separate requests (create database with a user, create

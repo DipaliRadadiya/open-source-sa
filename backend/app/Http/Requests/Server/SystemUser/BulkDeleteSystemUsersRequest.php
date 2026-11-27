@@ -24,7 +24,7 @@ class BulkDeleteSystemUsersRequest extends FormRequest
             // stale id fails the request rather than being skipped silently.
             'ids' => ['required', 'array', 'min:1', 'max:'.self::MAX],
             'ids.*' => ['integer', 'distinct', 'exists:system_users,id'],
-            // FS-C31, as on the single delete: end their sessions first.
+            // As on the single delete: end their sessions first.
             'end_sessions' => ['sometimes', 'boolean'],
         ];
     }

@@ -40,7 +40,7 @@ class ActivityLog extends Model
         // Compared as text, and case-insensitively like the other columns.
         // PostgreSQL has no ILIKE on json. MySQL and MariaDB store JSON under
         // a binary collation, so a plain LIKE is case-sensitive there —
-        // measured on MariaDB 10.11: `properties LIKE '%f2b%'` misses
+        // on MariaDB 10.11 `properties LIKE '%f2b%'` misses
         // "F2B-Test", `CAST(properties AS CHAR)` finds it.
         $properties = match ($query->getConnection()->getDriverName()) {
             'pgsql' => DB::raw('CAST(properties AS TEXT)'),

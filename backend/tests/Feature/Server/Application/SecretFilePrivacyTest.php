@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Process;
 /*
  * Statamic's create-project, Akaunting, Mautic, PrestaShop and a git deploy's
  * seed all leave `.env` 0644, readable by the web server account until the
- * user saved it or pressed "Fix permissions" (measured on 2026-09-29).
+ * user saved it or pressed "Fix permissions".
  */
 
 beforeEach(function () {

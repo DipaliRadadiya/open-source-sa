@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Testing\TestResponse;
 
 /*
- * Bug #17: the slug is the cron.d filename. A job named "panel-scheduler"
+ * The slug is the cron.d filename. A job named "panel-scheduler"
  * overwrote the panel's own scheduler, and deleting the job deleted it.
  */
 

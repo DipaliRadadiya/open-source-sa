@@ -7,7 +7,7 @@ use App\Services\Server\AppShell\AppShellMap;
 use Illuminate\Console\Command;
 
 /**
- * Put container login in place and rebuild its access map (RC-28).
+ * Put container login in place and rebuild its access map.
  *
  * This is how apps that existed before container login get it: the panel
  * update and install.sh both run this, so after an upgrade every Docker app's

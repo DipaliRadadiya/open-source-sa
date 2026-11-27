@@ -12,10 +12,10 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Testing\TestResponse;
 
 /*
- * Dipali, 2026-10-28: the central panel (and the panel's own screens) adding
- * a git account or a storage destination whose credential is already here
- * gets that record back — no second one. Any difference in the credential is
- * a new record, and an existing record is never changed.
+ * The central panel (and the panel's own screens) adding a git account or a
+ * storage destination whose credential is already here gets that record back
+ * — no second one. Any difference in the credential is a new record, and an
+ * existing record is never changed.
  */
 
 beforeEach(function () {
@@ -149,7 +149,7 @@ describe('storage destinations', function () {
         dupS3()->assertCreated();
 
         dupS3(['secret_key' => 'secret-new'])->assertStatus(422)->assertJsonValidationErrors('name')
-            // Support's wording (2026-10-29): says what to do, not only what is wrong.
+            // The message says what to do, not only what is wrong.
             ->assertJsonPath('errors.name.0', 'This name is already taken. Please choose a different name.');
     });
 

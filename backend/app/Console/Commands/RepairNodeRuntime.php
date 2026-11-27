@@ -10,8 +10,7 @@ use Illuminate\Console\Command;
 /**
  * Bring an existing server's Node in line with what a fresh install now does.
  *
- * Two things install.sh and the Node screen used to leave behind, both found
- * on a real server (2026-09-23):
+ * Two things install.sh and the Node screen used to leave behind:
  *
  *  - no `node`/`npm`/`npx` in /usr/local/bin. install.sh set fnm's default
  *    alias but never linked it, so a Node app installed without a pinned
@@ -35,7 +34,7 @@ class RepairNodeRuntime extends Command
         try {
             return $this->repair($node);
         } finally {
-            // Servers installed before bug #1 was fixed recorded "no Node"
+            // Servers installed before those links existed recorded "no Node"
             // and kept it until some install re-checked. This runs on every
             // deploy, after the links above exist, so it corrects them.
             $capabilities->refresh();

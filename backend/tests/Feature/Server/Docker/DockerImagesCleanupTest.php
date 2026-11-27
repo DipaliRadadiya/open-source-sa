@@ -11,9 +11,9 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /*
- * 2026-10-29 (Dipali): a deleted Docker app left its images behind for good —
- * 58 GB on one server. Deleting a Docker site now removes the images only it
- * used, and the Disk Cleaner can remove every image no container uses.
+ * A deleted Docker app left its images behind for good. Deleting a Docker site
+ * now removes the images only it used, and the Disk Cleaner can remove every
+ * image no container uses.
  */
 
 beforeEach(function () {

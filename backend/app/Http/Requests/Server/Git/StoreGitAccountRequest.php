@@ -45,7 +45,7 @@ class StoreGitAccountRequest extends FormRequest
 
     /**
      * The account already holding exactly this credential, if any — returned
-     * instead of a second one (Dipali, 2026-10-28).
+     * instead of a second one.
      */
     public function existingRecord(): ?GitAccount
     {

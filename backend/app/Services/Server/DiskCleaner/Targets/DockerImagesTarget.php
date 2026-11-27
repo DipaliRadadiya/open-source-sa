@@ -6,9 +6,9 @@ use App\Services\Server\DiskCleaner\AbstractCleanupTarget;
 use App\Services\Server\ServerOpsResult;
 
 /**
- * Docker images no container uses, and Docker's build cache (2026-10-29,
- * Dipali: deleted Docker apps left their images behind — 58 GB on one
- * server — and nothing on this screen could reclaim them).
+ * Docker images no container uses, and Docker's build cache: deleted Docker
+ * apps leave their images behind, and nothing else on this screen reclaims
+ * them.
  *
  * `docker image prune --all` removes only images with no container at all,
  * running or stopped, so a stopped app keeps its image and starts again

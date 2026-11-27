@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /*
- * #5 (support list, 2026-10-27): a site's cron jobs and its PHP version. The
+ * A site's cron jobs and its PHP version. The
  * panel shows which PHP each job runs and offers to switch the ones the user
  * ticks; it never switches one on its own.
  */

@@ -28,8 +28,7 @@ class PullStagingRequest extends FormRequest
             // `database`/`full` replace it — staging's is dumped first.
             'mode' => ['required', Rule::in(['files', 'database', 'full'])],
             // Dump the database being replaced first, so it can be put back
-            // (the Staging screen's safety copies). The user's choice since
-            // 2026-10-29; on unless they turn it off.
+            // (the Staging screen's safety copies). On unless they turn it off.
             'safety_copy' => ['sometimes', 'boolean'],
         ];
     }

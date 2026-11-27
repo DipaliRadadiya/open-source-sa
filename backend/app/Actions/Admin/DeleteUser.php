@@ -15,7 +15,7 @@ class DeleteUser
         $this->activityLogger->log('user.deleted', $user, ['username' => $user->username]);
 
         // Before the delete nulls user_id on every row they wrote: without
-        // the name the log reads as if the system had done it (FS-C22).
+        // the name the log reads as if the system had done it.
         ActivityLog::query()->where('user_id', $user->id)->update(['user_name' => $user->username]);
 
         $user->tokens()->delete();

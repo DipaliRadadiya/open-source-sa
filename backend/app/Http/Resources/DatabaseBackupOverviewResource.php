@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * One database row of the backup overview (RC-23): a database that is not part
+ * One database row of the backup overview: a database that is not part
  * of a site, whether it has a schedule of its own, and how its last backup
  * went. The same shape as {@see ApplicationBackupResource}, with the
  * database's name and engine where a site has its name and domain.

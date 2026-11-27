@@ -17,7 +17,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /*
- * RC-2 (frontend QA, 9 Oct): a Node application deployed from git with no
+ * A Node application deployed from git with no
  * deploy script never had `npm ci` run, so its first start died on
  * MODULE_NOT_FOUND — the step failed with no reason, and the application
  * stayed `active` while answering 502.

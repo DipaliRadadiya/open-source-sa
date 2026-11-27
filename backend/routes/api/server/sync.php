@@ -25,7 +25,7 @@ Route::post('/server/sync', [ServerSyncController::class, 'store'])
 Route::post('/server/sync/handover', [ServerSyncController::class, 'handover'])
     ->middleware(['permission:sync,manage', 'throttle:5,1']);
 
-// Whether a handover is needed, and what of it is already in place (FS-C26).
+// Whether a handover is needed, and what of it is already in place.
 Route::get('/server/sync/handover', [ServerSyncController::class, 'handoverStatus'])
     ->middleware('permission:sync');
 

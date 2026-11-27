@@ -44,7 +44,7 @@ class NewDockerName implements ValidationRule
             return;
         }
 
-        // A name the panel keeps for itself (RC-28): `sv-app-<id>_*` is how a
+        // A name the panel keeps for itself: `sv-app-<id>_*` is how a
         // site's private network is recognised, and the names a container may
         // never join are no better as a new network. Before the lookup, so the
         // refusal does not reach `docker`.

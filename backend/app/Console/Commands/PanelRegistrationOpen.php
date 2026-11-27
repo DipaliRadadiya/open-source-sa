@@ -6,7 +6,7 @@ use App\Models\User;
 use Illuminate\Console\Command;
 
 /**
- * Whether the first-administrator registration is still open (FS-A3).
+ * Whether the first-administrator registration is still open.
  *
  * Exit 0 while nobody has registered, 1 once someone has — for `install.sh`,
  * which told every re-run "anyone who reaches this address can claim the

@@ -6,7 +6,7 @@ use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
 /**
- * fnm would not remove a Node version (FS-C21).
+ * fnm would not remove a Node version.
  *
  * It answered "The settings change failed on the server." — the wrong
  * subject and no reason, while fnm had said exactly why ("Can't delete

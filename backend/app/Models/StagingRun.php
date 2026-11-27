@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A staging push or update-from-live, run on the queue (RC-16).
+ * A staging push or update-from-live, run on the queue.
  */
 #[Fillable([
     'application_id', 'staging_application_id', 'kind', 'mode', 'backup', 'safety_copy', 'status',

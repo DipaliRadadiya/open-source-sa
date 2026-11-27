@@ -31,7 +31,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Backups of a database on its own (2026-10-16; v7's `type=database`).
+ * Backups of a database on its own (v7's `type=database`).
  *
  * Everything under the database's own permission, the decision for this
  * feature: someone who manages a database can schedule, run, download and
@@ -91,7 +91,7 @@ class DatabaseBackupController extends Controller
             throw ValidationException::withMessages(['database' => [__('backup.errors.already_running')]]);
         }
 
-        // Room for it first (2026-10-29): said now, not by a failed backup.
+        // Room for it first: said now, not by a failed backup.
         app(DiskSpaceCheck::class)->requireForBackup($target);
 
         RunBackup::dispatch($target->id, request()->user()?->id);
@@ -107,7 +107,7 @@ class DatabaseBackupController extends Controller
      */
     public function restore(RestoreDatabaseBackupRequest $request, Database $database, Backup $backup, DiskSpaceCheck $space, SizeEstimate $sizes): JsonResponse
     {
-        // Room for it first (2026-10-29): the answer now, not after the dump.
+        // Room for it first: the answer now, not after the dump.
         $space->require(
             (int) $sizes->restore($backup, BackupType::Database->value, $request->safetyCopy(), $database),
             DiskSpaceCheck::workingDirectory(),

@@ -8,9 +8,8 @@ use Illuminate\Support\Facades\Process;
 use Laravel\Sanctum\Sanctum;
 
 /*
- * Every folder's size in one `du`, for the file manager's size column
- * (operator, 2026-10-01). Kept five minutes; anything the panel changes
- * forgets it.
+ * Every folder's size in one `du`, for the file manager's size column. Kept
+ * five minutes; anything the panel changes forgets it.
  */
 
 beforeEach(function () {

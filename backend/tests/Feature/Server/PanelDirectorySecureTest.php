@@ -12,9 +12,8 @@ use Illuminate\Support\Facades\Process;
  * `.panel` is where root writes a site's Basic Auth file, PHP ini and staging
  * dumps. It was owned by the site user on every PHP site (PoolManager's
  * `chown -R` on the parent of `sessions`), so a link the user planted there
- * redirected root's writes — reproduced live on 2026-09-29, where enabling
- * Basic Auth wrote into, and chowned to the user, a root-owned file outside
- * the site. PanelDirectory::secure() takes the directory back and removes
+ * redirected root's writes: enabling Basic Auth wrote into, and chowned to the
+ * user, a root-owned file outside the site. PanelDirectory::secure() takes the directory back and removes
  * what was planted; the driver runs it on every resync, which is how existing
  * servers repair themselves.
  */

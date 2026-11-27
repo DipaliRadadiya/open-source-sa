@@ -34,9 +34,9 @@ class RestoreResource extends JsonResource
             'application_id' => $this->resource->application_id,
             'application_name' => $this->resource->application?->name,
             'application_domain' => $this->resource->application?->domain,
-            // RC-19: a database's own restore. Without these its Backups tab
+            // A database's own restore. Without these its Backups tab
             // could not find the restore again after a reload, and a database
-            // restore looked like one of a deleted site (both have no
+            // restore would look like one of a deleted site (both have no
             // application). The name and engine come from the backup when the
             // database itself is gone, as the backup's own row keeps them.
             'database_id' => $this->resource->database_id,
@@ -70,8 +70,7 @@ class RestoreResource extends JsonResource
             'safety_copy' => $this->resource->safety_copy !== false,
             'rollback_path' => $this->resource->rollback_path,
             'reference' => $this->resource->reference,
-            // When it was asked for (OLD-8): a restore still queued has no
-            // start time, and the row had no time at all.
+            // When it was asked for: a restore still queued has no start time.
             'created_at' => $this->resource->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->resource->created_at?->diffForHumans(),
             'started_at' => $this->resource->started_at?->format('d-m-Y H:i:s'),

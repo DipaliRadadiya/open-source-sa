@@ -40,7 +40,7 @@ class UpdateDeploySettingsRequest extends FormRequest
     }
 
     /**
-     * A new branch must exist in the repository (bug #71): any name was
+     * A new branch must exist in the repository: any name was
      * saved, and the next deploy failed on a ref that was never there.
      * Asked only when the branch actually changes, since it reaches the git
      * host.

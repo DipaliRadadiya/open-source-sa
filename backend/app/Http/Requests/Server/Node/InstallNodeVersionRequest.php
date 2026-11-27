@@ -21,7 +21,7 @@ class InstallNodeVersionRequest extends FormRequest
             // A full semantic version, and nothing else. It reaches a command
             // argument, so the shape is the guard.
             'version' => ['bail', 'required', 'string', 'regex:/^\d+\.\d+\.\d+$/',
-                // A real release, not just the shape of one (bug #31): 99.0.0
+                // A real release, not just the shape of one: 99.0.0
                 // was accepted and left a failed entry behind.
                 function (string $attribute, mixed $value, \Closure $fail): void {
                     if (app(NodeRuntime::class)->releaseExists((string) $value) === false) {

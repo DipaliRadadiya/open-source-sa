@@ -6,10 +6,10 @@ use Closure;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Short-lived memory for read-only screens that ask the server (FS-C46).
+ * Short-lived memory for read-only screens that ask the server.
  *
  * `GET /settings`, `/server/facts` and `/databases/engines` ran their server
- * commands on every load — 0.8–1.9 s each, measured on a test server — and
+ * commands on every load — 0.8–1.9 s each — and
  * the Dashboard, Settings, Databases and Create screens each waited on one.
  * Their answers change when the panel changes them, so every such change
  * calls flush(); the TTL only bounds how long a change made *outside* the

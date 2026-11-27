@@ -13,9 +13,9 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /*
- * FS-C22 #8: every n8n listened for its task runners on 127.0.0.1:5679, n8n's
- * default, so a second one on the server found it taken and exited on start.
- * n8n 2.44's broker, read on the test server:
+ * Every n8n listens for its task runners on 127.0.0.1:5679, n8n's default,
+ * so a second one on the server would find it taken and exit on start.
+ * n8n 2.44's broker:
  *
  *     if (error.code === 'EADDRINUSE') {
  *         this.logger.info(`n8n Task Broker's port ${port} is already in use. …`);
@@ -131,7 +131,7 @@ it('writes the broker port into the site\'s environment, and leaves an older n8n
 
     expect($new)->toContain('N8N_RUNNERS_BROKER_PORT="3301"')
         ->toContain('N8N_PORT="3300"')
-        // New sites only (2026-10-03): an existing n8n is running on 5679 and
+        // New sites only: an existing n8n is running on 5679 and
         // keeps it; nothing rewrites its environment to a port it never had.
         ->and($old)->not->toContain('N8N_RUNNERS_BROKER_PORT')
         // Not editable on the Environment screen: the panel owns it, and a

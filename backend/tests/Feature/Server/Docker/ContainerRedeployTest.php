@@ -13,10 +13,9 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /*
- * D5 (Docker tester list, 2026-11-03): Pull and redeploy ran inside one HTTP
- * request — 19 s for a small image — and recorded nothing while it ran. A page
- * reloaded mid-pull showed a site with nothing happening to it, and Background
- * jobs (D3) stayed empty. It is now a queued job with a persisted run.
+ * Pull and redeploy ran inside one HTTP request and recorded nothing while it
+ * ran. A page reloaded mid-pull showed a site with nothing happening to it, and
+ * Background jobs stayed empty. It is now a queued job with a persisted run.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);

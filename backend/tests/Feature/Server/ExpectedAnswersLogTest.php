@@ -13,11 +13,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
 /*
- * Bug #48: the admin Error Log was full of ordinary "no" answers. Asking
- * whether MySQL is there, on a server with MariaDB only, logged "Access
- * denied for user 'root'" as an error on every screen that asked; asking
- * whether a .env exists logged `test -f` exiting 1. Measured on the test
- * servers: those two alone were most of the dashboard.
+ * The admin Error Log was full of ordinary "no" answers. Asking whether MySQL
+ * is there, on a server with MariaDB only, logged "Access denied for user
+ * 'root'" as an error on every screen that asked; asking whether a .env exists
+ * logged `test -f` exiting 1. Those two alone were most of the dashboard.
  */
 
 beforeEach(function () {
@@ -95,8 +94,8 @@ it('does not run mongosh, and so log a refused sudo, where MongoDB is not instal
         ->and(dashboardErrors())->toBe([]);
 });
 
-// FS-C34: "is MySQL/MariaDB/PostgreSQL installed?" answered no logged an error
-// every time — 605 lines in one day on a test server.
+// "Is MySQL/MariaDB/PostgreSQL installed?" answered no logged an error every
+// time.
 it('does not put "is this engine installed?" answered no on the dashboard', function (string $installer) {
     Process::fake(fn () => Process::result(
         errorOutput: "dpkg-query: no packages found matching mysql-server\n",

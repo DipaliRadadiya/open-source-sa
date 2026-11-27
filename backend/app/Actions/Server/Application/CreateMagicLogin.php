@@ -40,7 +40,7 @@ class CreateMagicLogin
         }
 
         // Multisite, "is this still an administrator", and the token write
-        // are all asked inside one WP-CLI run now (FS-C16) — see mint().
+        // are all asked inside one WP-CLI run — see mint().
         $session = $this->magicLogin->mint($application, $wpUserId);
         $chosen = $session['user'];
         unset($session['user']);

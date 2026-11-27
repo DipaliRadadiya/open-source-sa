@@ -6,7 +6,7 @@ use App\Services\Recipes\RecipeSchema;
 
 /**
  * A recipe service marked `"optional": true` is a helper: its trouble is a
- * named warning on the app, not a failed app (health badge, 2026-11-03). The
+ * named warning on the app, not a failed app (health badge). The
  * flag can hide an outage, so it is opt-in, never on the app's own service,
  * and the shipped list is pinned here.
  */

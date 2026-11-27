@@ -11,8 +11,7 @@ use App\Enums\LoginShell;
  * has. The two were treated as one, and they are not: zsh is not in a stock
  * Ubuntu image, yet the picker offered it, the API accepted it, and
  * `usermod -s /usr/bin/zsh` succeeds against a path that does not exist —
- * after which the user cannot log in at all. Reproduced on a real server
- * (2026-09-23).
+ * after which the user cannot log in at all.
  *
  * Asked of the filesystem directly rather than through ServerOps: the panel
  * runs on the server it manages, a shell has to be world-executable to be

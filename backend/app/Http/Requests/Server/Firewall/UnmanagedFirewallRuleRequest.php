@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * A rule ufw enforces that the panel has no row for, named by the `key` the
- * Firewall screen lists it under (FW-08). The key is matched against what ufw
+ * Firewall screen lists it under. The key is matched against what ufw
  * says now, never trusted as a rule on its own.
  */
 class UnmanagedFirewallRuleRequest extends FormRequest

@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\View;
 
 /*
- * The brand colour reaches the pages the panel renders itself (2026-10-16):
+ * The brand colour reaches the pages the panel renders itself:
  * the placeholder/disabled page written into a site, and the API host's home
  * page, which was Laravel's starter page. The colour sits inside a <style>
  * block, so only a plain hex value gets there.

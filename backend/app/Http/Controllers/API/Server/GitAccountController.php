@@ -73,8 +73,8 @@ class GitAccountController extends Controller
     public function store(StoreGitAccountRequest $request, ConnectGitAccount $action): JsonResponse
     {
         // Exactly this credential is connected already: that account, not a
-        // second one, and nothing about it changes (Dipali, 2026-10-28). The
-        // central panel reads `existing` and uses the id either way.
+        // second one, and nothing about it changes. The central panel reads
+        // `existing` and uses the id either way.
         if (($existing = $request->existingRecord()) !== null) {
             return response()->json([
                 'git_account' => GitAccountResource::make($existing)->resolve(),

@@ -8,11 +8,11 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /*
- * A new system user's name that is already a group on the server (RC-27,
- * 2026-10-22). useradd makes a group of the same name, so `docker` — a group
- * with no user — failed with "group docker exists": a 201 on the application
- * form and a provisioning job that died, because only `getent passwd` was
- * asked. Now both are asked, before anything is written.
+ * A new system user's name that is already a group on the server. useradd
+ * makes a group of the same name, so `docker` — a group with no user — would
+ * fail with "group docker exists": a 201 on the application form and a
+ * provisioning job that died, if only `getent passwd` were asked. Both are
+ * asked, before anything is written.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);

@@ -9,7 +9,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * The backup schedule of a database on its own (2026-10-16).
+ * The backup schedule of a database on its own.
  *
  * The same fields as a site's target minus the ones that only mean something
  * for a site: the type is always `database`, and there are no file or
@@ -37,7 +37,7 @@ class SaveDatabaseBackupTargetRequest extends FormRequest
     }
 
     /**
-     * A site's database is backed up with the site (decision 2026-10-16): a
+     * A site's database is backed up with the site: a
      * second schedule beside the site's would dump the same database twice
      * and restore it from two places that disagree.
      *

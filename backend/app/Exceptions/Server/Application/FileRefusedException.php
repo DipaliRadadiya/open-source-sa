@@ -9,7 +9,7 @@ use RuntimeException;
  * A file request refused for a reason the user can act on.
  *
  * Shaped like a validation error — `errors.{field}` — plus a `reason` code
- * (APP-3/APP-4). A bare `abort(422, …)` carried only a sentence, so the
+ * . A bare `abort(422, …)` carried only a sentence, so the
  * screen could show it as a pop-up and nothing else: it could not put it
  * under the field that caused it, nor tell "already exists" from "not an
  * archive" without matching translated text.

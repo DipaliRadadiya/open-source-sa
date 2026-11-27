@@ -34,7 +34,7 @@ class CreateDatabase
             if (! empty($data['create_user'])) {
                 $this->createUser->ensureUsernameFree($engineName, $data['name'], $data['create_user'], 'create_user.username');
 
-                // FS-C14(e): a remote user that needs the cluster restarted
+                // A remote user that needs the cluster restarted
                 // was refused only after the database had been made — so
                 // every round created it, dropped it again, and logged a
                 // `database.created` for a database that no longer existed.

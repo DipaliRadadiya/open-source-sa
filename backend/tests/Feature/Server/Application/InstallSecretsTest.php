@@ -17,8 +17,7 @@ use Illuminate\Support\Facades\Queue;
 /*
  * A one-click site's admin password was saved into `applications.settings`,
  * plain JSON, and `GET /applications/{id}` returned it to anyone allowed to
- * view the site, for as long as the site existed. Found live on 2026-09-24:
- * a WordPress site's admin password came back in the API response.
+ * view the site, for as long as the site existed.
  *
  * The installer needs it until the install succeeds and never again, so it now
  * lives in the encrypted `install_secrets`, is never serialized, and is cleared
@@ -195,8 +194,8 @@ it('stores a password sent through an update where the installer reads it, not i
 });
 
 /*
- * QA, 2026-11-17: `wp core install --locale` saves the language but does not
- * download it, so a site created in German stayed in English.
+ * `wp core install --locale` saves the language but does not download it, so
+ * a site created in German would stay in English.
  */
 it('downloads and switches on the site language after the install', function () {
     $ran = collect();

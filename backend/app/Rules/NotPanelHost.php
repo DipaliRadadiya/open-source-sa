@@ -8,7 +8,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 /**
  * Refuses the hostnames the panel itself is served on.
  *
- * Nothing stopped a site taking them (found in code review 2026-09-29), and
+ * Nothing stopped a site taking them, and
  * both halves of what followed are bad. The site's vhost and the panel's claim
  * the same server_name, so the web server picks one — possibly the site, and
  * the panel is gone from its own address. And install.sh issues the panel's

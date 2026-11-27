@@ -6,7 +6,7 @@ use RuntimeException;
 
 /**
  * An FTPS server presented a certificate other than the one recorded, or none
- * that could be read (FTP-01). Carries the `storage.test.*` key that says
+ * that could be read. Carries the `storage.test.*` key that says
  * which, so a backup that stops here reports why instead of "unreachable".
  */
 class FtpsCertificateException extends RuntimeException

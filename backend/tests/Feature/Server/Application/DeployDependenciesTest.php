@@ -175,8 +175,8 @@ function ranComposerInstall(): bool
 
 describe('with no deploy script written', function () {
     it('installs the packages a composer project needs, as the site user', function () {
-        // Until 2026-10-01 nothing ran here, so every new Composer project
-        // failed its first deploy with composer_dependencies_missing.
+        // Without this step every new Composer project fails its first
+        // deploy with composer_dependencies_missing.
         fakeComposerCheckout('{"require":{"laravel/framework":"^13.0"}}', vendorExists: true);
 
         runDependencyDeploy();

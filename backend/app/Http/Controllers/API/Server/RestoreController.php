@@ -36,8 +36,8 @@ class RestoreController extends Controller
      */
     public function store(RestoreBackupRequest $request, Backup $backup, DiskSpaceCheck $space, SizeEstimate $sizes): JsonResponse
     {
-        // Room for it first (2026-10-29), so the answer is now, not after a
-        // download and half an unpack.
+        // Room for it first, so the answer is now, not after a download and
+        // half an unpack.
         $space->require(
             (int) $sizes->restore($backup, $request->requestedType(), $request->safetyCopy()),
             DiskSpaceCheck::workingDirectory(),

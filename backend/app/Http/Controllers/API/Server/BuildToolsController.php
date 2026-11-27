@@ -45,7 +45,7 @@ class BuildToolsController extends Controller
         }
 
         // One at a time. A reload mid-install brought the Install button back
-        // and a second apt run could be queued behind the first (FS-A5).
+        // and a second apt run could be queued behind the first.
         if ($installs->versions(InstallBuildTools::RUNTIME)->get(InstallBuildTools::VERSION)?->status === InstallStatus::Installing) {
             return response()->json(['message' => __('errors/build-tools.already_installing')], 409);
         }

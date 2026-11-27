@@ -4,9 +4,8 @@ use App\Services\Runtime\InstallTracker;
 use App\Services\Runtime\RuntimeProgress;
 
 /*
- * FS-C18 (fresh-server QA, re-checked 9 Oct): Remove PHP 8.3 with its FPM
- * package held → apt refuses → the job records remove_failed — and GET /php
- * showed 8.3 as `ready` with no reason. The version is still on disk with
+ * Remove PHP 8.3 with its FPM package held → apt refuses → the job records
+ * remove_failed — and GET /php showed 8.3 as `ready` with no reason. The version is still on disk with
  * nothing missing, which is what a failed removal looks like, and the screen
  * took that to mean the failure was behind it.
  */

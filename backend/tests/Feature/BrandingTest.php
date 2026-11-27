@@ -38,9 +38,9 @@ it('points every default logo at a file the frontend ships', function () {
 });
 
 /*
- * Branding from Central's public site settings (2026-10-20, operator's call):
- * the panel shows what Central publishes, falls back to its own value by
- * value, and never breaks when Central is down.
+ * Branding from Central's public site settings: the panel shows what Central
+ * publishes, falls back to its own value by value, and never breaks when
+ * Central is down.
  */
 describe('from Central', function () {
     beforeEach(function () {
@@ -77,7 +77,7 @@ describe('from Central', function () {
     });
 
     it('keeps the panel\'s own value wherever Central has none', function () {
-        // What the real Central answered on 2026-10-20: no logos set.
+        // What the real Central answers when no logos are set.
         centralSays(['name' => 'ServerAvatar', 'logo_url' => null, 'icon_url' => null, 'favicon_url' => null, 'color_code' => '35b87a']);
 
         $this->getJson('/api/branding')->assertOk()

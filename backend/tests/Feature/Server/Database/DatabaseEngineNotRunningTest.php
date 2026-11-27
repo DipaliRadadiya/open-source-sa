@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Process;
  *
  * The create screen offers only running engines, but the API accepted any
  * configured one. `mysql` on a MariaDB server reached MariaDB's port as `root`
- * with no password and came back a 500 "operation failed" (seen live on the
- * Apache test server, 2026-10-22). Now a 422 on `engine`, before any SQL runs.
+ * with no password and came back a 500 "operation failed". Now a 422 on
+ * `engine`, before any SQL runs.
  */
 
 beforeEach(function () {

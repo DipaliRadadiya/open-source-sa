@@ -49,9 +49,9 @@ class ApplicationUpdates
             'newer_major' => null,
             'blocked_reason' => null,
             // Shown beside the button: the backup is the user's to take first,
-            // from the backups screen (Dipali, 2026-10-13).
+            // from the backups screen.
             // `max()` returns the column's raw string (`Y-m-d H:i:s`); every other
-            // date in the API, history[] here included, is `d-m-Y H:i:s` (RC-10).
+            // date in the API, history[] here included, is `d-m-Y H:i:s`.
             'last_backup_at' => ($last = Backup::query()
                 ->where('application_id', $application->id)
                 ->where('status', BackupStatus::Verified)

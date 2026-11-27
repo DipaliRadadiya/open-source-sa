@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Process;
  * Bring the panel's web interface unit up to what install.sh now writes.
  *
  * Two lines, each added by install.sh after servers were already installed:
- * `HOSTNAME=127.0.0.1` (bug #15: the interface listened on every address) and
+ * `HOSTNAME=127.0.0.1` (without it the interface listened on every address) and
  * `NoNewPrivileges=yes` (review finding S1: the interface's processes could
  * use the panel account's root-equivalent sudo grant). This adds whichever is
  * missing and reloads systemd. It does not restart the interface: the updater

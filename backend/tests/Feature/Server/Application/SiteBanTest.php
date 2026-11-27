@@ -174,7 +174,7 @@ it('includes the site\'s ban file in every vhost kind on every web server', func
 it('reads OpenLiteSpeed\'s config test the way the panel does: warnings pass, errors do not', function (string $test, bool $applied) {
     // `openlitespeed -t` exits 1 for warnings only — an unrelated site's
     // missing folder is enough — and 2 for errors. Taken as a failure, every
-    // ban was thrown away (measured on the OLS test box).
+    // ban was thrown away (seen on OpenLiteSpeed).
     $script = banScript('openlitespeed', $this->root, test: $test);
 
     runBan($script, 'ban', 'shop', '203.0.113.9');

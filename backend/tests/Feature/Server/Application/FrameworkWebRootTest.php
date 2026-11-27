@@ -9,7 +9,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
 /*
- * Bug #43: a Git "PHP application" stays on web root `/`, and Laravel and
+ * A Git "PHP application" stays on web root `/`, and Laravel and
  * Symfony keep their front controller in `public/` with `.env`, the source
  * and `vendor/` beside it. So the site served `/.env` and no application.
  */
@@ -50,7 +50,7 @@ function frameworkCheckout(Application $app, array $files): ArrayObject
             return Process::result(exitCode: in_array(substr($args[2], strlen($root) + 1), $files, true) ? 0 : 1);
         }
 
-        // No symlinks in this checkout (WR-01 refuses a web root behind one).
+        // No symlinks in this checkout (a web root behind one is refused).
         if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-L') {
             return Process::result(exitCode: 1);
         }

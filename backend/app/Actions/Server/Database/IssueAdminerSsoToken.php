@@ -54,7 +54,7 @@ class IssueAdminerSsoToken
 
         // The link carries a live database session and the cookie it buys is
         // then sent with every request; over plain HTTP both cross the network
-        // in clear text (phpMyAdmin's bug #98).
+        // in clear text.
         if ($adminer->scheme() !== 'https') {
             throw new AdminerSsoException(
                 message: __('errors/database.adminer_requires_https'),

@@ -6,7 +6,7 @@ use App\Support\PasswordPolicy;
 use Database\Seeders\PermissionSeeder;
 
 /**
- * Three findings from a QA pass, each about the API stating something it knows.
+ * Three cases of the API stating something it knows.
  */
 beforeEach(fn () => $this->seed(PermissionSeeder::class));
 

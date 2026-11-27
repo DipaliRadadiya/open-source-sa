@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 #[Fillable(['engine', 'connection_type', 'host', 'port', 'socket', 'username', 'password', 'options'])]
 class DatabaseConnection extends Model
 {
-    /** A changed connection changes what the engine list can see (FS-C46). */
+    /** A changed connection changes what the engine list can see. */
     protected static function booted(): void
     {
         static::saved(fn () => ProbeCache::flush());

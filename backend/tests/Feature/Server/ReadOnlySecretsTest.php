@@ -11,8 +11,8 @@ use Database\Seeders\PermissionSeeder;
  * A role that may only look must not be handed a working credential.
  *
  * Both lists sat behind `view`, and both returned the plaintext password —
- * a database user's, with a ready-made connection string (DB-01), and a
- * system user's SSH/SFTP login (SU-01). The password goes to `manage` only;
+ * a database user's, with a ready-made connection string, and a
+ * system user's SSH/SFTP login. The password goes to `manage` only;
  * `password_known` keeps telling a read-only screen whether one is set.
  * A deploy webhook's secret is the same kind of thing and goes to whoever may
  * deploy.
@@ -42,7 +42,7 @@ describe('database users', function () {
             ->assertJsonPath('users.0.password_known', true)
             ->assertJsonPath('users.0.connection_string', null)
             // Where to connect is not a secret, and a read-only screen lost it
-            // with the connection string (FS-B11).
+            // with the connection string.
             ->assertJsonPath('users.0.connection.port', 3306)
             ->assertJsonPath('users.0.connection.database', $this->database->name);
     });

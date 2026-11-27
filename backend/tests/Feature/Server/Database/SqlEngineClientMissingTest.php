@@ -10,7 +10,7 @@ use Psr\Log\LoggerInterface;
 /**
  * A server without the MySQL/MariaDB client: `env` exits 127. Asking for the
  * version is a probe, so "not installed" is an answer, not a failed command
- * (2026-11-05, the same fix as PostgreSQL's).
+ * (the same as for PostgreSQL).
  */
 beforeEach(function () {
     config(['server.databases.auth_file_dir' => sys_get_temp_dir()]);

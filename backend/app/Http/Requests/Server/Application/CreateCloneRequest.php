@@ -36,7 +36,7 @@ class CreateCloneRequest extends FormRequest
                 Rule::unique('application_domains', 'domain'),
                 // A clone still being made has no application row yet, so its
                 // domain passed both checks above and was accepted twice
-                // (CL-B1).
+                // .
                 Rule::unique('clones', 'domain')->where(fn ($query) => $query->whereIn('status', [CloneStatus::Pending->value, CloneStatus::Running->value])),
                 new NotPanelHost,
             ],

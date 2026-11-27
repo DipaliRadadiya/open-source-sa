@@ -10,8 +10,7 @@ use Illuminate\Support\Facades\Process;
 /*
  * A scheduled command's "not twice at once" lock outlived the server going
  * down mid-run: Redis kept it across the reboot and it blocked that command
- * for 24 hours. Seen on all three test servers on 2026-09-30 — scheduled
- * backups had stopped on one of them.
+ * for 24 hours.
  */
 
 beforeEach(function () {

@@ -24,22 +24,22 @@ class PushStagingRequest extends FormRequest
         return [
             // 'files' is the default the create form should pre-select: it
             // leaves the live database alone. It is not lossless — it deletes
-            // files that exist only on the live site (ST-B4) — and 'database'
+            // files that exist only on the live site — and 'database'
             // and 'full' replace the live database, which is saved first.
             'mode' => ['required', Rule::in(['files', 'database', 'full'])],
             // Dump the database being replaced first, so it can be put back
-            // (the Staging screen's safety copies). The user's choice since
-            // 2026-10-29; on unless they turn it off.
+            // (the Staging screen's safety copies). The user's choice; on
+            // unless they turn it off.
             'safety_copy' => ['sometimes', 'boolean'],
-            // FS-B10: take a full backup of the live site through its own
+            // Take a full backup of the live site through its own
             // backup setup first, and push only if it verified.
             'backup' => ['sometimes', 'boolean'],
         ];
     }
 
     /**
-     * Bug #88: a push with no staging copy reached StagingManager, which can
-     * only answer a generic 500.
+     * A push with no staging copy is refused here: StagingManager could only
+     * answer it with a generic 500.
      *
      * @return array<int, \Closure>
      */
