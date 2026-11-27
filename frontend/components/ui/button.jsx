@@ -70,6 +70,15 @@ function Button({
   const inheritedReason = useDisabledReason();
   if (denied || disabledReason === DENIED || (disabled && inheritedReason?.denied)) return null;
   const Comp = asChild ? Slot.Root : "button";
+  // Pressing Save would blur the field first; its blur validation shows or hides an error,
+  // the layout shifts, and the click lands beside the moved button. Keep focus where it is.
+  const onMouseDown =
+    !asChild && props.type === "submit"
+      ? (event) => {
+          props.onMouseDown?.(event);
+          event.preventDefault();
+        }
+      : props.onMouseDown;
   const control = (
     <Comp
       data-slot="button"
@@ -78,6 +87,7 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       disabled={disabled}
       {...props}
+      onMouseDown={onMouseDown}
     />
   );
 
