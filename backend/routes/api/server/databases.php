@@ -27,6 +27,11 @@ Route::middleware('manages-databases')->group(function (): void {
     // MySQL/MariaDB root password: set, change or reset.
     Route::put('/databases/connections/{engine}/root-password', [DatabaseConnectionController::class, 'rootPassword'])
         ->middleware(['permission:database,manage', 'throttle:5,1']);
+    // Whether the engine still listens off the box; closing it restarts the engine.
+    Route::get('/databases/connections/{engine}/remote-access', [DatabaseConnectionController::class, 'remoteAccess'])
+        ->middleware('permission:database');
+    Route::post('/databases/connections/{engine}/remote-access/close', [DatabaseConnectionController::class, 'closeRemoteAccess'])
+        ->middleware(['permission:database,manage', 'throttle:5,1']);
 
     // Brownfield reconcile.
     Route::get('/databases/untracked', [DatabaseController::class, 'untracked'])->middleware('permission:database');

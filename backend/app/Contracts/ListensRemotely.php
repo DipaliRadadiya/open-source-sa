@@ -17,4 +17,10 @@ interface ListensRemotely
 
     /** Bind every interface, then restart — the only way the setting takes. */
     public function openRemoteListening(): void;
+
+    /** Is the widening the panel's own (its drop-in or ALTER SYSTEM), so the panel may undo it? */
+    public function remoteListeningOpenedByPanel(): bool;
+
+    /** Undo openRemoteListening(), then restart; on a failed restart, put it back. */
+    public function closeRemoteListening(): void;
 }

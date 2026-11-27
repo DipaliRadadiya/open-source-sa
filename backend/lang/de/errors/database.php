@@ -18,6 +18,10 @@ return [
     // 409, not 422: the request is fine, the cluster is not ready. The
     // client re-sends with restart_cluster as explicit consent.
     'remote_access_restart_required' => 'Für Remote-Verbindungen muss :engine neu gestartet werden, weil die Adresse, auf der es lauscht, nur beim Start geändert werden kann. Anwendungen, die diese Datenbank nutzen, verlieren kurz ihre Verbindung. Bestätigen Sie, um neu zu starten und fortzufahren.',
+    'remote_access_close_busy' => 'Eine andere Änderung am Fernzugriff von :engine läuft noch. Versuchen Sie es gleich noch einmal.',
+    'remote_access_close_users_left' => 'Diese Remote-Benutzer brauchen noch Verbindungen von außen zu :engine: :users. Löschen Sie sie oder stellen Sie sie zuerst auf Lokal um.',
+    'remote_access_already_closed' => ':engine nimmt bereits nur lokale Verbindungen an.',
+    'remote_access_not_ours' => ':engine wurde durch die eigene Konfiguration des Servers für Verbindungen von außen geöffnet, nicht durch das Panel. Das Panel lässt es daher unverändert.',
     'phpmyadmin_not_selectable' => 'Die ausgewählte Website ist keine aktive phpMyAdmin-Installation.',
     'phpmyadmin_user_not_found' => 'Der angegebene Datenbankbenutzer gehört nicht zu dieser Datenbank.',
     'phpmyadmin_not_isolated' => 'Diese phpMyAdmin-Site nutzt den serverweiten PHP-Pool, sodass ein Anmeldelink für jede andere Site lesbar wäre. Geben Sie ihr einen eigenen PHP-Pool, oder öffnen Sie phpMyAdmin und melden Sie sich mit den Datenbank-Zugangsdaten an.',

@@ -63,6 +63,7 @@ return [
     'database.detached' => 'Detached database :name from :application',
     'database.connection_updated' => 'Updated the :engine connection settings',
     'database.root_password_changed' => 'Changed the :engine root password',
+    'database.remote_access_closed' => 'Closed :engine to outside connections',
     'database.user_updated' => 'Updated database user :username on :database',
     'database.phpmyadmin_signed_in' => 'Opened :name in phpMyAdmin as :username',
     'database.adminer_signed_in' => 'Opened :name in Adminer as :username',

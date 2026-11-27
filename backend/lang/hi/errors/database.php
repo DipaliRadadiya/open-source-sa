@@ -18,6 +18,10 @@ return [
     // 409, not 422: the request is fine, the cluster is not ready. The
     // client re-sends with restart_cluster as explicit consent.
     'remote_access_restart_required' => 'रिमोट कनेक्शन चालू करने के लिए :engine को रीस्टार्ट करना होगा, क्योंकि जिस पते पर यह सुनता है वह केवल शुरू होते समय बदला जा सकता है। इस डेटाबेस का उपयोग करने वाले एप्लिकेशन कुछ पल के लिए कनेक्शन खो देंगे। रीस्टार्ट करके आगे बढ़ने के लिए पुष्टि करें।',
+    'remote_access_close_busy' => ':engine की रिमोट पहुँच में एक और बदलाव अभी चल रहा है। थोड़ी देर बाद फिर से कोशिश करें।',
+    'remote_access_close_users_left' => 'इन रिमोट उपयोगकर्ताओं को अभी भी :engine पर बाहर से कनेक्शन चाहिए: :users। पहले इन्हें हटाएँ या लोकल पर सेट करें।',
+    'remote_access_already_closed' => ':engine पहले से ही केवल लोकल कनेक्शन स्वीकार करता है।',
+    'remote_access_not_ours' => ':engine को बाहरी कनेक्शन के लिए सर्वर की अपनी कॉन्फ़िगरेशन ने खोला है, पैनल ने नहीं, इसलिए पैनल इसे जैसा है वैसा ही छोड़ता है।',
     'phpmyadmin_not_selectable' => 'चयनित एप्लिकेशन एक सक्रिय phpMyAdmin इंस्टॉलेशन नहीं है।',
     'phpmyadmin_user_not_found' => 'निर्दिष्ट डेटाबेस उपयोगकर्ता इस डेटाबेस से संबंधित नहीं है।',
     'phpmyadmin_not_isolated' => 'यह phpMyAdmin एप्लिकेशन सर्वर-व्यापी PHP पूल साझा करती है, इसलिए साइन-इन लिंक हर दूसरी एप्लिकेशन पढ़ सकेगी। इसे अपना PHP पूल दें, या phpMyAdmin खोलकर डेटाबेस क्रेडेंशियल से साइन इन करें।',

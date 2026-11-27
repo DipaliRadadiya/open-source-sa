@@ -60,6 +60,7 @@ return [
         'database.phpmyadmin_signed_in',
         'database.adminer_signed_in',
         'database.root_password_changed',
+        'database.remote_access_closed',
         'application.magic_login',
         'application.container_secrets_viewed',
         'docker_database.credentials_viewed',

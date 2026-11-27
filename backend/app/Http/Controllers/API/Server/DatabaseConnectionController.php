@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Actions\Server\Database\ChangeDatabaseRootPassword;
+use App\Actions\Server\Database\CloseRemoteAccess;
 use App\Actions\Server\Database\SaveConnection;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\ChangeRootPasswordRequest;
+use App\Http\Requests\Server\Database\CloseRemoteAccessRequest;
 use App\Http\Requests\Server\Database\SaveConnectionRequest;
 use App\Http\Resources\DatabaseConnectionResource;
 use App\Services\Server\Databases\DatabaseManager;
+use App\Services\Server\Databases\RemoteAccessState;
 use Illuminate\Http\JsonResponse;
 
 class DatabaseConnectionController extends Controller
@@ -62,5 +65,25 @@ class DatabaseConnectionController extends Controller
         abort_unless(in_array($engine, $manager->engineNames(), true), 404);
 
         return response()->json(['reachable' => $manager->engine($engine)->available()]);
+    }
+
+    /**
+     * Does the engine still accept connections from off the box, and may the panel close that?
+     */
+    public function remoteAccess(string $engine, RemoteAccessState $state): JsonResponse
+    {
+        abort_unless($state->supports($engine), 404);
+
+        return response()->json(['remote_access' => $state->of($engine)]);
+    }
+
+    /**
+     * Stop listening off the box once no remote user is left. Restarts the engine.
+     */
+    public function closeRemoteAccess(string $engine, CloseRemoteAccessRequest $request, RemoteAccessState $state, CloseRemoteAccess $action): JsonResponse
+    {
+        abort_unless($state->supports($engine), 404);
+
+        return response()->json(['remote_access' => $action->execute($engine)]);
     }
 }

@@ -63,6 +63,7 @@ return [
     'database.detached' => 'Desvinculou o banco de dados :name de :application',
     'database.connection_updated' => 'Atualizou as configurações de conexão de :engine',
     'database.root_password_changed' => 'Alterou a senha de root do :engine',
+    'database.remote_access_closed' => 'Fechou o :engine a ligações externas',
     'database.user_updated' => 'Atualizou o usuário de banco de dados :username em :database',
     'database.phpmyadmin_signed_in' => 'Abriu :name no phpMyAdmin como :username',
     'database.adminer_signed_in' => 'Abriu :name no Adminer como :username',

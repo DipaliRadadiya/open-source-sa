@@ -9,6 +9,8 @@ use App\Models\DatabaseConnection;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * MySQL + MariaDB. Runs the `mysql`/`mariadb` client with connection creds in
@@ -94,6 +96,79 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
         if ($restart->failed()) {
             throw new DatabaseOperationException($restart->reference);
         }
+    }
+
+    /** The panel's drop-in (or an older name of it) is there: only then is closing ours to do. */
+    public function remoteListeningOpenedByPanel(): bool
+    {
+        foreach ($this->remoteBindFiles() as $path) {
+            $read = ($this->files ?? app(ManagedFile::class))->get($path, ['feature' => 'database', 'engine' => $this->connection->engine]);
+
+            if ($read->ok && preg_match('/^\s*bind[-_]address\s*=/mi', $read->output()) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Removes the panel's drop-in, then restarts. A failed restart writes it back and restarts
+     * again, so the engine is not left down by a change nobody needs.
+     */
+    public function closeRemoteListening(): void
+    {
+        $engine = $this->connection->engine;
+        $dropIn = (string) config("server.databases.engines.{$engine}.remote_bind_file");
+        $service = (string) config("server.databases.engines.{$engine}.service");
+        $context = ['feature' => 'database', 'engine' => $engine, 'op' => 'close_remote_listening'];
+
+        if ($dropIn === '' || $service === '') {
+            throw new DatabaseOperationException(self::logReference('no remote_bind_file or service configured', $context));
+        }
+
+        $removed = $this->serverOps->run(['rm', '-f', ...$this->remoteBindFiles()], $context);
+
+        if ($removed->failed()) {
+            throw new DatabaseOperationException($removed->reference);
+        }
+
+        $restart = $this->serverOps->run(['systemctl', 'restart', $service], $context, 120);
+
+        if ($restart->failed()) {
+            ($this->files ?? app(ManagedFile::class))->put(
+                $dropIn,
+                "# Managed by the panel: lets remote database users connect.\n[mysqld]\nbind-address = 0.0.0.0\n",
+                $context,
+            );
+            $this->serverOps->run(['systemctl', 'restart', $service], $context, 120);
+
+            throw new DatabaseOperationException($restart->reference);
+        }
+    }
+
+    /**
+     * A reference for a failure no command produced, logged where the user can quote it.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private static function logReference(string $message, array $context): string
+    {
+        $reference = (string) Str::uuid();
+        Log::channel('server-ops')->error($message, ['reference' => $reference, ...$context]);
+
+        return $reference;
+    }
+
+    /** @return list<string> the drop-in and its legacy names */
+    private function remoteBindFiles(): array
+    {
+        $engine = $this->connection->engine;
+
+        return array_values(array_unique(array_filter([
+            (string) config("server.databases.engines.{$engine}.remote_bind_file"),
+            ...(array) config("server.databases.engines.{$engine}.legacy_remote_bind_files", []),
+        ], fn ($path) => is_string($path) && $path !== '')));
     }
 
     public function engine(): string

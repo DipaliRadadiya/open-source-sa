@@ -18,6 +18,10 @@ return [
     // 409, not 422: the request is fine, the cluster is not ready. The
     // client re-sends with restart_cluster as explicit consent.
     'remote_access_restart_required' => 'Permitir conexões remotas exige reiniciar o :engine, porque o endereço em que escuta só pode ser alterado no arranque. As aplicações que usam esta base de dados perdem a ligação por um momento. Confirme para o reiniciar e continuar.',
+    'remote_access_close_busy' => 'Outra alteração ao acesso remoto do :engine ainda está em curso. Tente novamente daqui a pouco.',
+    'remote_access_close_users_left' => 'Estes utilizadores remotos ainda precisam que o :engine aceite ligações externas: :users. Elimine-os ou mude-os para Local primeiro.',
+    'remote_access_already_closed' => 'O :engine já aceita apenas ligações locais.',
+    'remote_access_not_ours' => 'O :engine foi aberto a ligações externas pela própria configuração do servidor, não pelo painel, por isso o painel deixa-o como está.',
     'phpmyadmin_not_selectable' => 'A aplicação selecionada não é uma instalação ativa do phpMyAdmin.',
     'phpmyadmin_user_not_found' => 'O usuário de banco de dados especificado não pertence a este banco de dados.',
     'phpmyadmin_not_isolated' => 'Esta aplicação phpMyAdmin compartilha o pool de PHP de todo o servidor, portanto um link de acesso seria legível por todas as outras aplicações. Dê-lhe o seu próprio pool de PHP, ou abra o phpMyAdmin e entre com as credenciais do banco de dados.',

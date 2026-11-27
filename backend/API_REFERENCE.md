@@ -4540,6 +4540,27 @@ Test reachability of the admin connection.
 
 ---
 
+### GET `/databases/connections/{engine}/remote-access`
+
+`mysql`, `mariadb` or `postgresql` (others 404). Needs `database` view. Whether the engine still accepts connections from off the server, and whether the panel may close that.
+
+```json
+{"remote_access": {"engine": "mariadb", "available": true, "listening_remotely": true, "opened_by_panel": true, "remote_users": 0, "can_close": true}}
+```
+
+- `listening_remotely`: bound to an address other than loopback. `null` when the engine is not running.
+- `opened_by_panel`: the panel widened it itself (its `bind-address` drop-in, or `ALTER SYSTEM` on PostgreSQL). `false` means the server's own configuration did; the panel never changes that. Show it as information, without a button.
+- `remote_users`: users the panel has with `remote` or `anywhere` access on this engine.
+- `can_close`: show **Close remote access** only when this is `true`. Re-read it after deleting a remote user or database.
+
+### POST `/databases/connections/{engine}/remote-access/close`
+
+Needs `database` manage. Body `{"restart": true}` (required: closing restarts the engine, so its applications lose their connections for a moment). Removes the panel's drop-in (or resets `listen_addresses`), restarts, and answers the new state as above. Logged as `database.remote_access_closed`.
+
+- `422` `errors.engine`: a remote user is left (they are named), it is already local only, or the panel did not open it.
+- `422` `errors.restart`: `restart` missing.
+- `500` with `reference`: the restart failed. On MySQL/MariaDB the drop-in is put back and the engine restarted again.
+
 ### GET `/databases`
 **Permission:** `database` (view)
 

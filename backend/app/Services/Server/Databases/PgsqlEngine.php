@@ -9,6 +9,8 @@ use App\Models\DatabaseConnection;
 use App\Services\Server\Databases\Imports\PgsqlLexer;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * PostgreSQL via `psql`. A separate driver from {@see SqlEngine}, not a subclass of it.
@@ -954,6 +956,43 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
         if ($cluster === null) {
             throw new DatabaseOperationException(null);
         }
+
+        $result = $this->serverOps->run(
+            ['systemctl', 'restart', "postgresql@{$cluster}"],
+            ['feature' => 'database', 'engine' => $this->engine(), 'op' => 'restart_cluster'],
+            120,
+        );
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+    }
+
+    /** Set by ALTER SYSTEM (postgresql.auto.conf), as openRemoteListening() does it. */
+    public function remoteListeningOpenedByPanel(): bool
+    {
+        $result = $this->run("SELECT sourcefile FROM pg_settings WHERE name = 'listen_addresses';");
+
+        return $result->ok && str_ends_with(trim($result->output()), 'postgresql.auto.conf');
+    }
+
+    /**
+     * Resets the ALTER SYSTEM value, then restarts the cluster. A failed restart cannot be undone
+     * with SQL (the cluster may be down), so the reference is all the caller gets.
+     */
+    public function closeRemoteListening(): void
+    {
+        // The cluster first: once the value is reset, a restart is the only way back.
+        $cluster = $this->cluster();
+
+        if ($cluster === null) {
+            $reference = (string) Str::uuid();
+            Log::channel('server-ops')->error('close_remote_listening: no cluster found', ['reference' => $reference, 'engine' => $this->engine()]);
+
+            throw new DatabaseOperationException($reference);
+        }
+
+        $this->must('ALTER SYSTEM RESET listen_addresses;');
 
         $result = $this->serverOps->run(
             ['systemctl', 'restart', "postgresql@{$cluster}"],
