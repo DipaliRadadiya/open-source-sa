@@ -121,7 +121,8 @@ it('computes the cpu percentage from the change since the previous read', functi
 
     Process::fake(['*' => Process::result(output: unitState(['CPUUsageNSec' => '12000000000']))]);
 
-    expect(fetchServices()['usage']['cpu_percent'])->toEqual(20.0);
+    // The wall clock keeps running between the two reads, so a slow machine reads a hair under 20.
+    expect(fetchServices()['usage']['cpu_percent'])->toEqualWithDelta(20.0, 0.5);
 });
 
 it('ignores a counter that went backwards, which means the service restarted', function () {
