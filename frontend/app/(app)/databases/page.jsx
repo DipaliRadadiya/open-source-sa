@@ -7,6 +7,7 @@ import {
   getDatabases,
   getUntracked,
   getConnections,
+  getRemoteAccess,
 } from "@/lib/databases/get-databases";
 import { getExports } from "@/lib/databases/get-exports";
 import {
@@ -100,6 +101,7 @@ export default async function DatabasesPage({ searchParams }) {
     dbCounts,
     unlinkedCount,
     catalogue,
+    remoteAccess,
   ] = await Promise.all([
     usable
       ? getDatabases(query)
@@ -115,6 +117,7 @@ export default async function DatabasesPage({ searchParams }) {
     usable && canManage
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
+    usable ? getRemoteAccess(engines) : Promise.resolve([]),
   ]);
 
   if (dbFailed && dbStatus === 422 && ["sort", "engine", "attached", "per_page", "direction"].some((key) => sp?.[key])) {
@@ -166,6 +169,7 @@ export default async function DatabasesPage({ searchParams }) {
           <EngineBar
             engines={engines}
             connections={connections}
+            remoteAccess={remoteAccess}
             canManage={canManage}
             summary={summary}
           />

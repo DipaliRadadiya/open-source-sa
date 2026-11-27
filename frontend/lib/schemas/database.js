@@ -206,6 +206,19 @@ export const connectionsResponseSchema = z.object({
   connections: z.array(connectionSchema).default([]),
 });
 
+export const remoteAccessSchema = z.object({
+  engine: z.string(),
+  available: z.boolean().nullish(),
+  listening_remotely: z.boolean().nullable(),
+  opened_by_panel: z.boolean().nullable(),
+  remote_users: z.number().int().nonnegative().default(0),
+  can_close: z.boolean().default(false),
+});
+
+export const remoteAccessResponseSchema = z.object({
+  remote_access: remoteAccessSchema,
+});
+
 export const connectionFormSchema = z
   .object({
     connection_type: z.enum(["tcp", "socket"]).default("tcp"),

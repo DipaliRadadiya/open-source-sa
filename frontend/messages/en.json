@@ -3636,6 +3636,17 @@
       "current": "Current root password",
       "currentPlaceholder": "Root's current password",
       "currentHint": "The panel can't sign in to {engine} as root with the password it knows. Enter root's current password once; it isn't saved."
+    },
+    "remoteAccess": {
+      "stillOpen": "{name} still accepts connections from other addresses, but no database user needs that any more.",
+      "close": "Close remote access",
+      "openedByServer": "{name} accepts connections from other addresses because of the server's own settings. The panel leaves that as it is.",
+      "confirmTitle": "Close remote access to {name}?",
+      "confirmBody": "{name} restarts, so applications using it lose their connection for a moment. Afterwards only this server can connect.",
+      "confirm": "Restart and close",
+      "closing": "Closing…",
+      "closed": "{name} now accepts connections from this server only.",
+      "closeFailed": "Couldn't close remote access to {name}."
     }
   },
   "git": {

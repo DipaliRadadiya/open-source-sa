@@ -3636,6 +3636,17 @@
       "current": "Contraseña actual de root",
       "currentPlaceholder": "Contraseña actual de root",
       "currentHint": "El panel no puede iniciar sesión en {engine} como root con la contraseña que conoce. Escribe una vez la contraseña actual de root; no se guarda."
+    },
+    "remoteAccess": {
+      "stillOpen": "{name} todavía acepta conexiones desde otras direcciones, pero ya ningún usuario de base de datos lo necesita.",
+      "close": "Cerrar el acceso remoto",
+      "openedByServer": "{name} acepta conexiones desde otras direcciones por la configuración propia del servidor. El panel lo deja como está.",
+      "confirmTitle": "¿Cerrar el acceso remoto a {name}?",
+      "confirmBody": "{name} se reinicia, así que las aplicaciones que lo usan pierden la conexión un momento. Después solo este servidor puede conectarse.",
+      "confirm": "Reiniciar y cerrar",
+      "closing": "Cerrando…",
+      "closed": "{name} ahora solo acepta conexiones desde este servidor.",
+      "closeFailed": "No se pudo cerrar el acceso remoto a {name}."
     }
   },
   "git": {

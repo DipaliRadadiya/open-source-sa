@@ -10,3 +10,7 @@ export async function adminerSso(...args) {
 export async function createDatabase(...args) {
   return globalThis.__databaseActionsApi.createDatabase(...args);
 }
+
+export async function closeRemoteAccess(...args) {
+  return globalThis.__databaseActionsApi.closeRemoteAccess(...args);
+}

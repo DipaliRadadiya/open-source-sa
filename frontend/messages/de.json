@@ -3636,6 +3636,17 @@
       "current": "Aktuelles Root-Passwort",
       "currentPlaceholder": "Aktuelles Passwort von root",
       "currentHint": "Das Panel kann sich mit dem bekannten Passwort nicht als root bei {engine} anmelden. Geben Sie das aktuelle Root-Passwort einmal ein; es wird nicht gespeichert."
+    },
+    "remoteAccess": {
+      "stillOpen": "{name} nimmt noch Verbindungen von anderen Adressen an, aber kein Datenbankbenutzer braucht das mehr.",
+      "close": "Fernzugriff schließen",
+      "openedByServer": "{name} nimmt Verbindungen von anderen Adressen an, weil die eigenen Einstellungen des Servers das so vorsehen. Das Panel lässt das unverändert.",
+      "confirmTitle": "Fernzugriff auf {name} schließen?",
+      "confirmBody": "{name} startet neu, Anwendungen, die es nutzen, verlieren kurz die Verbindung. Danach kann sich nur noch dieser Server verbinden.",
+      "confirm": "Neu starten und schließen",
+      "closing": "Wird geschlossen…",
+      "closed": "{name} nimmt jetzt nur noch Verbindungen von diesem Server an.",
+      "closeFailed": "Der Fernzugriff auf {name} konnte nicht geschlossen werden."
     }
   },
   "git": {

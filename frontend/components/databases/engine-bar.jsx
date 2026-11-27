@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { HoverHint } from "@/components/ui/hover-hint";
+import { RemoteAccessNotes } from "@/components/databases/remote-access-note";
 
 function EngineMark({ engine, status, t }) {
   const name = t(`engines.${engine}`);
@@ -42,7 +43,7 @@ function EngineMark({ engine, status, t }) {
   );
 }
 
-export function EngineBar({ engines = [], connections = [], canManage, summary }) {
+export function EngineBar({ engines = [], connections = [], remoteAccess = [], canManage, summary }) {
   const t = useTranslations("databases");
   const router = useRouter();
   const [pending, setPending] = useState(null);
@@ -253,6 +254,8 @@ export function EngineBar({ engines = [], connections = [], canManage, summary }
           {t("install.takingLonger")}
         </p>
       ) : null}
+
+      <RemoteAccessNotes states={remoteAccess} canManage={canManage} />
 
       <RootPasswordDialog
         engine={rootFor}

@@ -5,6 +5,7 @@ import {
   databasesResponseSchema,
   untrackedResponseSchema,
   connectionsResponseSchema,
+  remoteAccessResponseSchema,
 } from "@/lib/schemas/database";
 import { rememberedPerPage } from "@/lib/tables/remembered-per-page";
 import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
@@ -90,3 +91,22 @@ export const getConnections = cache(async function getConnections() {
   const { data } = await read("/databases/connections", connectionsResponseSchema);
   return data?.connections ?? [];
 });
+
+export const REMOTE_ACCESS_ENGINES = ["mysql", "mariadb", "postgresql"];
+
+// A failed read is left out: no note beats a guessed one.
+export async function getRemoteAccess(engines = []) {
+  const names = engines
+    .filter((engine) => engine.running && REMOTE_ACCESS_ENGINES.includes(engine.engine))
+    .map((engine) => engine.engine);
+  const states = await Promise.all(
+    names.map(async (name) => {
+      const { data } = await read(
+        `/databases/connections/${encodeURIComponent(name)}/remote-access`,
+        remoteAccessResponseSchema,
+      );
+      return data?.remote_access ?? null;
+    }),
+  );
+  return states.filter(Boolean);
+}

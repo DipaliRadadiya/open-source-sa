@@ -3636,6 +3636,17 @@
       "current": "Senha atual do root",
       "currentPlaceholder": "Senha atual do root",
       "currentHint": "O painel não consegue entrar no {engine} como root com a senha que conhece. Digite uma vez a senha atual do root; ela não é salva."
+    },
+    "remoteAccess": {
+      "stillOpen": "{name} ainda aceita conexões de outros endereços, mas nenhum usuário de banco de dados precisa mais disso.",
+      "close": "Fechar o acesso remoto",
+      "openedByServer": "{name} aceita conexões de outros endereços por causa das configurações do próprio servidor. O painel deixa como está.",
+      "confirmTitle": "Fechar o acesso remoto ao {name}?",
+      "confirmBody": "O {name} reinicia, então as aplicações que o usam perdem a conexão por um instante. Depois, só este servidor pode se conectar.",
+      "confirm": "Reiniciar e fechar",
+      "closing": "Fechando…",
+      "closed": "O {name} agora só aceita conexões deste servidor.",
+      "closeFailed": "Não foi possível fechar o acesso remoto ao {name}."
     }
   },
   "git": {

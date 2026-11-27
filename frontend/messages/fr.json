@@ -3636,6 +3636,17 @@
       "current": "Mot de passe root actuel",
       "currentPlaceholder": "Mot de passe actuel de root",
       "currentHint": "Le panneau ne peut pas se connecter à {engine} en tant que root avec le mot de passe qu'il connaît. Saisissez une fois le mot de passe root actuel ; il n'est pas enregistré."
+    },
+    "remoteAccess": {
+      "stillOpen": "{name} accepte encore des connexions depuis d'autres adresses, mais plus aucun utilisateur de base de données n'en a besoin.",
+      "close": "Fermer l'accès distant",
+      "openedByServer": "{name} accepte des connexions depuis d'autres adresses à cause des réglages propres du serveur. Le panneau n'y touche pas.",
+      "confirmTitle": "Fermer l'accès distant à {name} ?",
+      "confirmBody": "{name} redémarre, donc les applications qui l'utilisent perdent leur connexion un instant. Ensuite, seul ce serveur peut s'y connecter.",
+      "confirm": "Redémarrer et fermer",
+      "closing": "Fermeture…",
+      "closed": "{name} n'accepte plus que les connexions de ce serveur.",
+      "closeFailed": "Impossible de fermer l'accès distant à {name}."
     }
   },
   "git": {

@@ -61,6 +61,12 @@ export function updateConnection(engine, payload) {
   });
 }
 
+export function closeRemoteAccess(engine) {
+  return api.post(`/databases/connections/${encodeURIComponent(engine)}/remote-access/close`, {
+    restart: true,
+  });
+}
+
 export function testConnection(engine) {
   return api.post(`/databases/connections/${encodeURIComponent(engine)}/test`);
 }
