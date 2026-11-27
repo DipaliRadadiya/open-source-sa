@@ -94,6 +94,15 @@ function lastAddonCommand(): array
     return end($GLOBALS['addonRan'])['command'];
 }
 
+/** @return list<array<int, string>> the add-on binary's runs, without the panel's own systemctl reads */
+function addonBinaryRuns(): array
+{
+    return array_values(array_map(fn ($run) => $run['command'], array_filter(
+        $GLOBALS['addonRan'] ?? [],
+        fn ($run) => ($run['command'][0] ?? '') !== 'systemctl',
+    )));
+}
+
 // ── who may call ─────────────────────────────────────────────────────────────
 
 it('does not exist for an administrator', function () {
@@ -337,8 +346,30 @@ it('answers a repeated report from the cache', function () {
     $this->withHeaders(addonHeaders($this->token))->getJson($url)->assertOk()->assertJsonPath('data.total_bandwidth', 10);
     $this->withHeaders(addonHeaders($this->token))->getJson($url)->assertOk();
 
-    expect($GLOBALS['addonRan'])->toHaveCount(1)
-        ->and($GLOBALS['addonRan'][0]['command'])->toBe(["{$this->binDir}/log-monitoring-suite", 'bandwidth:top-ips', '--application=7', '--limit=5']);
+    expect(addonBinaryRuns())->toHaveCount(1)
+        ->and(addonBinaryRuns()[0])->toBe(["{$this->binDir}/log-monitoring-suite", 'bandwidth:top-ips', '--application=7', '--limit=5']);
+});
+
+it('answers afresh once the logs have been read again', function () {
+    Cache::flush();
+    $this->site->forceFill(['log_monitoring_suite_id' => 7])->save();
+    $GLOBALS['fetchStamp'] = '';
+    $GLOBALS['reportTotal'] = 0;
+    fakeAddon(fn (array $command) => $command[0] === 'systemctl'
+        ? ['ExecMainExitTimestamp='.$GLOBALS['fetchStamp']]
+        : ['{"status":"success","data":{"total_bandwidth":'.$GLOBALS['reportTotal'].'}}']);
+
+    $url = "/api/central/addons/applications/{$this->site->id}/log-monitoring/bandwidth/summary";
+    // Just installed: nothing read yet.
+    $this->withHeaders(addonHeaders($this->token))->getJson($url)->assertJsonPath('data.total_bandwidth', 0);
+
+    // The first read lands; within the report cache window, the dashboard must show it.
+    $GLOBALS['fetchStamp'] = 'Fri 2026-11-27 07:45:00 UTC';
+    $GLOBALS['reportTotal'] = 512;
+    $this->travel(20)->seconds();
+
+    $this->withHeaders(addonHeaders($this->token))->getJson($url)->assertJsonPath('data.total_bandwidth', 512);
+    expect(addonBinaryRuns())->toHaveCount(2);
 });
 
 it('does not cache a failure', function () {
@@ -350,7 +381,7 @@ it('does not cache a failure', function () {
     $this->withHeaders(addonHeaders($this->token))->getJson($url)->assertForbidden();
     $this->withHeaders(addonHeaders($this->token))->getJson($url)->assertForbidden();
 
-    expect($GLOBALS['addonRan'])->toHaveCount(2);
+    expect(addonBinaryRuns())->toHaveCount(2);
 });
 
 it('knows only the reports the toolkit has', function () {

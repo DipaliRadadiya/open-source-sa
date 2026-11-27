@@ -157,7 +157,8 @@ class InsightsAddonController extends Controller
             $arguments[] = '--'.str_replace('_', '-', $option).'='.$request->validated($option);
         }
 
-        $key = 'addon:insights:'.$application->id.':'.implode(' ', $arguments);
+        // With the last log read in the key, a new read is never answered from an older one.
+        $key = 'addon:insights:'.$application->id.':'.implode(' ', $arguments).':'.$toolkit->lastFetchMark();
 
         // Only answers are cached; an error is asked again next time.
         $answer = Cache::remember($key, (int) config('server.addons.log_monitoring_suite.cache_seconds'), fn () => $toolkit->run($arguments, (int) config('server.addons.sync_timeout'), ['application' => $application->id]));

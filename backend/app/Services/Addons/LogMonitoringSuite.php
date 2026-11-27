@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Services\Server\ServerOps;
 use App\Services\Server\WebServers\WebServerManager;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
@@ -205,6 +206,26 @@ class LogMonitoringSuite extends AddonCli
         $health['retention_days'] = $this->retentionDays();
 
         return $health;
+    }
+
+    /**
+     * When the log reader last finished, as systemd stamps it; empty when unknown.
+     *
+     * Part of every report's cache key, so a cached answer ends the moment new lines are read
+     * (otherwise a site shows 0 for minutes after its first read). Asked at most every 15 seconds:
+     * a dashboard asks for many reports at once.
+     */
+    public function lastFetchMark(): string
+    {
+        return (string) Cache::remember('addon:log-monitoring-suite:last-fetch', 15, function (): string {
+            $shown = $this->serverOps->run(
+                ['systemctl', 'show', self::FETCH_UNIT.'.service', '--property=ExecMainExitTimestamp'],
+                ['feature' => 'addon', 'addon' => $this->name(), 'op' => 'last_fetch'],
+                timeout: 15,
+            );
+
+            return $shown->ok ? trim($shown->output()) : '';
+        });
     }
 
     /**
