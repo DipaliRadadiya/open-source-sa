@@ -1,12 +1,8 @@
 
-{{-- `external: true` is load-bearing: the panel creates this volume so it appears
-     on the Docker page, can be attributed to this database, and is guarded by the
-     same delete checks a site's volume is. Declared without it, Compose would make
-     its own and the panel would neither see it nor protect it.
-
-     The comment sits ABOVE `volumes:` rather than inside the block: Blade strips
-     the leading whitespace of the line after a comment, so a comment placed before
-     an indented line flattens it. --}}
+{{-- `external: true` is load-bearing: the panel creates this volume so it shows on the Docker page
+     and is guarded by the same delete checks as a site's volume. Without it Compose makes its own and
+     the panel neither sees nor protects it.
+     Sits ABOVE `volumes:`, not inside the block, so no indented line follows it. --}}
 volumes:
   {{ $volume }}:
     external: true

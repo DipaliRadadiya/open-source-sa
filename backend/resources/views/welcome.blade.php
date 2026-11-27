@@ -1,12 +1,6 @@
-{{--
-    What the API's own address shows in a browser.
-
-    It was Laravel's starter page — another product's name, colours and links
-    on the panel's API host. Now the panel's branding (name and brand colour,
-    from config/branding.php) and two ways on: the panel itself and the API
-    reference. Same rules as the site pages: nothing fetched, nothing about
-    the server disclosed.
---}}
+{{-- The API host's own page in a browser: panel name and brand colour (config/branding.php), and
+     links to the panel and the API reference. Nothing is fetched and nothing about the server is
+     disclosed. --}}
 @php($brand = \App\Support\BrandColor::value())
 @php($panel = (string) config('server.storage.panel_url'))
 <!doctype html>

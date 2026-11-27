@@ -1,30 +1,10 @@
-{{--
-    The one page the panel serves from somebody else's document root.
-
-    Two callers, two audiences. The placeholder is read by the operator who
-    just created a site and wants to know it works; the disabled page is read
-    by that site's visitors, who did not choose to be here. Same markup so they
-    look like one product, different words.
-
-    Three rules this file exists to hold:
-
-    **Nothing is fetched.** No CDN, no web font, no analytics, no favicon
-    request. A server with no outbound network — which a firewalled box behind
-    a NAT gateway routinely is — renders a page with a dead stylesheet, and a
-    broken layout is a worse answer than the unstyled text this replaces. It
-    also means the page cannot report a visitor to anyone.
-
-    **Nothing is disclosed.** No PHP version, no server software, no paths, no
-    `phpinfo()`. This is publicly reachable from the second the site
-    provisions, and a blank site can sit for months — a version string here is
-    a free gift to anything scanning for known-vulnerable builds. The default
-    nginx and Apache pages name no version either.
-
-    **Everything is inline.** One file, written through `tee` into a directory
-    that may contain nothing else. A stylesheet in a second file would be a
-    second write, a second thing to own, and a 404 the first time somebody
-    copies the html somewhere.
---}}
+{{-- The one page the panel serves from somebody else's document root: the new-site placeholder and
+     the disabled-site page (same markup, different words).
+     Nothing is fetched (no CDN, web font, analytics, favicon): a box with no outbound network must
+     still render, and the page must not report a visitor to anyone.
+     Nothing is disclosed (no PHP or server version, paths, phpinfo()): it is public from the moment
+     the site provisions.
+     Everything is inline: one file, written through `tee` into a directory that may hold nothing else. --}}
 <!doctype html>
 <html lang="{{ $locale }}">
 <head>
@@ -161,9 +141,8 @@
     <p>{{ $lede }}</p>
 
     @if ($dynamic !== null)
-      {{-- Rendered by PHP on the site itself, so it is evidence rather than a
-           claim: a static file cannot print the time it was asked for. This is
-           the question an operator actually has about a new PHP site. --}}
+      {{-- Rendered by PHP on the site itself, as proof that PHP works: a static file cannot print the
+           time it was asked for. --}}
       <span class="status"><span class="dot"></span>{!! $dynamic !!}</span>
     @endif
 

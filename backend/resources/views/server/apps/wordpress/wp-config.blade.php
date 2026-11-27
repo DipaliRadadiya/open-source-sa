@@ -21,12 +21,9 @@ $table_prefix = '{{ $prefix }}';
 define('WP_DEBUG', false);
 define('DISALLOW_FILE_EDIT', true);
 
-{{-- Staging-only, all null/false on a normal install so this changes nothing
-     for it. `WP_HOME`/`WP_SITEURL` pin the site to its own domain regardless
-     of what got copied into the database; `DISABLE_WP_CRON` is the one
-     non-negotiable staging safeguard — without it, scheduled tasks a clone
-     inherited (WooCommerce emails, drip campaigns) fire against real
-     customers from a site nobody is meant to be treating as live. --}}
+{{-- Staging-only; null/false on a normal install, so it changes nothing there. `WP_HOME`/`WP_SITEURL`
+     pin the site to its own domain. `DISABLE_WP_CRON` is the staging safeguard: inherited scheduled
+     tasks (WooCommerce emails, drip campaigns) would otherwise fire against real customers. --}}
 @if ($home ?? null)
 define('WP_HOME', '{{ $home }}');
 define('WP_SITEURL', '{{ $siteUrl ?? $home }}');
@@ -38,10 +35,8 @@ define('WP_ENVIRONMENT_TYPE', '{{ $environmentType }}');
 define('DISABLE_WP_CRON', true);
 @endif
 
-{{-- WordPress's own marker, kept verbatim: WP-CLI adds any constant that is
-     not here yet just above it (`wp config set`), and without it every such
-     addition failed — debug log, DISABLE_WP_CRON, memory limits, Object Cache
-     Pro's WP_REDIS_CONFIG. Found on a live server, 2026-10-02. --}}
+{{-- WordPress's own marker, kept verbatim: `wp config set` inserts new constants just above it, and
+     without it every such addition (debug log, DISABLE_WP_CRON, WP_REDIS_CONFIG) fails. --}}
 /* That's all, stop editing! Happy publishing. */
 
 if (! defined('ABSPATH')) {

@@ -25,8 +25,7 @@ listen.mode = 0660
 pm = {{ $pmType }}
 pm.max_children = {{ $pmMaxChildren }}
 @if ($pmType === 'dynamic')
-{{-- Derived from max_children, or the site's own numbers (kept from v7)
-     when all three are set and agree with it. --}}
+{{-- Derived from max_children, or the site's own numbers when all three are set and agree with it. --}}
 pm.start_servers = {{ $pmStartServers }}
 pm.min_spare_servers = {{ $pmMinSpare }}
 pm.max_spare_servers = {{ $pmMaxSpare }}
@@ -64,10 +63,9 @@ php_admin_value[auto_prepend_file] = {{ $autoPrependFile }}
 @endif
 php_admin_flag[allow_url_fopen] = {{ $allowUrlFopen ? 'on' : 'off' }}
 @if ($openBasedir)
-{{-- A second layer, not the boundary: open_basedir is enforced inside PHP, so
-     it stops a script wandering the filesystem but does not stop anything the
-     kernel would allow. The user above is what actually isolates the site.
-     The session path has to be listed or sessions stop working. --}}
+{{-- A second layer, not the boundary: open_basedir is enforced inside PHP and does not stop what the
+     kernel allows; the site's system user is what isolates it. The session path must be listed or
+     sessions stop working. --}}
 php_admin_value[open_basedir] = {{ $openBasedir }}
 @endif
 @if ($disableFunctions)

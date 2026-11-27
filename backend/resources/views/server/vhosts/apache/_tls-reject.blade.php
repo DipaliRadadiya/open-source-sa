@@ -1,8 +1,6 @@
-{{-- Apache cannot reject an SNI hostname before selecting a certificate. A
-     reserved-name self-signed pair lets this exact hostname terminate into a
-     denied vhost rather than Apache's first real TLS application. Browsers see
-     a certificate error, which is honest after SSL uninstall; they never see
-     another customer's site. --}}
+{{-- Apache cannot reject an SNI hostname before selecting a certificate. A reserved-name self-signed
+     pair lets this exact hostname terminate into a denied vhost rather than Apache's first real TLS
+     application. Browsers see a certificate error, never another customer's site. --}}
 <VirtualHost *:443>
     ServerName {{ $serverNames[0] }}
 @if (count($serverNames) > 1)

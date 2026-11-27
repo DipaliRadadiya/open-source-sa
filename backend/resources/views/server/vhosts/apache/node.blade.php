@@ -1,11 +1,9 @@
 {{-- Managed by the panel. Manual edits are overwritten on the next deploy.
-
-     Needs mod_proxy, mod_proxy_http and mod_proxy_wstunnel. The config test
-     fails loudly if any is missing, which is the right outcome: a silently
-     unproxied vhost would serve the site's source directory instead. --}}
+     Needs mod_proxy, mod_proxy_http and mod_proxy_wstunnel. The config test fails loudly if any is
+     missing, which beats a silently unproxied vhost serving the site's source directory. --}}
 @if ($section !== 'ssl')
-{{-- Force HTTPS lives in the site's conf/apache/forceHttps.conf, as v7
-     has it, which the body loads with the rest of that folder. --}}
+{{-- Force HTTPS lives in the site's conf/apache/forceHttps.conf, which the body loads with the rest
+     of that folder. --}}
 <VirtualHost *:80>
 @include('server.vhosts.apache._node-body')
 </VirtualHost>
@@ -24,13 +22,11 @@
     SSLProtocol -all +TLSv1.2 +TLSv1.3
     SSLHonorCipherOrder off
 
-    {{-- Without this the Node app sees `X-Forwarded-Proto: http` on a TLS
-         request and builds every absolute URL with the wrong scheme — logins
-         redirect to plaintext and cookies marked Secure are dropped. --}}
+    {{-- Without this the Node app sees `X-Forwarded-Proto: http` on a TLS request and builds absolute
+         URLs with the wrong scheme: logins redirect to plaintext and Secure cookies are dropped. --}}
     RequestHeader set X-Forwarded-Proto "https"
 
-    {{-- HTTP/2 on HTTPS, as v7 had it. Only when the module is loaded:
-         `Protocols h2` without it would be a no-op at best. --}}
+    {{-- HTTP/2 on HTTPS, only when the module is loaded: `Protocols h2` without it would be a no-op. --}}
     <IfModule http2_module>
         Protocols h2 http/1.1
     </IfModule>
@@ -42,9 +38,8 @@
 @include('server.vhosts.apache._tls-reject')
 @endif
 
-{{-- Redirects get their own VirtualHost. Serving the same content under a
-     second name splits its search ranking between the two; a 301 keeps the
-     authority on one. --}}
+{{-- Redirects get their own VirtualHost: serving the same content under a second name splits
+     its search ranking, a 301 keeps the authority on one. --}}
 @foreach ($redirects as $redirect)
 @if ($section !== 'ssl')
 <VirtualHost *:80>
@@ -61,10 +56,8 @@
 </VirtualHost>
 @endif
 @if ($section !== 'main' && $certificate && in_array($redirect->domain, $certificate->domains ?? [], true))
-{{-- A redirect needs its own HTTPS listener. `http://old` → `https://new` looks
-     like it needs no certificate of its own, but a browser that has ever seen
-     HSTS for `old` refuses the plaintext hop and never reaches the redirect at
-     all. --}}
+{{-- A redirect needs its own HTTPS listener: a browser that has seen HSTS for `http://old` refuses
+     the plaintext hop and never reaches the redirect. --}}
 <VirtualHost *:443>
     ServerName {{ $redirect->domain }}
 

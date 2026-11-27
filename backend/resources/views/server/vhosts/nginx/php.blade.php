@@ -1,19 +1,16 @@
 {{-- Managed by the panel. Manual edits are overwritten on the next deploy.
-     Rendered twice, as v7 lays a site out (step B1): `main` → {name}.conf (port
-     80, and the no-certificate reject on 443), `ssl` → {name}-le-ssl.conf or
-     {name}-ssl.conf (port 443). Null renders both. The firewall's log_format
-     goes in whichever file nginx loads first: `-le-ssl` sorts before `.conf`. --}}
+     Rendered twice: `main` → {name}.conf (port 80, and the no-certificate reject on 443), `ssl` →
+     {name}-le-ssl.conf or {name}-ssl.conf (port 443). Null renders both. The firewall's log_format goes
+     in whichever file nginx loads first: `-le-ssl` sorts before `.conf`. --}}
 @if ($waf && ($section === null || $section === ($certificate ? 'ssl' : 'main')))
-{{-- The firewall log's format, which nginx only accepts at http level: a site
-     file is included there, so each site declares its own, under its own name.
-     Combined, plus which rule matched and what was done (bug #84). --}}
+{{-- The firewall log's format, which nginx accepts only at http level: a site file is included there,
+     so each site declares its own, under its own name. Combined, plus which rule matched and what was
+     done. --}}
 log_format {{ $waf['logFormat'] }} '$remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" waf=$waf_reason action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}';
 @endif
 @if ($forceHttps && $section !== 'ssl')
-{{-- Plain HTTP exists only to send visitors to HTTPS — with one exception, and
-     it is not optional: the ACME challenge has to stay reachable on port 80 or
-     renewal stops working, and the redirect goes on pointing confidently at a
-     certificate that has expired. --}}
+{{-- Plain HTTP exists only to send visitors to HTTPS, except the ACME challenge, which must stay
+     reachable on port 80 or renewal stops and the redirect points at an expired certificate. --}}
 server {
     listen 80;
 @if ($ipv6)
@@ -22,12 +19,10 @@ server {
 
     server_name {{ implode(' ', $serverNames) }};
 
-    {{-- Served from one shared directory rather than the site's own document
-         root: node and proxy sites serve nothing from disk, so there would be
-         nowhere for certbot to drop the token. `^~` so it beats the
-         front-controller rewrite — a WordPress site would otherwise hand the
-         token to index.php and answer with its 404 page, which Let's Encrypt
-         reads as unauthorized and which costs one of five attempts an hour. --}}
+    {{-- Served from one shared directory rather than the site's own document root (node and proxy
+         sites serve nothing from disk), and `^~` so it beats the front-controller rewrite: Let's Encrypt
+         reads the 404 a WordPress site would answer as unauthorized, which costs one of five attempts an
+         hour. --}}
     location ^~ /.well-known/acme-challenge/ {
         root {{ $challengeRoot }};
         default_type "text/plain";
@@ -38,10 +33,9 @@ server {
 
     location / {
 @foreach ($uncoveredNames as $name)
-        {{-- Not on the certificate: https://{{ $name }} is a TLS error, so
-             send it to the primary. Inside `location /`, never at server
-             level, so the ACME location above still answers for this name
-             and the certificate can be reissued to include it. --}}
+        {{-- Not on the certificate: https://<name> is a TLS error, so send it to the primary. Inside
+             `location /`, never at server level, so the ACME location above still answers for this name and
+             the certificate can be reissued to include it. --}}
         if ($host = {{ $name }}) {
             return 301 https://{{ $serverNames[0] }}$request_uri;
         }
@@ -54,12 +48,9 @@ server {
 @if ($section === null || ($section === 'ssl' ? $certificate : (! $certificate || ! $forceHttps)))
 server {
 @if ($certificate && $section !== 'main')
-    {{-- `http2 on;` where this nginx has it (1.25.1+), `listen ... http2`
-         elsewhere — chosen by NginxDriver::supportsHttp2Directive(). The new
-         form is a hard error before 1.25 (Ubuntu 24.04 ships 1.24), and a
-         failed config test takes every site on the box down; the old one is
-         only deprecated after it, but printed a warning per site on every
-         `nginx -t` (36 on an 18-site Ubuntu 26.04 box). --}}
+    {{-- `http2 on;` where this nginx has it (1.25.1+), `listen ... http2` elsewhere, chosen by
+         NginxDriver::supportsHttp2Directive(). The new form is a hard error before 1.25 and a failed config
+         test takes every site on the box down; the old one only warns, once per site, on every `nginx -t`. --}}
 @if ($http2On)
     listen 443 ssl{{ $http2On ? '' : ' http2' }};
 @if ($ipv6)
@@ -76,24 +67,19 @@ server {
     ssl_certificate     {{ $certificate->certificate_path }};
     ssl_certificate_key {{ $certificate->private_key_path }};
 
-    {{-- TLS 1.2 as the floor. 1.0 and 1.1 are deprecated and fail PCI checks;
-         allowing them buys compatibility only with browsers that stopped
-         receiving security updates years ago. --}}
+    {{-- TLS 1.2 as the floor: 1.0 and 1.1 are deprecated and fail PCI checks, and allowing them only
+         helps browsers that stopped getting security updates years ago. --}}
     ssl_protocols TLSv1.2 TLSv1.3;
-    {{-- Off deliberately: with TLS 1.3 the client's preference is the better
-         one, and forcing the server's order is how boxes end up pinned to an
-         older suite than both sides support. --}}
+    {{-- Off deliberately: with TLS 1.3 the client's preference is the better one, and forcing the
+         server's order pins boxes to an older suite than both sides support. --}}
     ssl_prefer_server_ciphers off;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 1d;
-    {{-- Tickets off for forward secrecy: a stolen ticket key decrypts every
-         session it ever issued, which is the property TLS 1.3 exists to
-         remove. --}}
+    {{-- Tickets off for forward secrecy: a stolen ticket key decrypts every session it ever issued. --}}
     ssl_session_tickets off;
 @elseif (! $certificate)
-    {{-- Keep this hostname owned on 443 after SSL uninstall. Without an exact
-         SNI match nginx serves the first SSL vhost on the box — another
-         customer's application. --}}
+    {{-- Keep this hostname owned on 443 after SSL uninstall: without an exact SNI match nginx serves the
+         first SSL vhost on the box, another customer's application. --}}
     listen 443 ssl{{ $http2On ? '' : ' http2' }};
 @if ($ipv6)
     listen [::]:443 ssl{{ $http2On ? '' : ' http2' }};
@@ -102,10 +88,9 @@ server {
     {{-- nginx 1.19.4+ refuses the handshake before presenting a certificate. --}}
     ssl_reject_handshake on;
 @else
-    {{-- Older nginx (Ubuntu 22.04 ships 1.18) has no ssl_reject_handshake and
-         fails the config test on it. It presents the panel's reserved pair,
-         which names nothing real, as the catch-all does, and closes HTTPS for
-         this name until it has a certificate. Port 80 is unaffected. --}}
+    {{-- Older nginx (Ubuntu 22.04 ships 1.18) has no ssl_reject_handshake and fails the config test on
+         it. It presents the panel's reserved pair, which names nothing real, as the catch-all does, and
+         closes HTTPS for this name until it has a certificate. Port 80 is unaffected. --}}
     ssl_certificate     {{ $tlsFallback['certificate'] }};
     ssl_certificate_key {{ $tlsFallback['private_key'] }};
     if ($scheme = https) {
@@ -123,12 +108,10 @@ server {
     server_name {{ implode(' ', $serverNames) }};
 @if ($basicAuth)
 @if ($basicAuth['serverOnly'])
-    {{-- The application's own requests to itself (WordPress's wp-cron.php,
-         bug #75) skip the password, and only those: the path must match
-         exactly AND the request must come from one of this server's own
-         addresses. `auth_basic` treats a realm that evaluates to "off" as
-         off, which is what lets this be decided per request. `if` here only
-         sets variables, in server context, where it is safe. --}}
+    {{-- The application's own requests to itself (WordPress's wp-cron.php) skip the password, and only
+         those: exact path AND a request from one of this server's own addresses. `auth_basic` treats a
+         realm that evaluates to "off" as off, which allows a per-request decision. `if` here only sets
+         variables, in server context, where it is safe. --}}
     set $sv_auth_realm "Restricted";
     set $sv_auth_open "";
     if ($uri ~ "^({{ collect($basicAuth['serverOnly']['paths'])->map(fn ($p) => preg_quote($p, '"'))->implode('|') }})$") {
@@ -147,12 +130,10 @@ server {
     auth_basic_user_file {{ $basicAuth['htpasswdPath'] }};
 @endif
 
-    {{-- Served from one shared directory rather than the site's own document
-         root: node and proxy sites serve nothing from disk, so there would be
-         nowhere for certbot to drop the token. `^~` so it beats the
-         front-controller rewrite — a WordPress site would otherwise hand the
-         token to index.php and answer with its 404 page, which Let's Encrypt
-         reads as unauthorized and which costs one of five attempts an hour. --}}
+    {{-- Served from one shared directory rather than the site's own document root (node and proxy
+         sites serve nothing from disk), and `^~` so it beats the front-controller rewrite: Let's Encrypt
+         reads the 404 a WordPress site would answer as unauthorized, which costs one of five attempts an
+         hour. --}}
     location ^~ /.well-known/acme-challenge/ {
         root {{ $challengeRoot }};
         default_type "text/plain";
@@ -165,14 +146,11 @@ server {
 
     index index.php index.html;
 
-    {{-- The site's own `post_max_size`, so the web server and PHP agree.
-         nginx defaults this to 1 MB and nothing here used to set it, so a site
-         whose pool said 512M still answered 413 at one megabyte — the request
-         never reached PHP for its settings to matter. --}}
+    {{-- The site's own `post_max_size`, so the web server and PHP agree. nginx defaults to 1 MB, so
+         without this a site whose pool allows 512M still answers 413 at one megabyte. --}}
     client_max_body_size {{ $maxBodySize }};
 
-    {{-- The HTTPS block logs to `-ssl` files, as v7 does (vhosts the same as
-         v7, 2026-11-08); fail2ban and the Logs screen read both. --}}
+    {{-- The HTTPS block logs to `-ssl` files; fail2ban and the Logs screen read both. --}}
     access_log {{ $logDir }}/access{{ $section === 'ssl' ? '-ssl' : '' }}.log;
     error_log  {{ $logDir }}/error{{ $section === 'ssl' ? '-ssl' : '' }}.log;
 
@@ -181,17 +159,15 @@ server {
     }
 
 @foreach ($wellKnown['redirects'] as $name => $target)
-    {{-- Service discovery the application's own .htaccess does on Apache —
-         Nextcloud's CalDAV/CardDAV. Answered 404 here, so calendar and
-         contact clients could not find the server. --}}
+    {{-- Service discovery the application's own .htaccess does on Apache (Nextcloud CalDAV/CardDAV);
+         without it calendar and contact clients cannot find the server. --}}
     location = /.well-known/{{ $name }} {
         return 301 {{ $target }};
     }
 @endforeach
 @if ($wellKnown['fallback'])
-    {{-- Every other well-known URI to the application, as its .htaccess does.
-         The ACME location above is a longer prefix and still wins; PKI
-         validation files are served as they are. --}}
+    {{-- Every other well-known URI to the application, as its .htaccess does. The ACME location above is
+         a longer prefix and still wins; PKI validation files are served as they are. --}}
     location ^~ /.well-known/ {
         location ^~ /.well-known/pki-validation/ {
             try_files $uri =404;
@@ -201,8 +177,8 @@ server {
     }
 @endif
 @foreach ($mimeTypes as $extension => $type)
-    {{-- A type the application sets in its .htaccess. `.mjs` went out as
-         application/octet-stream, which browsers refuse to run as a module. --}}
+    {{-- A type the application sets in its .htaccess: `.mjs` would go out as application/octet-stream,
+         which browsers refuse to run as a module. --}}
     location ~* \.{{ $extension }}$ {
         types { }
         default_type {{ $type }};
@@ -210,58 +186,43 @@ server {
     }
 @endforeach
 @foreach ($deniedPaths as $pattern)
-    {{-- The application ships this as an Apache `.htaccess` rule, which nginx
-         never reads: without it, logs, sessions and source under the web root
-         were downloadable. Before the PHP location on purpose — regex
-         locations are tried in order and the first match wins, so placed
-         after it a denied `.php` would still run. --}}
+    {{-- The application ships this as an Apache `.htaccess` rule, which nginx never reads: without it
+         logs, sessions and source under the web root are downloadable. Before the PHP location on purpose:
+         regex locations are first-match, so after it a denied `.php` would still run. --}}
     location ~* {{ $pattern }} {
         deny all;
     }
 @endforeach
 
-    {{-- Extra rules an addon keeps for this site (the WordPress toolkit's
-         xmlrpc and uploads-PHP blocks). Included, not rendered, so a domain,
-         certificate or HTTPS change that rewrites this file leaves them in
-         place. Before the PHP location on purpose: regex locations are
-         first-match, and v7 included its equivalent after it, so its
-         "block PHP in uploads" let `/wp-content/uploads/x.php` run. A glob
-         that matches nothing is not an error. --}}
+    {{-- Extra rules an addon keeps for this site (the WordPress toolkit's xmlrpc and uploads-PHP blocks).
+         Included, not rendered, so a domain, certificate or HTTPS change that rewrites this file leaves
+         them in place. Before the PHP location on purpose: regex locations are first-match, so after it
+         `/wp-content/uploads/x.php` would still run. A glob that matches nothing is not an error. --}}
     include {{ $siteRules }}/*.conf;
 
-    {{-- `[^/]\.php(/|$)`, not `\.php$`. Several applications address their own
-         scripts with a path appended — Moodle's slash arguments are the loudest
-         case, where every stylesheet and script is requested as
-         `/theme/styles.php/boost/<rev>/all`. Anchored at the end, that URL does
-         not match this block at all: it falls through to `location /`, gets
-         handed to index.php by try_files, and the browser receives HTML where
-         it asked for CSS. The result is a Moodle that renders as unstyled
-         markup while looking, from the panel's side, like a perfectly healthy
-         site.
-
-         The leading `[^/]` keeps a request for a bare directory ending in
-         `.php` out, and the snippet's own `try_files $fastcgi_script_name =404`
-         still refuses to hand PHP-FPM a script that does not exist — which is
-         what stops the widened pattern becoming the arbitrary-execution hole
-         `.php$` was presumably guarding against. --}}
+    {{-- `[^/]\.php(/|$)`, not `\.php$`: several applications address their scripts with a path appended
+         (Moodle's slash arguments, `/theme/styles.php/boost/<rev>/all`). Anchored at the end, that URL
+         falls through to `location /`, is handed to index.php, and the browser gets HTML where it asked
+         for CSS.
+         The leading `[^/]` keeps a bare directory ending in `.php` out; the snippet's own
+         `try_files $fastcgi_script_name =404` still refuses to hand PHP-FPM a script that does not exist,
+         which is what stops the wider pattern becoming an arbitrary-execution hole. --}}
     location ~ [^/]\.php(/|$) {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:{{ $phpSocket }};
-        {{-- v7's 300 s, or longer when the site lets PHP run longer: nginx's
-             own 60 s cut long imports and saves off with a 504 while PHP was
-             still working. --}}
+        {{-- 300 s, or longer when the site lets PHP run longer: nginx's own 60 s cuts long imports and saves
+             off with a 504 while PHP is still working. --}}
         fastcgi_read_timeout {{ $fastcgiReadTimeout }};
     }
 
-    {{-- Version control and dotfiles must never be served. A .git directory
-         inside a web root is a full source disclosure. --}}
+    {{-- Version control and dotfiles must never be served. A .git directory inside a web root is a full
+         source disclosure. --}}
     location ~ /\.(?!well-known) {
         deny all;
     }
 @if ($application->site_type !== 'nextcloud')
 
-    {{-- v7's browser caching for static files, same types and times. Not for
-         Nextcloud, which v7 left out too: it sets its own headers. --}}
+    {{-- Browser caching for static files. Not for Nextcloud, which sets its own headers. --}}
     location ~* \.(?:jpg|jpeg|gif|png|webp|avif|svg|ico|bmp|cur|tif|tiff|woff|woff2|ttf|otf|eot|mp3|aac|flac|wav|ogg|m4a|oga|webm|mp4|m4v|wasm|zip|pdf)$ {
         expires 30d;
         add_header Cache-Control "public, immutable";
@@ -288,34 +249,29 @@ server {
 @endif
 @foreach ($subdirectoryFrontControllers as $i => $front)
 
-    {{-- A directory that is an application of its own (PrestaShop's back
-         office), which Apache routes with the `.htaccess` inside it. Last on
-         purpose: regex locations are first-match, so the PHP, dotfile and
-         denied-path rules above must see `.php`, `.htaccess` and logs first —
-         placed before them, this would serve those as plain files. --}}
+    {{-- A directory that is an application of its own (PrestaShop's back office), which Apache routes with
+         the `.htaccess` inside it. Last on purpose: regex locations are first-match, so the PHP, dotfile
+         and denied-path rules above must see `.php`, `.htaccess` and logs first. --}}
     location ~ ^/(?<frontdir{{ $i }}>{{ $front['directory'] }})/ {
         try_files $uri $uri/ /$frontdir{{ $i }}/{{ $front['script'] }}$is_args$args;
     }
 @endforeach
 
-    {{-- v7's per-site folder: every `*.conf` the user or v7 put there, loaded
-         where v7 loaded it, last in the server block (vhosts the same as v7,
-         2026-11-08; {@see \App\Services\Server\WebServers\SiteConfFolder}). --}}
+    {{-- The per-site folder: every `*.conf` the user or an addon put there, loaded last in the server
+         block ({@see \App\Services\Server\WebServers\SiteConfFolder}). --}}
     include {{ $siteConf }}/*.conf;
 }
 @endif
 
-{{-- Redirects get their own server block. Serving the same content under a
-     second name splits its search ranking between the two; a 301 keeps the
-     authority on one. --}}
+{{-- Redirects get their own server block: serving the same content under a second name splits its
+     search ranking, a 301 keeps the authority on one. --}}
 @foreach ($redirects as $redirect)
 @php($redirectTls = $certificate && in_array($redirect->domain, $certificate->domains ?? [], true))
 @if ($section !== 'ssl' || $redirectTls)
 server {
 @if ($redirectTls && $section !== 'main')
-    {{-- A redirect needs its own HTTPS listener. `http://old` → `https://new`
-         looks like it needs no certificate, but a browser that has seen HSTS
-         for `old` refuses the plaintext hop and never reaches the redirect. --}}
+    {{-- A redirect needs its own HTTPS listener: a browser that has seen HSTS for `http://old` refuses the
+         plaintext hop and never reaches the redirect. --}}
 @if ($http2On)
     listen 443 ssl{{ $http2On ? '' : ' http2' }};
 @if ($ipv6)
@@ -342,12 +298,10 @@ server {
 
     server_name {{ $redirect->domain }};
 
-    {{-- Served from one shared directory rather than the site's own document
-         root: node and proxy sites serve nothing from disk, so there would be
-         nowhere for certbot to drop the token. `^~` so it beats the
-         front-controller rewrite — a WordPress site would otherwise hand the
-         token to index.php and answer with its 404 page, which Let's Encrypt
-         reads as unauthorized and which costs one of five attempts an hour. --}}
+    {{-- Served from one shared directory rather than the site's own document root (node and proxy
+         sites serve nothing from disk), and `^~` so it beats the front-controller rewrite: Let's Encrypt
+         reads the 404 a WordPress site would answer as unauthorized, which costs one of five attempts an
+         hour. --}}
     location ^~ /.well-known/acme-challenge/ {
         root {{ $challengeRoot }};
         default_type "text/plain";

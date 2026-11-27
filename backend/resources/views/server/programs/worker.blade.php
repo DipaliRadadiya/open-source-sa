@@ -6,8 +6,8 @@
 ; labour the systemd template units had, in the format the commercial panel and
 ; every Laravel tutorial already use.
 [program:{{ $program }}]
-{{-- Two-digit suffix, as Laravel's own documented example does: the process
-     names sort correctly in `supervisorctl status` past nine copies. --}}
+{{-- Two-digit suffix (as Laravel's docs do) so names sort correctly in `supervisorctl status` past
+     nine copies. --}}
 process_name=%(program_name)s_%(process_num)02d
 command={{ $command }}
 directory={{ $directory }}
@@ -17,23 +17,18 @@ user={{ $user }}
 autostart={{ $autoStart ? 'true' : 'false' }}
 autorestart={{ $autoRestart ? 'true' : 'false' }}
 
-{{-- Both, so a worker that forks children takes them with it. Without these
-     supervisor signals only the process it spawned, and a `php artisan` that
-     shelled out leaves the real work orphaned and still holding the job. --}}
+{{-- Both, so a worker that forks children takes them down with it; otherwise only the spawned process
+     is signalled and a `php artisan` that shelled out is left orphaned, still holding the job. --}}
 stopasgroup=true
 killasgroup=true
 
-{{-- SIGTERM, then wait. `queue:work` treats it as "finish the job you are
-     holding, then exit"; being killed mid-job leaves that job half-done, which
-     for anything touching money is the failure that actually matters.
-
-     ⚠️ This must be >= the worker's own `--max-time`, or supervisor SIGKILLs
-     it partway through and the job runs twice. --}}
+{{-- SIGTERM, then wait: `queue:work` finishes the job it holds, then exits; a kill mid-job leaves it
+     half-done.
+     Must be >= the worker's own `--max-time`, or supervisor SIGKILLs it partway and the job runs twice. --}}
 stopsignal=TERM
 stopwaitsecs={{ $stopWaitSeconds }}
 
-{{-- One stream. Keeping stderr separate means a crash reason lands in a second
-     file nobody opens, while the log the panel shows says nothing. --}}
+{{-- One stream: a separate stderr puts a crash reason in a second file nobody opens. --}}
 redirect_stderr=true
 stdout_logfile={{ $logFile }}
 stdout_logfile_maxbytes=10MB
@@ -42,9 +37,8 @@ stdout_logfile_backups=3
 loglevel={{ $logLevel }}
 @endif
 
-{{-- The environment the application itself reads. A queue worker with
-     different credentials from the site that queued the job is a long
-     afternoon. --}}
+{{-- The environment the application itself reads, so the worker has the same credentials as the site
+     that queued the job. --}}
 environment=PATH="{{ $path }}"
 @if ($extraConfig)
 

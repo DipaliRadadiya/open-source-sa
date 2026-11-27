@@ -1,15 +1,7 @@
 {{-- Managed by the panel. Manual edits are overwritten.
-
-     MongoDB.
-
-     `MONGO_INITDB_ROOT_*` creates the root user on an EMPTY data directory and is
-     ignored afterwards — the same init-only rule as every other engine here.
-
-     Mongo has no separate application user: the root credential is what the panel
-     stores and what a site connects with. Creating a scoped user would need a
-     command run after the server is up, and the panel has no post-start step. That
-     is a real limitation rather than an oversight, and it is why the connection
-     details name the root user. --}}
+     MongoDB. `MONGO_INITDB_ROOT_*` creates the root user on an EMPTY data directory and is ignored
+     afterwards. No scoped application user: the panel has no post-start step, so a site connects
+     with the root credential. --}}
 name: {{ $project }}
 
 services:

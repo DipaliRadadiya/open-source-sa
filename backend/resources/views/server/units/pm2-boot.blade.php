@@ -9,20 +9,14 @@ Type=forking
 User={{ $user }}
 Group={{ $user }}
 
-{{-- The whole reason this file exists rather than `pm2 startup`. That command
-     prints a sudo line for someone to copy and paste, and the old panel
-     scraped it with a regex that hardcoded `/usr/lib/node_modules/pm2/bin/pm2`
-     and `-u \w+`. A Node upgrade via `n` moves the toolchain to /usr/local and
-     a username with a hyphen breaks the pattern; either way the match came
-     back empty, the empty string was executed as a command, `bash -c ""`
-     exited 0, and the panel reported boot persistence it had never set up.
-     Written directly, from values we already hold. --}}
+{{-- The reason this file exists instead of `pm2 startup`: that command prints a sudo line to copy,
+     and scraping it with a regex broke on Node upgrades and hyphenated usernames, ran an empty command
+     and reported boot persistence that was never set up. Written directly from values we hold. --}}
 Environment=PM2_HOME={{ $pm2Home }}
 PIDFile={{ $pm2Home }}/pm2.pid
 
-{{-- `resurrect` reads the dump this user's applications are saved to. For an
-     adopted application that dump is the boot mechanism, which is why every
-     state change in LegacyPm2Driver saves it. --}}
+{{-- `resurrect` reads the dump this user's applications are saved to. For an adopted application that
+     dump is the boot mechanism, so every state change in LegacyPm2Driver saves it. --}}
 ExecStart={{ $pm2 }} resurrect
 ExecReload={{ $pm2 }} reload all
 ExecStop={{ $pm2 }} kill
@@ -30,8 +24,8 @@ ExecStop={{ $pm2 }} kill
 Restart=on-failure
 RestartSec=5
 
-{{-- PM2's daemon opens a file descriptor per managed process and per log; the
-     default soft limit is low enough to matter on an account with many sites. --}}
+{{-- PM2's daemon opens a file descriptor per managed process and per log; the default soft limit is
+     low for an account with many sites. --}}
 LimitNOFILE=infinity
 
 [Install]

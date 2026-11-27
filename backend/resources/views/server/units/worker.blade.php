@@ -1,19 +1,15 @@
 {{-- Managed by the panel. Manual edits are overwritten when the worker is saved. --}}
-{{-- A template unit: one file, N instances (sv-worker-{slug}@1 … @N). systemd
-     owns the instances so the panel stores only the number it asked for, and
-     "3 of 4 running" stays a question the OS answers rather than one we cache. --}}
+{{-- A template unit: one file, N instances (sv-worker-{slug}@1 … @N). systemd owns the instances, so
+     "3 of 4 running" is answered by the OS, not by a cache. --}}
 [Unit]
 Description={{ $worker->name }} — {{ $application->domain }} (%i)
 After=network.target
 Wants=network-online.target
 @if ($autoRestart)
-{{-- Without a limit a crash loop restarts forever at 5s intervals and buries
-     the cause in the journal. Failing visibly is a state someone can act on. --}}
-{{-- In [Unit], where systemd reads them. Under [Service] the interval was
-     rejected ("Unknown key 'StartLimitIntervalSec' in section [Service],
-     ignoring" — in the journal of every sv-app unit on a real server), so the
-     burst counted against systemd's default 10 s window, which five restarts
-     5 s apart never fill: a crash loop restarted forever. --}}
+{{-- Without a limit a crash loop restarts every 5s forever and buries the cause in the journal;
+     failing visibly is a state someone can act on. --}}
+{{-- In [Unit], where systemd reads them: under [Service] the key is ignored, so the burst counts
+     against systemd's default 10 s window, which restarts 5 s apart never fill. --}}
 StartLimitBurst=5
 StartLimitIntervalSec=60
 @endif
@@ -24,21 +20,15 @@ User={{ $user }}
 Group={{ $user }}
 WorkingDirectory={{ $directory }}
 
-{{-- The dash means "if it exists". A worker reads the same environment as the
-     application it belongs to — a queue worker with different credentials from
-     the site that queued the job is a long afternoon.
-
-     Which means literally the same file the Environment screen edits, so it
-     comes from the model rather than being rebuilt from the project root
-     here. Three copies of this path had already drifted apart. --}}
+{{-- The dash means "if it exists". A worker reads the same environment as its application; the path
+     comes from the model so it is literally the file the Environment screen edits. --}}
 EnvironmentFile=-{{ $envPath }}
 Environment=PATH={{ $path }}
 
 ExecStart={{ $exec }}
 
-{{-- SIGTERM, then wait. `queue:work` treats SIGTERM as "finish the job you are
-     holding, then exit" — killing it mid-job leaves that job half-done, which
-     for anything touching money is the failure that actually matters. --}}
+{{-- SIGTERM, then wait: `queue:work` finishes the job it holds, then exits; a kill mid-job leaves it
+     half-done. --}}
 KillSignal=SIGTERM
 KillMode=mixed
 TimeoutStopSec={{ $stopWaitSeconds }}
