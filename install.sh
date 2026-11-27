@@ -4,60 +4,46 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/DipaliRadadiya/open-source-sa/main/install.sh | sudo bash
 #
-# Installs only what the panel needs to run *itself*. Everything the panel
-# manages for you — database engines, extra PHP/Node versions, a different web
-# server, fail2ban — is installed afterwards from the panel's own setup page,
-# where it can show progress and be retried. A twenty-minute apt run with no UI
-# and no retry is the thing this split exists to avoid.
+# Installs only what the panel needs to run itself. Everything it manages (database engines, extra
+# PHP/Node versions, another web server, fail2ban) is installed later from the panel's setup page,
+# where it shows progress and can be retried.
 #
-# Design rules, in case you are editing this:
+# Design rules:
 #
-#   * Every step is idempotent. Re-running the script must converge, not
-#     compound. A user whose install failed at minute nine will run it again.
-#   * Nothing is changed before the preflight passes. An unsupported OS or a
-#     busy port 80 is a refusal, not a half-installed server.
-#   * The install never fails because TLS failed. A panel reachable over a
-#     self-signed certificate is recoverable; a panel that does not exist is not.
-#   * Matches what the panel expects, not what is conventional. Node goes in via
-#     fnm because that is what the panel's Node feature manages; PHP needs the
-#     ondrej repository or the panel can only ever offer the one version Ubuntu
-#     ships.
+#   * Every step is idempotent. Re-running must converge, not compound.
+#   * Nothing changes before the preflight passes. An unsupported OS or a busy port 80 is a
+#     refusal, not a half-installed server.
+#   * The install never fails because TLS failed: a panel on a self-signed certificate is
+#     recoverable, a panel that does not exist is not.
+#   * Match what the panel expects. Node goes in via fnm (what the panel's Node feature manages);
+#     PHP needs the ondrej repository or the panel can only offer the one version Ubuntu ships.
 #
-# -E (errtrace) is load-bearing: the ERR trap below reports the ~200 commands
-# that do not go through run(). Without errtrace that trap is NOT inherited by
-# shell functions/subshells — and since every step runs inside a function, a
-# failure there would abort silently (set -e stops, trap never fires). Keep -E.
+# -E (errtrace) is load-bearing: without it the ERR trap below is not inherited by functions or
+# subshells, and every step runs inside a function, so a failure would abort silently. Keep -E.
 set -Eeuo pipefail
 
-# Runtime trees must be readable by nginx and executable by the panel account.
-# Secret files (installer log, .env rewrite, auth files) set restrictive modes
-# explicitly at their write sites; a global 077 umask would make the cloned app
-# and fnm runtime inaccessible to the users that must serve and run them.
+# Runtime trees must be readable by nginx and executable by the panel account. Secret files set
+# restrictive modes at their write sites; a global 077 umask would make the cloned app and fnm
+# runtime inaccessible to the users that must serve and run them.
 umask 022
 
 # ─── Defaults ────────────────────────────────────────────────────────────────
 
 REPO_URL="${REPO_URL:-https://github.com/DipaliRadadiya/open-source-sa.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
-# Every artifact this script creates — the account, the paths, the systemd units,
-# the sudoers and cron files — is named from this one slug, and none of them
-# carries a product name.
-#
-# Deliberate: the panel is white-labelled, so a reseller's customer must not find
-# an upstream brand stamped across their own server. Overridable, so rebranding
-# is one value rather than a grep.
+# Every artifact this script creates (account, paths, systemd units, sudoers and cron files) is
+# named from this one slug and carries no product name: the panel is white-labelled, so a
+# reseller's customer must not find an upstream brand on their server. Overridable for rebranding.
 PANEL_SLUG="${PANEL_SLUG:-panel}"
 
 APP_DIR="${APP_DIR:-/var/www/${PANEL_SLUG}}"
 APP_USER="${APP_USER:-${PANEL_SLUG}}"
-# Self-update writes its runner script and progress here. Deliberately outside
-# APP_DIR: both would be destroyed by the checkout whose progress they record.
+# Self-update writes its runner script and progress here. Outside APP_DIR: the checkout it runs
+# would destroy both.
 UPDATE_STATE_DIR="${UPDATE_STATE_DIR:-/var/lib/${PANEL_SLUG}-update}"
-# What an administrator sees on SSH login while the panel installs and once it
-# has: the install keeps its progress here, and LOGIN_SCRIPT reads it (see
-# start_login_status). Outside APP_DIR for the same reason as the update state,
-# and readable by every account, because it holds step names and addresses and
-# never a secret. The login script decides who is shown it.
+# What an administrator sees on SSH login: the install keeps its progress here and LOGIN_SCRIPT
+# reads it (see start_login_status). Outside APP_DIR like the update state, and readable by every
+# account because it holds step names and addresses, never a secret.
 INSTALL_STATE_DIR="${INSTALL_STATE_DIR:-/var/lib/${PANEL_SLUG}-install}"
 LOGIN_SCRIPT="/etc/profile.d/${PANEL_SLUG}-login.sh"
 PHP_VERSION="${PHP_VERSION:-8.4}"
@@ -65,27 +51,23 @@ NODE_VERSION="${NODE_VERSION:-24}"
 FRONTEND_PORT="${FRONTEND_PORT:-3100}"
 FNM_DIR="/opt/fnm"
 FNM_BIN="/usr/local/bin/fnm"
-# fnm itself, pinned: the release binary and its SHA-256 (GitHub's published
-# asset digest), rather than fnm.vercel.app's script fetching whatever is
-# latest and running it as root (review finding S3). Bump all three together.
+# fnm, pinned: the release binary and its SHA-256 (GitHub's asset digest), instead of a script
+# that fetches the latest and runs it as root. Bump all three together.
 FNM_VERSION="1.39.0"
 FNM_SHA256_X86_64="7807664f39d39fc518da1c35ba0181e4b3267603c4b1dedeb4b5fc6ae440a224"
 FNM_SHA256_AARCH64="4eaff58b2c5bf30d0934027572dd0b5bbb60d2a1af309230b53662d4b1d45599"
-# The apt signing keys trusted for packages.sury.org and Docker: the primary
-# key fingerprints, checked like the LiteSpeed ones (add_ols_repository).
+# Primary key fingerprints of the apt signing keys trusted for packages.sury.org and Docker,
+# checked like the LiteSpeed ones (add_ols_repository).
 SURY_KEY_FPR="15058500A0235D97F5D10063B188E2B695BD4743"
 DOCKER_KEY_FPR="9DC858229FC7DD38854AE2D88D81803C0EBFCD88"
-# The identity OpenLiteSpeed's workers run as, from its own httpd_config.conf
-# defaults. Named once because two places need it -- the panel's fpm socket on
-# the other stacks, and the panel's LSAPI socket directory on this one -- and
-# they disagreed about it for as long as both existed.
+# The identity OpenLiteSpeed's workers run as (its httpd_config.conf defaults). Named once: it is
+# needed for the panel's fpm socket on the other stacks and its LSAPI socket directory on this one.
 OLS_USER="nobody"
 OLS_GROUP="nogroup"
 LOG_FILE="/var/log/${PANEL_SLUG}-install.log"
 
-# How long to wait for another package manager before giving up. A fresh cloud
-# server runs unattended-upgrades on first boot, so an installer that refuses to
-# wait fails on exactly the machines it is meant for.
+# How long to wait for another package manager. A fresh cloud server runs unattended-upgrades on
+# first boot, so an installer that refuses to wait fails on exactly those machines.
 APT_LOCK_WAIT=900
 
 OS_VERSION_ID=""   # 22.04 | 24.04 | 26.04 — set by preflight
@@ -98,8 +80,8 @@ SCHEME="https"     # settled by configure_tls before any URL is written
 DRY_RUN=0          # --dry-run
 FORCE=0            # --force: install on a server that isn't fresh
 
-# The fresh-server check's outcome (fresh_server_check): passed, forced,
-# rerun or, on a dry run, not_fresh. Written to the state file and the log.
+# The fresh-server check's outcome (fresh_server_check): passed, forced, rerun or, on a dry run,
+# not_fresh. Written to the state file and the log.
 FRESH_CHECK=""
 # What it found that a fresh server would not have, one short string each.
 FRESH_FINDINGS=()
@@ -113,77 +95,55 @@ FRESH_ROOT=""
 FAIL_CODE=""
 FAIL_FINDINGS=()
 
-# --central-token=, or the environment variable, which is the better of the two:
-# an argument is readable in `ps` by every account on the box for the length of
-# the install, and this one is a credential. Read from the environment here so
-# that path keeps working, and never printed anywhere.
+# --central-token=, or the environment variable, which is better: an argument is readable in `ps`
+# by every account for the length of the install, and this is a credential. Never printed.
 CENTRAL_TOKEN="${CENTRAL_TOKEN:-}"
 
-# Set by Central when it creates the server (2026-10-17). All optional; without
-# them the install is exactly what it was.
+# Set by Central when it creates the server. All optional; without them the install is unchanged.
 #
-#   PANEL_ADMIN_USERNAME / PANEL_ADMIN_PASSWORD — the first administrator,
-#     created before the panel is reachable. Otherwise a fresh panel is open for
-#     registration and the first visitor becomes its administrator, and a
-#     server Central built has a public address before its owner opens it.
-#     The password is environment-only, never a flag: an argument is readable in
-#     `ps` by every account here for the length of the install.
+#   PANEL_ADMIN_USERNAME / PANEL_ADMIN_PASSWORD — the first administrator, created before the panel
+#     is reachable. Otherwise the first visitor to a fresh panel becomes its administrator. The
+#     password is environment-only, never a flag (readable in `ps`).
 #   PROGRESS_URL — where each step is reported, signed with CENTRAL_TOKEN.
 PANEL_ADMIN_USERNAME="${PANEL_ADMIN_USERNAME:-}"
 PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD:-}"
 PROGRESS_URL="${PROGRESS_URL:-}"
-# CENTRAL_URL — Central's own address (2026-10-20, RC-15). The panel reads its
-#   public branding from it (GET /api/v1/site-settings); unset, the panel keeps
-#   its built-in branding.
+# CENTRAL_URL — Central's own address. The panel reads its public branding from it
+#   (GET /api/v1/site-settings); unset, the panel keeps its built-in branding.
 CENTRAL_URL="${CENTRAL_URL:-}"
 PROGRESS_READY=0   # set once PROGRESS_URL has been checked
-# PROGRESS_ACTIVITY=1 — Central asks for the lines the installer prints while a
-#   long command runs (which packages are being set up, the wait for Ubuntu's
-#   updates, "still building…"), as `activity`, `activity_code` and
-#   `activity_elapsed` on an `installing` report. Off unless asked for: a
-#   Central that does not expect them would add every one to its step history.
+# PROGRESS_ACTIVITY=1 — Central asks for the lines the installer prints while a long command runs
+#   (packages being set up, the wait for Ubuntu's updates, "still building…"), reported as
+#   `activity`, `activity_code` and `activity_elapsed`. Off unless asked for: a Central that does
+#   not expect them would add each one to its step history.
 PROGRESS_ACTIVITY="${PROGRESS_ACTIVITY:-0}"
 
 # Secrets this script comes to know beyond the ones above (every Redis password
 # it tried), so the log lines a failed report carries can leave them out.
 REDACT=()
 
-# Which stack to build. Asked rather than assumed, because it decides the web
-# server — and the web server serves the panel itself, so it cannot be changed
-# from inside the panel later without the panel going down with it.
+# Which stack to build. Asked rather than assumed: it decides the web server, which serves the
+# panel itself and so cannot be changed from inside the panel later.
 #
-# `ols` was absent until 2026-09-01 and labelled experimental until 2026-09-09.
-# Two decisions from that period are still load-bearing and should not be
-# undone casually:
+# Two `ols` decisions are load-bearing:
 #
-#   * The panel runs on LSPHP here, the same build its hosted sites use, and
-#     ondrej's PHP is not installed at all. Reversed on 2026-09-10: the earlier
-#     note said the panel stayed on PHP-FPM "so the panel does not also depend
-#     on the lsphp packages it has never used", which traded one dependency for
-#     two PHP builds on one box. See the note above configure_ols().
-#   * The panel's own vhost is written OUTSIDE the panel-managed markers in
-#     httpd_config.conf — see configure_ols() for why that is load-bearing.
+#   * The panel runs on LSPHP, the same build its hosted sites use; ondrej's PHP is not installed.
+#     See the note above configure_ols().
+#   * The panel's own vhost is written OUTSIDE the panel-managed markers in httpd_config.conf; see
+#     configure_ols().
 #
-# One capability difference remains, and the installer says it at selection:
-# there is no per-site PHP isolation. It is not a defect in this script. The
-# 8G firewall and the bot blocker both work on OLS — the templates render
-# their rules into each site's vhconf (the WAF since 2026-09-30).
+# One difference remains, stated at selection: OLS has no per-site PHP isolation.
 STACK=""           # --stack=lemp|lamp|mern|ols|docker  (prompted, or lemp)
 WEB_SERVER=""      # derived from STACK
 
-# The PHP the PANEL itself runs on: composer, artisan, the queue worker, cron
-# and the web SAPI, all the same binary.
+# The PHP the PANEL itself runs on: composer, artisan, the queue worker, cron and the web SAPI,
+# all the same binary. One build, deliberately: two would give the installing CLI and the serving
+# SAPI different extension sets, and the API would answer 500 on a missing extension while the CLI
+# works.
 #
-# One build, deliberately. Two would mean the CLI that installs the code and
-# the SAPI that serves it having different extension sets, and the failure mode
-# is the API answering 500 on a missing extension while the CLI that installed
-# it works perfectly.
-#
-# On lemp/lamp/mern that is ondrej's `/usr/bin/php8.4` with php-fpm behind the
-# web server. On ols it is LiteSpeed's lsphp, because OpenLiteSpeed spawns PHP
-# itself over LSAPI and a second PHP from a second repository would be the two
-# builds this exists to avoid. Set by derive_php_runtime() once the stack is
-# known.
+# On lemp/lamp/mern that is ondrej's `/usr/bin/php8.4` with php-fpm behind the web server. On ols
+# it is LiteSpeed's lsphp, which OpenLiteSpeed spawns itself over LSAPI. Set by
+# derive_php_runtime() once the stack is known.
 PANEL_PHP_BIN=""   # CLI: artisan, composer, queue worker, cron
 COMPOSER_BIN=""    # resolved in install_packages; may predate us
 PANEL_PHP_SAPI=""  # what the web server talks to: "fpm" or "lsapi"
@@ -198,25 +158,20 @@ else
 fi
 
 STEP_NO=0
-# What we are doing right now, so a failure can say which part broke rather
-# than only which line number did.
+# What we are doing right now, so a failure can name the part that broke, not only the line.
 CURRENT_STEP="starting up"
-# The SSH login status (start_login_status). Off until the first change is
-# made: a refusal in preflight changed nothing, so there is nothing to report.
+# The SSH login status (start_login_status). Off until the first change is made: a refusal in
+# preflight changed nothing, so there is nothing to report.
 LOGIN_STATUS=0
 STEP_TOTAL=0
-# When this run began — one value for every report it makes, so a reader can
-# tell this run's reports from an earlier run's (Central's progress, the SSH
-# login status). Set here, not when the login status is prepared a few steps
-# in: the first reports went out with 0.
+# When this run began: one value for every report it makes (Central's progress, the SSH login
+# status), so a reader can tell this run's reports from an earlier one's. Set here, not later.
 INSTALL_STARTED="$(date +%s)"
 
-# needrestart (Ubuntu 24.04 and later) runs after every apt transaction and
-# restarts each service whose libraries changed — including the systemd unit
-# an automated install runs in, which starts the whole install again from step
-# one. Seen three times in one install on a fresh 24.04 server (2026-10-17).
-# Its apt hook stands aside while this is set; this script's own apt runs
-# inherit it, and nothing else on the server is affected.
+# needrestart (Ubuntu 24.04+) runs after every apt transaction and restarts each service whose
+# libraries changed, including the systemd unit an automated install runs in, which restarts the
+# whole install from step one. Its apt hook stands aside while this is set; only this script's
+# apt runs inherit it.
 export NEEDRESTART_SUSPEND=1
 say()  { printf '%s\n' "$*"; }
 step() {
@@ -228,16 +183,13 @@ ok()   { printf '     %s✓%s %s\n' "$GREEN" "$RESET" "$*"; }
 skip() { printf '     %s·%s %s %s(already done)%s\n' "$DIM" "$RESET" "$*" "$DIM" "$RESET"; }
 warn() { printf '     %s!%s %s\n' "$YELLOW" "$RESET" "$*" >&2; }
 
-# Log lines on stdin, made safe to show anyone: colour codes stripped, then
-# every secret this script knows replaced with [redacted]. The terminal and
-# Central's failed report both go through here — the terminal's copy ends up
-# in the journal when Central runs the install under systemd-run.
+# Log lines on stdin, made safe to show anyone: colour codes stripped, every secret this script
+# knows replaced with [redacted]. The terminal and Central's failed report both go through here.
 redact_log() {
     local text secret
     text="$(sed 's/\x1b\[[0-9;?]*[A-Za-z]//g')"
-    # Every name defaulted: setup_backend unsets PANEL_ADMIN_PASSWORD once the
-    # admin exists, and a bare "$PANEL_ADMIN_PASSWORD" under `set -u` killed
-    # this mid-report on every failure after that point.
+# Every name defaulted: setup_backend unsets PANEL_ADMIN_PASSWORD once the admin exists, and a
+# bare "$PANEL_ADMIN_PASSWORD" under `set -u` would kill this mid-report.
     for secret in "${PANEL_ADMIN_PASSWORD:-}" "${CENTRAL_TOKEN:-}" "${REDIS_PASSWORD:-}" "${REDACT[@]}"; do
         [[ -n "$secret" ]] && text="${text//"$secret"/[redacted]}"
     done
@@ -246,9 +198,8 @@ redact_log() {
     fi
 }
 
-# Tail of the install log, indented, or a note saying why there isn't one.
-# Every failure path prints this: "apt failed" with no output is not a
-# diagnosis, and the log is the only place the actual output went.
+# Tail of the install log, indented, or a note saying why there isn't one. Every failure path
+# prints this: the log is the only place the actual output went.
 log_tail() {
     local lines="${1:-15}"
 
@@ -271,11 +222,9 @@ report_failure() {
     printf '  %s\n' "$headline" >&2
     [[ -n "$detail" ]] && printf '  %s%s%s\n' "$DIM" "$detail" "$RESET" >&2
 
-    # No log means we stopped in preflight, before anything was touched. Do
-    # not point the user at a file that does not exist, and do not pad the
-    # message with recovery steps for a machine that was never changed.
-    # The requirements check runs after the log exists, but it too stops before
-    # anything is changed, and says so itself.
+# No log means we stopped in preflight, before anything was touched: do not point at a file that
+# does not exist or pad the message with recovery steps. The requirements check runs after the log
+# exists but also stops before any change, and says so itself.
     if [[ ! -r "${LOG_FILE:-}" || "$headline" == *"Nothing has been changed on this server."* ]]; then
         # The fresh-server stop already says it, in the sentence Central shows.
         [[ "$headline" == *"Nothing on this server was changed."* || "$headline" == *"Nothing has been changed on this server."* ]] \
@@ -297,10 +246,8 @@ report_failure() {
 
 die() { progress_stop 2>/dev/null || true; report_failure "$*"; exit 1; }
 
-# set -e kills the script on ANY failing command, including the ~200 that do
-# not go through run(). Without this trap that death is completely silent:
-# no message, no log pointer, just a non-zero exit — which reads to the user
-# as "it did nothing". This turns every one of those into a real report.
+# set -e kills the script on ANY failing command, including the ~200 that do not go through run().
+# Without this trap that death is silent; this turns each one into a real report.
 on_error() {
     local code="$1" line="$2" command="$3"
 
@@ -314,17 +261,13 @@ on_error() {
 
 trap 'on_error "$?" "$LINENO" "$BASH_COMMAND"' ERR
 
-# Runs a command, sending its noise to the log. The log path is printed on
-# failure, because "apt failed" with no output is not a diagnosis.
+# Runs a command, sending its output to the log. The log path is printed on failure.
 run() {
     if (( DRY_RUN )); then
         printf '     %s$ %s%s\n' "$DIM" "$*" "$RESET"
         return 0
     fi
-    # The ERR trap must not also fire for this: `if !` already handles the
-    # failure, and a doubled report is worse than none.
-    # A command in an `if` condition does not fire the ERR trap, so this
-    # reports once rather than twice.
+# A command in an `if` condition does not fire the ERR trap, so a failure reports once, not twice.
     if ! "$@" >>"$LOG_FILE" 2>&1; then
         progress_stop 2>/dev/null || true
         report_failure "This command failed. Its output is in the log." "\$ $*"
@@ -332,8 +275,8 @@ run() {
     fi
 }
 
-# Keep apt/network noise in the log, but make every long operation visible in
-# the terminal so a download is never mistaken for a stalled installer.
+# Keep apt/network noise in the log, but make every long operation visible in the terminal so a
+# download is never mistaken for a stalled installer.
 run_progress() {
     local label="$1"
     shift
@@ -348,20 +291,15 @@ run_progress() {
 
 # ─── Progress while a long command runs ──────────────────────────────────────
 #
-# A command that runs for minutes used to print one line and then nothing: a
-# ten-minute wait for Ubuntu's own updates looked exactly like a hung installer,
-# in the terminal and in Central. So while one runs, a ticker in the background
-# watches it and prints a full line when there is something to say:
+# A command that runs for minutes would print one line and then nothing, looking like a hung
+# installer in the terminal and in Central. So a background ticker watches it and prints a full
+# line when there is something to say: the group of packages apt is setting up (from apt's status
+# lines), that apt is waiting for Ubuntu's updates (every 15 s), or "still <doing what>" after
+# 15 s of silence.
 #
-#   - which group of packages apt is setting up, from apt's own status lines;
-#   - that apt is waiting for Ubuntu's updates, every 15 s;
-#   - otherwise how far it got, or "still <doing what>", after 15 s of silence.
-#
-# Full lines only, never \r: the journal and Central's systemd-run capture
-# keep every byte. The ticker only watches — the command runs exactly as
-# before, with the same exit code and failure handling — and it is stopped
-# before anything else is printed (progress_stop; die, run and the EXIT trap
-# call it too, so none outlives a failure).
+# Full lines only, never \r: the journal and Central's systemd-run capture keep every byte. The
+# ticker only watches; the command's exit code and failure handling are unchanged. It is stopped
+# before anything else prints (progress_stop; die, run and the EXIT trap call it too).
 
 PROGRESS_PID=""
 # A private directory for this run (apt's status file, the last activity sent
@@ -469,9 +407,8 @@ progress_say() {
     progress_activity "$1" "$2"
 }
 
-# The same line to Central, when it asked (PROGRESS_ACTIVITY=1): one when the
-# code changes, at most every 15 s, otherwise one a minute. A few dozen per
-# install, far inside Central's history and rate limits.
+# The same line to Central, when it asked (PROGRESS_ACTIVITY=1): one when the code changes, at most
+# every 15 s, otherwise one a minute — far inside Central's history and rate limits.
 progress_activity() {
     [[ "$PROGRESS_ACTIVITY" == "1" ]] || return 0
     (( PROGRESS_READY )) || return 0
@@ -542,10 +479,8 @@ progress_tick() {
         waiting=1
     elif [[ -n "$PT_STATUS" ]] && (( PT_NOW - PT_STATUS_SEEN >= 15 )) \
             && (( PT_LOCK_SINCE || PT_NOW - PT_LAST_LINE >= 15 )) && ubuntu_updates_running; then
-        # An apt command with no word from apt for 15 s while Ubuntu's
-        # updates run is waiting for them, whether or not it says so (-qq
-        # does not). apt commands only: the build runs beside the updates on
-        # purpose, and is not waiting for anything.
+# An apt command silent for 15 s while Ubuntu's updates run is waiting for them, whether or not
+# it says so (-qq does not). apt commands only: the build runs beside the updates on purpose.
         waiting=1
         PT_LOCK_HOLDER="unattended-upgr"
         (( PT_LOCK_SINCE )) || PT_LOCK_SINCE=$PT_STATUS_SEEN
@@ -662,11 +597,8 @@ try_apt() {
     return "$rc"
 }
 
-# The EXIT trap: no ticker outlives the install, the run directory goes, and
-# needrestart gets this unit back. finish() released that only on success, so
-# a failed install left needrestart skipping this unit's name until the next
-# run that succeeded (review finding R13; seen live after a failed install).
-# release_needrestart is safe to run twice.
+# The EXIT trap: no ticker outlives the install, the run directory goes, and needrestart gets this
+# unit back. Runs on failure too, not only on success. release_needrestart is safe to run twice.
 on_exit() {
     progress_stop
     release_needrestart
@@ -735,9 +667,7 @@ Control panel installer
                                CENTRAL_TOKEN (Bearer). Also PROGRESS_URL.
 USAGE
             exit 0 ;;
-        # A usage mistake, not a failed install: no log to read, nothing to
-        # report (FS-A11). It used to print the "read the full log / open an
-        # issue" block over a typo.
+# A usage mistake, not a failed install: no log to read, so no failure report.
         *) printf 'Unknown option: %s\nRun with --help to see the options.\n' "$arg" >&2
            exit 2 ;;
     esac
@@ -745,14 +675,11 @@ done
 
 # ─── Preflight ───────────────────────────────────────────────────────────────
 #
-# Everything that could make this install fail badly is checked here, before a
-# single package is installed. The alternative — discovering on step 11 that
-# port 80 is taken — leaves the user with a server that is neither what it was
-# nor what they wanted.
+# Everything that could make this install fail badly is checked here, before a single package is
+# installed: discovering on step 11 that port 80 is taken leaves a half-changed server.
 
-# Central's inputs, checked before the first step reports anywhere and before
-# anything on the server changes. A bad one is a mistake in the caller, not a
-# half-built server.
+# Central's inputs, checked before the first step reports and before anything changes. A bad one
+# is a mistake in the caller, not a half-built server.
 validate_central_inputs() {
     if [[ -n "$PANEL_ADMIN_USERNAME" || -n "$PANEL_ADMIN_PASSWORD" ]]; then
         [[ -n "$PANEL_ADMIN_USERNAME" && -n "$PANEL_ADMIN_PASSWORD" ]] \
@@ -781,16 +708,13 @@ validate_central_inputs() {
     fi
 }
 
-# Everything the operator (or Central) hands the installer, checked before it
-# is used anywhere. These go into vhosts, unit files, sed expressions, paths
-# that are later deleted, and git's command line; each used to be taken as
-# given. The realistic failure is a typo -- a pasted https://panel.example.com/
-# as --domain made a broken vhost and a certbot failure ten minutes later --
-# but a `;` or `}` in --domain also rewrote the nginx config around it.
+# Everything the operator (or Central) hands the installer, checked before use. These reach vhosts,
+# unit files, sed expressions, paths that are later deleted and git's command line. A typo (a
+# pasted https://panel.example.com/ as --domain) breaks the vhost, and a `;` or `}` in --domain
+# rewrites the nginx config around it.
 validate_inputs() {
-    # Before anything is changed, so it says so -- which also keeps
-    # report_failure from showing an earlier install's log as if it were
-    # this run's.
+    # Runs before anything is changed, so it says so; that also keeps report_failure from showing
+    # an earlier install's log as if it were this run's.
     input_refused() {
         die "$1
      Nothing has been changed on this server."
@@ -853,10 +777,8 @@ preflight() {
      Nothing has been changed on this server."
     fi
 
-    # Kept for the steps that have to branch on the release — the PHP repository
-    # most of all, since the mechanism differs between 24.04 and 26.04. Captured
-    # here rather than re-sourcing /etc/os-release later, so there is one place
-    # that decides what this machine is.
+    # Kept for the steps that branch on the release, the PHP repository most of all (the mechanism
+    # differs between 24.04 and 26.04). One place decides what this machine is.
     OS_VERSION_ID="${VERSION_ID}"
     OS_CODENAME="${VERSION_CODENAME:-}"
 
@@ -872,27 +794,15 @@ preflight() {
 
     fresh_server_check
 
-    # Ports, before any web server is installed. `ss` ships with iproute2 on
-    # both supported releases. A web server that is already ours is not a
-    # conflict — this is the re-run case.
-    # A web server on 80/443 is not automatically a conflict. Three cases:
+    # Ports, before any web server is installed (`ss` ships with iproute2 on both supported
+    # releases). A web server on 80/443 is not automatically a conflict:
     #
     #   ours          — a re-run. Always fine.
-    #   a supported   — an existing nginx/Apache, which is what a server being
-    #   web server      migrated from another panel looks like. The panel adds
-    #                   one vhost beside whatever is already there; it never
-    #                   rewrites global config, and `nginx -t` gates the reload.
-    #                   Refusing here forced the operator to stop their web
-    #                   server for the whole install, taking every hosted site
-    #                   offline to install a panel that was going to share that
-    #                   web server anyway.
-    #                   Since 2026-10-18 such a server only gets this far with
-    #                   --force: a web server serving sites is one of the things
-    #                   fresh_server_check stops on. So taking a server over from
-    #                   another panel — the planned v7 → v8 in-place migration
-    #                   included — needs --force, which Central's migration flow
-    #                   passes. The sharing below is what those installs use;
-    #                   keep it.
+    #   a supported   — an existing nginx/Apache, as on a server migrated from another panel. The
+    #   web server      panel adds one vhost beside it, never rewrites global config, and
+    #                   `nginx -t` gates the reload. Such a server only gets this far with --force
+    #                   (fresh_server_check stops on it otherwise), which Central's migration
+    #                   flow passes. Keep the sharing.
     #   anything else — a real conflict, and still fatal.
     local port
     for port in 80 443; do
@@ -925,8 +835,7 @@ preflight() {
 
     command -v systemctl >/dev/null 2>&1 || die "systemd is required"
 
-    # A dry run writes nothing at all (FS-A1) — not even the log, which a
-    # real install truncates here.
+    # A dry run writes nothing at all, not even the log, which a real install truncates here.
     if (( DRY_RUN )); then
         LOG_FILE=/dev/null
         return 0
@@ -947,10 +856,9 @@ preflight() {
     } >>"$LOG_FILE"
 }
 
-# The plan a dry run prints, then stops (FS-A1). It used to carry on through
-# every step with `run` silenced — and the many writes that do not go through
-# `run` (vhosts, systemd units, the pool, cron, sudoers, both .env files) were
-# made anyway, on a run that promised to change nothing.
+# The plan a dry run prints, then stops. Carrying on through the steps with `run` silenced is not
+# enough: the many writes that bypass `run` (vhosts, units, the pool, cron, sudoers, both .env
+# files) would still happen.
 dry_run_plan() {
     if [[ "$FRESH_CHECK" == "not_fresh" ]]; then
         step "Dry run — this server isn't fresh; nothing was changed"
@@ -979,23 +887,19 @@ dry_run_plan() {
 
 # ─── Fresh-server check ──────────────────────────────────────────────────────
 #
-# The installer is for a server with nothing on it yet. On 2026-10-18 it was
-# run by mistake on a busy server — 26 sites, MariaDB, Redis, PHP-FPM pools —
-# and accepted it, because preflight looked at the OS, the ports and the disk
-# only. It then upgraded packages, installed Docker and Postfix, appended to
-# that server's redis.conf and restarted Redis, and added a global conf to its
-# PHP-FPM before failing at step 14.
+# The installer is for a server with nothing on it yet. Preflight once accepted a busy server
+# (sites, MariaDB, Redis, PHP-FPM pools) because it checked only the OS, ports and disk, then
+# upgraded packages and edited that server's redis.conf and PHP-FPM config before failing.
 #
-# So preflight stops on strong evidence that a server already hosts something,
-# and only on that: every provider's stock Ubuntu image must pass. Each check
-# below looks for one thing a fresh image never has. What images do ship —
-# snapd, cloud-init, guest agents, swap, firewall rules, an MTA, an empty
-# database server — is printed as harmless, and anything the check cannot read
-# for certain is a warning, never a stop. Nothing here writes anything, so a
-# stop still truthfully says "Nothing on this server was changed".
+# So preflight stops on strong evidence that a server already hosts something, and only on that:
+# every provider's stock Ubuntu image must pass. Each check looks for one thing a fresh image never
+# has. What images do ship (snapd, cloud-init, guest agents, swap, firewall rules, an MTA, an empty
+# database server) is printed as harmless, and anything the check cannot read for certain is a
+# warning, never a stop. Nothing here writes anything, so a stop truthfully says "Nothing on this
+# server was changed".
 #
-# A re-run is never checked (the sites may be the panel's own), and --force
-# turns every finding into a warning.
+# A re-run is never checked (the sites may be the panel's own), and --force turns every finding
+# into a warning.
 
 fresh_note() {
     FRESH_NOTES+=("$1")
@@ -1092,13 +996,10 @@ fresh_server_rerun() {
     elif grep -q "^virtualHost ${PANEL_SLUG} " "${R}/usr/local/lsws/conf/httpd_config.conf" 2>/dev/null; then
         printf 'the panel'\''s own OpenLiteSpeed site'
     elif [[ -d "${APP_DIR}/.git" && -f "${APP_DIR}/install.sh" && -f "${APP_DIR}/backend/artisan" ]]; then
-        # A checkout of this repository, not merely something at the path:
-        # `panel` is a generic name, and a directory or an account by that
-        # name used to be enough -- the check was skipped on a server that
-        # was not ours, and fetch_source then cleared the directory as a
-        # leftover clone (review finding R2). The account is no longer asked
-        # at all: every install since the state file has one, and an account
-        # alone proves nothing.
+        # A checkout of this repository, not merely something at the path: `panel` is a generic
+        # name, and a directory or account by that name would skip the check on a server that is
+        # not ours (fetch_source would then clear it as a leftover clone). The account is not
+        # asked: on its own it proves nothing.
         printf 'the panel in %s' "$APP_DIR"
     else
         return 1
@@ -1446,8 +1347,7 @@ fresh_list_harmless() {
     return 0
 }
 
-# Is this server fresh? Stops the install, through die, when it is not — after
-# the OS checks and before anything on the server changes. See the note above.
+# Is this server fresh? Dies when it is not, after the OS checks and before anything changes.
 fresh_server_check() {
     local rerun finding
 
@@ -1498,11 +1398,8 @@ fresh_server_check() {
 resolve_stack() {
     step "Choosing the stack"
 
-    # Asked from /dev/tty, never stdin. Under `curl … | bash` the *script itself*
-    # is on stdin, so a plain `read` would swallow the rest of the script rather
-    # than wait for an answer — the install would then behave bizarrely rather
-    # than hang, which is worse. No terminal means no question: the flag or the
-    # default decides.
+    # Ask on /dev/tty, never stdin: under `curl … | bash` the script itself is on stdin, so a
+    # plain `read` would swallow the rest of the script. No terminal means no question.
     if [[ -z "$STACK" ]]; then
         if [[ -r /dev/tty && -w /dev/tty ]]; then
             printf '\n     Which stack should this server run?\n\n'
@@ -1532,19 +1429,12 @@ resolve_stack() {
     fi
 
     case "$STACK" in
-        # docker is nginx too, and deliberately so: containers are reached
-        # through a reverse proxy on the allocated port, which is the same
-        # vhost a Node app already gets. The stack name is a product label over
-        # a runtime flag, not a fourth web server -- there is nothing a Docker
-        # web-server driver would do differently.
+        # docker is nginx too: containers are reached through a reverse proxy on the allocated
+        # port, the same vhost a Node app gets.
         lemp|mern|docker) WEB_SERVER="nginx" ;;
         lamp)      WEB_SERVER="apache" ;;
         ols)
             WEB_SERVER="openlitespeed"
-            # Said once, plainly, to whoever is watching the install rather than
-            # only to whoever reads the source. Not a warning about the stack
-            # any more — a capability difference they would otherwise find out
-            # about from a control that refuses to switch on.
             say "     note: there is no per-site PHP isolation on OpenLiteSpeed"
             say "     (no per-site pools). The 8G firewall and bot blocker work."
             ;;
@@ -1553,27 +1443,19 @@ resolve_stack() {
 
     derive_php_runtime
 
-    # PHP and Node are installed regardless of the stack: the panel's API is PHP
-    # and its own interface is a Next.js build. The stack decides what *sites*
-    # get, and which web server owns port 80.
+    # PHP and Node are installed whatever the stack: the panel's API is PHP, its UI is Next.js.
     ok "${STACK} — ${WEB_SERVER}, PHP ${PHP_VERSION}, Node ${NODE_VERSION}"
 }
 
 # ─── Hostnames ───────────────────────────────────────────────────────────────
 #
-# nip.io resolves <anything>.<ip-with-dashes>.nip.io to that IP, with no DNS to
-# configure.
-#
-# The IP is written with dashes and the label is separated by a *dot*, which is
-# load-bearing: it makes `panel` and `api` children of one shared parent, so a
-# single session cookie can cover both. Separating with a dash instead would
-# make them unrelated siblings under nip.io and logging in would not work.
+# nip.io resolves <anything>.<ip-with-dashes>.nip.io to that IP, with no DNS to configure.
+# The label is separated from the IP by a dot, not a dash: that makes `panel` and `api`
+# children of one parent, so a single session cookie covers both.
 
-# The source address of this server's route to the internet, or nothing when
-# there is no route. `ip route get` exits 2 on "Network is unreachable", and
-# under pipefail that failure used to fire the ERR trap before the caller's own
-# "could not determine this server's IP" could explain it, so a server with no
-# network got a raw trap report (twice) instead.
+# Source address of this server's route to the internet, or nothing when there is none.
+# `ip route get` exits 2 when the network is unreachable; the `|| true` keeps pipefail from
+# firing the ERR trap before the caller can explain it.
 local_route_ip() {
     { ip -4 route get 1.1.1.1 2>/dev/null || true; } \
         | awk '!f{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); f=1}}'
@@ -1592,9 +1474,8 @@ resolve_hostnames() {
         return
     fi
 
-    # The address the outside world sees, which on a NAT'd box is not the one on
-    # the interface. Falls back to the local route if the lookup services are
-    # unreachable — a wrong-but-present name beats an empty one.
+    # The address the outside world sees (not the interface's, behind NAT). Falls back to the
+    # local route when the lookup services are unreachable.
     local ip="" url
     for url in https://api.ipify.org https://ifconfig.me/ip https://icanhazip.com; do
         ip=$(curl -fsS --max-time 5 "$url" 2>/dev/null | tr -d '[:space:]') || ip=""
@@ -1615,14 +1496,9 @@ resolve_hostnames() {
             warn "$ip is a private address — the nip.io name will only work from inside this network" ;;
     esac
 
-    # A dot between the label and the dashed IP, not a dash — and this is the
-    # difference between logging in and not.
-    #
-    # `panel-1-2-3-4.nip.io` and `api-1-2-3-4.nip.io` are both single labels
-    # under nip.io: siblings, with no shared parent. A session cookie cannot be
-    # scoped to cover both. `panel.1-2-3-4.nip.io` and `api.1-2-3-4.nip.io` are
-    # children of `1-2-3-4.nip.io`, which *can* hold the cookie — which is how
-    # the existing development server is set up, and why it works.
+    # A dot between the label and the dashed IP, not a dash: `panel.1-2-3-4.nip.io` and
+    # `api.1-2-3-4.nip.io` share the parent `1-2-3-4.nip.io`, which can hold one session cookie.
+    # `panel-1-2-3-4` and `api-1-2-3-4` would be unrelated siblings and login would fail.
     local dashed="${ip//./-}"
     COOKIE_DOMAIN="${dashed}.nip.io"
     PANEL_HOST="panel.${COOKIE_DOMAIN}"
@@ -1634,83 +1510,44 @@ resolve_hostnames() {
 
 # ─── Swap ────────────────────────────────────────────────────────────────────
 
-# The memory the install needs while the frontend build runs: RAM and swap
-# together, measured rather than assumed. Re-measured 2026-11-01 on fresh
-# TeamCompute boxes (Ubuntu 24.04, main b7404f244), because the 3072 MB this
-# used to be had gone stale as the frontend grew:
-#
-#   - a clean `next build` alone peaks at 3059 MB RAM + 257 MB swap (2 vCPU,
-#     4 GB box), and the panel's own services already use ~600 MB by then;
-#   - 2 GB RAM + 1.1 GB swap (the old 3072 budget): the kernel OOM-killed
-#     next-build at 1.6 GB anon-rss -- the bare "Killed" users reported;
-#   - 1 GB RAM + 2.1 GB swap: swap filled, the box stopped answering SSH;
-#   - 2 GB RAM + 2.6 GB swap (this budget): built in 299 s on 1 vCPU, peaking
-#     at 1634 MB RAM + 1506 MB swap for the build, with 437 MB already in use.
-#
-# 4608 is the 3.3 GB build plus the 0.6 GB already running, plus margin.
-#
-# Kept in step with panel_update.preflight.min_free_memory_mb, which the
-# in-place updater reports against free memory + swap: that check sees the
-# services already running, so it asks for the build alone (3584).
+# RAM + swap the install needs while the frontend build runs, measured rather than assumed:
+# a clean `next build` peaks at ~3.3 GB and the panel's services already use ~0.6 GB.
+# With less (2 GB RAM + 1.1 GB swap) the kernel OOM-kills the build; with 1 GB RAM the box
+# thrashes until SSH stops answering. Keep in step with panel_update.preflight.min_free_memory_mb
+# (that check sees the running services, so it asks for the build alone: 3584).
 BUILD_MEMORY_MB=4608
 
-# Every box gets swap, including ones with RAM to spare. The build is not the
-# only reason to have it: a swapless server has no margin at all, so the first
-# unexpected spike -- a backup, a restore, a customer's own build, a burst of
-# php-fpm children -- is answered by the OOM killer instead of by paging, and
-# what it picks is not necessarily the process that grew. A gigabyte of disk
-# is a cheap way to turn a hard kill into a slow minute.
+# Every box gets swap, even with RAM to spare: with none, the first spike (backup, restore,
+# a customer's build) goes to the OOM killer instead of paging.
 MINIMUM_SWAP_MB=1024
 
-# How far below target the existing swapfile may sit before it is rebuilt.
-# Exists because mkswap's one-page header makes every file measure 1 MB short
-# of the size it was created at, so an exact comparison is never satisfied and
-# the installer rebuilds its swapfile on every single run. 64 MB is far above
-# that 1 MB and far below any increment worth acting on.
+# How far below target the existing swapfile may sit before it is rebuilt. mkswap's one-page
+# header makes every file measure 1 MB short, so an exact comparison would rebuild it every run.
 SWAP_TOLERANCE_MB=64
 
-# The swapfile the installer manages. A second file rather than resizing the
-# first: /swapfile may not be ours, and swapoff-ing a file the box is actively
-# paging into is a far worse failure than using a little more disk.
+# The swapfile the installer manages. A second file rather than resizing /swapfile, which may
+# not be ours; swapoff-ing a file the box is paging into is worse than using more disk.
 #
-# ⚠️ This name is also the panel's `server.swap_file`, and the two must stay
-# equal: the Memory screen answers "is swap on?" by looking for that exact path
-# in the kernel's swap list. While they disagreed, this gigabyte was live and
-# the screen said off. A test asserts the two match, so changing it here alone
-# fails the suite rather than the server.
+# ⚠️ Must equal the panel's `server.swap_file`: the Memory screen finds swap by that exact path
+# in the kernel's swap list. A test asserts the two match.
 PANEL_SWAPFILE=/swapfile-panel
 
-# How much of the swap is the file we manage. Read from /proc/swaps rather than
-# `swapon --show`, which is in /sbin and not always on PATH. A file listed as
-# "(deleted)" does not match, which is correct: it is gone and is not coming
-# back.
+# MB of swap that is the file we manage. Read from /proc/swaps because `swapon --show` is in
+# /sbin and not always on PATH. A "(deleted)" file does not match, which is correct.
 req_our_swap_mb() {
     local ours
     ours=$(awk -v f="$PANEL_SWAPFILE" '$1 == f {printf "%d", $3/1024}' /proc/swaps 2>/dev/null)
     printf '%s\n' "${ours:-0}"
 }
 
-# The size configure_swap() will (re)create the panel's swapfile at, or 0 when
-# it leaves swap alone. One function for the check and the action, so the
-# check cannot promise one thing while configure_swap() does another.
-#
-# Two independent requirements, and the box has to satisfy both:
-#
-#   1. RAM + swap must clear BUILD_MEMORY_MB, or `next build` is killed with a
-#      bare "Killed". On a 2 GB box this is the binding one.
-#   2. There must be at least MINIMUM_SWAP_MB of swap regardless, so that even
-#      a large server has somewhere to page rather than reaching for the OOM
-#      killer at the first spike.
-#
-# Sized against the swap that is NOT ours, because our own file is deleted and
-# recreated. Counting it would size the replacement as though it still
-# existed: a box wanting 2048 MB, already holding our 1024 MB file, computed
-# 1025 MB -- then removed the 1024 and created 1025, landing at half the target.
-#
-# mkswap spends one page on its header, so a file of N MB reports as N-1.
-# Without SWAP_TOLERANCE_MB every re-run saw a 1 MB shortfall and "fixed" it,
-# and since the fix is swapoff/delete/recreate, re-running the installer
-# REPLACED a gigabyte of swap with a 1 MB file ("size = 1020 KiB", observed).
+# The size configure_swap() will (re)create the panel's swapfile at, or 0 to leave swap alone.
+# Shared by the check and the action so they cannot disagree. Two requirements, both must hold:
+#   1. RAM + swap clears BUILD_MEMORY_MB, or `next build` is killed.
+#   2. At least MINIMUM_SWAP_MB of swap regardless.
+# Sized against the swap that is NOT ours, because our own file is deleted and recreated;
+# counting it would size the replacement too small.
+# mkswap spends one page on its header (N MB reports as N-1), so SWAP_TOLERANCE_MB stops a
+# re-run from replacing a good swapfile with a tiny one.
 swap_to_add_mb() {
     local ram_mb="$1" swap_mb="$2" ours_mb="$3" wanted_mb add_mb
     wanted_mb=$(( BUILD_MEMORY_MB - ram_mb ))
@@ -1724,31 +1561,19 @@ swap_to_add_mb() {
 
 # ─── Requirements ────────────────────────────────────────────────────────────
 #
-# The numbers the README's Requirements table quotes. A test reads both and
-# fails when they disagree, so change them here and there together.
+# The numbers the README's Requirements table quotes; a test fails when they disagree.
 #
-# MIN_RAM_MB: below this the install is refused up front. A 1 GB box cannot
-# build the panel even with swap (it thrashed until SSH stopped answering, see
-# BUILD_MEMORY_MB); 2 GB builds with the swap configure_swap() adds. A "2 GB"
-# server reports less than 2048 MB to the OS (1967 on TeamCompute), hence the
-# tolerance: the check refuses only when RAM + RAM_TOLERANCE_MB is still short.
+# MIN_RAM_MB: below this the install is refused up front. A "2 GB" server reports a little
+# less than 2048 MB to the OS, hence RAM_TOLERANCE_MB: refuse only when RAM + tolerance is short.
 MIN_RAM_MB=2048
 RECOMMENDED_RAM_MB=4096
 RAM_TOLERANCE_MB=256
 
-# Free space on /var, besides the swap. Measured 2026-11-01 on a fresh Ubuntu
-# 24.04 image (1.6 GB used before): a lemp install writes 3.4 GB on top of its
-# swapfile -- the panel in /var/www 1.8 GB (code, vendor, node_modules, the
-# build), packages and apt's lists 0.8 GB, Node 0.2 GB, npm's cache 0.2 GB. The
-# 3 GB this check used to ask for was less than the install itself, so 5 GB:
-# the install plus room for the logs, the database and a first site.
+# Free space on /var, besides the swap: a lemp install writes ~3.4 GB, plus room for logs,
+# the database and a first site.
 MIN_DISK_MB=5120
-# A Docker server stores every application's images on this disk as well.
-# Measured 2026-11-01 (fresh Ubuntu 24.04, Docker 29): a docker install writes
-# 3.8 GB besides its swapfile, and pulling two 1-Click Recipes' images took
-# another 9.2 GB -- Open WebUI 0.9 GB, Dify 8.3 GB (its API image alone is
-# 4.1 GB). 20 GB is the install plus room for one large recipe and a few
-# small ones.
+# A Docker server also stores every application's images here: the install writes ~3.8 GB and
+# a large 1-Click Recipe can pull 8 GB or more.
 DOCKER_MIN_DISK_MB=20480
 
 # Every failed requirement, collected so the refusal names them all at once
@@ -1786,10 +1611,8 @@ req_cgroup_limit_mb() {
     [[ -n "$lowest" ]] && printf '%s\n' $(( lowest / 1048576 ))
     return 0
 }
-# How many processes in this process's cgroup the OOM killer has killed, by
-# either kind (the kernel's own or a cgroup limit). memory.events counts the
-# whole subtree and anyone may read it, so a rise across the build is proof
-# without needing the kernel log.
+# How many processes in this cgroup the OOM killer has killed (kernel or cgroup limit).
+# memory.events counts the whole subtree and is world-readable, so no kernel log is needed.
 req_oom_kills() {
     local cg
     cg=$(awk -F: '$1 == "0" {print $3}' /proc/self/cgroup 2>/dev/null)
@@ -1800,15 +1623,10 @@ req_free_mb() { df -Pm "$1" 2>/dev/null | awk 'NR==2 {print $4}'; }
 req_same_disk() { [[ "$(df -P "$1" 2>/dev/null | awk 'NR==2 {print $1}')" == "$(df -P "$2" 2>/dev/null | awk 'NR==2 {print $1}')" ]]; }
 # "none" on a VM or bare metal, otherwise the container type (lxc, openvz, …).
 req_container() { systemd-detect-virt --container 2>/dev/null || true; }
-# Can this kernel run Docker's containers? Two things Docker cannot work
-# without: being allowed to mount in a new mount namespace, and the overlay
-# filesystem it stores images on. Both are tried rather than looked up: an
-# overlay module that is not loaded yet is missing from /proc/filesystems, and
-# a container cannot `modprobe` -- asking those two refused Docker in an LXD
-# container that runs it fine (found live, 2026-11-01). The mounts are made
-# inside a private namespace that dies with them, over an empty temporary
-# directory; the only lasting trace is the kernel loading its overlay module,
-# which Docker would do anyway.
+# Can this kernel run Docker? It needs mounts in a new namespace and the overlay filesystem.
+# Both are tried, not looked up: an overlay module not yet loaded is missing from
+# /proc/filesystems, and a container cannot `modprobe`. The probe mounts live in a private
+# namespace over an empty temp directory.
 req_docker_kernel() {
     local dir problems=()
     if dir=$(mktemp -d 2>/dev/null) && mkdir -p "$dir/lower" "$dir/upper" "$dir/work" "$dir/merged"; then
@@ -1877,8 +1695,7 @@ check_requirements() {
         ok "${ram} MB RAM + ${swap} MB swap"
     fi
 
-    # Our own swapfile is deleted before its replacement is made, so only the
-    # difference comes out of the free space.
+    # Our own swapfile is deleted before its replacement is made: only the difference is new.
     new_mb=$(( add_mb - ours ))
     (( add_mb == 0 || new_mb < 0 )) && new_mb=0
 
@@ -1886,8 +1703,7 @@ check_requirements() {
     [[ "$STACK" == "docker" ]] && need_disk=$DOCKER_MIN_DISK_MB
     free_var=$(req_free_mb /var)
     free_var=${free_var:-0}
-    # The swapfile is created on /; when that is the same disk as /var it
-    # comes out of the same free space.
+    # The swapfile is created on /; on the same disk as /var it uses the same free space.
     if (( new_mb > 0 )) && req_same_disk / /var; then
         if (( free_var < need_disk + new_mb )); then
             requirement_fail "Disk: ${free_var} MB free on /var. This install needs ${need_disk} MB there$( [[ "$STACK" == "docker" ]] && printf ' for a Docker server' ) plus ${new_mb} MB for swap: $(( need_disk + new_mb )) MB in total."
@@ -1918,12 +1734,8 @@ check_requirements() {
             if [[ -n "$problems" ]]; then
                 requirement_fail "Docker: this server cannot run Docker: ${problems//;/; }.$( [[ "$container" == lxc* ]] && printf ' On LXC/LXD, turn on nesting for this container (security.nesting=true) and restart it.' )"
             elif [[ "$container" == lxc* ]]; then
-                # What LXD's security.nesting changes cannot be seen from in
-                # here: with it off, every probe above still passes and Docker
-                # still installs, and only `docker run` fails, inside runc
-                # ("open sysctl net.ipv4.ip_unprivileged_port_start ...
-                # permission denied", measured 2026-11-01 on LXD 5.21). So say
-                # it rather than guess either way.
+                # LXD's security.nesting cannot be seen from inside: with it off every probe
+                # above still passes and only `docker run` fails (in runc). So say it.
                 ok "this server can mount what Docker needs"
                 warn "this is an LXC container: Docker's containers only start if nesting is on for it (on the host: lxc config set <name> security.nesting=true, then restart it)"
             else
@@ -1947,18 +1759,14 @@ configure_swap() {
     step "Checking memory"
 
     local ram_mb swap_mb add_mb ours_mb swapfile="$PANEL_SWAPFILE"
-    # The same reading check_requirements() used: a cgroup memory limit is the
-    # RAM the build really gets.
+    # Same reading as check_requirements(): a cgroup memory limit is the RAM the build gets.
     ram_mb=$(req_ram_mb)
 
-    # Existing swap is counted, not treated as a reason to stop looking. The
-    # old check bailed the moment *any* swap existed, so a box that came with a
-    # 256 MB swapfile got nothing added and failed the build anyway.
+    # Existing swap is counted, not a reason to stop looking.
     swap_mb=$(req_swap_mb)
     ours_mb=$(req_our_swap_mb)
 
-    # PANEL_SWAP_MB is the escape hatch: `0` skips this entirely (for a box
-    # whose swap the operator manages), any other number forces that size.
+    # PANEL_SWAP_MB: `0` skips swap management entirely, any other number forces that size.
     if [[ "${PANEL_SWAP_MB:-}" == "0" ]]; then
         skip "swap management disabled (PANEL_SWAP_MB=0)"
         return
@@ -1984,14 +1792,8 @@ configure_swap() {
     fi
 
     if [[ -e "$swapfile" ]]; then
-        # Off first, and only if it is on: swapoff fails on a file that is not
-        # active, which is fine. When the kernel refuses for an active one
-        # (what it holds does not fit back into RAM), that failure used to be
-        # thrown away, and the install died one line later on "rm -f
-        # /swapfile-panel" -- the kernel will not unlink an active swap file
-        # either -- with nothing in the log saying why (review finding R10,
-        # reproduced on a real server). Say the real reason, before touching
-        # anything.
+        # Swap off first, only if it is on (swapoff fails on an inactive file). If the kernel
+        # refuses an active one, say why now: the later `rm -f` would fail with nothing logged.
         if (( ours_mb > 0 )) && ! swapoff "$swapfile" >>"$LOG_FILE" 2>&1; then
             die "could not turn off ${swapfile} to resize it (usually: what it holds does not fit back into RAM).
      Nothing has been deleted; its output is in ${LOG_FILE}. Free some memory or run with PANEL_SWAP_MB=0 to leave swap alone, then run this installer again."
@@ -2009,29 +1811,16 @@ configure_swap() {
 
 # ─── Packages ────────────────────────────────────────────────────────────────
 
-# The panel offers PHP versions by asking apt what it can install. Without a
-# multi-version repository that answer is "only the one Ubuntu ships", and the
-# whole multi-version PHP feature is inert. It is a prerequisite of the panel
-# working, not a preference — which is why this refuses rather than continues.
-#
-# The mechanism differs by release, and this is the part that would have broken
-# a 26.04 install silently:
-#
+# The panel offers PHP versions by asking apt, so a multi-version repository is a prerequisite.
+# The source differs by release:
 #   22.04 / 24.04  ppa:ondrej/php on Launchpad.
-#   26.04          the PPA does not publish for resolute. The same maintainer's
-#                  packages.sury.org does, so 26.04 uses that instead. Ubuntu
-#                  26.04 also ships PHP 8.5 as its own default, so the pinned
-#                  8.4 exists there ONLY through this repository.
+#   26.04          the PPA does not publish for resolute; use packages.sury.org instead.
+#                  Ubuntu 26.04 ships PHP 8.5, so the pinned 8.4 exists only through it.
+# Existing installs keep the PPA they were installed with (a second source would duplicate it).
 #
-# The releases already in the wild keep the PPA they were installed with: an
-# existing install has ondrej sources on disk, and switching mechanism under it
-# would leave two sources for the same packages.
 # Which PHP the panel runs on, decided once from the stack.
-#
-# LSPHP names its tree by the compacted version -- `lsphp84`, never `lsphp8.4`
-# -- and assuming the dot produces a path that does not exist, which OLS does
-# not check when the configuration is tested: the panel would be reported up
-# and answer 503 on every request.
+# LSPHP names its tree by the compacted version (`lsphp84`, not `lsphp8.4`); OLS does not check
+# the path when it tests the config, so a wrong one would answer 503 on every request.
 derive_php_runtime() {
     if [[ "$WEB_SERVER" == "openlitespeed" ]]; then
         local lsphp_compact="${PHP_VERSION//./}"
@@ -2058,9 +1847,7 @@ add_php_repository() {
         run install -d -m 0755 /etc/apt/keyrings
         fetch_apt_key "PHP repository" https://packages.sury.org/php/apt.gpg "$SURY_KEY_FPR" "$keyring"
 
-        # Written with signed-by rather than apt-key: apt-key is deprecated and
-        # a key trusted globally would sign for every repository on the box,
-        # not just this one.
+        # signed-by, not apt-key: a globally trusted key would sign for every repository.
         if (( DRY_RUN )); then
             printf '     %s$ write %s%s\n' "$DIM" "$list" "$RESET"
         else
@@ -2072,18 +1859,11 @@ add_php_repository() {
         return
     fi
 
-    # A glob inside [[ -f ]] is not expanded, so it is matched with compgen —
-    # the naive version silently always thought the repository was missing.
-    #
-    # The refresh happens either way, and that is the point: install_packages
-    # refreshes every source after this, whether the file was just written or
-    # was already there. `add-apt-repository` writes the sources file before the
-    # download succeeds, so a run interrupted between the two leaves a file apt
-    # has never fetched an index for. Skipping the refresh because the file
-    # exists is what turned that into a dead install: apt has the source and no
-    # packages from it.
-    #
-    # -n: no refresh of its own. One refresh for every source, not one each.
+    # A glob inside [[ -f ]] is not expanded, so match with compgen.
+    # install_packages refreshes every source afterwards even when the file already exists:
+    # `add-apt-repository` writes the file before the download succeeds, so an interrupted run
+    # leaves a source apt never fetched an index for.
+    # -n: no refresh of its own (one refresh for all sources).
     if ! compgen -G "/etc/apt/sources.list.d/ondrej*php*" >/dev/null; then
         run_progress "Adding the ondrej/php repository" add-apt-repository -y -n ppa:ondrej/php
     else
@@ -2091,9 +1871,8 @@ add_php_repository() {
     fi
 }
 
-# The version apt would install for php${PHP_VERSION}-fpm, empty when there is
-# none. `(none)` is apt's way of saying the package is known but unreachable —
-# flattened to empty here so callers have one thing to test.
+# The version apt would install for php${PHP_VERSION}-fpm, empty when there is none
+# (apt's `(none)` is flattened to empty).
 php_candidate() {
     local candidate
     candidate=$(apt-cache policy "php${PHP_VERSION}-fpm" 2>/dev/null | awk '/Candidate:/ {print $2}')
@@ -2103,32 +1882,13 @@ php_candidate() {
     printf '%s' "$candidate"
 }
 
-# Proven before anything is installed, not discovered halfway through: without
-# this the install would die on `apt-get install php8.4-fpm` with the web server
-# and Redis already on the box, which is the half-installed state preflight
-# exists to avoid.
+# Proven before anything is installed, so the install does not die on `apt-get install
+# php8.4-fpm` with the web server and Redis already on the box.
 #
-# Asks apt the question that matters — "can you install php8.4?" — rather than
-# "does a file with the right name exist?".
-#
-# The difference is the whole bug this replaced. The old flow decided the
-# repository was present from a filename, skipped refreshing it, and then died
-# claiming the repository "carries no php${PHP_VERSION}". That sentence was
-# false: ondrej publishes php8.4 for noble, and has throughout. What had
-# actually happened was that apt never fetched the index — a previous run
-# interrupted after `add-apt-repository` wrote the file, or a refresh that
-# failed to download.
-#
-# `apt-get update` is the reason that goes unnoticed: it exits **0** when a
-# repository cannot be fetched, printing only `W: Failed to fetch`. Verified
-# against a deliberately unreachable source. So "the repository was added"
-# could be reported over a download that never happened.
-#
-# Hence: ask apt, after the source is in place AND the index refreshed. Since
-# 2026-11-02 that is the normal path rather than the repair: install_packages
-# writes the PHP source when it is missing (add_php_repository), refreshes every
-# source once, and only then asks here — so a re-run with a stale source still
-# converges, because the refresh always runs.
+# Asks apt "can you install php8.4?" rather than checking for a file with the right name:
+# `apt-get update` exits 0 when a repository cannot be fetched (only `W: Failed to fetch`),
+# so a missing index would otherwise go unnoticed. Call it after the source is written AND
+# the index refreshed (install_packages does both).
 ensure_php_available() {
     if (( DRY_RUN )); then
         printf '     %s$ apt-cache policy php%s-fpm%s\n' "$DIM" "$PHP_VERSION" "$RESET"
@@ -2139,8 +1899,6 @@ ensure_php_available() {
     candidate=$(php_candidate)
 
     if [[ -z "$candidate" ]]; then
-        # Says what was established, not what was assumed. The repository being
-        # empty is only one of the reasons, and it is the least likely.
         die "apt cannot install PHP ${PHP_VERSION} on ${PRETTY_NAME:-this release}, after adding and refreshing the PHP repository.
      Usually one of:
        - the repository index failed to download (apt-get update reports this as a warning, not an error)
@@ -2157,30 +1915,16 @@ ensure_php_available() {
 
 # ─── apt locks ───────────────────────────────────────────────────────────────
 #
-# Ubuntu allows one package operation at a time, arbitrated by locks on
-# /var/lib/dpkg/lock-frontend, /var/lib/apt/lists/lock and
-# /var/cache/apt/archives/lock. A server that booted minutes ago is usually
-# still running unattended-upgrades, and apt's default behaviour on a held lock
-# is to print "Could not get lock" and exit — which killed the install.
+# Ubuntu allows one package operation at a time. A freshly booted server is usually still
+# running unattended-upgrades, and apt's default on a held lock is to exit, which killed the install.
+# Two layers:
+#   configure_apt_lock_wait  makes apt itself block for the lock (atomic, no check-then-run gap).
+#                            A config drop-in, because add-apt-repository, certbot and the
+#                            panel also call apt.
+#   wait_for_apt_lock        explains the delay, so a long wait is not mistaken for a hang.
 #
-# Two layers, because either alone is wrong:
-#
-#   configure_apt_lock_wait  makes apt itself block for the lock instead of
-#                            erroring. This is the part that is actually
-#                            correct: the lock is taken atomically, so nothing
-#                            can slip in between a check and our command. It is
-#                            a config drop-in rather than a flag on each call
-#                            because apt is also invoked by things we do not
-#                            control — add-apt-repository, certbot, and later
-#                            the panel itself.
-#
-#   wait_for_apt_lock        explains the delay. Without it apt blocks silently
-#                            and a ten-minute wait is indistinguishable from a
-#                            hung installer.
-#
-# Never: kill the holder, delete a lock file, or run `dpkg --configure -a`
-# blindly. Each of those can leave the package database permanently broken —
-# far worse than the wait they save.
+# Never kill the holder, delete a lock file, or run `dpkg --configure -a` blindly: each can
+# leave the package database permanently broken.
 configure_apt_lock_wait() {
     local conf="/etc/apt/apt.conf.d/99${PANEL_SLUG}-lock-wait"
 
@@ -2193,28 +1937,18 @@ configure_apt_lock_wait() {
     chmod 0644 "$conf"
 }
 
-# Asks apt whether the lock is free, by having apt try to take it and refuse to
-# wait. This is deliberately not a process check: unattended-upgrades leaves a
-# long-lived helper process running on an idle server, so "is something named
-# apt alive" reports busy on a machine where the lock is free — a false wait
-# followed by a false failure, which is worse than the problem being fixed.
+# Asks apt whether the lock is free, by having apt try to take it without waiting. Not a process
+# check: unattended-upgrades leaves a helper running on an idle server while the lock is free.
 #
-# `apt-get check` is read-only and takes the same locks a real operation does.
-# It can also fail for reasons that are not locks — broken dependencies, most
-# often — so only the two messages apt emits for a *contended* lock count as
-# held. Matching "unable to acquire the dpkg frontend lock" more loosely would
-# be wrong: apt says that to a non-root caller too, where the lock is free and
-# the problem is permission. LC_ALL=C keeps the message in English on a
-# localised server.
+# `apt-get check` is read-only and takes the same locks as a real operation. It can fail for
+# other reasons (broken dependencies), so only the two messages apt emits for a contended lock
+# count as held; apt also says "unable to acquire the dpkg frontend lock" to a non-root caller.
+# LC_ALL=C keeps the message in English.
 apt_lock_is_held() {
     local output lock
 
-    # apt-get check only takes the dpkg/frontend lock. `apt-get update` needs the
-    # lists lock, and a first-boot unattended-upgrades holds THAT one while
-    # leaving the frontend lock free — so a check-only probe reports "free" and
-    # the update then dies on "Could not get lock /var/lib/apt/lists/lock". fuser
-    # reports a holder of any of the real lock files, whatever the lock type, so
-    # we wait for the one that actually matters.
+    # apt-get check takes only the dpkg frontend lock, but `apt-get update` needs the lists lock,
+    # which a first-boot unattended-upgrades holds. fuser sees a holder of any real lock file.
     if command -v fuser >/dev/null 2>&1; then
         for lock in /var/lib/apt/lists/lock /var/lib/dpkg/lock-frontend \
                     /var/lib/dpkg/lock /var/cache/apt/archives/lock; do
@@ -2227,7 +1961,7 @@ apt_lock_is_held() {
     grep -qiE 'it is held by process|temporarily unavailable' <<<"$output"
 }
 
-# Best-effort, for the message only — it is never what decides to wait.
+# Best-effort, for the message only; it never decides whether to wait.
 apt_lock_holder() {
     local pid name
 
@@ -2241,11 +1975,9 @@ apt_lock_holder() {
     printf 'another package manager'
 }
 
-# Is Ubuntu installing its own updates right now? The units apt.systemd.daily
-# runs in are `activating` for as long as they run; and a run started some
-# other way is still an `unattended-upgrade` process. Not its `-shutdown`
-# helper, which idles on every server (see apt_lock_is_held). The panel asks
-# the same two things (SystemUpdatesActivity) for its setup page.
+# Is Ubuntu installing its own updates right now? The apt.systemd.daily units are `activating`
+# while they run, and a run started another way is still an `unattended-upgrade` process (not
+# its idle `-shutdown` helper). The panel asks the same two things (SystemUpdatesActivity).
 ubuntu_updates_running() {
     local state
 
@@ -2255,8 +1987,8 @@ ubuntu_updates_running() {
     pgrep -f 'bin/unattended-upgrade( |$)' >/dev/null 2>&1
 }
 
-# Something else is doing package work: it holds the lock, or Ubuntu's updates
-# are running (between their download and install they hold no lock at all).
+# Something else is doing package work: it holds the lock, or Ubuntu's updates are running
+# (between their download and install they hold no lock).
 package_manager_busy() {
     apt_lock_is_held || ubuntu_updates_running
 }
@@ -2270,15 +2002,11 @@ apt_wait_text() {
     fi
 }
 
-# Waits for the lock another package manager holds, saying what it is waiting
-# for every 15 s. Never takes the lock from it.
-#
-# `soft` as $1: give up with a warning (return 1) rather than stop the install,
-# for a caller that can carry on without apt (a certificate retry).
-#
-# While install_packages is waiting (EARLY_WORK=1), the time goes to the work
-# that needs no package at all — Node, the panel's source, the interface's npm
-# packages — one item at a time, with the lock checked again after each.
+# Waits for the lock another package manager holds, reporting every 15 s. Never takes the lock.
+# `soft` as $1: warn and return 1 instead of stopping the install, for a caller that can carry
+# on without apt (a certificate retry).
+# While install_packages waits (EARLY_WORK=1), the time goes to work that needs no package,
+# one item at a time, rechecking the lock after each.
 wait_for_apt_lock() {
     local mode="${1:-}" holder started=$SECONDS waited=0 said=0
 
@@ -2325,14 +2053,12 @@ wait_for_apt_lock() {
 
 # ─── Work that needs no package, while the lock is held ──────────────────────
 #
-# Installing Node through fnm, fetching the panel and `npm ci` need curl,
-# unzip, git and the panel account — all on the image or made before the
-# package step — and no apt at all. So when install_packages has to wait for
-# another package manager, it does them in the meantime (wait_for_apt_lock).
+# Installing Node through fnm, fetching the panel and `npm ci` need no apt, so
+# install_packages does them while it waits for another package manager (wait_for_apt_lock).
 #
-# Each runs in a subshell that cannot report: a failure here goes to the log
-# only, and the item simply runs again in its own step, with the normal fatal
-# handling. That matters, because Central deletes a server it is told failed.
+# Each runs in a subshell that cannot report: a failure goes to the log only, and the item
+# runs again in its own step with the normal fatal handling (Central deletes a server it is
+# told failed).
 EARLY_WORK=0
 EARLY_RAN=0
 EARLY_TRIED="|"
@@ -2357,8 +2083,7 @@ early_item() {
     EARLY_TRIED+="${key}|"
     say "     → while we wait: ${label}..."
 
-    # In the background and waited for, not in an `if`: errexit is off inside
-    # an if's condition, and the item has to stop at its first failure.
+    # In the background and waited for, not in an `if` (errexit is off in a condition).
     ( early_sandbox; "$fn" ) >>"$LOG_FILE" 2>&1 &
     wait $! || rc=$?
 
@@ -2382,15 +2107,9 @@ early_work_next() {
     return 0
 }
 
-# MongoDB publishes an ASCII-armoured signing key. Panel releases before this
-# repair saved that response with a `.gpg` extension, which tells apt to parse
-# it as a dearmoured binary keyring. The repository list survived the failed
-# engine install, so every later `apt-get update` — including this installer's
-# first package step — stopped with NO_PUBKEY before updated panel code could
-# repair its own file.
-#
-# The signing key for one MongoDB series, as the armored file apt reads
-# straight from signed-by. A reply that is not a key stops the install.
+# The signing key for one MongoDB series, saved as the ASCII-armoured `.asc` file apt reads
+# straight from signed-by (a `.gpg` name makes apt expect a dearmoured binary keyring).
+# A reply that is not a key stops the install.
 fetch_mongodb_key() {
     local series="$1" keyring="$2" label="$3"
 
@@ -2406,10 +2125,9 @@ fetch_mongodb_key() {
     run chmod 0644 "$keyring"
 }
 
-# Touch only the exact MongoDB source/key pattern the panel wrote. An unrelated
-# third-party repository is the server owner's configuration, not ours to
-# rewrite. The old `.gpg` file is left in place; once no source references it,
-# it is harmless, and deleting an operator-managed file would be needless.
+# Repair the MongoDB source/key pairing from older panel releases (a `.gpg` key that apt
+# rejects with NO_PUBKEY). Touches only the exact pattern the panel wrote, never another
+# repository; the old `.gpg` file is left in place.
 repair_panel_mongodb_repository() {
     local list series old_key keyring current fixed
 
@@ -2424,9 +2142,8 @@ repair_panel_mongodb_repository() {
         keyring="/etc/apt/keyrings/mongodb-server-${series}.asc"
         current=$(cat "$list" 2>/dev/null || true)
 
-        # Only the official MongoDB Ubuntu source with the panel's old key path
-        # is ours to rewrite. A correct `.asc` source with a missing key is also
-        # repaired, covering a download interrupted between the two writes.
+        # Only the official MongoDB Ubuntu source with the old key path is rewritten. A correct
+        # `.asc` source with a missing key is also repaired (download interrupted mid-write).
         if [[ "$current" == *"https://repo.mongodb.org/apt/ubuntu"* \
               && "$current" == *"signed-by=${old_key}"* ]]; then
             fetch_mongodb_key "$series" "$keyring" "Repairing the MongoDB ${series} repository signing key"
@@ -2449,19 +2166,11 @@ repair_panel_mongodb_repository() {
 }
 
 # Docker, from Docker's own repository.
-#
-# Not `curl -fsSL https://get.docker.com | sh`. That is the documented
-# convenience script and it pipes a remote file straight into a root shell on
-# someone else's server — the same trade this installer already refuses for
-# LiteSpeed, whose one-liner drops keys into /etc/apt/trusted.gpg.d/ and trusts
-# them for every repository on the box. One keyring, scoped to one source with
-# signed-by, the way sury and MongoDB are already handled here.
-#
-# Ubuntu ships `docker.io` in universe, which would need no repository at all.
-# It is consistently several minor versions behind and does not carry the
-# compose v2 plugin, and compose is the format the panel generates — so the
-# older package would work right up until the first `docker compose` call.
-# The Docker source only; its packages go into install_packages's one install.
+# Not `get.docker.com | sh`: that pipes a remote file into a root shell. One keyring scoped to
+# one source with signed-by, like sury and MongoDB.
+# Not Ubuntu's `docker.io`: it lags several minor versions and lacks the compose v2 plugin,
+# which is the format the panel generates.
+# Writes the source only; the packages go into install_packages's one install.
 add_docker_repository() {
     local keyring="/etc/apt/keyrings/docker.asc"
     local list="/etc/apt/sources.list.d/docker.list"
@@ -2477,8 +2186,7 @@ add_docker_repository() {
     if (( DRY_RUN )); then
         printf '     %s$ write %s%s\n' "$DIM" "$list" "$RESET"
     else
-        # dpkg's own architecture, not `uname -m`: the repository is
-        # indexed by amd64/arm64, and uname says x86_64/aarch64.
+        # dpkg's architecture, not `uname -m`: the repository is indexed by amd64/arm64.
         printf 'deb [arch=%s signed-by=%s] https://download.docker.com/linux/ubuntu %s stable\n' \
             "$(dpkg --print-architecture)" "$keyring" "$OS_CODENAME" >"$list"
     fi
@@ -2486,48 +2194,23 @@ add_docker_repository() {
     ok "Docker repository added (${OS_CODENAME})"
 }
 
-# Every package the panel needs, one per line: the one list install_packages
-# hands apt in a single transaction.
+# Every package the panel needs, one per line: the one list install_packages hands apt in a
+# single transaction.
 #
-# update-notifier-common provides `apt-check`, which is how the panel counts
-# pending and security updates. Without it the Settings page cannot tell the
-# difference between "nothing waiting" and "could not look", so it reports
-# neither. Cheap, and it is the same source Ubuntu's own MOTD uses.
-#
-# build-essential is here because npm packages ship prebuilt binaries only
-# for some Node versions, and fall back to compiling from source for the
-# rest. A server with no compiler turns that fallback into a dead install:
-# n8n died in `node-gyp` building isolated-vm on 2026-09-15, and the error
-# it surfaced was about dependency resolution, because npm buries the one
-# line that matters under thousands of peer warnings.
-#
-# Installed for every stack, deliberately. Which packages need compiling is
-# not knowable at install time — the user picks site types later, and a
-# git-deployed project can depend on anything — so a conditional would have
-# to guess the future. It is ~235 MB, and it is the difference between an
-# install that works and one that fails for a reason the user cannot act on.
-# `pigz` is gzip across every core, and backups are where that shows.
-# Measured on a 103 GB site with 8 cores: `tar -czf` took 67 minutes with
-# gzip pinned at 99.5% of one core and seven idle; pigz did the same work in
-# ~15. Same format — pigz emits ordinary gzip, so `tar -tzf`, the verify step
-# and every archive already in a bucket are unaffected.
-#
-# The panel falls back to gzip when this is absent, so it is an improvement
-# rather than a requirement. That fallback is load-bearing: the updater ships
-# code, never packages, so this line only ever reaches *fresh* installs —
-# an existing panel upgrading to the code that prefers pigz will not have it
-# until somebody runs `apt install pigz` by hand. ~60 KB.
-#
-# `acl` is setfacl: each site user's home is closed to every other local
-# account and opened, by ACL, to the panel and the web server only (see
-# HomeDirectoryAccess). Ubuntu 26.04 does not ship it. Unlike pigz, existing
-# servers get it too: `sites:resync` installs it when it is missing.
+# update-notifier-common provides `apt-check`, how the panel counts pending and security updates.
+# build-essential, for every stack: npm packages fall back to compiling from source when no
+# prebuilt binary exists for the Node version, and which ones need it is unknowable at install
+# time (site types and git-deployed projects come later).
+# pigz is gzip across every core, for backups; it writes ordinary gzip. The panel falls back to
+# gzip when it is absent (the updater ships code, not packages, so only fresh installs get it).
+# acl is setfacl: each site user's home is closed to other local accounts and opened by ACL to
+# the panel and web server only (see HomeDirectoryAccess). Ubuntu 26.04 does not ship it;
+# `sites:resync` installs it on existing servers.
 panel_packages() {
     printf '%s\n' software-properties-common curl git unzip zip rsync ca-certificates gnupg \
         update-notifier-common build-essential pigz acl
 
-    # Only the chosen web server. Installing both would have them fight over
-    # port 80, and apt starts them on install.
+    # Only the chosen web server: both would fight over port 80, and apt starts them on install.
     case "$WEB_SERVER" in
         nginx)         printf '%s\n' nginx ;;
         apache)        printf '%s\n' apache2 ;;
@@ -2536,14 +2219,12 @@ panel_packages() {
 
     printf '%s\n' redis-server sqlite3 supervisor
 
-    # OpenLiteSpeed's panel PHP is lsphp, installed by install_ols_packages
-    # right after this list (see the note there).
+    # OpenLiteSpeed's panel PHP is lsphp, installed by install_ols_packages after this list.
     [[ "$PANEL_PHP_SAPI" == "fpm" ]] && panel_php_packages
 
-    # certbot from the start, not when the certificate is issued: an apt run
-    # there is the one Ubuntu's updates queued behind for seven minutes.
-    # No certbot plugin exists for OpenLiteSpeed. --webroot instead: certbot
-    # drops its token in the document root and never touches the config, so
+    # certbot from the start, not when the certificate is issued: a later apt run can queue
+    # behind Ubuntu's updates for minutes.
+    # No certbot plugin exists for OpenLiteSpeed: --webroot leaves the config alone, so
     # installing the certificate is our job (see install_ols_certificate).
     if (( WANT_SSL )); then
         case "$WEB_SERVER" in
@@ -2553,11 +2234,8 @@ panel_packages() {
         esac
     fi
 
-    # Docker, when the stack asked for it, from Docker's own repository
-    # (add_docker_repository). buildx and compose are plugins now, not
-    # separate binaries. Without docker-compose-plugin there is no `docker
-    # compose` subcommand at all, and the panel generates compose files — so
-    # omitting it ships a stack whose every deploy fails on the first call.
+    # Docker, from Docker's own repository (add_docker_repository). Without docker-compose-plugin
+    # there is no `docker compose` subcommand, and the panel generates compose files.
     if [[ "$STACK" == "docker" ]]; then
         printf '%s\n' docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     fi
@@ -2565,9 +2243,8 @@ panel_packages() {
     return 0
 }
 
-# Matches the extensions the panel actually loads. Kept explicit rather
-# than pulling php${V} — the metapackage drags in apache2 as a
-# dependency, which would fight nginx for port 80.
+# The extensions the panel loads, named explicitly: the php${V} metapackage drags in apache2,
+# which would fight nginx for port 80.
 panel_php_packages() {
     printf '%s\n' \
         "php${PHP_VERSION}-fpm" "php${PHP_VERSION}-cli" "php${PHP_VERSION}-common" \
@@ -2578,23 +2255,14 @@ panel_php_packages() {
         "php${PHP_VERSION}-redis" "php${PHP_VERSION}-igbinary" "php${PHP_VERSION}-opcache" \
         "php${PHP_VERSION}-soap" \
         "php${PHP_VERSION}-imagick" "php${PHP_VERSION}-imap" "php${PHP_VERSION}-gmp"
-    # pgsql alongside mysql: the panel can manage a PostgreSQL server, and
-    # without this extension no PHP application on the box can connect to
-    # one — the databases would be creatable and unusable.
-    #
-    # soap has no package on the LiteSpeed stack because LSPHP compiles
-    # it in, so an OpenLiteSpeed box has always had it. Naming it here
-    # is what stops nginx and Apache being the odd ones out: the two
-    # lists are now identical, and PhpRuntimeTest fails if they drift.
-    #
-    # What v7 installs as well (operator, 2026-10-07): imagick for
-    # WordPress's image editor, imap for Mautic, gmp for Nextcloud.
-    # Measured on 24.04 and 26.04 for every PHP 7.4–8.5.
+    # pgsql alongside mysql: the panel can manage PostgreSQL, and PHP apps need it to connect.
+    # soap has no package on the LiteSpeed stack (LSPHP compiles it in); naming it here keeps
+    # the two lists identical, and PhpRuntimeTest fails if they drift.
+    # imagick (WordPress image editor), imap (Mautic) and gmp (Nextcloud) match what v7 installs.
 }
 
-# What writing the third-party sources needs before the refresh: curl, gpg,
-# the CA bundle and add-apt-repository. Ubuntu's cloud images ship all of
-# them, so this is normally nothing; a missing one costs one extra refresh.
+# What writing the third-party sources needs before the refresh: curl, gpg, the CA bundle and
+# add-apt-repository. Ubuntu's cloud images ship them all; a missing one costs one extra refresh.
 install_source_tools() {
     local missing=()
 
@@ -2625,10 +2293,9 @@ add_package_sources() {
     fi
 }
 
-# Local mail, installed right after the main list. A call of its own because
-# it is never fatal (configure_mail): one package failing must not take the
-# whole transaction down with it. A Postfix that was here before the install
-# is left exactly as it was.
+# Local mail, installed right after the main list. A call of its own because it is never fatal
+# (configure_mail): it must not take the whole transaction down. A Postfix that was already
+# here is left as it was.
 install_postfix() {
     if [[ "$POSTFIX_STATE" == "preinstalled" ]]; then
         return 0
@@ -2667,46 +2334,35 @@ POSTFIX_STATE=""
 
 # ─── The package step ────────────────────────────────────────────────────────
 #
-# Every apt operation of the install happens here, in one block with no gaps,
-# and none after it (a test holds that line). The reason is measured, not
-# assumed (2026-11-01, seven fresh 4 GB servers): Ubuntu's first-boot
-# unattended-upgrades queues behind our package work and takes the lock in the
-# first gap of a few seconds — on six of seven boxes the gap after this step —
-# and then holds it for 6–9 minutes. The next apt call of ours (Postfix, or
-# certbot) waited all of that, and everything else waited behind it.
-#
-# With every package in now, Ubuntu's updates run beside the configuration
-# and the build, which need no package at all. Nothing interrupts them.
+# Every apt operation of the install happens here, in one block with no gaps, and none after
+# it (a test holds that line). Ubuntu's first-boot unattended-upgrades takes the lock in the
+# first gap and holds it for minutes, so a later apt call of ours (Postfix, certbot) would
+# wait behind it. With every package in, those updates run beside the configuration and the
+# build, which need no package.
 #
 #   1. sources first, written without a refresh of their own;
 #   2. one refresh;
 #   3. one install of every package (panel_packages);
 #   4. straight after, the non-fatal ones: Postfix, lsphp's extensions.
-# A host booted with ipv6.disable=1 has no IPv6 socket family at all, and
-# nginx refuses to start on any `listen [::]` there ("socket() [::]:80 failed
-# (97: Address family not supported by protocol)"). /proc/net/if_inet6 exists
-# exactly when the kernel has IPv6; the sysctl disable_ipv6 switch leaves it,
-# and leaves binding to [::] working (review finding P1, checked on a real
-# server).
+#
+# A host booted with ipv6.disable=1 has no IPv6 socket family, and nginx refuses to start on
+# any `listen [::]` there. /proc/net/if_inet6 exists exactly when the kernel has IPv6; the
+# disable_ipv6 sysctl leaves it and leaves binding to [::] working.
 # The argument is only for the tests; the installer calls it with none.
 have_ipv6() {
     [[ -e "${1:-/proc/net/if_inet6}" ]]
 }
 
-# The nginx files the installer writes, without their [::] listens when the
-# host has no IPv6. certbot --nginx then adds no IPv6 listen of its own either:
-# it mirrors the server block's existing listens.
+# The nginx files the installer writes, minus their [::] listens when the host has no IPv6
+# (certbot --nginx mirrors the existing listens, so it adds none either).
 nginx_without_ipv6() {
     have_ipv6 || sed -i '/^[[:space:]]*listen[[:space:]]\+\[::\]/d' "$@"
 }
 
-# Ubuntu's nginx package starts nginx as it installs, with a default site that
-# listens on [::]:80, so on a host with no IPv6 the package itself fails to
-# configure and the install stops at "Installing packages" before any file of
-# ours exists. Its postinst only links that site when nothing is at
-# sites-enabled/default yet, so a comment-only file there lets nginx start;
-# configure_nginx deletes it, as it deletes the stock site. A link there is the
-# stock site from an earlier failed run, and is replaced the same way.
+# Ubuntu's nginx package starts nginx on install with a default site listening on [::]:80, so
+# on a host with no IPv6 the package fails to configure. Its postinst links that site only when
+# nothing is at sites-enabled/default, so a comment-only file there lets nginx start;
+# configure_nginx deletes it. A symlink there is the stock site from a failed run: replaced.
 # Arguments only for the tests; the installer calls it with none.
 # shellcheck disable=SC2120
 make_room_for_nginx_without_ipv6() {
@@ -2746,17 +2402,10 @@ install_packages() {
         ensure_php_available
     fi
 
-    # The optional packages (Postfix; lsphp and its extensions on
-    # OpenLiteSpeed) go into the SAME transaction. They used to be calls of
-    # their own, straight after, and the sub-second gap before them was enough:
-    # Ubuntu's updates wait on the lock behind us, and on one of seven fresh
-    # servers (2026-11-02) they took it there, and Postfix waited five minutes.
-    # apt has no way to hold the lock across two calls (it ignores
-    # DPKG_FRONTEND_LOCKED, tested on apt 2.8), so there is one call.
-    #
-    # They stay optional: if the whole list fails, the required ones are
-    # installed on their own and the optional ones after, each non-fatal, as
-    # before. Only then is there a gap, and only in that rare case.
+    # Optional packages (Postfix; lsphp and its extensions on OpenLiteSpeed) go into the SAME
+    # transaction: apt cannot hold the lock across two calls, and in the gap Ubuntu's updates take
+    # it. If the whole list fails, the required packages are installed alone, then the optional
+    # ones, each non-fatal.
     local pkgs=() optional=()
     mapfile -t pkgs < <(panel_packages)
     if [[ "$POSTFIX_STATE" != "preinstalled" ]]; then
@@ -2786,51 +2435,24 @@ install_packages() {
     fi
 
     if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
-        # OpenLiteSpeed: the panel runs on LSPHP, the same build its hosted
-        # sites use. ondrej's PHP is not installed at all on this stack.
+        # OpenLiteSpeed: the panel runs on LSPHP, the same build its hosted sites use; ondrej's PHP
+        # is not installed. Pointing only the web SAPI at lsphp would leave composer/artisan on
+        # /usr/bin/php: two PHPs with two extension sets, and API 500s on a missing extension.
+        # Skipping phpX.Y-fpm also avoids /etc/apache2, which made OLS servers detect as Apache.
         #
-        # Two builds is the thing being avoided. Pointing only the web SAPI at
-        # lsphp while composer and artisan stayed on /usr/bin/php would give the
-        # panel two PHPs with two extension sets, and the failure mode is the
-        # API answering 500 on an extension the CLI that installed the code has.
-        #
-        # A side effect worth naming: /etc/apache2 comes from `phpX.Y-fpm`, so
-        # an OLS box that never installs it never grows the phantom directory
-        # that made every OpenLiteSpeed server detect as Apache.
-        #
-        # Here rather than in configure_web_server, and the ordering is the
-        # reason: composer is fetched a few lines below and run with
-        # PANEL_PHP_BIN, which on this stack is lsphp.
-        #
-        # install_ols_packages guards itself, so the later call from
-        # configure_ols is a no-op rather than a second apt run.
+        # Done here, not in configure_web_server: composer is fetched below and run with
+        # PANEL_PHP_BIN (lsphp). install_ols_packages guards itself, so configure_ols' later call
+        # is a no-op.
         install_ols_packages
 
-        # gd, xml, zip, mbstring and bcmath have no packages -- they are
-        # compiled into lsphp, verified by extracting the .deb, which ships no
-        # .so files at all. The rest are separate packages and are added by
-        # install_ols_packages alongside the ones hosted sites need.
+        # gd, xml, zip, mbstring and bcmath are compiled into lsphp (no packages); the rest are
+        # added by install_ols_packages alongside the ones hosted sites need.
 
-        # `php` on PATH, pointing at LSPHP's CLI.
-        #
-        # Found on real hardware, and it stopped the install dead:
-        #
-        #   env: 'php': No such file or directory
-        #
-        # composer and wp-cli are PHARs whose shebang is `#!/usr/bin/env php`.
-        # Installing them with an explicit interpreter is not enough -- the
-        # moment anything EXECUTES them, the kernel reads that line and looks
-        # for `php` on PATH. There is none on this stack, because ondrej's PHP
-        # is deliberately not installed.
-        #
-        # wp-cli is the one that matters beyond the install: the panel drives
-        # every WordPress operation through /usr/local/bin/wp, so without this
-        # a WordPress site could not be created, updated or backed up on an
-        # OpenLiteSpeed server.
-        #
-        # /usr/local/bin comes before /usr/bin on the default PATH, and this is
-        # only created on this stack, so it cannot shadow ondrej's php
-        # elsewhere.
+        # `php` on PATH, pointing at LSPHP's CLI. composer and wp-cli are PHARs with a
+        # `#!/usr/bin/env php` shebang, so executing them needs `php` on PATH even when they were
+        # installed with an explicit interpreter. The panel drives every WordPress operation
+        # through /usr/local/bin/wp. /usr/local/bin comes before /usr/bin, and this link exists
+        # only on this stack, so it shadows no other php.
         run ln -sfn "$PANEL_PHP_BIN" /usr/local/bin/php
     fi
 
@@ -2847,12 +2469,7 @@ install_packages() {
 # For install_packages: composer, downloaded only when there is none, and
 # COMPOSER_BIN pointing at whichever one is used.
 ensure_composer() {
-    # Whatever composer we end up using, remember *where* it is. The check
-    # below asks "is composer installed anywhere", and the install step later
-    # used to invoke a hardcoded /usr/local/bin/composer — so on a server that
-    # already had one somewhere else the install skipped the download and then
-    # died on a path it had never created. Found on a migrated box carrying
-    # Ubuntu's /usr/bin/composer.
+    # Record where composer is: later steps must use this path, not assume /usr/local/bin/composer.
     COMPOSER_BIN=$(command -v composer 2>/dev/null || true)
 
     if [[ -z "$COMPOSER_BIN" ]]; then
@@ -2868,22 +2485,17 @@ ensure_composer() {
 
 # ─── Checked downloads ───────────────────────────────────────────────────────
 #
-# Everything here is fetched over https from a well-known host and then run or
-# trusted as root, and used to be taken on that alone: Composer's installer,
-# fnm's install script, the sury.org and Docker apt keys (review finding S3).
-# A compromised upstream or CDN would have been root on every new server. Each
-# is now checked against something that does not come from the same download,
-# and the scratch files live in RUN_DIR (mktemp, root-only, removed on exit)
-# instead of fixed names in /tmp.
+# Everything here is fetched over https and then run or trusted as root, so each download is
+# checked against something that does not come from the same download. Scratch files live in
+# RUN_DIR (mktemp, root-only, removed on exit), not under fixed names in /tmp.
 
 # A scratch file for one download.
 download_tmp() {
     mktemp "${RUN_DIR:-${TMPDIR:-/tmp}}/download.XXXXXX"
 }
 
-# An apt signing key, trusted only if it is exactly one key with the expected
-# primary fingerprint. One, not "includes": signed-by trusts every key in the
-# file, so an extra key would sign for this repository too.
+# An apt signing key, trusted only if it is exactly one key with the expected primary fingerprint
+# (signed-by trusts every key in the file, so an extra key would sign for this repo too).
 fetch_apt_key() {
     local label="$1" url="$2" fpr="$3" dest="$4" tmp keys got
 
@@ -2909,8 +2521,7 @@ fetch_apt_key() {
     rm -f "$tmp"
 }
 
-# Composer, from its installer, checked against the SHA-384 Composer publishes
-# for it on a different host -- the check getcomposer.org/download documents.
+# Composer's installer, checked against the SHA-384 Composer publishes on another host.
 install_composer_binary() {
     local setup sig expected actual
     setup="$(download_tmp)"
@@ -2930,16 +2541,14 @@ install_composer_binary() {
      for a moment right after a Composer release."
     fi
 
-    # PANEL_PHP_BIN, not a bare `php`: on OpenLiteSpeed there is no
-    # /usr/bin/php at all, and a bare invocation would either fail or --
-    # worse -- find some other PHP and install composer against it.
+    # PANEL_PHP_BIN, not a bare `php`: OpenLiteSpeed has no /usr/bin/php, and a bare call could
+    # find some other PHP and install composer against it.
     run "$PANEL_PHP_BIN" "$setup" --install-dir=/usr/local/bin --filename=composer
     rm -f "$setup" "$sig"
 }
 
-# fnm, as the pinned release binary checked against its pinned SHA-256. The
-# same file fnm.vercel.app's script installs, without the script: it fetched
-# "latest", checked nothing, and was itself run as root unchecked.
+# fnm, as the pinned release binary checked against its pinned SHA-256 (not fnm.vercel.app's
+# script, which fetched "latest", checked nothing and ran as root).
 install_fnm_binary() {
     local asset want zip
 
@@ -2967,25 +2576,21 @@ install_fnm_binary() {
 
 # ─── Node, through fnm ───────────────────────────────────────────────────────
 #
-# fnm rather than apt or nodesource because the panel's Node feature manages
-# versions *with fnm* and treats anything else as an untouchable system binary.
-# Installing Node from apt here would leave that feature unable to add or switch
-# versions on a server it just installed.
+# fnm, not apt or nodesource: the panel's Node feature manages versions with fnm and treats any
+# other Node as an untouchable system binary.
 
 install_node() {
     step "Installing Node ${NODE_VERSION} (fnm)"
     install_node_body
 }
 
-# fnm's own layout: node-versions/vX.Y.Z/installation/bin/node — four levels
-# below node-versions, which is why maxdepth is 5 and not 3.
+# fnm's layout: node-versions/vX.Y.Z/installation/bin/node, so maxdepth is 5.
 find_node_bin() {
     find "${FNM_DIR}/node-versions" -maxdepth 5 -type f -name node -path "*v${NODE_VERSION}.*" -print -quit 2>/dev/null || true
 }
 
-# The step without its header, so install_packages can run it while it waits
-# for the package lock (early_work_next). Re-run safe: a second run skips
-# what the first did.
+# The step without its header, so install_packages can run it while it waits for the package
+# lock (early_work_next). Re-run safe.
 install_node_body() {
     if [[ ! -x "$FNM_BIN" ]]; then
         mkdir -p "$FNM_DIR"
@@ -3009,23 +2614,16 @@ install_node_body() {
         skip "Node ${NODE_VERSION}"
     fi
 
-    # Resolved once and written into the frontend's unit file. The panel's own
-    # frontend should keep running the version it was built against even if
-    # someone later changes the server's default.
+    # Resolved once and written into the frontend's unit file, so the frontend keeps the version
+    # it was built against even if the server's default changes.
     NODE_BIN=$(find_node_bin)
     [[ -x "${NODE_BIN:-}" ]] || die "installed Node ${NODE_VERSION} but cannot find its binary under ${FNM_DIR}"
 
-    # Bare node/npm/npx for everything that is not the panel: an SSH user, a
-    # cron job, and any Node app installed without a pinned version. The
-    # Node screen's "set default" makes exactly these links; setting fnm's
-    # alias alone did not, so a fresh server had a default Node and no `npm`
-    # on anyone's PATH, and a Node-RED install died on
-    # `npm: No such file or directory`. Re-run safe: -sfn replaces a link.
+    # Bare node/npm/npx for everything that is not the panel (SSH users, cron, Node apps without
+    # a pinned version). Setting fnm's alias alone makes no `npm` on PATH. Re-run safe.
     #
-    # Not over a Node the server already has. A server that comes from v7 runs
-    # its sites on v7's Node (nodesource, /usr/bin/node); /usr/local/bin comes
-    # first on PATH, so a link here would move every one of them to this
-    # version without a word (operator, 2026-10-07: keep v7's Node).
+    # Not over a Node the server already has: /usr/local/bin comes first on PATH, so a link would
+    # silently move every site of a server upgraded from v7 off its /usr/bin/node.
     local node_bin_dir bin
     node_bin_dir=$(dirname "$NODE_BIN")
     if [[ -x /usr/bin/node ]]; then
@@ -3037,10 +2635,9 @@ install_node_body() {
         ok "node, npm and npx linked into /usr/local/bin"
     fi
 
-    # The installer runs as root under umask 077, but the frontend build and
-    # the panel's runtime manager execute Node as the panel account. Without
-    # this ownership hand-off, `env npm` finds the binary but cannot traverse
-    # /opt/fnm, producing a misleading "Permission denied" error.
+    # The installer runs as root under umask 077, but the frontend build and the runtime manager
+    # run Node as the panel account: without this chown, `env npm` cannot traverse /opt/fnm and
+    # fails with a misleading "Permission denied".
     run chown -R "${APP_USER}:${APP_USER}" "$FNM_DIR"
     ok "node binary: $NODE_BIN"
 }
@@ -3057,11 +2654,8 @@ create_user() {
         ok "user ${APP_USER}"
     fi
 
-    # `adm` is Debian's read-the-logs group, and several of the logs the panel
-    # reports on are root:adm 0750 — /var/log/unattended-upgrades among them.
-    # Membership is the intended way in, and a far narrower grant than adding
-    # another root command to the sudoers list: it is read access to logs, not
-    # the ability to run anything.
+    # `adm` is Debian's read-the-logs group (several logs the panel reports on are root:adm
+    # 0750). Far narrower than another root command in the sudoers list: read access only.
     if id -nG "$APP_USER" | tr ' ' '\n' | grep -qx adm; then
         skip "${APP_USER} is in the adm group"
     else
@@ -3072,28 +2666,17 @@ create_user() {
 
 # ─── Source ──────────────────────────────────────────────────────────────────
 
-# Does the panel we just checked out know the stack we were asked to build?
+# Does the panel we just checked out know the requested stack? The script may come from a branch
+# URL while the panel is cloned from $REPO_BRANCH (default main), so `--stack=newthing` would only
+# fail at `artisan server:record-stack`, the LAST step of setup_backend. Fail here, before any of
+# that work, and name the flag that fixes it.
 #
-# It is possible for it not to, and it cost two servers. This script is fetched
-# from a URL -- often a branch -- while the panel is cloned from $REPO_BRANCH,
-# which defaults to main regardless of where the script itself came from. So
-# `curl .../feat/some-branch/install.sh | bash -s -- --stack=newthing` installs
-# main's panel, and main has never heard of `newthing`.
-#
-# The failure without this check lands on `artisan server:record-stack`, which
-# is the LAST thing setup_backend does -- after packages, composer, migrations
-# and seeding. Thirteen steps of work, then "Unknown stack". The fix is to fail
-# here instead, before any of it, and to name the flag that resolves it.
-#
-# Grepped rather than asked of artisan: composer has not run yet at this point,
-# so there is no artisan to ask. StackRegistryTest keeps this list and the
-# installer's own in step, so the grep is an early warning rather than the
-# authority.
+# Grepped, not asked of artisan: composer has not run yet. StackRegistryTest keeps this list in
+# step with the installer's, so this is an early warning, not the authority.
 assert_panel_knows_stack() {
     local registry="${APP_DIR}/backend/app/Services/Server/Capabilities/ServerCapabilities.php"
 
-    # No file means a layout this check does not understand. Say nothing rather
-    # than refuse an install over a path that moved.
+    # No file means a layout this check does not understand: do not refuse over a moved path.
     [[ -f "$registry" ]] || return 0
 
     if grep -qE "^[[:space:]]*'${STACK}' => \\[" "$registry"; then
@@ -3120,33 +2703,20 @@ fetch_source() {
 
 # The step without its header, for early_work_next — see install_node_body.
 fetch_source_body() {
-    # git >=2.35.2 refuses to run any command against a repo whose top-level
-    # directory is owned by a different user than the one invoking it (the
-    # "dubious ownership" check, added after CVE-2022-24765). Every git call
-    # in this function runs as root, but $APP_DIR is handed to $APP_USER via
-    # chown below and stays that way — so without this exception, the very
-    # next git config call, and every fetch/reset on future re-runs, fails
-    # with a bare "fatal: not in a git directory" that looks like a missing
-    # or broken clone rather than what it actually is.
+    # git >=2.35.2 refuses a repo whose top-level directory belongs to another user ("dubious
+    # ownership", CVE-2022-24765). git runs as root here but $APP_DIR is chowned to $APP_USER, so
+    # without this exception every later fetch/reset fails with a misleading "fatal: not in a git
+    # directory".
     if ! git config --global --get-all safe.directory 2>/dev/null | grep -qxF "$APP_DIR"; then
         run git config --global --add safe.directory "$APP_DIR"
     fi
 
     if [[ -d "${APP_DIR}/.git" ]]; then
-        # As ${APP_USER}: a fetch run as root writes a root-owned
-        # .git/FETCH_HEAD, and the panel's own updater — which fetches as
-        # ${APP_USER} — can then never rewrite it.
-        # An explicit refspec, not a bare branch name. The clone below is
-        # --depth 1, which pins remote.origin.fetch to ONE branch:
-        #
-        #   +refs/heads/main:refs/remotes/origin/main
-        #
-        # so `git fetch origin some-other-branch` fetches into FETCH_HEAD and
-        # never creates refs/remotes/origin/some-other-branch. The reset on the
-        # next line then dies on an unknown revision, and re-running the
-        # installer with a different --branch on an existing box was impossible.
-        # Writing the destination ref ourselves works for main too -- it
-        # rewrites the ref it already has.
+        # As ${APP_USER}: a fetch run as root leaves a root-owned .git/FETCH_HEAD that the
+        # panel's own updater could never rewrite.
+        # An explicit refspec, not a bare branch name: the --depth 1 clone pins remote.origin.fetch
+        # to one branch, so fetching another into FETCH_HEAD never creates its remote ref and the
+        # reset below fails on an unknown revision. This also works for main.
         progress_start "downloading the panel"
         run sudo -u "${APP_USER}" -H git -C "$APP_DIR" fetch --depth 1 origin \
             "+refs/heads/${REPO_BRANCH}:refs/remotes/origin/${REPO_BRANCH}"
@@ -3156,17 +2726,9 @@ fetch_source_body() {
     else
         mkdir -p "$(dirname "$APP_DIR")"
         if [[ -e "$APP_DIR" ]]; then
-            # A previous attempt can leave APP_DIR behind without a valid
-            # .git — an interrupted clone, or something else pre-creating
-            # the path. git then either refuses to clone into it or, worse,
-            # leaves it in a state where later plumbing (git config, fetch)
-            # fails with a cryptic "not in a git directory".
-            #
-            # Moved aside, not deleted. This used to be rm -rf on the theory
-            # that the installer owns APP_DIR, and with `panel` as the
-            # default name the directory was sometimes another application
-            # (review finding R2). A leftover clone costs some disk to keep;
-            # somebody's site costs everything to lose.
+            # A leftover APP_DIR without a valid .git (interrupted clone, or pre-created path)
+            # breaks git plumbing later. Moved aside, not deleted: with the default name `panel`
+            # the directory can be another application, and a leftover clone only costs disk.
             local aside
             aside="${APP_DIR}.old-$(date +%Y%m%d-%H%M%S)"
             run mv "$APP_DIR" "$aside"
@@ -3180,45 +2742,30 @@ fetch_source_body() {
 
     assert_panel_knows_stack
 
-    # Before composer and npm run, not after. Both run as ${APP_USER} and both
-    # write into a tree git just created as root — without this they fail on
-    # the first write to vendor/ or node_modules/.
+    # Before composer and npm run: both run as ${APP_USER} and write into a tree git just created
+    # as root, so they would fail on the first write to vendor/ or node_modules/.
     run chown -R "${APP_USER}:${APP_USER}" "$APP_DIR"
     ok "owned by ${APP_USER}"
 
-    # setup_backend() below chmod -R 775's storage/ and bootstrap/cache/,
-    # which includes the tracked .gitignore placeholders that keep those
-    # otherwise-empty directories in git. That flips their mode from the
-    # repo's 644 to 775, and with core.fileMode on (git's default) that reads
-    # as an uncommitted change forever after — which the panel-update
-    # preflight's clean-working-tree check takes at face value and refuses to
-    # update on, despite there being nothing to lose.
+    # setup_backend() chmod -R 775's storage/ and bootstrap/cache/, including their tracked
+    # .gitignore placeholders. With core.fileMode on, that mode change reads as an uncommitted
+    # change forever, and the panel-update preflight (clean working tree) refuses to update.
     #
-    # Run as ${APP_USER}, not as root. `git config` rewrites .git/config, and a
-    # root-owned .git/config is how a tree handed to ${APP_USER} two lines ago
-    # ends up with root-owned files in it again. The same shape further up —
-    # `git -C "$APP_DIR" fetch` on a re-run — leaves a root-owned
-    # .git/FETCH_HEAD, and every later `sudo -u ${APP_USER} git fetch` then
-    # dies with "cannot open '.git/FETCH_HEAD': Permission denied". Reported
-    # from the field, reproduced on a real box.
+    # Run as ${APP_USER}, not root: `git config` rewrites .git/config, and root-owned files in
+    # the tree make every later `sudo -u ${APP_USER} git fetch` fail with "Permission denied".
     run sudo -u "${APP_USER}" -H git -C "$APP_DIR" config core.fileMode false
     ok "git mode tracking disabled (storage permissions are not source control)"
 }
 
-# Sets a key in an .env file, preserving every other line — comments, ordering
-# and blank lines included. Written to a temp file and moved, because a
-# half-written .env is a panel that will not boot at all.
+# Sets a key in an .env file, preserving every other line. Written to a temp file and moved,
+# because a half-written .env is a panel that will not boot.
 set_env() {
     local file="$1" key="$2" value="$3" tmp
 
-    # Anything outside a plain charset gets quoted, or dotenv either misreads it
-    # or fails to parse the file at all — a `#` starts a comment mid-value, and a
-    # bare `$` is read as interpolation. Values we generate are alphanumeric, but
-    # a password already present in redis.conf is whatever the operator chose.
+    # Anything outside a plain charset is quoted, or dotenv misreads it: `#` starts a comment
+    # mid-value and a bare `$` is read as interpolation.
     if [[ -n "$value" && ! "$value" =~ ^[A-Za-z0-9_.:/@-]+$ ]]; then
-        # Backslashes first, or the escapes added below get escaped again. Then
-        # quotes, then dollars — getting this order wrong silently produces a
-        # value that parses as something else.
+        # Order matters: backslashes first, or the escapes added below get escaped again.
         value="${value//\\/\\\\}"
         value="${value//\"/\\\"}"
         value="${value//\$/\\\$}"
@@ -3228,9 +2775,8 @@ set_env() {
     tmp=$(mktemp "${file}.XXXXXX")
 
     if grep -qE "^[[:space:]]*${key}=" "$file" 2>/dev/null; then
-        # The value goes in via awk's ENVIRON, never through the regex
-        # replacement, so characters like & and \1 in a generated password
-        # cannot be interpreted.
+        # The value goes in via awk's ENVIRON, never the regex replacement, so characters like
+        # & and \1 in a generated password cannot be interpreted.
         VALUE="$value" KEY="$key" awk '
             $0 ~ "^[[:space:]]*" ENVIRON["KEY"] "=" { print ENVIRON["KEY"] "=" ENVIRON["VALUE"]; next }
             { print }
@@ -3246,17 +2792,11 @@ set_env() {
 
 # ─── Redis ───────────────────────────────────────────────────────────────────
 
-# Local mail, as v7 sets a server up (operator, 2026-10-07). Without an MTA
-# PHP's mail() fails, so WordPress password resets, contact forms and every
-# notification an application sends go nowhere, with no error on screen.
+# Local mail, as v7 sets a server up. Without an MTA, PHP's mail() fails and WordPress resets,
+# contact forms and notifications go nowhere with no error on screen.
 #
-# Postfix as v7 has it ("Internet Site", relaying only for this machine), but
-# listening on loopback only: the sites need to send, nothing needs to
-# receive, and v7's listener on every interface was kept closed only by the
-# firewall. Never fatal — a panel without local mail still works.
-#
-# Installed in the package step (install_postfix); configured here, which needs
-# no apt at all.
+# Postfix as "Internet Site", but listening on loopback only: sites send, nothing receives.
+# Never fatal. Installed in the package step (install_postfix); configured here, no apt needed.
 configure_mail() {
     step "Setting up local mail (Postfix)"
 
@@ -3275,11 +2815,10 @@ configure_mail() {
     ok "Postfix sends mail for this server (listening on loopback only)"
 }
 
-# What the default user's ACL line in redis.conf leaves it with, read the way
-# Redis applies the line, left to right: "nopass" (no password at all),
-# "password", "none" (neither — nobody can log in as it), or nothing when the
-# file has no such line. A password token clears nopass and resetpass clears
-# both, so `nopass` appearing on the line is not enough on its own.
+# What the default user's ACL line in redis.conf leaves it with, read as Redis applies it, left
+# to right: "nopass", "password", "none" (nobody can log in as it), or nothing when the file has
+# no such line. A password token clears nopass and resetpass clears both, so `nopass` on the
+# line is not enough on its own.
 redis_default_acl() {
     awk '$1 == "user" && $2 == "default" { line = $0 }
         END {
@@ -3295,11 +2834,10 @@ redis_default_acl() {
         }' "$1" 2>/dev/null || true
 }
 
-# Gives the default user this password (as its SHA-256, the form CONFIG REWRITE
-# writes) in place of the password rules its ACL line had. The rest of the line
-# — the keys, channels and commands it may use — and every other user's line
-# stay as they are, and the old line is kept above it as a comment. Written
-# back into the same file, so its owner and mode do not change.
+# Gives the default user this password (as its SHA-256, the form CONFIG REWRITE writes) in place
+# of its ACL line's password rules. The rest of the line and every other user's line stay as
+# they are; the old line is kept above it as a comment. Written back into the same file, so its
+# owner and mode do not change.
 redis_set_default_password() {
     local conf="$1" hash new
     hash="$(printf '%s' "$2" | sha256sum | cut -d' ' -f1)"
@@ -3320,12 +2858,10 @@ redis_set_default_password() {
     printf '%s\n' "$new" >"$conf"
 }
 
-# A Redis password counts only when Redis itself proves it. redis-cli is no
-# proof on its own: when AUTH fails it prints "AUTH failed: ..." and carries on,
-# and a PING then works anyway if the default user needs no password. So the
-# authenticated PING must answer PONG with no AUTH failure, and a PING with no
-# password must be refused — otherwise .env gets a password Redis rejects and
-# every connection the panel makes fails (2026-10-18, step 14).
+# A Redis password counts only when Redis itself proves it. redis-cli prints "AUTH failed" and
+# carries on, and a PING then works anyway if the default user needs no password. So the
+# authenticated PING must answer PONG with no AUTH failure, and a PING with no password must be
+# refused; otherwise .env gets a password Redis rejects and every connection fails.
 #
 # The password goes in REDISCLI_AUTH, not -a, so it is not in the process list.
 redis_password_works() {
@@ -3352,13 +2888,10 @@ configure_redis() {
         return
     fi
 
-    # The password Redis really has may not be the `requirepass` line. The
-    # panel's Redis settings change it with CONFIG SET + CONFIG REWRITE, which
-    # on current Redis writes an ACL `user default ... #<hash>` line and leaves
-    # the installer's old `requirepass` behind — the ACL line wins. The panel
-    # keeps the live one in its own .env, so on a re-run that is tried first,
-    # then the `requirepass` line, and whichever Redis accepts is used below.
-    # Using the stale one silently moved the panel's cache to the database.
+    # The password Redis really has may not be the `requirepass` line: the panel's Redis settings
+    # use CONFIG SET + CONFIG REWRITE, which writes an ACL `user default ... #<hash>` line that
+    # wins over the installer's old `requirepass`. The panel keeps the live one in its own .env,
+    # so on a re-run that is tried first, then `requirepass`; whichever Redis accepts is used.
     local existing panel_env="${APP_DIR}/backend/.env" from_panel=""
     existing=$(awk '/^requirepass / {print $2; exit}' "$conf" 2>/dev/null || true)
     if [[ -f "$panel_env" ]]; then
@@ -3370,25 +2903,22 @@ configure_redis() {
     [[ -n "$from_panel" ]] && candidates+=("$from_panel")
     [[ -n "$existing" && "$existing" != "$from_panel" ]] && candidates+=("$existing")
 
-    # `user default on nopass ...` — what CONFIG REWRITE writes for a Redis
-    # that never had a password — beats `requirepass`: Redis applies the ACL
-    # line after it, so the default user stays open while CONFIG GET
-    # requirepass shows the new value. Appending `requirepass` there changed
-    # nothing (2026-10-18). The password goes on the ACL line itself; the
-    # `requirepass` line stays as well, or is added, because a re-run finds the
-    # password there when the panel's .env does not have it yet.
+    # `user default on nopass ...` (what CONFIG REWRITE writes for a Redis without a password)
+    # beats `requirepass`: the ACL line is applied after it, so the default user stays open. The
+    # password goes on the ACL line itself; `requirepass` stays too (or is added), because a
+    # re-run finds the password there when the panel's .env does not have it yet.
     local acl new
     acl="$(redis_default_acl "$conf")"
 
     if [[ "$acl" != "nopass" ]] && [[ -n "$existing" || "$acl" == "password" ]]; then
         skip "Redis already has a password"
     else
-        # An open default user with a `requirepass` line (a re-run after the
-        # line was appended to no effect) gets that password.
+        # An open default user with a `requirepass` line (a re-run after it was appended to no
+        # effect) gets that password.
         new="$existing"
         if [[ -z "$new" ]]; then
-            # No trailing `head -c`: it closes the pipe early and SIGPIPEs tr, which
-            # pipefail turns into a fatal exit 141. Over-read, then slice in bash.
+            # No trailing `head -c`: it closes the pipe early and SIGPIPEs tr, which pipefail
+            # turns into a fatal exit 141. Over-read, then slice in bash.
             new=$(head -c 48 /dev/urandom | base64 | tr -d '/+=')
             new=${new:0:32}
             printf '\n# Added by the Control panel installer\nrequirepass %s\n' "$new" >>"$conf"
@@ -3405,14 +2935,11 @@ configure_redis() {
     fi
     REDACT+=("${candidates[@]}")
 
-    # Bounded like v7 (operator, 2026-10-07): 256 MB. Without it Redis grows
-    # until the kernel kills something, and with `noeviction` a full cache
-    # makes every write fail. Left alone when the operator already set one.
-    # volatile-lru, not allkeys-lru: the panel's queue is on this Redis, and a
-    # queued job has no TTL, so only volatile-* can never evict one. The Redis
-    # screen refuses allkeys-* for that reason, and could not be saved on a
-    # fresh install while this wrote it. The panel's update moves servers that
-    # still have the old line (`redis:repair-installer-policy`).
+    # Bounded to 256 MB, as v7 does: without it Redis grows until the kernel kills something,
+    # and with `noeviction` a full cache fails every write. Left alone if one is already set.
+    # volatile-lru, not allkeys-lru: the panel's queue is on this Redis and queued jobs have no
+    # TTL, so only volatile-* can never evict one (the Redis screen refuses allkeys-*). The
+    # panel's update fixes the old line (`redis:repair-installer-policy`).
     if ! grep -qE '^maxmemory ' "$conf"; then
         printf '\n# Added by the Control panel installer\nmaxmemory 256mb\nmaxmemory-policy volatile-lru\n' >>"$conf"
         ok "Redis memory capped at 256 MB (volatile-lru)"
@@ -3421,12 +2948,11 @@ configure_redis() {
     run systemctl enable --now redis-server
     run systemctl restart redis-server
 
-    # Proven, not assumed: if Redis cannot be reached with this credential the
-    # panel must not be configured to depend on it, or the first request 500s
-    # with NOAUTH and the screen you would fix it from is behind that failure.
+    # Proven, not assumed: if Redis cannot be reached with this credential the panel must not
+    # depend on it, or the first request 500s with NOAUTH.
     #
-    # Three tries, a second apart: Ubuntu's updates may be running beside this
-    # step, and their needrestart hook can restart Redis under the probe.
+    # Three tries, a second apart: Ubuntu's updates may run beside this step, and their
+    # needrestart hook can restart Redis under the probe.
     local candidate attempt
     for attempt in 1 2 3; do
         for candidate in "${candidates[@]}"; do
@@ -3456,13 +2982,11 @@ setup_backend() {
     step "Setting up the API"
 
     local dir="${APP_DIR}/backend"
-    # SCHEME is decided by configure_tls, which runs before this — the URLs
-    # written here have to match what the server actually answers on.
+    # SCHEME is decided by configure_tls, which runs before this: the URLs written here must
+    # match what the server answers on.
     local scheme="$SCHEME"
 
-    # Through the interpreter rather than relying on composer's own shebang.
-    # The `php` symlink above makes the shebang work too, but naming the binary
-    # here means this step does not depend on PATH at all.
+    # Through the interpreter, not composer's shebang, so this step does not depend on PATH.
     progress_start "installing the API's PHP dependencies" composer
     run sudo -u "$APP_USER" -H "$PANEL_PHP_BIN" "${COMPOSER_BIN:-/usr/local/bin/composer}" install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d "$dir"
     progress_stop
@@ -3484,10 +3008,9 @@ setup_backend() {
 
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan migrate --force' -- "$dir" "${PANEL_PHP_BIN}"
 
-    # The first administrator, the moment there is a table to put it in — and
-    # before the frontend is built and the services start, so registration is
-    # closed before anyone can open the panel. The password goes on STDIN, as
-    # the central token does below, and is dropped as soon as it is used.
+    # The first administrator, as soon as there is a table for it and before the services start,
+    # so registration is closed before anyone can open the panel. The password goes on STDIN
+    # and is dropped once used.
     if [[ -n "$PANEL_ADMIN_USERNAME" ]]; then
         run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:create-admin --username="$3"' \
             -- "$dir" "${PANEL_PHP_BIN}" "$PANEL_ADMIN_USERNAME" <<<"$PANEL_ADMIN_PASSWORD"
@@ -3500,28 +3023,18 @@ setup_backend() {
 
     prime_runtime_catalogues "$dir"
 
-    # Tell the panel what we built. It can detect that nginx and PHP are here,
-    # but not whether that was a deliberate `lemp` build or a box somebody
-    # assembled by hand — and the difference matters to the setup page.
+    # Tell the panel what we built: it can detect nginx and PHP, but not whether this was a
+    # deliberate `lemp` build or a hand-assembled box, and the setup page depends on it.
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan server:record-stack "$3"' -- "$dir" "${PANEL_PHP_BIN}" "$STACK"
     ok "stack recorded as ${STACK}"
 
-    # Central-management token. Passed in by the central panel's provisioning
-    # flow when this server is being installed on behalf of an existing customer.
-    # The token is stored server-side and the same value is registered with
-    # central so it can call this server's API without any user session.
+    # Central-management token, passed in by the central panel's provisioning flow. It is stored
+    # server-side and registered with central so it can call this server's API without a user
+    # session.
     #
-    # Handed to artisan on STDIN, never as an argument: an argument is readable
-    # by every account on the box via `ps` for as long as the command runs, and
-    # run() echoes a failing command into the log. A herestring is visible to
-    # neither, so nothing has to be redacted afterwards.
-    #
-    # The storing is a real artisan command rather than inline PHP. The previous
-    # version was `tinker --execute=` inside a single-quoted `sh -c`, which
-    # passed an empty token (no expansion inside single quotes, and sudo resets
-    # the environment regardless), invalid PHP (`\\'settings\\'` closes the
-    # quote instead of escaping), and ran `php "$2" artisan` where $2 is already
-    # the PHP binary. It had never once worked.
+    # Handed to artisan on STDIN, never as an argument: an argument is readable by every account
+    # via `ps`, and run() echoes a failing command into the log. A herestring is visible to
+    # neither, so nothing has to be redacted.
     if [[ -n "$CENTRAL_TOKEN" ]]; then
         run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:central-token' \
             -- "$dir" "${PANEL_PHP_BIN}" <<<"$CENTRAL_TOKEN"
@@ -3529,9 +3042,8 @@ setup_backend() {
     fi
 }
 
-# The API's .env, for setup_backend: the URLs, the database, the cache,
-# queue and session drivers, and what the self-updater needs to know about
-# this install. $1 is the backend directory, $2 the scheme, $3 the database.
+# The API's .env, for setup_backend: URLs, database, cache/queue/session drivers, and what the
+# self-updater needs to know. $1 is the backend directory, $2 the scheme, $3 the database.
 write_backend_env() {
     local dir="$1" scheme="$2" db="$3"
 
@@ -3543,21 +3055,16 @@ write_backend_env() {
     [[ -n "$CENTRAL_URL" ]] && set_env "${dir}/.env" CENTRAL_URL "${CENTRAL_URL%/}"
     set_env "${dir}/.env" DB_CONNECTION sqlite
     set_env "${dir}/.env" DB_DATABASE "$db"
-    # All three follow whether Redis actually answered, not whether it was
-    # installed — configure_redis sets CACHE_STORE to "database" when the probe
-    # fails, and the other two have to agree with it or the panel is pointed at
-    # a Redis it already proved it cannot reach.
-    #
-    # They matter more than they look on a SQLite panel: SQLite allows exactly
-    # one writer, so a database queue means the worker polls the same file every
-    # request writes to, and a database session driver adds a write per request.
-    # That is how an idle single-user panel produces "database is locked".
+    # All three follow whether Redis actually answered, not whether it was installed:
+    # configure_redis sets CACHE_STORE to "database" when the probe fails, and the other two must
+    # agree. On SQLite (one writer) a database queue or session driver makes the panel write to
+    # the file it polls, which produces "database is locked".
     set_env "${dir}/.env" QUEUE_CONNECTION "$CACHE_STORE"
     set_env "${dir}/.env" SESSION_DRIVER "$CACHE_STORE"
     set_env "${dir}/.env" CACHE_STORE "$CACHE_STORE"
 
-    # Leading dot so the cookie covers both hosts under the shared parent. With
-    # a single host there is no parent to share and it is same-origin anyway.
+    # Leading dot so the cookie covers both hosts under the shared parent; a single host has no
+    # parent to share.
     if (( SINGLE_HOST )); then
         set_env "${dir}/.env" SESSION_DOMAIN "$COOKIE_DOMAIN"
     else
@@ -3570,50 +3077,26 @@ write_backend_env() {
         set_env "${dir}/.env" REDIS_PORT 6379
     fi
 
-    # Self-update needs to know what this installer named things. The config
-    # defaults assume PANEL_SLUG=panel and a default fnm alias; an install that
-    # used neither would restart units that do not exist and build with the
-    # wrong node. The installer is the only thing that knows the real answers,
-    # so it writes them rather than leaving the admin to discover them after a
-    # failed update.
+    # Self-update needs to know what this installer named things: the config defaults assume
+    # PANEL_SLUG=panel and a default fnm alias, and an install using neither would restart units
+    # that do not exist and build with the wrong node.
     set_env "${dir}/.env" PANEL_UPDATE_STATE_DIR "$UPDATE_STATE_DIR"
     set_env "${dir}/.env" PANEL_PHP_VERSION "$PHP_VERSION"
 
-    # The interpreter itself, not just its version.
-    #
-    # The self-updater built `/usr/bin/php${PANEL_PHP_VERSION}` from the line
-    # above, which is right on nginx and Apache and names nothing at all on
-    # OpenLiteSpeed: that stack installs no ondrej PHP, and the panel runs on
-    # LSPHP under /usr/local/lsws. Every self-update on every OLS install
-    # called a binary that does not exist — so an OLS panel could not update
-    # itself, and could not ship a security fix.
-    #
-    # This value has been computed correctly by derive_php_runtime since the
-    # LSPHP work landed; it was simply never written down. Writing it removes
-    # the guess on both stacks rather than only the broken one.
+    # The interpreter itself, not just its version: `/usr/bin/php${PANEL_PHP_VERSION}` names
+    # nothing on OpenLiteSpeed (no ondrej PHP; the panel runs on LSPHP under /usr/local/lsws), so
+    # an OLS panel could not update itself.
     set_env "${dir}/.env" PANEL_PHP_BIN "$PANEL_PHP_BIN"
 
-    # The same version again, under the key the *sites* use. `PANEL_PHP_VERSION`
-    # above is the panel's own interpreter and is read by the self-updater
-    # alone; `SERVER_DEFAULT_PHP_VERSION` is what a site that names no version
-    # gets — its pool, its vhost's `lsphp` path, its installer's CLI.
-    #
-    # This installer installs exactly one PHP, the one asked for here, and the
-    # config default for sites was the literal `8.4` regardless. So
-    # `PHP_VERSION=8.3 ./install.sh` produced a server with only 8.3 on it
-    # where every site was created pointing at an 8.4 that was never installed:
-    # on nginx a pool written into a missing `/etc/php/8.4`, on OpenLiteSpeed
-    # an `lsphp84` binary that is not there and a site reported Active that
-    # answers 503. Two keys because they are genuinely two decisions — a panel
-    # can be updated onto a newer PHP without moving every site onto it — but
-    # at install time there is only one PHP, so they start out agreeing.
+    # The same version under the key the *sites* use. PANEL_PHP_VERSION is the panel's own
+    # interpreter (read by the self-updater only); SERVER_DEFAULT_PHP_VERSION is what a site with
+    # no version gets (pool, vhost lsphp path, CLI). The installer installs exactly one PHP, so
+    # the config default `8.4` would point every site at a PHP that is not there when
+    # `PHP_VERSION=8.3`. They are two decisions, but start out agreeing.
     set_env "${dir}/.env" SERVER_DEFAULT_PHP_VERSION "$PHP_VERSION"
-    # Which unit the update path reloads to pick up new PHP code.
-    #
-    # On OpenLiteSpeed there is no php-fpm at all: lshttpd spawns the panel's
-    # LSPHP itself, so restarting the web server is what recycles PHP. Naming a
-    # service that does not exist would make every panel update report a failed
-    # step for work that was never needed.
+    # Which unit the update path reloads for new PHP code. OpenLiteSpeed has no php-fpm: lshttpd
+    # spawns LSPHP itself, so restarting the web server recycles PHP, and naming a missing
+    # service would fail a step of every panel update.
     if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
         set_env "${dir}/.env" PANEL_PHP_FPM_SERVICE "lshttpd.service"
     else
@@ -3622,9 +3105,8 @@ write_backend_env() {
     set_env "${dir}/.env" PANEL_FRONTEND_SERVICE "${PANEL_SLUG}-frontend.service"
     set_env "${dir}/.env" PANEL_QUEUE_SERVICE "${PANEL_SLUG}-queue.service"
     set_env "${dir}/.env" PANEL_NODE_BIN_DIR "$(dirname "$NODE_BIN")"
-    # Node is installed under fnm, not on the panel process's PATH, so a bare
-    # `node` invocation (e.g. the dashboard runtime probe) fails with
-    # "node: not found". Pin the absolute binary for server.node_binary.
+    # Node is under fnm, not on the panel process's PATH: pin the absolute binary for
+    # server.node_binary, or a bare `node` call (dashboard runtime probe) fails.
     set_env "${dir}/.env" SERVER_NODE_BINARY "$NODE_BIN"
 }
 
@@ -3633,17 +3115,12 @@ write_backend_env() {
 prime_runtime_catalogues() {
     local dir="$1"
 
-    # Prime the npm catalogue. `npm_latest` on the Node screen is read from
-    # this table, and an empty table is reported as null — which the panel
-    # correctly reads as "we do not know" and so keeps offering the Update
-    # button on an npm that is already current. Only this command fills it and
-    # it is otherwise scheduled daily, so without this a brand-new server
-    # spends up to a day telling the user to update something that is current.
+    # Prime the npm catalogue: `npm_latest` is read from this table, and an empty table reads as
+    # "unknown", so the Node screen keeps offering an Update for an npm that is already current.
+    # Only this command fills it (otherwise a daily schedule).
     #
-    # Deliberately not `run`: that aborts the install on a non-zero exit, and
-    # this reaches out to the npm registry. A third party being down must not
-    # fail somebody's server install — the daily schedule will retry, and the
-    # only cost in the meantime is the over-eager button described above.
+    # Deliberately not `run` (aborts the install on non-zero exit): this reaches out to the npm
+    # registry, and a third party being down must not fail an install. The daily schedule retries.
     if sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan runtimes:refresh-npm' \
         -- "$dir" "${PANEL_PHP_BIN}" >>"$LOG_FILE" 2>&1; then
         ok "npm catalogue primed"
@@ -3651,19 +3128,12 @@ prime_runtime_catalogues() {
         warn "npm catalogue not primed; the Node screen may offer an npm update that is not needed until the daily refresh runs"
     fi
 
-    # Prime the runtime lifecycle catalogue, for the same reason and with the
-    # same failure mode. The Node picker hides versions the project has ended
-    # support for, and "ended support" is read from this table — so an empty
-    # one means every dead release is offered as though it were fine. That is
-    # not cosmetic: a user picked Node 21, dead since June 2024, and the
-    # one-click n8n install died compiling a native module nobody publishes a
-    # prebuilt binary for any more.
+    # Prime the runtime lifecycle catalogue, same reason and failure mode. The Node picker hides
+    # versions whose support has ended, read from this table: an empty one offers every dead
+    # release, and an app install can die compiling a native module nobody builds for it.
     #
-    # Non-fatal, and not `run`, for the reason the npm block above gives: this
-    # reaches out to github, and a third party being down must not fail an
-    # install. Failing open is deliberate on the read side too — unknown is
-    # not dead — so the only cost until the daily schedule catches up is the
-    # old behaviour.
+    # Non-fatal and not `run`, as above; this reaches out to github. Failing open on the read
+    # side is deliberate (unknown is not dead).
     if sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan runtimes:refresh-lifecycle' \
         -- "$dir" "${PANEL_PHP_BIN}" >>"$LOG_FILE" 2>&1; then
         ok "runtime lifecycle catalogue primed"
@@ -3678,8 +3148,8 @@ build_frontend() {
     step "Building the panel"
 
     local dir="${APP_DIR}/frontend"
-    # Next inlines NEXT_PUBLIC_* at build time, so this has to be the final
-    # scheme, not a guess. That is why TLS is settled before this runs.
+    # Next inlines NEXT_PUBLIC_* at build time, so this must be the final scheme (TLS is settled
+    # before this runs).
     local scheme="$SCHEME"
     local api_base="${scheme}://${API_HOST}"
 
@@ -3689,32 +3159,17 @@ build_frontend() {
 
     chown -R "${APP_USER}:${APP_USER}" "$dir"
 
-    # npm is a script with a `#!/usr/bin/env node` shebang, so it runs under
-    # whatever node is first on PATH. Pinning PATH here is what makes the build
-    # use the version we installed rather than whatever else is on the box.
+    # npm has a `#!/usr/bin/env node` shebang, so it runs under the first node on PATH; pinning
+    # PATH makes the build use the version we installed.
     local node_dir
     node_dir=$(dirname "$NODE_BIN")
 
-    # V8 will not grow its old space past this cap no matter how much memory
-    # the box has, so a large `next build` dies with "FATAL ERROR: Reached
-    # heap limit Allocation failed - JavaScript heap out of memory" while
-    # `free` still shows plenty spare. That is a different failure from the
-    # one configure_swap() addresses: swap cannot help here, because nothing
-    # is short of memory — V8 is refusing to use it.
-    #
-    # Node picks this default from total RAM, so the boxes most likely to hit
-    # it are exactly the small ones the panel is meant to run on. Sized from
-    # RAM rather than hardcoded: a fixed 4 GB on a 1 GB box invites the OOM
-    # killer instead, trading a clear V8 error for a bare "Killed".
-    #
-    # But do not mistake this for the thing that keeps a small box alive any
-    # more. Next 16 builds with Turbopack by default, and Turbopack's working
-    # set lives in a Rust heap that NODE_OPTIONS cannot reach: on a 1.5 GB
-    # cgroup the kernel kills the native `MainThread` at 1.4 GB anon-rss, with
-    # this cap set and V8 nowhere near it. The cap is kept because it is still
-    # correct for the `--webpack` fallback and costs nothing; what actually
-    # buys headroom now is configure_swap() above and the build-worker cap in
-    # frontend/next.config.mjs.
+    # V8 will not grow its old space past a cap derived from total RAM, so a large `next build`
+    # can die with "heap out of memory" while `free` shows spare memory (swap cannot help). Sized
+    # from RAM, not hardcoded: a fixed 4 GB on a 1 GB box invites the OOM killer instead.
+    # Next 16's Turbopack lives in a Rust heap NODE_OPTIONS cannot reach, so on a small box
+    # headroom comes from configure_swap() and the build-worker cap in frontend/next.config.mjs;
+    # this cap still serves the `--webpack` fallback.
     local ram_mb heap_mb
     ram_mb=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo)
     if (( ram_mb >= 7500 )); then
@@ -3722,26 +3177,22 @@ build_frontend() {
     elif (( ram_mb >= 3500 )); then
         heap_mb=3072
     else
-        # Above physical RAM on a small box, deliberately: configure_swap()
-        # has already brought RAM + swap up to BUILD_MEMORY_MB by this point,
-        # and a slow build that finishes beats a fast one that does not.
+        # Above physical RAM on a small box, deliberately: configure_swap() has already brought
+        # RAM + swap up to BUILD_MEMORY_MB, and a slow build that finishes beats a fast one that
+        # does not.
         heap_mb=2048
     fi
 
     say "     this is the slow part — a few minutes"
     frontend_deps
 
-    # Ubuntu's first-boot updates usually run beside this step now (see
-    # install_packages), and dpkg, unattended-upgrades and an occasional
-    # update-initramfs take a few hundred MB of their own. So, only while
-    # they run:
+    # Ubuntu's first-boot updates usually run beside this step (see install_packages) and take a
+    # few hundred MB. While they run:
     #
-    #   - a server below the recommended RAM waits for them and builds alone,
-    #     as every install did before: beside them it could run out of memory;
-    #   - a larger one builds beside them, but as the process the kernel stops
-    #     first (oom_score_adj +500) — never dpkg in the middle of an upgrade;
-    #   - a build killed for memory there waits for them, then builds once
-    #     more, alone, as before. A second kill is explained as always.
+    #   - a server below the recommended RAM waits for them and builds alone;
+    #   - a larger one builds beside them as the process the kernel stops first (oom_score_adj
+    #     +500), never dpkg in the middle of an upgrade;
+    #   - a build killed for memory there waits for them, then builds once more, alone.
     #
     # Nothing here touches unattended-upgrades; only our own score moves.
     local ram beside=0
@@ -3755,16 +3206,13 @@ build_frontend() {
         fi
     fi
 
-    # Not through run(): when the kernel kills the build for memory, all the
-    # log says is "Killed", and that needs explaining in words.
+    # Not through run(): when the kernel kills the build for memory the log only says "Killed",
+    # which needs explaining in words.
     #
-    # Under a memory limit the OOM killer does not stop at the build: once it
-    # has killed next-build it can go on through everything in the cgroup,
-    # this installer included, and then nothing explains anything (seen live
-    # under a systemd MemoryMax). So the installer makes itself the last thing
-    # it would pick while the build runs, and the build goes back to the
-    # score it would have had — or +500 beside Ubuntu's updates. Root may
-    # lower its own score; anyone may raise.
+    # Under a memory limit the OOM killer can go on through everything in the cgroup, this
+    # installer included. So the installer makes itself the last pick while the build runs, and
+    # the build gets back its own score (or +500 beside Ubuntu's updates). Root may lower its own
+    # score; anyone may raise.
     local since oom_before adj rc attempt
     adj=$(cat "/proc/$BASHPID/oom_score_adj" 2>/dev/null || echo 0)
     for attempt in 1 2; do
@@ -3862,15 +3310,9 @@ build_kill_message() {
 # ─── PHP-FPM pool ────────────────────────────────────────────────────────────
 
 configure_fpm() {
-    # Nothing to do on OpenLiteSpeed: there is no php-fpm on this stack at all.
-    #
-    # The dedicated master below exists for one reason -- to escape the distro
-    # unit's ProtectSystem=full, which would stop the panel running `sudo
-    # useradd` -- and OpenLiteSpeed's own unit has no sandboxing to escape. It
-    # ships without ProtectSystem, without ProtectHome, with PrivateTmp=false
-    # and with accounting off, saying so in a comment: "do not want to be
-    # limited in anyway". So the problem this function solves does not exist
-    # here, and lshttpd spawns the panel's LSPHP itself -- see configure_ols.
+    # Nothing to do on OpenLiteSpeed: no php-fpm on this stack. The dedicated master below exists
+    # to escape the distro unit's ProtectSystem=full (which would stop `sudo useradd`), and OLS's
+    # own unit has no sandboxing; lshttpd spawns the panel's LSPHP itself (see configure_ols).
     if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
         skip "php-fpm (OpenLiteSpeed runs the panel on LSPHP)"
         return 0
@@ -3878,38 +3320,29 @@ configure_fpm() {
 
     step "Configuring PHP-FPM"
 
-    # The panel runs under its OWN php-fpm master, not the distro's shared
-    # php${PHP_VERSION}-fpm.service. Two reasons, both load-bearing:
+    # The panel runs under its OWN php-fpm master, not the distro's php${PHP_VERSION}-fpm.service:
     #
-    #   1. The panel runs privileged host commands (useradd, writing webserver
-    #      configs, ...) synchronously via `sudo` from its PHP workers. The
-    #      distro unit ships ProtectSystem=full, which mounts /etc, /usr and
-    #      /boot read-only for the master and every child it spawns — so
-    #      `sudo useradd` dies with "cannot lock /etc/passwd". ReadWritePaths=
-    #      does not reliably punch back through ProtectSystem, so the panel's
-    #      master simply must not be sandboxed that way.
+    #   1. The panel runs privileged host commands (useradd, webserver configs) via `sudo` from
+    #      its PHP workers. The distro unit's ProtectSystem=full mounts /etc, /usr and /boot
+    #      read-only, so `sudo useradd` dies with "cannot lock /etc/passwd", and ReadWritePaths=
+    #      does not reliably punch back through it.
     #
-    #   2. ProtectSystem is a property of the fpm *master* and is shared by
-    #      every pool under it. Relaxing the shared unit would strip that
-    #      protection from every hosted site too. A dedicated master confines
-    #      the relaxation to the panel alone; hosted-site pools stay on the
-    #      distro unit (PoolManager writes them into its pool.d) with their
-    #      hardening intact.
+    #   2. ProtectSystem belongs to the fpm *master* and covers every pool under it. Relaxing the
+    #      shared unit would strip it from every hosted site; a dedicated master confines the
+    #      relaxation to the panel. Hosted-site pools stay on the distro unit (PoolManager writes
+    #      them into its pool.d) with their hardening intact.
     local pool_dir="/etc/php/${PHP_VERSION}/fpm/${PANEL_SLUG}-pool.d"
     local master_conf="/etc/php/${PHP_VERSION}/fpm/php-fpm-${PANEL_SLUG}.conf"
 
     run mkdir -p "$pool_dir"
 
-    # Migrate away from the old layout: a pool left in the distro's shared
-    # pool.d by an earlier install would be loaded by the hardened shared
-    # master too, racing the dedicated master for the same socket.
+    # Migrate from the old layout: a pool left in the distro's shared pool.d would also be loaded
+    # by the hardened shared master, racing the dedicated master for the same socket.
     run rm -f "/etc/php/${PHP_VERSION}/fpm/pool.d/${PANEL_SLUG}.conf"
 
-    # Whoever connects to the socket has to be able to write to it, and that is
-    # the web server, not the pool's own user. nginx and Apache both run as
-    # www-data; OpenLiteSpeed runs as nobody:nogroup. Getting this wrong is not
-    # a warning — the web server simply cannot open the socket, and every PHP
-    # request answers 502 while php-fpm itself looks perfectly healthy.
+    # The socket must be writable by the web server, not the pool's user: www-data for nginx and
+    # Apache, nobody:nogroup for OpenLiteSpeed. Wrong here means 502 on every PHP request while
+    # php-fpm looks healthy.
     local socket_owner="www-data"
     local socket_group="www-data"
     if [[ "$WEB_SERVER" == "openlitespeed" ]]; then
@@ -3921,22 +3354,19 @@ configure_fpm() {
 
     write_panel_fpm_master "$pool_dir" "$master_conf"
 
-    # Let a reload of the hosted-site master finish the requests it would
-    # otherwise cut off. The panel reloads it on every site created or deleted
-    # and every PHP setting saved, and with process_control_timeout at its
-    # default of 0 each reload answered every in-flight request on every site
-    # with a 502 (measured 2026-10-01). Its own file in pool.d, so the distro's
-    # php-fpm.conf stays untouched; FPM reads [global] from any included file.
-    # The panel writes the same file for each PHP version installed later --
-    # FpmReloadGrace, which a test keeps in step with this.
+    # Let a reload of the hosted-site master finish in-flight requests: the panel reloads it on
+    # every site or PHP setting change, and with process_control_timeout at its default of 0
+    # each reload answered every in-flight request on every site with a 502. Its own file in
+    # pool.d keeps the distro's php-fpm.conf untouched (FPM reads [global] from any included
+    # file). The panel writes the same file for each later PHP version: FpmReloadGrace, which a
+    # test keeps in step with this.
     cat >"/etc/php/${PHP_VERSION}/fpm/pool.d/00.panel-global.conf" <<'GRACE'
 ; Managed by the panel. Lets a reload finish the requests it would otherwise cut off.
 [global]
 process_control_timeout = 30s
 GRACE
 
-    # The distro unit is left enabled for hosted-site pools, but the panel no
-    # longer rides on it.
+    # The distro unit stays enabled for hosted-site pools; the panel no longer rides on it.
     run systemctl enable "php${PHP_VERSION}-fpm"
     run systemctl restart "php${PHP_VERSION}-fpm"
     run systemctl daemon-reload
@@ -3952,9 +3382,8 @@ GRACE
 write_panel_fpm_pool() {
     local pool_dir="$1" socket_owner="$2" socket_group="$3"
 
-    # Its own pool on its own socket, owned by the panel's user. `ondemand`
-    # because a control panel is idle most of the time and a 1 GB box has
-    # better uses for the memory than parked PHP workers.
+    # Its own pool and socket, owned by the panel's user. `ondemand`: a control panel is mostly
+    # idle, and a 1 GB box has better uses for the memory than parked workers.
     cat >"${pool_dir}/${PANEL_SLUG}.conf" <<POOL
 [${PANEL_SLUG}]
 user = ${APP_USER}
@@ -3992,9 +3421,8 @@ POOL
 write_panel_fpm_master() {
     local pool_dir="$1" master_conf="$2"
 
-    # A minimal master config that loads only the panel pool. Kept separate
-    # from the distro's php-fpm.conf so a package upgrade never pulls the panel
-    # pool back under the shared, hardened master.
+    # A minimal master config loading only the panel pool, separate from the distro's
+    # php-fpm.conf so a package upgrade never pulls the pool back under the shared hardened master.
     cat >"$master_conf" <<GLOBAL
 [global]
 pid = /run/php/php${PHP_VERSION}-fpm-${PANEL_SLUG}.pid
@@ -4003,11 +3431,9 @@ daemonize = no
 include = ${pool_dir}/*.conf
 GLOBAL
 
-    # Deliberately NOT sandboxed with ProtectSystem/ReadWritePaths: the panel
-    # legitimately writes /etc, /usr and more as root via sudo. It is isolated
-    # from hosted sites by being its own master, and the only account with sudo
-    # here is the panel's own — hosted pools run as www-data with no sudo — so
-    # this master carries no extra tenant risk.
+    # Deliberately NOT sandboxed with ProtectSystem/ReadWritePaths: the panel writes /etc, /usr
+    # and more as root via sudo. It is its own master, and the only account with sudo is the
+    # panel's (hosted pools run as www-data, no sudo), so this master adds no tenant risk.
     cat >"/etc/systemd/system/${PANEL_SLUG}-fpm.service" <<UNIT
 [Unit]
 Description=Control panel PHP-FPM (dedicated master)
@@ -4037,41 +3463,16 @@ configure_web_server() {
 
 # ─── OpenLiteSpeed ───────────────────────────────────────────────────────────
 #
-# The config syntax and every path below were first checked on 2026-09-01
-# against the openlitespeed 1.9.2 package for Ubuntu 26.04 (resolute), by
-# extracting the .deb rather than trusting LiteSpeed's docs, and the installer
-# has since run on real servers. Settled that way:
+# Config syntax and paths were checked by extracting the openlitespeed 1.9.2 .deb (Ubuntu 26.04):
+#   * `add lsapi:<name> php` takes ONE colon; `type::name` is only for a load balancer's workers.
+#   * A proxy context is `type proxy` + `handler <extprocessor name>`.
+#   * gd, xml, zip, mbstring and bcmath have no packages: they are compiled into lsphp84.
 #
-#   * `add lsapi:<name> php` takes ONE colon, matching the shipped
-#     `add lsapi:lsphp php`. The `type::name` form with two colons is only for
-#     a load balancer's worker list. (`fcgi` is also a valid external-app type,
-#     so PHP-FPM would work too; the panel does not use it, see below.)
-#   * A proxy context is `type proxy` + `handler <extprocessor name>`, per the
-#     OLS-specific attribute definition.
-#   * lsphp extensions are NOT missing. There are no -gd/-xml/-zip/-mbstring
-#     packages because they are compiled statically into lsphp84 — its Depends
-#     carry libfreetype6/libjpeg8/libpng16/libwebp7 (gd), libonig5 (mbstring)
-#     and libxml2-16 (xml), and the .deb ships no .so files at all.
-#
-# The panel runs on LSPHP, not PHP-FPM, and one binary does both jobs.
-#
-# This reverses an earlier decision, and the reasoning is worth keeping because
-# the danger it named is real. That note said pointing the web SAPI at lsphp84
-# "would give the panel two different PHP builds with two different extension
-# sets, and the failure mode is the API 500ing on a missing extension while the
-# CLI that installed it works fine". Correct -- but only for moving HALF of it.
-#
-# So both halves moved. PANEL_PHP_BIN is lsphp for composer, artisan, the queue
-# worker, cron and the web SAPI alike, and ondrej's PHP is not installed on this
-# stack at all. That is one build, not two, and it removes the second PHP
-# instead of adding one: an OLS box used to carry both.
-#
-# Two things follow, both checked rather than assumed. Every extension the panel
-# needs exists for LSPHP (curl, intl, sqlite3, pgsql, mysql, redis, igbinary,
-# opcache as packages; gd, xml, zip, mbstring and bcmath compiled in -- the .deb
-# ships no .so at all). And `configure_fpm` has nothing to do here, because the
-# dedicated master it builds exists only to escape the distro unit's
-# ProtectSystem=full, and OpenLiteSpeed's own unit has no sandboxing to escape.
+# The panel runs on LSPHP, not PHP-FPM: PANEL_PHP_BIN is lsphp for composer, artisan, the queue
+# worker, cron and the web SAPI alike, and ondrej's PHP is not installed. Moving only the web
+# SAPI would give two PHP builds with different extension sets (API 500s on an extension the CLI
+# has). So configure_fpm has nothing to do here: its dedicated master only escapes the distro
+# unit's ProtectSystem=full, and OpenLiteSpeed's own unit has no sandboxing.
 configure_ols() {
     step "Configuring OpenLiteSpeed"
 
@@ -4085,15 +3486,12 @@ configure_ols() {
 
     [[ -f "$conf" ]] || die "OpenLiteSpeed installed but ${conf} is missing — see $LOG_FILE"
 
-    # Back up before touching the file every future site also depends on. The
-    # panel does the same on every edit (see OlsSharedConfig); the installer is
-    # the one write that happens before the panel exists to do it.
+    # Back up before touching the file every future site also depends on. The panel does the
+    # same on every edit (see OlsSharedConfig); this is the one write before the panel exists.
     [[ -f "${conf}.preinstall" ]] || run cp -f "$conf" "${conf}.preinstall"
-    # And this run's own copy, which is the one restored below. .preinstall is
-    # the file as OpenLiteSpeed shipped it, from the FIRST run: on a re-run the
-    # live file also holds every site the panel has registered since
-    # (OlsSharedConfig), and restoring .preinstall deleted them all from the
-    # web server (review finding R6).
+    # And this run's own copy, the one restored below. .preinstall is the file as OpenLiteSpeed
+    # shipped it (from the FIRST run): on a re-run the live file also holds every site the panel
+    # registered since (OlsSharedConfig), and restoring .preinstall would delete them all.
     run cp -f "$conf" "${conf}.pre-run"
 
     run mkdir -p "$vhost_dir" "/usr/local/lsws/conf/vhosts" "${vhost_dir}/logs"
@@ -4123,54 +3521,26 @@ configure_ols() {
 # For configure_ols: the panel's LSAPI socket directory (now and after a
 # reboot) and the panel's own PHP settings.
 prepare_ols_panel_runtime() {
-    # The panel's LSAPI socket directory, and the reason it is not /tmp/lshttpd
-    # with everyone else's.
+    # The panel's LSAPI socket directory (not /tmp/lshttpd with everyone else's).
     #
-    # 0750 ${OLS_USER}:${APP_USER} -- lshttpd owns it, the panel's user is the
-    # group. Both identities can reach it; a hosted site's user is in neither,
-    # so a compromised site cannot reach the socket the panel's privileged PHP
-    # listens on, and therefore cannot speak LSAPI to it and get code execution
-    # as the one user on this box with a sudoers grant. That is the whole point
-    # of the directory and it survives the ownership below unchanged.
+    # 0750 ${OLS_USER}:${APP_USER}: a hosted site's user is in neither, so a compromised site
+    # cannot reach the socket of the panel's privileged PHP (the one user with a sudoers grant).
     #
-    # OWNER IS THE WEB SERVER, NOT THE PANEL. This was the other way round and
-    # the API returned 503 on every OpenLiteSpeed install ever made. With
-    # autoStart, lshttpd does not connect to this socket -- it CREATES it, plus
-    # lsphp.sock.pid beside it, and creating a file needs write on the
-    # directory. As ${APP_USER}:${OLS_GROUP} the server got r-x from the group
-    # and could not create either, so the external app never started:
+    # OWNER IS THE WEB SERVER, NOT THE PANEL: with autoStart lshttpd CREATES the socket (and
+    # lsphp.sock.pid), which needs write on the directory. Owned by the panel it had only r-x,
+    # the external app never started ("Failed to lock pid file ... Permission denied") and the
+    # API answered 503. Same rule as configure_fpm's socket owner.
     #
-    #   [panel-lsphp]: Failed to lock pid file for [/run/panel/lsphp.sock]:
-    #   Permission denied ... Can not start this external application.
-    #
-    # The rule is the one configure_fpm states for its socket owner -- the
-    # web server has to be able to write to the socket. Under fpm that lands on
-    # listen.owner, because fpm creates the socket. Under LSAPI the server
-    # creates it, so it lands on the directory instead. Same rule, different
-    # file, and the difference is easy to miss: it looks like a permissions
-    # nicety and it is the difference between a working panel and a dead one.
-    #
-    # tmpfiles.d as well as mkdir: /run is a tmpfs and does not survive a
-    # reboot, and a panel that comes back with no socket directory is a panel
-    # that does not come back. Keep the two in step -- a mismatch is a panel
-    # that works until the first reboot.
+    # tmpfiles.d as well as mkdir: /run is a tmpfs, so without it the directory is gone after a
+    # reboot. Keep the two in step.
     run mkdir -p "/run/${PANEL_SLUG}"
     run chown "${OLS_USER}:${APP_USER}" "/run/${PANEL_SLUG}"
     run chmod 0750 "/run/${PANEL_SLUG}"
 
-    # The panel's own PHP settings.
-    #
-    # On the other stacks these are php_admin_value lines in the panel's fpm
-    # pool. There is no pool here, so they go in an ini of the panel's own and
-    # LSPHP is pointed at it -- the same mechanism SitePhpIni uses for hosted
-    # sites on this stack.
-    #
-    # Not optional. The pool comment records what happens without them: the
-    # panel falls back to PHP's defaults, upload_max_filesize=2M and
-    # post_max_size=8M, while the web server allows 64M and the file manager
-    # advertises 50M -- so every upload over 2M is rejected by PHP before
-    # Laravel ever sees the request. That bug was fixed once on fpm; moving to
-    # LSAPI without carrying these would reintroduce it here.
+    # The panel's own PHP settings. On the other stacks these are php_admin_value lines in the
+    # panel's fpm pool; here they go in an ini of the panel's own that LSPHP is pointed at (the
+    # mechanism SitePhpIni uses for hosted sites). Not optional: without them PHP's defaults
+    # (upload_max_filesize=2M, post_max_size=8M) reject every upload over 2M before Laravel sees it.
     run mkdir -p "/etc/${PANEL_SLUG}/php"
     cat >"/etc/${PANEL_SLUG}/php/zz-panel.ini" <<PANELINI
 ; Managed by the installer. Overwritten on every run.
@@ -4195,16 +3565,10 @@ PANELINI
 test_ols_config() {
     local conf="$1"
 
-    # Tested before restarting, exactly as with nginx and Apache: a broken
-    # config that reaches a restart takes the web server down, and on this box
-    # that includes the panel you would use to fix it.
-    #
-    # `openlitespeed -t` is what OpenLiteSpeed documents for this, and the only
-    # thing that does it. lswsctrl has NO config-test verb -- it takes
-    # start|stop|restart|reload|status and prints its usage for anything else,
-    # exiting non-zero. So `lswsctrl config_test` never tested anything: it
-    # failed exactly the way a rejected config fails, and this function then
-    # restored the original and aborted every single --stack=ols install.
+    # Test before restarting, as for nginx and Apache: a broken config that reaches a restart takes
+    # the web server (and the panel) down.
+    # `openlitespeed -t` is the only config test: lswsctrl has no such verb (it prints usage and
+    # exits non-zero, which looks exactly like a rejected config).
     local test_output test_status=0
     test_output=$(/usr/local/lsws/bin/openlitespeed -t 2>&1) || test_status=$?
     printf '%s\n' "$test_output" >>"$LOG_FILE"
@@ -4212,21 +3576,15 @@ test_ols_config() {
     if (( test_status != 0 )); then
         warn "the generated OpenLiteSpeed config failed its own test — restoring the file as it was before this run"
 
-        # ALL of it, not the [ERROR] lines. OpenLiteSpeed fails this test on
-        # [WARN] too — an unbalanced brace is reported as one — so filtering to
-        # [ERROR] hid the entire reason for a failure on the one run where it
-        # mattered, and cost a round trip to a real server to find that out.
-        # A test whose output we cannot see is worth about as much as no test.
+        # Print all of it, not just [ERROR] lines: OpenLiteSpeed also fails this test on [WARN]
+        # (e.g. an unbalanced brace).
         printf '     openlitespeed -t exited %s:\n' "$test_status" >&2
         printf '%s\n' "$test_output" | sed 's/^/     /' >&2
 
         run cp -f "${conf}.pre-run" "$conf"
 
-        # Now ask the same question of the file exactly as it was before this
-        # run. If that fails too, nothing this run wrote is to blame
-        # and restoring it has fixed nothing — saying "the original has been
-        # restored" would be an outright lie, and the operator would go looking
-        # in the wrong file.
+        # Test the original too: if it fails as well, this run is not to blame and saying
+        # "restored" would mislead.
         local base_output base_status=0
         base_output=$(/usr/local/lsws/bin/openlitespeed -t 2>&1) || base_status=$?
         printf '%s\n' "$base_output" >>"$LOG_FILE"
@@ -4241,25 +3599,14 @@ test_ols_config() {
     fi
 }
 
-# The directories the vhost's static contexts point at, created before the
-# config that names them.
+# Directories the vhost's static contexts point at, created before the config that names them.
 #
-# OpenLiteSpeed resolves a `context`'s `location` at config-load time and
-# reports `path is not accessible` for one that does not exist. nginx and Apache
-# do not care -- they resolve per request -- so this is the one stack where the
-# order matters, and the order cannot change: configure_web_server() runs before
-# build_frontend() on purpose, because Next inlines NEXT_PUBLIC_* at build time
-# and the URLs are not final until TLS is settled. So at this point
-# frontend/.next does not exist yet, and neither does the acme-challenge
-# directory certbot has not yet had a reason to create.
-#
-# Dropping a context is not cosmetic in either case: the acme-challenge one is
-# how `certbot --webroot` proves the domain, and without it issuance gets
-# Laravel's 404 page and Let's Encrypt reads that as unauthorized.
-#
-# Ownership follows the panel account because build_frontend() writes into
-# .next as that user; a root-owned .next/static would trade this failure for a
-# build one. It chowns the tree again anyway, so this is belt and braces.
+# OpenLiteSpeed resolves a context's `location` at config-load time and fails with
+# `path is not accessible` if it is missing (nginx/Apache resolve per request).
+# configure_web_server() runs before build_frontend() on purpose (Next inlines NEXT_PUBLIC_* at
+# build time), so frontend/.next and the acme-challenge directory do not exist yet.
+# Dropping the acme-challenge context breaks `certbot --webroot`: issuance gets Laravel's 404.
+# Owned by the panel account because build_frontend() writes into .next as that user.
 ensure_ols_context_paths() {
     local dirs=(
         "${APP_DIR}/backend/public/.well-known/acme-challenge"
@@ -4274,20 +3621,11 @@ ensure_ols_context_paths() {
 
 # Lift OpenLiteSpeed's cap on dynamically generated responses.
 #
-# `maxDynRespSize` bounds the body of anything PHP produces, and it ships at
-# 2047M. The panel serves file downloads through PHP — it must, because the
-# bytes belong to the site's own Linux user and only the panel holds the
-# sudoers grant to read them — so that cap is a hard ceiling on the size of any
-# file the file manager can hand back. A 6.5 GB download is refused with a bare
-# 413 before PHP runs at all, which reaches the browser as "this site can't be
-# reached".
-#
-# OpenLiteSpeed only. nginx and Apache have no equivalent limit on a proxied or
-# FastCGI response body, so this is one of the places the three genuinely
-# differ rather than one where the config merely looks different.
-#
-# 1024G rather than 0: tested on a real server, `0` is read as zero and every
-# download over a few hundred bytes 413s. There is no "unlimited" value.
+# `maxDynRespSize` (default 2047M) bounds the body of anything PHP produces. The panel serves file
+# downloads through PHP (the bytes belong to the site user; only the panel holds the sudoers
+# grant), so larger downloads get a bare 413. OpenLiteSpeed only: nginx/Apache have no such limit.
+# 1024G rather than 0: `0` is read as zero and rejects nearly every download; there is no
+# "unlimited" value.
 ensure_ols_dynamic_response_limit() {
     local conf="$1"
     local want="1024G"
@@ -4300,9 +3638,7 @@ ensure_ols_dynamic_response_limit() {
     if grep -qE "^[[:space:]]*maxDynRespSize" "$conf"; then
         run sed -i -E "s|^([[:space:]]*)maxDynRespSize[[:space:]]+\\S+[[:space:]]*$|\\1maxDynRespSize               ${want}|" "$conf"
     else
-        # Absent rather than wrong: append it at the end of the file. The
-        # server-wide directives in httpd_config.conf sit outside any block,
-        # so the end of the file is as good a place as any.
+        # Absent: append at the end; server-wide directives sit outside any block.
         printf 'maxDynRespSize               %s\n' "$want" >>"$conf"
     fi
 
@@ -4311,12 +3647,9 @@ ensure_ols_dynamic_response_limit() {
 
 # The LiteSpeed apt repository, pinned rather than bootstrapped.
 #
-# LiteSpeed's documented one-liner is `wget -O - https://repo.litespeed.sh |
-# sudo bash`, which drops its keys into /etc/apt/trusted.gpg.d/ — trusting them
-# for *every* repository on the box, not just theirs. That is the old apt-key
-# model and it is not a trade this installer should make on someone else's
-# server. Same treatment the MongoDB source already gets: one keyring, scoped to
-# one source with signed-by.
+# LiteSpeed's one-liner drops its keys into /etc/apt/trusted.gpg.d/, trusting them for every
+# repository on the box. Use one keyring scoped to this source with signed-by instead (as for
+# MongoDB).
 OLS_PACKAGES_DONE=0
 
 # The LiteSpeed source only; install_packages refreshes it with the others and
@@ -4325,21 +3658,12 @@ add_ols_repository() {
     local keyring=/usr/share/keyrings/litespeed.gpg
     local list=/etc/apt/sources.list.d/litespeed.list
 
-    # BOTH keys, not one. LiteSpeed publish two and sign the repository with the
-    # second; installing only lst_debian_repo.gpg produces
-    #
-    #   NO_PUBKEY 011AA62DEDA1F085
-    #   E: The repository ... is not signed.
-    #
-    # which is what a real install hit. Their own bootstrapper installs both,
-    # which is why it works and picking "the obvious one" did not.
-    #
+    # BOTH keys are needed: LiteSpeed signs the Release file with lst_repo.gpg, and installing only
+    # lst_debian_repo.gpg fails with NO_PUBKEY 011AA62DEDA1F085.
     #   lst_debian_repo.gpg -> 3F6F627083084D0E
     #   lst_repo.gpg        -> 011AA62DEDA1F085  <- signs the Release file
-    #
-    # Fingerprints are pinned. This file becomes a root-level apt trust anchor,
-    # so "whatever that URL served" is not good enough: a key swapped in transit
-    # over plain HTTP would otherwise be trusted for every package it signs.
+    # Fingerprints are pinned: this file becomes a root-level apt trust anchor and the keys are
+    # fetched over plain HTTP.
     local -a key_urls=(
         http://rpms.litespeedtech.com/debian/lst_debian_repo.gpg
         http://rpms.litespeedtech.com/debian/lst_repo.gpg
@@ -4349,12 +3673,8 @@ add_ols_repository() {
         3E892522DB44E1B063D366C5011AA62DEDA1F085
     )
 
-    # Rebuilt whenever the keyring on disk does not already hold every expected
-    # key, not merely when the file is absent. A box that ran an earlier build
-    # of this installer has a keyring with only one of the two, and `-f` alone
-    # would skip past it forever — which is exactly what happened: the re-run
-    # after the fix produced the identical NO_PUBKEY error, because the broken
-    # file was still there and still counted as "done".
+    # Rebuild unless the keyring already holds every expected key (a keyring from an earlier build
+    # with only one key would otherwise count as done forever).
     local needs_keyring=0 fpr
     if [[ ! -f "$keyring" ]]; then
         needs_keyring=1
@@ -4405,28 +3725,21 @@ add_ols_repository() {
     ok "LiteSpeed repository added (${OS_CODENAME})"
 }
 
-# lsphp, straight after install_packages's one install (openlitespeed is in
-# that list). Called twice on this stack -- once from install_packages so the
-# panel has a PHP to run composer with, once from configure_ols where it has
-# always lived. The second is a no-op rather than a second apt run.
+# lsphp, straight after install_packages's one install (openlitespeed is in that list). Called
+# twice on this stack (from install_packages and from configure_ols); the second call is a no-op.
 install_ols_packages() {
     local lsphp="lsphp${PHP_VERSION//./}" started=$SECONDS
-    # The panel's own extensions are in this list too, because on this stack the
-    # panel runs on the same lsphp its sites do. curl/intl/sqlite3 are what
-    # Laravel and the panel's SQLite database need; redis/igbinary back the
-    # cache and queue; opcache is the difference between a usable panel and a
-    # slow one.
+    # The panel runs on the same lsphp its sites do, so its extensions are here too: curl/intl/sqlite3
+    # for Laravel and its SQLite database, redis/igbinary for cache and queue, opcache for speed.
     local core=(
         "${lsphp}" "${lsphp}-common"
         "${lsphp}-curl" "${lsphp}-intl" "${lsphp}-sqlite3"
         "${lsphp}-redis" "${lsphp}-igbinary" "${lsphp}-opcache"
     )
-    # The database clients hosted sites connect with. The panel itself runs on
-    # SQLite, so these are the sites' and do not stop the install (below).
+    # Database clients for hosted sites. The panel itself runs on SQLite, so these do not stop the
+    # install (below).
     local sites=("${lsphp}-mysql" "${lsphp}-pgsql")
-    # imagick and imap, as v7 installs them (operator, 2026-10-07). Optional:
-    # LiteSpeed packages them from 8.2 up only. gmp needs nothing — LiteSpeed
-    # compiles it in.
+    # Optional: LiteSpeed packages imagick/imap from PHP 8.2 up only. gmp is compiled in.
     local extras=("${lsphp}-imagick" "${lsphp}-imap")
 
     # --list: the names, for install_packages's one transaction.
@@ -4442,23 +3755,12 @@ install_ols_packages() {
 
     export DEBIAN_FRONTEND=noninteractive
 
-    # lsphp is the panel's own PHP on this stack and the hosted sites' too.
-    # Installed here so the first site created does not have to wait for it,
-    # and so a box that cannot provide it fails now — during an install the
-    # user is watching — rather than later inside a queued job.
-    #
-    # Three calls, because apt fails the whole command if one name is missing:
-    #
-    #   * the panel's own set is fatal (review finding R7). Carrying on
-    #     without it only moved the failure to composer or artisan, minutes
-    #     later and far from the cause;
-    #   * the sites' database clients warn. `-pgsql` alongside `-mysql`, for
-    #     the same reason the PHP-FPM list above carries it: the panel can
-    #     manage a PostgreSQL server, and without the client extension no site
-    #     on this stack could connect to a database the panel had just made
-    #     for it. LiteSpeed's repository carries both for every version it
-    #     ships (8.0–8.4 on jammy and noble, verified 2026-09-10 against their
-    #     Packages index);
+    # lsphp is the panel's own PHP and the sites' too. Installed here so a box that cannot provide it
+    # fails now, not later inside a queued job. Three calls, because apt fails the whole command
+    # if one name is missing:
+    #   * the panel's own set is fatal: carrying on only moves the failure to composer/artisan;
+    #   * the sites' database clients (-mysql, -pgsql) only warn: without them no site could connect
+    #     to a database the panel made. LiteSpeed's repository carries both for every version;
     #   * imagick/imap warn, in a call of their own (below).
     say "     → Installing ${lsphp} and its extensions..."
     progress_start "installing ${lsphp}" apt_install
@@ -4484,15 +3786,9 @@ install_ols_packages() {
 
 # The listener `map` lines, one per virtual host, newline-terminated.
 #
-# nginx and Apache give the API its own server block on ${API_HOST}.
-# OpenLiteSpeed routes by listener `map`, and the installer only ever named
-# ${PANEL_HOST} -- so on a two-host install the API hostname resolved to the box
-# and matched no virtual host at all. Worse once the shipped `map Example *`
-# catch-all was dropped, since that had been answering it by accident.
-#
-# One map per name rather than a comma-separated list on one map, because the
-# two names now have two different vhosts behind them: the panel proxies to
-# Next, the API serves Laravel.
+# OpenLiteSpeed routes by listener `map`, so the API hostname must be named here or it matches no
+# virtual host (nginx/Apache give the API its own server block). One map per name, because the
+# panel (proxy to Next) and the API (Laravel) are different vhosts.
 ols_listener_maps() {
     printf '  map                     %s %s\n' "$PANEL_SLUG" "$PANEL_HOST"
     (( SINGLE_HOST )) || printf '  map                     %s-api %s\n' "$PANEL_SLUG" "$API_HOST"
@@ -4500,18 +3796,14 @@ ols_listener_maps() {
 
 # The panel's own vhconf.conf.
 #
-# Deliberately NOT built from the panel's php.blade.php template: that one is
-# for hosted sites and runs them on lsphp with per-site suEXEC. The panel is a
-# different animal — the same lsphp over an lsapi external app, plus a proxy to
-# Next.
+# Deliberately NOT built from the php.blade.php template, which is for hosted sites (lsphp with
+# per-site suEXEC): the panel is the same lsphp over an lsapi external app, plus a proxy to Next.
 write_ols_vhost() {
     local vhost_dir="$1"
     local api_context="" front_controller="" doc_root="${APP_DIR}/frontend" index_block="" proxy_context=""
 
-    # Single-host installs serve the API and the SPA from one name, so this one
-    # vhost has to do both. Two-host installs get a separate backend vhost (see
-    # write_ols_api_vhost) exactly as the Apache stack gets a second
-    # <VirtualHost> -- and this one is then pure proxy, with no PHP in it at all.
+    # Single-host installs serve the API and the SPA from one name, so this vhost does both.
+    # Two-host installs get a separate backend vhost (write_ols_api_vhost); this one is then pure proxy.
     if (( SINGLE_HOST )); then
         read -r -d '' api_context <<CONF || true
 extprocessor ${PANEL_SLUG}-lsphp {
@@ -4595,18 +3887,11 @@ CONF
 
         # The front controller, fenced to the paths the backend owns.
         #
-        # A rewrite block is a *virtual host* level rule -- OpenLiteSpeed's
-        # manual says in as many words not to put document-root rules here, and
-        # to use a context instead. We cannot: the context this rule would go in
-        # is `/`, and in single-host mode that one is the proxy to Next. So the
-        # fence is a RewriteCond on REQUEST_URI instead.
-        #
-        # Without it, `RewriteCond %{REQUEST_FILENAME} !-f` is true for every SPA
-        # route -- /dashboard is not a file under backend/public -- so every page
-        # of the panel would be rewritten to /index.php and answered by Laravel's
-        # 404 instead of by Next. Apache avoids the same collision with
-        # `<Location /api> ProxyPass !`, which is the same fence written the
-        # other way round.
+        # OpenLiteSpeed says to put document-root rewrite rules in a context, not at vhost level,
+        # but the `/` context is the proxy to Next in single-host mode. So fence with a RewriteCond
+        # on REQUEST_URI instead. Without it `!-f` is true for every SPA route (/dashboard is not a
+        # file under backend/public) and Laravel would answer every page with a 404 instead of Next.
+        # Apache avoids the same collision with `<Location /api> ProxyPass !`.
         front_controller=$(ols_front_controller '  RewriteCond %{REQUEST_URI} ^/(api|sanctum)(/|$)
 ')
         doc_root="${APP_DIR}/backend/public"
@@ -4645,11 +3930,9 @@ context / {
 }
 CONF
 
-    # In two-host mode this vhost has no PHP in it at all -- no scripthandler,
-    # no index.php, and crucially NO rewrite block. The front controller here
-    # would rewrite every SPA route to /index.php, because /dashboard is not a
-    # file on disk, and the panel would answer Laravel's 404 on every page. The
-    # backend lives in its own vhost; nothing in this one needs a rewrite.
+    # Two-host mode: this vhost has no PHP at all: no scripthandler, no index.php and NO rewrite
+    # block. A front controller here would rewrite every SPA route to /index.php and Laravel would
+    # answer 404 on every page. The backend lives in its own vhost.
     cat >"${vhost_dir}/vhconf.conf" <<CONF
 # Managed by the Control panel installer.
 docRoot                   ${doc_root}
@@ -4682,15 +3965,9 @@ CONF
 
 # The backend on its own hostname, two-host installs only.
 #
-# nginx and Apache both do this: ${API_HOST} gets its own server block serving
-# the whole of backend/public, and ${PANEL_HOST} gets one that only proxies to
-# Next. OpenLiteSpeed used to be the odd one out, running both roles through a
-# single vhost -- which left the API hostname mapped to nothing at all, and
-# sent ${API_HOST}/docs/api-reference to Next.
-#
-# Splitting them also removes the rewrite collision for free: with no proxy
-# context in this vhost, the front-controller rule can be a plain virtual-host
-# rewrite, which is the shape OpenLiteSpeed documents for a PHP application.
+# Like nginx and Apache, ${API_HOST} gets its own vhost serving backend/public while the panel
+# vhost only proxies to Next. With no proxy context here the front-controller rule can be a plain
+# virtual-host rewrite, which is the shape OpenLiteSpeed documents for a PHP application.
 write_ols_api_vhost() {
     local vhost_dir="$1"
 
@@ -4795,11 +4072,9 @@ accesslog \$VH_ROOT/logs/access.log {
 CONF
 }
 
-# Served from the backend's public/ so certbot --webroot has somewhere to drop
-# its token. Its own context so the front-controller rewrite cannot swallow it
-# and answer Laravel's 404 page, which Let's Encrypt reads as unauthorized.
-# In both vhosts, because the certificate covers both names and certbot proves
-# each one separately.
+# Served from the backend's public/ so certbot --webroot has somewhere to drop its token. Its own
+# context so the front-controller rewrite cannot swallow it (Laravel's 404 reads as unauthorized
+# to Let's Encrypt). In both vhosts: certbot proves each name separately.
 ols_acme_context() {
     cat <<CONF
 context /.well-known/acme-challenge {
@@ -4810,9 +4085,8 @@ context /.well-known/acme-challenge {
 CONF
 }
 
-# Version control and dotfiles must never be served: a .git inside a web root
-# is a full source disclosure. "exp:" is OLS's regex context -- nginx's "~" is
-# not valid here and fails the config test.
+# Version control and dotfiles must never be served: a .git in a web root is a full source
+# disclosure. "exp:" is OLS's regex context; nginx's "~" is invalid here and fails the config test.
 ols_dotfile_context() {
     cat <<'CONF'
 context exp:^/\.(git|svn|hg|bzr|env|panel) {
@@ -4843,14 +4117,9 @@ CONF
 
 # Register the panel's vhost in the shared httpd_config.conf.
 #
-# **Outside the panel-managed markers, on purpose.** OlsSharedConfig owns the
-# region between its BEGIN/END comments and *rebuilds* it from what it reads —
-# add, replace and remove are all "parse the region, change one entry, render it
-# back". A panel vhost written inside that region would be treated as an
-# ordinary site and regenerated from vhostBlock()'s generic template the first
-# time any real site was provisioned, losing the lsapi and proxy contexts above
-# and taking the panel down with it. Written outside, the panel's own entry is
-# copied through untouched exactly like a user's hand-written config.
+# Outside the panel-managed markers, on purpose: OlsSharedConfig rebuilds that region from what
+# it parses, so a panel vhost written inside would be regenerated from the generic site template
+# and lose its lsapi and proxy contexts. Outside, it is copied through untouched.
 register_ols_panel_vhost() {
     local conf="$1" vhost_dir="$2" api_vhost_dir="$3"
 
@@ -4859,38 +4128,20 @@ register_ols_panel_vhost() {
         return
     fi
 
-    # A `map` is only legal inside a listener block, so the listener has to
-    # exist. OLS ships a `Default` one; a box where it has been renamed is a
-    # refusal rather than a guess at which address we are meant to answer on.
-    #
-    # Matched with no space required before the brace. The config OpenLiteSpeed
-    # actually ships writes `listener Default{`, and an exact 'listener Default {'
-    # match finds nothing — so this died on every fresh install until the shipped
-    # file was read rather than assumed. The panel's own OlsSharedConfig already
-    # gets this right with \s*; this is the installer catching up to it.
+    # A `map` is only legal inside a listener block. OLS ships a `Default` one; if it was renamed,
+    # refuse rather than guess the address.
+    # No space required before the brace: the shipped config writes `listener Default{`.
     if ! grep -qE '^listener[[:space:]]+Default[[:space:]]*\{' "$conf"; then
         die "no 'listener Default' block in ${conf} — cannot map the panel vhost.
      This installer does not invent a listener: which address and port the
      server should answer on is not something it can guess."
     fi
 
-    # OpenLiteSpeed ships its Default listener on *:8088, not *:80 — the panel
-    # would be registered correctly and still answer on nothing. Moved to 80,
-    # and the shipped `map Example *` catch-all dropped: left in place it
-    # answers for our hostname too, exactly as Ubuntu's default nginx site and
-    # Apache's 000-default do, both of which this installer already removes.
-    #
-    # The `virtualHost Example` block goes with it, not just the map. Removing
-    # only the map left the vhost defined and still validated on every config
-    # load, where its document root — root-owned, as apt unpacked it — trips
-    #
-    #   [WARN] [config:server:vhosts:vhost:Example] Uid of
-    #       /usr/local/lsws/Example/html/ is 0, smaller than minimum
-    #       requirement 11, use server uid!
-    #
-    # on a demo site the panel has already decided should not be reachable.
-    # Deleting nginx's default site and running a2dissite 000-default are the
-    # same decision; this is finishing it rather than doing half of it.
+    # OpenLiteSpeed ships its Default listener on *:8088, not *:80, so move it to 80. Drop the
+    # shipped `map Example *` catch-all too: it would answer for our hostname (as Ubuntu's default
+    # nginx site and Apache's 000-default would, which this installer already removes).
+    # The `virtualHost Example` block goes with it: left defined, its root-owned document root
+    # triggers a "Uid ... smaller than minimum requirement" [WARN] on every config load.
     local tmp80="${conf}.panel-tmp"
     awk '
         !inexample && /^virtualHost[[:space:]]+Example[[:space:]]*\{/ {
@@ -4940,10 +4191,8 @@ virtualHost ${PANEL_SLUG}-api {
 CONF
     fi
 
-    # The map goes just inside the Default listener's closing brace. Inserted
-    # with awk on brace depth rather than "the next line starting with }" — a
-    # hand-indented closing brace would otherwise put the map in whatever block
-    # came next, where it is illegal and fails the config test.
+    # The map goes just inside the Default listener's closing brace, found by brace depth: "the
+    # next line starting with }" would misplace it after a hand-indented brace and fail the test.
     local tmp="${conf}.panel-tmp"
     awk -v maps="$(ols_listener_maps)" '
         /^listener[[:space:]]+Default[[:space:]]*\{/ { inlistener = 1; depth = 0 }
@@ -4962,16 +4211,14 @@ CONF
     ok "panel vhost registered for ${PANEL_HOST}"
 }
 
-# OpenLiteSpeed ships a second control panel of its own, WebAdmin on :7080,
-# which this binds to the server itself (S5) and gives a random password.
-# The Default listener on :8088 is handled in register_ols_panel_vhost, not here.
+# OpenLiteSpeed's WebAdmin console on :7080: bind it to the server itself and give it a random
+# password. The Default listener on :8088 is handled in register_ols_panel_vhost, not here.
 # The argument is only for the tests; the installer calls it with none.
 # shellcheck disable=SC2120
 harden_ols_webadmin() {
     local admin_conf="${1:-/usr/local/lsws/admin/conf/admin_config.conf}"
-    # A random WebAdmin password, printed nowhere. The operator can set their
-    # own with /usr/local/lsws/admin/misc/admpass.sh; what matters here is that
-    # the shipped default does not survive the install.
+    # A random WebAdmin password, printed nowhere: the shipped default must not survive the install.
+    # The operator can set their own with /usr/local/lsws/admin/misc/admpass.sh.
     local admin_pass
     admin_pass="$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 20)"
 
@@ -4984,14 +4231,10 @@ harden_ols_webadmin() {
         fi
     fi
 
-    # Bound to this server only. Leaving 7080 off the firewall allow-list
-    # (configure_firewall) kept nothing out, because the installer never
-    # enables ufw: on a stock Ubuntu box the console answered on every address
-    # while this line said it was closed (review finding S5). Nothing of the
-    # panel's uses WebAdmin; an operator reaches it through an SSH tunnel.
-    # Applies at the cold restart configure_ols does next (restart_ols_cold;
-    # a graceful one cannot move it). The panel does the same for servers
-    # installed before this (panel:ols-webadmin).
+    # Bound to this server only: leaving 7080 off a firewall allow-list never kept it closed, because
+    # the installer does not enable ufw. The panel does not use WebAdmin; reach it via an SSH tunnel.
+    # Applies at the cold restart configure_ols does next (restart_ols_cold; a graceful one cannot
+    # move it). The panel does the same for servers installed earlier (panel:ols-webadmin).
     if [[ -f "$admin_conf" ]]; then
         sed -i -E 's/^([[:space:]]*address[[:space:]]+)[^[:space:]]+:7080[[:space:]]*$/\1127.0.0.1:7080/' "$admin_conf" 2>>"$LOG_FILE" || true
     fi
@@ -5002,26 +4245,17 @@ harden_ols_webadmin() {
     fi
 }
 
-# OpenLiteSpeed stopped, every litespeed process gone, then started again:
-# never the graceful handover `systemctl restart lshttpd` does (finding N1).
+# OpenLiteSpeed stopped, every litespeed process gone, then started again: never the graceful
+# handover `systemctl restart lshttpd` does.
 #
-# A graceful restart passes the running server's listening sockets to the new
-# one. When the config has moved a listener to another address on the same
-# port -- harden_ols_webadmin's *:7080 to 127.0.0.1:7080 -- the new server
-# inherits *:7080, cannot bind 127.0.0.1:7080 beside it, and exits:
+# A graceful restart hands the running server's listening sockets to the new one. When the config
+# moved a listener to another address on the same port (harden_ols_webadmin: *:7080 to
+# 127.0.0.1:7080), the new server inherits *:7080, cannot bind 127.0.0.1:7080 beside it and exits;
+# systemd restarts it every few seconds until the old server finishes its graceful stop
+# (gracefulRestartTimeout, 300 s), so a certbot run in that window fails.
 #
-#   Can't listen at address adminListener: Address already in use!
-#   ... Fatal error in configuration, exit!
-#
-# systemd then starts it again every few seconds, each time up for about two,
-# until the old server has finished its graceful stop (gracefulRestartTimeout,
-# 300 s). certbot ran inside that window on every fresh OpenLiteSpeed install,
-# so Let's Encrypt timed out and the panel got the self-signed fallback.
-#
-# The unit's own stop is graceful too (ExecStop=lswsctrl delay-stop with
-# KillMode=none), so it returns at once and the old server lingers. So: wait
-# for it, then TERM what is left, then KILL. Waiting alone is not enough --
-# a draining server may hold on for the full 300 s.
+# The unit's own stop is graceful too (ExecStop=lswsctrl delay-stop, KillMode=none), so it returns
+# at once and the old server lingers. So: wait, then TERM what is left, then KILL.
 restart_ols_cold() {
     if (( DRY_RUN )); then
         printf '     %s$ %s%s\n' "$DIM" "systemctl stop lshttpd && (wait until no litespeed process is left) && systemctl start lshttpd" "$RESET"
@@ -5062,10 +4296,9 @@ wait_for_ols_exit() {
     return 0
 }
 
-# 0 once lshttpd is active, listening on every port given, and still the same
-# process ${OLS_SETTLE:-5} s later; 1 after ${OLS_START_TIMEOUT:-60} s. One
-# look is not enough: a server systemd keeps starting again answers for a
-# second or two each time (N1), and a certbot run in that second fails.
+# 0 once lshttpd is active, listening on every port given, and still the same process
+# ${OLS_SETTLE:-5} s later; 1 after ${OLS_START_TIMEOUT:-60} s. One look is not enough: a server
+# systemd keeps restarting answers for a second or two each time.
 wait_for_ols_serving() {
     local limit="${OLS_START_TIMEOUT:-60}" settle="${OLS_SETTLE:-5}"
     local waited=0 pid port
@@ -5107,10 +4340,8 @@ configure_nginx() {
 
     mkdir -p /etc/nginx/snippets
 
-    # The location blocks live in snippets that both the port-80 and (later) the
-    # port-443 server blocks include. Written this way so the two can never
-    # drift apart — the alternative, duplicating them per listener, is how a
-    # config ends up serving different things over HTTP and HTTPS.
+    # The location blocks live in snippets that both the port-80 and (later) the port-443 server
+    # blocks include, so the two cannot drift apart.
     local api_locations=/etc/nginx/snippets/${PANEL_SLUG}-api.conf
     local panel_locations=/etc/nginx/snippets/${PANEL_SLUG}-web.conf
 
@@ -5120,11 +4351,9 @@ configure_nginx() {
     local sanctum_location=""
     if (( SINGLE_HOST )); then
         api_prefix="^~ /api"
-        # Sanctum serves its CSRF-cookie route at /sanctum/csrf-cookie — a
-        # top-level path, NOT under /api. In single-host mode the catch-all in
-        # the panel snippet proxies everything but /api to Next, so without an
-        # explicit /sanctum route the SPA's very first request
-        # (GET /sanctum/csrf-cookie) hits Next and 404s, and login never starts.
+        # Sanctum's CSRF route is /sanctum/csrf-cookie, a top-level path, NOT under /api. Without an
+        # explicit /sanctum route the single-host catch-all sends it to Next, which 404s, and login
+        # never starts.
         read -r -d '' sanctum_location <<'SANCTUM' || true
 location ^~ /sanctum {
     try_files $uri $uri/ /index.php?$query_string;
@@ -5246,23 +4475,18 @@ NGINX
     nginx_without_ipv6 "/etc/nginx/sites-available/${PANEL_SLUG}.conf"
     ln -sf "/etc/nginx/sites-available/${PANEL_SLUG}.conf" "/etc/nginx/sites-enabled/${PANEL_SLUG}.conf"
 
-    # Ubuntu's default site is a catch-all on port 80. Left enabled it answers
-    # for our hostnames too, depending on which loads first.
+    # Ubuntu's default site is a port-80 catch-all and would answer for our hostnames too.
     rm -f /etc/nginx/sites-enabled/default
 
-    # Tested before reloading, always. A broken config that reaches a reload
-    # takes the web server down — and on this box that includes the panel you
-    # would use to fix it.
+    # Tested before reloading, always: a broken config that reaches a reload takes the web server
+    # (and the panel) down.
     if ! nginx -t >>"$LOG_FILE" 2>&1; then
         die "the generated nginx config failed its own test — see $LOG_FILE"
     fi
 
     run systemctl enable nginx
-    # reload-or-restart, not reload: a stopped unit cannot be reloaded, and
-    # the port check above tells the operator to stop whatever holds :80 --
-    # which on a re-install is this very web server. Following that advice
-    # then killed the install here. Both outcomes are wanted: reload if it is
-    # running, start it if it is not.
+    # reload-or-restart, not reload: a stopped unit cannot be reloaded, and on a re-install the
+    # port-80 check tells the operator to stop this very web server.
     run systemctl reload-or-restart nginx
     ok "nginx serving ${PANEL_HOST}"
 }
@@ -5272,24 +4496,17 @@ NGINX
 configure_apache() {
     step "Configuring Apache"
 
-    # proxy_fcgi + SetHandler rather than mod_php or fcgid. mod_php would run PHP
-    # inside Apache as www-data, which throws away the per-site user isolation the
-    # whole panel is built on — the FPM pool exists precisely so PHP runs as the
-    # panel's own account.
-    # expires + http2: v7's browser caching and HTTP/2 on HTTPS (vhosts the same
-    # as v7, 2026-11-08). The vhost wraps both in <IfModule>, so a server that
-    # never ran this line still starts.
+    # proxy_fcgi + SetHandler rather than mod_php or fcgid: mod_php would run PHP inside Apache as
+    # www-data and throw away the per-site user isolation; the FPM pool runs PHP as the panel account.
+    # expires + http2: browser caching and HTTP/2 on HTTPS. The vhost wraps both in <IfModule>, so a
+    # server that never ran this line still starts.
     run a2enmod proxy proxy_fcgi proxy_http rewrite headers setenvif ssl expires http2 remoteip
 
-    # Apache's default site is a catch-all on port 80 and answers for our
-    # hostnames depending on load order.
+    # Apache's default site is a port-80 catch-all and would answer for our hostnames too.
     run a2dissite 000-default
 
-    # Without a global ServerName every `apachectl configtest` -- the panel runs
-    # one before each reload and shows its output on the Services screen --
-    # opens with "AH00558: Could not reliably determine the server's fully
-    # qualified domain name". Harmless, and noise in every test. Every vhost
-    # the panel writes names itself, so this is only the fallback's name.
+    # Without a global ServerName every `apachectl configtest` (the panel runs one before each
+    # reload) opens with AH00558. Harmless noise; every vhost the panel writes names itself.
     printf 'ServerName %s\n' "$(hostname)" >"/etc/apache2/conf-available/${PANEL_SLUG}-servername.conf"
     run a2enconf "${PANEL_SLUG}-servername"
 
@@ -5297,29 +4514,23 @@ configure_apache() {
 
     run a2ensite "${PANEL_SLUG}"
 
-    # Tested before reloading, exactly as with nginx: a broken config that reaches
-    # a reload takes the web server down, and on this box that includes the panel
-    # you would use to fix it.
+    # Tested before reloading, exactly as with nginx.
     if ! apache2ctl configtest >>"$LOG_FILE" 2>&1; then
         die "the generated Apache config failed its own test — see $LOG_FILE"
     fi
 
-    # Ubuntu 26.04's apache2.service mounts /home read-only for Apache
-    # (ProtectHome=read-only). Every site the panel creates lives in its owner's
-    # home and logs to <site>/logs, which the root master opens at start -- so
-    # the first site's reload failed with "Read-only file system: could not
-    # open error log file" and took Apache down, the panel included. Found on
-    # the 26.04 test server. ReadWritePaths=/home does not lift it (measured);
-    # ProtectHome=no does. The panel's ApacheDriver writes the same drop-in on
-    # servers installed before this.
+    # Ubuntu 26.04's apache2.service mounts /home read-only (ProtectHome=read-only). Site homes and
+    # their <site>/logs live there, so the first site's reload failed with "Read-only file system:
+    # could not open error log file" and took Apache (and the panel) down. ReadWritePaths=/home does
+    # not lift it; ProtectHome=no does. The panel's ApacheDriver writes the same drop-in on servers
+    # installed earlier.
     mkdir -p /etc/systemd/system/apache2.service.d
     printf '[Service]\nProtectHome=no\n' >"/etc/systemd/system/apache2.service.d/${PANEL_SLUG}-site-logs.conf"
     run systemctl daemon-reload
 
     run systemctl enable apache2
-    # restart, not reload: a running Apache keeps the sandbox it started with,
-    # and a stopped one (the installer's own port-80 advice stops it) cannot be
-    # reloaded at all.
+    # restart, not reload: a running Apache keeps the sandbox it started with, and a stopped one
+    # (the installer's own port-80 advice stops it) cannot be reloaded.
     run systemctl restart apache2
     ok "Apache serving ${PANEL_HOST}"
 }
@@ -5330,9 +4541,8 @@ write_apache_panel_site() {
     local conf="/etc/apache2/sites-available/${PANEL_SLUG}.conf"
     local api_block panel_block
 
-    # The API. `AllowOverride All` because Laravel ships a .htaccess doing the
-    # front-controller rewrite — reproducing it here would mean two copies of the
-    # same rules that can disagree after an upgrade.
+    # The API. `AllowOverride All` because Laravel ships a .htaccess doing the front-controller
+    # rewrite; duplicating it here would let two copies disagree after an upgrade.
     read -r -d '' api_block <<CONF || true
     DocumentRoot ${APP_DIR}/backend/public
 
@@ -5374,8 +4584,7 @@ CONF
 CONF
 
     if (( SINGLE_HOST )); then
-        # One name: /api to Laravel, everything else to Next. Same origin, so no
-        # cross-site cookie to get wrong.
+        # One name: /api to Laravel, everything else to Next (same origin, so no cross-site cookie).
         cat >"$conf" <<CONF
 # Managed by the control panel installer.
 <VirtualHost *:80>
@@ -5421,10 +4630,9 @@ install_services() {
 
     local backend="${APP_DIR}/backend"
 
-    # The panel writes its update runner and progress state here as the panel
-    # account, so the directory has to exist and belong to it before the first
-    # update rather than being created by whoever happens to run first. 0750:
-    # the script it holds is executable and names service units.
+    # The panel writes its update runner and progress state here as the panel account, so it must
+    # exist and belong to it before the first update. 0750: the script it holds is executable and
+    # names service units.
     run mkdir -p "$UPDATE_STATE_DIR"
     run chown "${APP_USER}:${APP_USER}" "$UPDATE_STATE_DIR"
     run chmod 750 "$UPDATE_STATE_DIR"
@@ -5469,8 +4677,7 @@ StandardError=journal
 WantedBy=multi-user.target
 UNIT
 
-    # One worker. Server operations are sequential by nature — two workers
-    # racing to change the same server is a failure mode, not throughput.
+    # One worker: server operations are sequential, and two workers changing one server would race.
     cat >"/etc/systemd/system/${PANEL_SLUG}-queue.service" <<UNIT
 [Unit]
 Description=Control panel queue worker
@@ -5512,23 +4719,17 @@ StandardError=journal
 WantedBy=multi-user.target
 UNIT
 
-    # The scheduler tick. Without it the metrics collector never samples and the
-    # disk cleaner never runs — features that look built but do nothing.
+    # The scheduler tick: without it the metrics collector and the disk cleaner never run.
     cat >"/etc/cron.d/${PANEL_SLUG}-scheduler" <<CRON
 * * * * * ${APP_USER} ${PANEL_PHP_BIN} ${backend}/artisan schedule:run >> /dev/null 2>&1
 CRON
     chmod 644 "/etc/cron.d/${PANEL_SLUG}-scheduler"
 
     run systemctl daemon-reload
-    # enable --now only *starts* a stopped unit; on a re-run it is a no-op, and
-    # the already-running process keeps serving the build that build_frontend
-    # just replaced underneath it. For Next that means the standalone output and
-    # its client reference manifests change on disk while the old server holds
-    # the old ones, and every affected route 500s with "the client reference
-    # manifest for route X does not exist". Restart explicitly so a re-run
-    # actually serves what it just built — the installer promises re-runs are
-    # safe, so they must also be correct. Same reason the queue worker restarts:
-    # it holds the old code in memory until it does.
+    # enable --now is a no-op for an already-running unit, which would keep serving the build that
+    # build_frontend just replaced (Next 500s with "the client reference manifest for route X does
+    # not exist"). Restart explicitly so re-runs serve what they built; the queue worker likewise
+    # holds the old code in memory.
     run systemctl enable "${PANEL_SLUG}-frontend.service"
     run systemctl enable "${PANEL_SLUG}-queue.service"
     run systemctl restart "${PANEL_SLUG}-frontend.service"
@@ -5544,51 +4745,23 @@ CRON
 configure_sudoers() {
     step "Granting the panel its privileges"
 
-    # READ THIS BEFORE CHANGING IT.
+    # The panel needs root for specific commands (system users, vhosts, service restarts); PHP-FPM
+    # itself runs unprivileged and only these commands escalate. The list lives in
+    # backend/config/server.php under `privilege`.
     #
-    # The panel creates system users, writes vhosts, and restarts services, so
-    # it needs root for specific commands. PHP itself runs unprivileged and only
-    # these escalate.
-    #
-    # The list itself lives in backend/config/server.php, under `privilege`.
-    #
-    # Be clear about what this does and does not buy. The list includes `tee`,
-    # `chown` and `sh`, because the panel's existing operations use them — and
-    # any one of those as root is a path to full root. So this is **not**
-    # least privilege, and an attacker with code execution inside the panel can
-    # escalate.
-    #
-    # What it does buy, which is not nothing: PHP-FPM does not run as root, so
-    # every bug *short of* code execution — a path traversal, a file disclosure,
-    # a mis-scoped read — stays confined to an unprivileged account. Running FPM
-    # as root would make the same bugs instantly fatal.
-    #
-    # The real fix is a privileged helper exposing semantic operations
-    # (create-system-user, write-vhost-for-domain) that validate their arguments,
-    # so the web tier never names a path at all. Until that exists, this is the
-    # honest trade and it is written down rather than implied.
+    # This is NOT least privilege: the list includes `tee`, `chown` and `sh`, and any of them as root
+    # is a path to full root, so code execution inside the panel can escalate. What it buys is that
+    # every bug short of code execution (path traversal, file disclosure) stays confined to an
+    # unprivileged account. The real fix is a privileged helper exposing semantic operations that
+    # validate their arguments.
 
-    # Rendered by the panel, not written here.
+    # Rendered by the panel (one list, in config/server.php), as APP_USER like every other artisan
+    # call here: as root it would leave root-owned files in storage/framework. setup_backend has
+    # already run, so vendor/ exists.
     #
-    # This function used to carry its own copy of the binary list, which had to
-    # agree with config/server.php and nothing made it. Every privilege bug the
-    # panel has had was that duplication -- touch, certbot, openssl, crontab,
-    # stat and mysqldump were each added to one copy and not the other, and each
-    # broke a feature that looked configured. There is now one list, and this
-    # asks for it.
-    #
-    # As APP_USER, like every other artisan call here: run as root it would
-    # leave root-owned files in storage/framework under a service that is not
-    # root, and the next cache write would fail.
-    #
-    # setup_backend has already run (see main), so vendor/ exists.
-    #
-    # Rendered beside the grant under a name with a dot in it, which sudo
-    # skips, made 0440, validated, and only then moved over the real name --
-    # what panel:sudoers itself does. Rendering straight into the real name
-    # emptied a working grant on every re-run before anything was rendered,
-    # and a failure then left the panel with no privileges at all. A failure
-    # now leaves the grant that was there.
+    # Rendered beside the grant under a name with a dot (sudo skips it), made 0440, validated, then
+    # moved over the real name, as panel:sudoers does. Rendering straight into the real name emptied
+    # a working grant when a re-run failed.
     local grant="/etc/sudoers.d/${PANEL_SLUG}"
     local staged="/etc/sudoers.d/${PANEL_SLUG}.new"
     rm -f "$staged"
@@ -5608,12 +4781,8 @@ configure_sudoers() {
     mv -f "$staged" "$grant"
     ok "sudoers rule installed for ${APP_USER}"
 
-    # The security page reads effective sshd config with `sudo -n sshd -T`, and
-    # sshd refuses to run without its privilege-separation directory /run/sshd.
-    # That lives on a tmpfs and is only created by ssh.service — on a
-    # socket-activated ssh (Ubuntu 24.04+ default) it may be absent at rest and
-    # is wiped on every reboot, so the read fails with "Missing privilege
-    # separation directory". A tmpfiles rule recreates it at boot regardless.
+    # `sudo -n sshd -T` needs /run/sshd (tmpfs, created only by ssh.service; absent at rest on
+    # socket-activated ssh, Ubuntu 24.04+, and wiped on reboot). A tmpfiles rule recreates it at boot.
     cat >"/etc/tmpfiles.d/${PANEL_SLUG}-sshd.conf" <<TMPFILES
 d /run/sshd 0755 root root -
 TMPFILES
@@ -5623,23 +4792,11 @@ TMPFILES
 
 # ─── Firewall ────────────────────────────────────────────────────────────────
 
-# The port SSH is actually on, resolved the same way the panel resolves it
-# (App\Support\SshPort): the first `Port` in a sshd_config.d drop-in, else
-# the first in sshd_config itself, else 22. Asking the same question the same
-# way is the point -- this used to hardcode 22 while `firewall:record-defaults`
-# recorded the real port, so on a server whose SSH had been moved the panel's
-# rule list and the box disagreed from the moment of install.
-#
-# sshd_config itself is read too because that is where people move the port by
-# hand. Reading the drop-ins alone allowed 22 on a server listening on 2222,
-# and on a server whose ufw is already on that is the rule which locks the
-# owner out the day port 22 is closed (review finding R11).
-#
-# Deliberately not `sshd -T`, which is more authoritative: it needs /run/sshd
-# to exist, and reading the same files as the panel keeps the two answers
-# identical even where both are wrong. A drop-in is also where the panel
-# *writes* a port change, and Ubuntu includes them before the rest of the main
-# file, so a drop-in still wins.
+# The port SSH is on, resolved as the panel resolves it (App\Support\SshPort): the first `Port` in
+# a sshd_config.d drop-in, else in sshd_config itself, else 22. sshd_config is read too because
+# people move the port there by hand; allowing 22 while sshd listens on 2222 locks the owner out
+# once port 22 is closed. Not `sshd -T`: it needs /run/sshd, and reading the same files as the
+# panel keeps both answers identical. Drop-ins win, as Ubuntu includes them first.
 #
 # Arguments only for the tests; the installer calls it with none.
 # shellcheck disable=SC2120
@@ -5679,12 +4836,9 @@ configure_firewall() {
         ok "rules added for ${ssh_port}, 80, 443"
     fi
 
-    # Tell the panel what we just allowed. Without this the firewall screen
-    # reads its enabled flag live from ufw and its rule list from the database,
-    # so a server whose ufw was already active showed an enabled firewall over
-    # an empty table — the rules were on the box and the panel had no record of
-    # them. Records only; it never runs ufw, so the "we do not enable someone's
-    # firewall for them" rule above still holds. Idempotent.
+    # Tell the panel what was allowed: its firewall screen reads the rule list from the database, so
+    # without this a server with ufw already active shows an enabled firewall over an empty table.
+    # Records only; never runs ufw. Idempotent.
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan firewall:record-defaults' \
         -- "${APP_DIR}/backend" "${PANEL_PHP_BIN}"
     ok "rules recorded in the panel"
@@ -5692,9 +4846,8 @@ configure_firewall() {
 
 # ─── TLS ─────────────────────────────────────────────────────────────────────
 
-# The self-signed certificate both fallbacks use when Let's Encrypt says no
-# (OpenLiteSpeed's, and nginx's or Apache's): ten years, for the panel's name,
-# where the vhost files already point.
+# Self-signed certificate used by the fallbacks when Let's Encrypt fails: ten years, for the
+# panel's name, at the path the vhost files already point to.
 make_self_signed_certificate() {
     mkdir -p "/etc/ssl/${PANEL_SLUG}"
     run openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
@@ -5703,9 +4856,8 @@ make_self_signed_certificate() {
         -subj "/CN=${PANEL_HOST}"
 }
 
-# The Apache half of the self-signed fallback. Separate file and separate site so
-# a later successful certbot run edits an untouched config, and so backing this
-# out is one `a2dissite` rather than an unpick.
+# The Apache half of the self-signed fallback: a separate file and site, so a later certbot run
+# edits an untouched config and backing out is one `a2dissite`.
 self_signed_apache() {
     local conf="/etc/apache2/sites-available/${PANEL_SLUG}-tls.conf"
     local names="${PANEL_HOST}"
@@ -5714,9 +4866,8 @@ self_signed_apache() {
     {
         printf '# Self-signed fallback, written by the control panel installer.\n'
         printf '# Delete this site and run: certbot --apache -d %s\n' "$names"
-        # Apache needs one VirtualHost per name here, and each includes the same
-        # blocks the port-80 sites use — read back from the file we already wrote
-        # rather than duplicated, so the two cannot drift.
+        # One VirtualHost per name, reusing the port-80 site's blocks read back from the file so the
+        # two cannot drift.
         sed -e 's/\*:80/*:443/' \
             -e "/ServerName/a\\    SSLEngine on\\n    SSLCertificateFile /etc/ssl/${PANEL_SLUG}/cert.pem\\n    SSLCertificateKeyFile /etc/ssl/${PANEL_SLUG}/key.pem" \
             "/etc/apache2/sites-available/${PANEL_SLUG}.conf" | tail -n +2
@@ -5744,16 +4895,11 @@ self_signed_apache() {
     fi
 }
 
-# The OpenLiteSpeed half of TLS.
-#
-# Two things differ from the other stacks and both are structural, not cosmetic:
-#
-#   * There is no certbot plugin, so `--webroot` issues the certificate and
-#     nothing installs it. We write the paths into the vhost ourselves.
-#   * OLS binds certificates to a *listener*, not to a vhost. A site answers on
-#     443 only if a secure listener exists AND the site is mapped into it — so
-#     the certificate alone is not enough, which is the trap this function is
-#     mostly here to avoid.
+# The OpenLiteSpeed half of TLS. Two structural differences from the other stacks:
+#   * No certbot plugin: `--webroot` issues the certificate and nothing installs it, so the paths
+#     are written into the vhost here.
+#   * OLS binds certificates to a *listener*, not a vhost: a site answers on 443 only if a secure
+#     listener exists AND the site is mapped into it.
 configure_tls_ols() {
     local conf="/usr/local/lsws/conf/httpd_config.conf"
     local vhconf="/usr/local/lsws/conf/vhosts/${PANEL_SLUG}/vhconf.conf"
@@ -5769,9 +4915,8 @@ configure_tls_ols() {
         args+=(--register-unsafely-without-email)
     fi
 
-    # Let's Encrypt connects to port 80 from outside, and a server that is
-    # not up there turns into "Timeout during connect" and the self-signed
-    # fallback (N1). configure_ols checked already; this is where it counts.
+    # Let's Encrypt connects to port 80 from outside; a server not up there ends in "Timeout during
+    # connect" and the self-signed fallback.
     if (( ! DRY_RUN )) && ! wait_for_ols_serving 80; then
         warn "OpenLiteSpeed is not answering on port 80, so Let's Encrypt will probably not reach it"
     fi
@@ -5783,14 +4928,10 @@ configure_tls_ols() {
         SCHEME="https"
         ok "Let's Encrypt certificate issued"
 
-        # Reload on renewal. certbot --nginx/--apache do that themselves;
-        # certonly --webroot has no installer and reloads nothing, so the
-        # renewed certificate sat on disk while lshttpd kept serving the old
-        # one from memory -- an expired panel certificate a month after the
-        # first renewal. The panel writes this same file, byte for byte
-        # (CertbotClient::ensureRenewalHook), but only once a site certificate
-        # exists; the panel's own has no row. Same name and body, so neither
-        # writer undoes the other.
+        # Reload on renewal: `certonly --webroot` has no installer, so without this the renewed
+        # certificate stays on disk while lshttpd serves the old one from memory. The panel writes the
+        # same file with the same body (CertbotClient::ensureRenewalHook), so neither writer undoes
+        # the other.
         local hook_dir=/etc/letsencrypt/renewal-hooks/deploy
         run install -d -m 0755 "$hook_dir"
         printf '%s\n' '#!/bin/sh' \
@@ -5800,9 +4941,8 @@ configure_tls_ols() {
         run chmod 0755 "${hook_dir}/sv-oss-reload"
         ok "renewals reload OpenLiteSpeed"
     else
-        # Same reasoning as the nginx path: nip.io shares one Let's Encrypt rate
-        # limit globally, so failing here is common and must not fail the
-        # install. Encrypted with a self-signed certificate beats plaintext.
+        # As on the nginx path: nip.io shares one Let's Encrypt rate limit, so failing here is common
+        # and must not fail the install. Self-signed beats plaintext.
         warn "could not get a Let's Encrypt certificate (see $LOG_FILE)"
         if [[ -z "$DOMAIN" ]]; then
             warn "nip.io shares one certificate rate limit globally, so this is common"
@@ -5825,17 +4965,12 @@ install_ols_certificate() {
     local conf="$1" vhconf="$2" cert="$3" key="$4"
     local vhconfs=("$vhconf")
 
-    # The API vhost needs the certificate too. It answers on ${API_HOST}, which
-    # is on the same certificate, and a vhost without vhssl is served the
-    # listener's default -- so the SPA's own API calls would be the ones getting
-    # a name mismatch.
+    # The API vhost needs the certificate too: without vhssl it is served the listener's default,
+    # and the SPA's own API calls would get a name mismatch.
     (( SINGLE_HOST )) || vhconfs+=("/usr/local/lsws/conf/vhosts/${PANEL_SLUG}-api/vhconf.conf")
 
-    # Every file this edits, as it was, so a config OpenLiteSpeed rejects is
-    # taken back out below rather than left for the next restart to find. A
-    # rejected config does not stop the server that is running; it stops the
-    # one that starts after a reboot, and with it the panel and every site
-    # (review finding R3).
+    # Back up every file this edits, so a config OpenLiteSpeed rejects is taken back out below: a
+    # rejected config does not stop the running server, but stops the one started after a reboot.
     local target backups=() mapped=1
     for target in "$conf" "${vhconfs[@]}"; do
         [[ -f "$target" ]] || continue
@@ -5896,9 +5031,8 @@ CONF
         fi
     fi
 
-    # A failed rewrite above is handled as a rejected config: without the map
-    # the certificate is on a listener that never serves the panel (review
-    # finding R9; `awk … && mv` carried on as if it had worked).
+    # A failed rewrite above counts as a rejected config: without the map the certificate sits on a
+    # listener that never serves the panel.
     if (( ! mapped )) || ! /usr/local/lsws/bin/openlitespeed -t >>"$LOG_FILE" 2>&1; then
         for target in "${backups[@]}"; do
             mv -f "${target}.pre-tls" "$target"
@@ -5940,12 +5074,9 @@ configure_tls() {
         return
     fi
 
-    # A self-signed fallback left by an earlier run comes out first (review
-    # finding R5). That run said "re-run later"; on the re-run certbot then
-    # succeeded beside it, two blocks answered on 443 for the same name, and
-    # the stale self-signed one could be the one served. If certbot fails
-    # again, the fallback below writes it afresh. The running server keeps
-    # what it loaded until certbot or the fallback reloads it.
+    # Remove a self-signed fallback left by an earlier run: if certbot succeeds on the re-run, two
+    # blocks answer on 443 for the same name and the stale one may be served. If certbot fails
+    # again, the fallback below rewrites it. The running server keeps what it loaded until reloaded.
     if [[ "$WEB_SERVER" == "apache" ]]; then
         if [[ -e "/etc/apache2/sites-enabled/${PANEL_SLUG}-tls.conf" ]]; then
             run a2dissite "${PANEL_SLUG}-tls"
@@ -5976,11 +5107,8 @@ configure_tls() {
         return
     fi
 
-    # Expected often enough to be handled rather than treated as an error.
-    # nip.io is not on the Public Suffix List, so Let's Encrypt counts every
-    # *.nip.io certificate in the world against one 50-per-week limit — a
-    # bucket shared with everybody else using it. The install must not fail
-    # because that bucket happened to be empty.
+    # Expected often: nip.io is not on the Public Suffix List, so every *.nip.io certificate counts
+    # against one shared 50-per-week Let's Encrypt limit. The install must not fail because of it.
     warn "could not get a Let's Encrypt certificate (see $LOG_FILE)"
     if [[ -z "$DOMAIN" ]]; then
         warn "nip.io shares one certificate rate limit globally, so this is common"
@@ -5995,15 +5123,12 @@ configure_tls() {
         return
     fi
 
-    # A separate file rather than appending to the port-80 config, so a re-run
-    # can simply delete it, and a later `certbot --nginx` swaps the real
-    # certificate into these 443 blocks. They include the very same location
-    # snippets the port-80 site does — nothing is duplicated, so HTTP and HTTPS
-    # cannot end up serving different things.
+    # A separate file rather than appended to the port-80 config, so a re-run can delete it and a
+    # later `certbot --nginx` swaps the real certificate into these 443 blocks. They include the
+    # same location snippets as the port-80 site, so HTTP and HTTPS cannot serve different things.
     #
-    # TLS 1.2 as the floor, as the panel's site templates and the OpenLiteSpeed
-    # path set it: left out, the block inherits nginx.conf's stock list, which
-    # still names TLS 1.0 and 1.1 (review finding S6).
+    # TLS 1.2 as the floor (as the panel's site templates and the OpenLiteSpeed path do); otherwise
+    # the block inherits nginx.conf's stock list, which still names TLS 1.0 and 1.1.
     local tls_conf=/etc/nginx/sites-available/${PANEL_SLUG}-tls.conf
     local http_conf=/etc/nginx/sites-available/${PANEL_SLUG}.conf
     local api_locations=/etc/nginx/snippets/${PANEL_SLUG}-api.conf
@@ -6066,11 +5191,9 @@ NGINX
     nginx_without_ipv6 "$tls_conf"
     ln -sf "$tls_conf" "/etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf"
 
-    # And plain HTTP only sends visitors to HTTPS, as `certbot --redirect` does
-    # with a real certificate: before, the panel went on answering logins on
-    # port 80 beside the encrypted copy (review finding S6). The ACME location
-    # stays, so certbot can still prove the name later. configure_nginx writes
-    # this file afresh on every run, so a re-run starts from the full site.
+    # Plain HTTP only redirects to HTTPS, as `certbot --redirect` does with a real certificate. The
+    # ACME location stays so certbot can still prove the name later. configure_nginx rewrites this
+    # file on every run, so a re-run starts from the full site.
     cp -a "$http_conf" "${http_conf}.pre-tls"
     # $host and $request_uri are nginx's, not the shell's.
     # shellcheck disable=SC2016
@@ -6085,9 +5208,8 @@ NGINX
         TLS_STATE="self-signed"
         SCHEME="https"
     else
-        # Removing one symlink puts nginx back exactly as it was, which is why
-        # this went in a separate file rather than being appended to the working
-        # one. Serving plain HTTP beats serving nothing.
+        # Removing one symlink puts nginx back exactly as it was (hence the separate file). Serving
+        # plain HTTP beats serving nothing.
         warn "the self-signed configuration did not validate; staying on HTTP"
         rm -f "/etc/nginx/sites-enabled/${PANEL_SLUG}-tls.conf"
         mv -f "${http_conf}.pre-tls" "$http_conf"
@@ -6101,13 +5223,11 @@ NGINX
     fi
 }
 
-# On nginx before 1.25.1 the panel's site templates ask for HTTP/2 in the
-# listen line (`listen 443 ssl http2`; NginxDriver::supportsHttp2Directive).
-# Every server on port 443 has to ask for the same protocol options, or
-# `nginx -t` prints "protocol options redefined" once per site — harmless,
-# and alarming on the screen that shows it (2026-11-24, Ubuntu 24.04). So the
-# panel's own 443 blocks follow the sites. A version that cannot be read
-# counts as old, as it does for the templates.
+# On nginx before 1.25.1 the panel's site templates ask for HTTP/2 in the listen line
+# (`listen 443 ssl http2`; NginxDriver::supportsHttp2Directive). Every server on port 443 must ask
+# for the same protocol options or `nginx -t` prints "protocol options redefined" once per site,
+# so the panel's own 443 blocks follow the sites. An unreadable version counts as old, as it does
+# for the templates.
 nginx_listen_http2() {
     local version
     version="$(nginx -v 2>&1 | sed -n 's|.*nginx/\([0-9][0-9.]*\).*|\1|p')"
@@ -6133,11 +5253,10 @@ panel_listen_http2() {
     fi
 }
 
-# certbot, with a short retry while Ubuntu's updates run beside it: their
-# needrestart hook can restart the web server in the middle of the challenge.
-# Once 10 s later, then once more after they let go of the package lock. Three
-# tries at most, well inside Let's Encrypt's 5 failed validations per host an
-# hour. Never fatal: the callers fall back to a self-signed certificate.
+# certbot, with a short retry while Ubuntu's updates run beside it: their needrestart hook can
+# restart the web server mid-challenge. Retries once after 10 s, then once after they release the
+# package lock (three tries at most, within Let's Encrypt's 5 failed validations per host per
+# hour). Never fatal: callers fall back to a self-signed certificate.
 certbot_issue() {
     local attempt
 
@@ -6166,31 +5285,24 @@ certbot_issue() {
 
 # ─── SSH login status ────────────────────────────────────────────────────────
 #
-# Somebody who logged in while the install ran (a second session, or after
-# their first one dropped) found a half-built server with nothing saying what it
-# was doing. And once it finished, the address it printed lived only in the
-# terminal that ran it. So the install keeps its progress in one small file, and
-# a login script shows administrators the matching message:
+# The install keeps its progress in one small file, and a login script shows administrators the
+# matching message (a second session, or the address after the install finished, would otherwise
+# see nothing):
 #
 #   installing    step N of M and its name, when it started, how to follow it
 #   failed        the step, the reason, where the log is, that a re-run is safe
-#   interrupted   "installing", but that installer is gone (the session closed,
-#                 it was killed, the server rebooted). Worked out at login from
-#                 the installer's PID and the boot id, since nobody is left to
-#                 write it down.
-#   installed     the addresses, version, stack, live service status, and a
-#                 warning while nobody has claimed the administrator account
+#   interrupted   "installing", but that installer is gone (session closed, killed, rebooted);
+#                 worked out at login from the installer's PID and the boot id
+#   installed     the addresses, version, stack, live service status, and a warning while nobody
+#                 has claimed the administrator account
 #
-# Shown to root and the sudo/admin group only, in interactive login shells.
-# Deliberately not /etc/update-motd.d: pam_motd runs those as root on every
-# login with no idea who is logging in, so every site's own SSH user (on a
-# white-labelled server, a reseller's customer) would get the administrator's
-# view. And nothing in here can stop an install: the status is a courtesy.
+# Shown to root and the sudo/admin group only, in interactive login shells. Not /etc/update-motd.d:
+# pam_motd runs those as root for every login, so every site's own SSH user would get the
+# administrator's view. Nothing in here may stop an install: the status is a courtesy.
 
-# How many step() calls a real install makes, for "step N of M": the 3 before
-# the dry-run gate, then main()'s, where configure_fpm skips its step on
-# OpenLiteSpeed. Keep in step with main(). The login script drops the "of M"
-# when a count outruns it, so a forgotten bump reads oddly rather than wrongly.
+# How many step() calls a real install makes, for "step N of M": the 3 before the dry-run gate,
+# then main()'s, where configure_fpm skips its step on OpenLiteSpeed. Keep in step with main(). The
+# login script drops the "of M" when a count outruns it.
 install_step_total() {
     if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
         echo 19
@@ -6199,17 +5311,14 @@ install_step_total() {
     fi
 }
 
-# needrestart (Ubuntu 24.04 and later) restarts every service whose libraries
-# an apt run replaced. When this script runs as a systemd service — how an
-# automated install (Central, systemd-run) keeps going without a terminal —
-# that includes this script, which then starts again from step one. On a fresh
-# server the apt run is often not ours at all: Ubuntu's own unattended-upgrades
-# starts within minutes of first boot and calls needrestart itself, without
-# NEEDRESTART_SUSPEND. Seen three times in one install (2026-10-17).
+# needrestart (Ubuntu 24.04+) restarts every service whose libraries an apt run replaced. When this
+# script runs as a systemd service (an automated install without a terminal) that includes this
+# script, which then starts again from step one; Ubuntu's own unattended-upgrades can trigger it on
+# a fresh server too, without NEEDRESTART_SUSPEND.
 #
-# So the unit this script runs in is excluded by name for as long as it runs,
-# and the exclusion is removed when the install finishes. Nothing to do from a
-# terminal: needrestart restarts services, not login sessions.
+# So the unit this script runs in is excluded by name while it runs, and the exclusion is removed
+# when the install finishes. Nothing to do from a terminal: needrestart restarts services, not
+# login sessions.
 NEEDRESTART_GUARD=""
 # Arguments only for the tests; the installer calls it with none.
 # shellcheck disable=SC2120
@@ -6228,16 +5337,13 @@ protect_from_needrestart() {
     fi
 }
 
-# needrestart must never restart the queue worker itself. The worker drains
-# the job it is running before it stops (up to 30 minutes), and a panel job
-# that installs packages is waiting for the very lock Ubuntu's
-# unattended-upgrades holds while its needrestart hook waits for that restart:
-# each waits for the other until the job gives up on the lock and fails. Seen
-# live (2026-11-02): MariaDB installed from the panel right after the install
-# said "done", while Ubuntu's first-boot updates still ran.
+# needrestart must never restart the queue worker itself: the worker drains its running job first
+# (up to 30 minutes), and a panel job installing packages waits for the lock Ubuntu's
+# unattended-upgrades holds while its needrestart hook waits for that restart, so each waits for
+# the other until the job fails on the lock.
 #
-# Nothing is lost: the worker restarts itself every hour (--max-time=3600),
-# which picks up upgraded libraries anyway. Every other service still restarts.
+# Nothing is lost: the worker restarts itself every hour (--max-time=3600), which picks up upgraded
+# libraries anyway. Every other service still restarts.
 # Arguments only for the tests; the installer calls it with none.
 # shellcheck disable=SC2120
 keep_queue_from_needrestart() {
@@ -6333,10 +5439,9 @@ installed_version() {
         | sed -n 's/.*"app_version":"\([^"]*\)".*/\1/p'
 }
 
-# Never fails and never prints. It runs inside step() and inside the failure
-# report, so a full disk or a missing tool must neither stop the install nor
-# re-enter the ERR trap. The file is replaced whole (a temp file, then a
-# rename), so a login never reads half of one.
+# Never fails and never prints: it runs inside step() and the failure report, so a full disk or a
+# missing tool must neither stop the install nor re-enter the ERR trap. The file is replaced whole
+# (temp file, then rename), so a login never reads half of one.
 # A JSON string literal. Only what can appear in a step title, a reason or a
 # URL needs escaping: backslash and quote, and any control character, which
 # becomes a space (one_line has already flattened newlines).
@@ -6360,13 +5465,10 @@ json_text() {
     printf '"%s"' "$s"
 }
 
-# The end of the install log, for a failed report: Central shows it, so the
-# person who started the install sees what went wrong without logging in.
-#
-# The last 40 lines, colour codes stripped, and every secret this script knows
-# replaced with [redacted] before anything else is done with the text. Then at
-# most 8 KB, keeping the end — that is where the error is — and only whole
-# UTF-8 characters, because one cut in half makes the whole report invalid JSON.
+# The end of the install log, for a failed report (Central shows it, so the person who started the
+# install sees what went wrong). The last 40 lines, colour codes stripped, every secret this script
+# knows replaced with [redacted] first; then at most 8 KB keeping the end, and only whole UTF-8
+# characters, because one cut in half makes the whole report invalid JSON.
 report_log_tail() {
     [[ -r "${LOG_FILE:-}" ]] || return 0
 
@@ -6375,20 +5477,16 @@ report_log_tail() {
     printf '%s' "$text" | tail -c 8192 | iconv -f UTF-8 -t UTF-8 -c 2>/dev/null
 }
 
-# Report this step to Central (PROGRESS_URL), signed with the central token.
+# Report this step to Central (PROGRESS_URL), signed with the central token. The same facts
+# save_install_state writes for the SSH login screen, so the two cannot disagree. Never the
+# administrator password.
 #
-# The same facts save_install_state writes for the SSH login screen, so the two
-# can never disagree. Never the administrator password.
+# Best effort, never fatal: Central being down must not fail or stall an install. A step is sent in
+# the background; "installed" and "failed" are sent before returning, because they are the last
+# thing this script does and a background request would die with it (the install's unit stops its
+# whole process group). `seq` lets Central drop a report that arrives after a later one.
 #
-# Best effort and never fatal: Central being down must not fail or stall an
-# install. A step is sent in the background — a slow Central cannot slow the
-# install — while "installed" and "failed" are sent before returning, because
-# they are the last thing this script does and a background request would die
-# with it (the install's unit stops its whole process group). `seq` lets Central
-# drop a report that arrives after a later one.
-#
-# The token goes in a 0600 header file read with `curl -H @file`, never on the
-# command line, for the reason the token itself is read from the environment.
+# The token goes in a 0600 header file read with `curl -H @file`, never on the command line.
 send_progress() {
     (( PROGRESS_READY )) || return 0
     (( DRY_RUN )) && return 0
@@ -6404,9 +5502,8 @@ send_progress() {
         printf 'Authorization: Bearer %s\n' "$CENTRAL_TOKEN" >"${dir}/header"
         {
             printf '{"state":%s' "$(json_str "$state")"
-            # Milliseconds by arithmetic, not `%3N`: Ubuntu 26.04's date
-            # (uutils) ignores the width and prints all nine digits, a number
-            # too large for a JavaScript client to hold exactly.
+            # Milliseconds by arithmetic, not `%3N`: Ubuntu 26.04's date (uutils) ignores the width
+            # and prints all nine digits, too large for a JavaScript client to hold exactly.
             printf ',"seq":%s' "$(( $(date +%s%N) / 1000000 ))"
             printf ',"step":%s,"total":%s' "${STEP_NO:-0}" "${STEP_TOTAL:-0}"
             printf ',"title":%s' "$(json_str "$(one_line "$CURRENT_STEP")")"
@@ -6533,11 +5630,9 @@ save_install_state() {
             fi
         } >"$tmp" || { rm -f "$tmp"; exit 0; }
 
-        # Administrators only (the sudo group), as the login script shows it: a
-        # failure reason can quote a command line, and a site's own SSH user
-        # has no business reading it (review finding S7; it was 0644). The
-        # group is best effort: without one the file stays root's alone, and
-        # the login status shows to root only rather than to everybody.
+        # Administrators only (the sudo group), as the login script shows it: a failure reason can
+        # quote a command line, and a site's own SSH user has no business reading it. Without the
+        # group the file stays root's alone and the login status shows to root only.
         chgrp sudo "$tmp" 2>/dev/null || true
         chmod 0640 "$tmp" && mv -f "$tmp" "${INSTALL_STATE_DIR}/state" || rm -f "$tmp"
     ) >/dev/null 2>&1 || true
@@ -6751,14 +5846,10 @@ LOGIN
 
 # ─── Finish ──────────────────────────────────────────────────────────────────
 
-# The command that swaps the self-signed fallback for a real certificate, for
-# the web server this box runs and every name the fallback covers. It said
-# `certbot --nginx -d <panel>` on every stack, which on Apache is the wrong
-# plugin and in two-host mode leaves the API name out (review finding R12).
-# The Apache fallback is its own site, taken out first as configure_tls does
-# on a re-run; on nginx certbot puts the certificate into the fallback's 443
-# blocks. OpenLiteSpeed has no certbot plugin: the installer wires the
-# certificate in itself.
+# The command that swaps the self-signed fallback for a real certificate, for the web server this
+# box runs and every name the fallback covers. The Apache fallback is its own site, taken out
+# first as configure_tls does on a re-run; on nginx certbot puts the certificate into the
+# fallback's 443 blocks. OpenLiteSpeed has no certbot plugin: the installer wires it in itself.
 certificate_hint() {
     local names="-d ${PANEL_HOST}"
     (( SINGLE_HOST )) || names+=" -d ${API_HOST}"
@@ -6781,46 +5872,36 @@ finish() {
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan route:cache' -- "$backend" "${PANEL_PHP_BIN}"
     ok "configuration cached"
 
-    # Close the checkout to every local account but the web server's. It is
-    # 755 all the way down, and config:cache has just written the APP_KEY and
-    # the Redis password into a 644 file inside it -- readable by every site
-    # and SSH user the panel will create. As APP_USER like every artisan call
-    # here (setfacl goes through the panel's sudo grant, configured above);
-    # the same command runs on every update through sites:resync. Never fatal;
-    # the command reports what it did.
+    # Close the checkout to every local account but the web server's: it is 755 all the way down,
+    # and config:cache has just written the APP_KEY and the Redis password into a 644 file inside
+    # it, readable by every site and SSH user the panel will create. As APP_USER (setfacl goes
+    # through the panel's sudo grant, configured above); every update runs it again through
+    # sites:resync. Never fatal.
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:close-directory' -- "$backend" "${PANEL_PHP_BIN}"
 
-    # The neutral answer for a domain no site claims (bug #55): without it the
-    # first site created would answer every unknown name, and on
-    # OpenLiteSpeed the TLS listener shows the panel's certificate. Written by
-    # sites:resync, which every update runs too. Never fatal: a web server
-    # that refuses it keeps its own default.
+    # The neutral answer for a domain no site claims: without it the first site created would
+    # answer every unknown name, and on OpenLiteSpeed the TLS listener shows the panel's
+    # certificate. Written by sites:resync, which every update runs too. Never fatal.
     if sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan sites:resync' -- "$backend" "${PANEL_PHP_BIN}" >>"$LOG_FILE" 2>&1; then
         ok "unknown domains get a neutral answer"
     else
         warn "could not set the default site for unknown domains — see $LOG_FILE"
     fi
 
-    # Container login (RC-28): a Docker app's own system user logs straight into
-    # its container. The group, the root helper, its sudo rule (visudo-checked)
-    # and the sshd Match block (sshd -t before reload). After configure_sudoers,
-    # because the visudo check runs through that grant. Not fatal: a failure
-    # leaves sshd and sudo exactly as they were, and every update retries it.
+    # Container login: a Docker app's own system user logs straight into its container (group, root
+    # helper, sudo rule checked with visudo, sshd Match block checked with sshd -t). After
+    # configure_sudoers, because the visudo check runs through that grant. Not fatal: a failure
+    # leaves sshd and sudo as they were, and every update retries it.
     if sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan containers:sync-shell-access' -- "$backend" "${PANEL_PHP_BIN}" >>"$LOG_FILE" 2>&1; then
         ok "Docker apps' own users can log in to their containers"
     else
         warn "container login for Docker apps is not set up — see $LOG_FILE"
     fi
 
-    # Prove the panel actually works before claiming the install succeeded.
-    # Everything above this line only shows that commands ran as *root*; the
-    # panel runs as an unprivileged account, and the gap between those two is
-    # where a whole non-functional install can hide. Run as APP_USER for that
-    # reason — as root it would pass regardless.
-    #
-    # Not fatal: the panel is installed either way, and the failures are
-    # usually fixable in place. But it is printed loudly, because an installer
-    # that says "done" over a broken panel is worse than one that fails.
+    # Prove the panel works before claiming success. Everything above only shows that commands ran
+    # as root; the panel runs as an unprivileged account, so run this as APP_USER (as root it would
+    # pass regardless). Not fatal, but printed loudly: an installer that says "done" over a broken
+    # panel is worse than one that fails.
     step "Checking the installation"
     if (( DRY_RUN )); then
         printf '     %s$ artisan panel:doctor%s\n' "$DIM" "$RESET"
@@ -6851,8 +5932,8 @@ finish() {
     (( LOGIN_STATUS )) && printf '  SSH:     administrators see this address and the panel status at every login\n'
     printf '\n'
 
-    # Only while nobody has registered (FS-A3): a re-run on a panel with an
-    # administrator told them anyone could claim the account.
+    # Only while nobody has registered: a re-run on a panel with an administrator must not tell
+    # them anyone could claim the account.
     if sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:registration-open' -- "$backend" "${PANEL_PHP_BIN}" >/dev/null 2>&1; then
         printf '  %sOpen the panel and register — the first account becomes the%s\n' "$BOLD" "$RESET"
         printf '  %sadministrator, and registration closes behind it.%s\n\n' "$BOLD" "$RESET"
@@ -6872,10 +5953,9 @@ finish() {
     printf '  Then use the setup page to install a database engine and anything\n'
     printf '  else you need.\n\n'
 
-    # The install no longer waits for Ubuntu's first-boot updates (they run
-    # beside it; see install_packages), so on a new server they can still be
-    # going. Nothing to do about it but know: the panel's own installs wait
-    # for them, and the setup page says so (system_updates_running).
+    # The install does not wait for Ubuntu's first-boot updates (see install_packages), so on a new
+    # server they can still be running. The panel's own installs wait for them, and the setup page
+    # says so (system_updates_running).
     if ubuntu_updates_running; then
         printf '  ✅ %sPanel is ready.%s Ubuntu is still finishing its security updates in the\n' "$BOLD" "$RESET"
         printf '     background (usually a few minutes). Installing new software from the\n'
@@ -6908,25 +5988,22 @@ main() {
     start_login_status
     protect_from_needrestart
     configure_swap
-    # Before the packages, not after: install_node() hands fnm's tree to this
-    # account, and install_packages may run it early, while it waits for the
-    # package lock. useradd needs no package — and run before apt, it never
-    # contends with a postinst adding a user of its own for /etc/passwd's lock.
+    # Before the packages: install_node() hands fnm's tree to this account, and install_packages may
+    # run it early, while waiting for the package lock. Run before apt, useradd also never contends
+    # with a postinst for /etc/passwd's lock.
     create_user
-    # Every apt operation of the install, in one block (see install_packages).
-    # Nothing after it may use apt: Ubuntu's first-boot updates start right
-    # behind it and hold the lock for minutes, and they run beside everything
-    # below, which needs no package. InstallerAptPhaseTest holds that line.
+    # Every apt operation of the install, in one block (see install_packages). Nothing after it may
+    # use apt: Ubuntu's first-boot updates start right behind it and hold the lock for minutes.
+    # InstallerAptPhaseTest holds that line.
     install_packages
     install_node
     fetch_source
     configure_redis
     configure_mail
     configure_fpm
-    # nginx and TLS come before the two things that bake URLs in: the backend's
-    # .env and the frontend's build. Next inlines NEXT_PUBLIC_* at build time, so
-    # building first and getting TLS afterwards ships a panel calling https on a
-    # server answering http.
+    # nginx and TLS come before the two things that bake URLs in, the backend's .env and the
+    # frontend's build: Next inlines NEXT_PUBLIC_* at build time, so building first ships a panel
+    # calling https on a server answering http.
     configure_web_server
     configure_tls
     setup_backend
