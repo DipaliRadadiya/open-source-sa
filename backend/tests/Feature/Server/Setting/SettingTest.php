@@ -938,7 +938,7 @@ describe('a scheduled restart', function () {
             ->toBe(now()->addMinutes(30)->format('d-m-Y H:i:s'));
     });
 
-    it('says the time in the server\'s timezone, as the reboot schedule does (FS-C7)', function () {
+    it('says the time in the server\'s timezone, as the reboot schedule does', function () {
         fakeSettings();
         File::put($this->dir.'/timezone', "Europe/Berlin\n");
         config(['server.timezone_file' => $this->dir.'/timezone']);

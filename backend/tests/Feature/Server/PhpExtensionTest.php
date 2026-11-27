@@ -150,7 +150,7 @@ function catalogFor(string $version): Collection
         ->keyBy('name');
 }
 
-it('still finds installed extensions when PHP prints a startup warning first (OLD-5)', function () {
+it('still finds installed extensions when PHP prints a startup warning first', function () {
     fakeExtensions(startupWarning: "PHP Warning:  Module \"redis\" is already loaded in Unknown on line 0\n");
 
     // One package, three modules: only readable from the extension dir.

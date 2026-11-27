@@ -27,7 +27,7 @@ function kindRow(string $type, string $action, ?User $user = null): ActivityLog
     ]);
 }
 
-describe('failed sign-ins and last sign-in (OLD-16/17)', function () {
+describe('failed sign-ins and last sign-in', function () {
     it('records a wrong password on the account it was tried against', function () {
         $user = User::factory()->create(['username' => 'jdoe', 'password' => bcrypt('Password123')]);
 
@@ -72,7 +72,7 @@ describe('failed sign-ins and last sign-in (OLD-16/17)', function () {
     });
 });
 
-describe('kind of event (FS-C15)', function () {
+describe('kind of event', function () {
     it('reads the kind from the action name', function (string $action, string $kind) {
         expect(app(ActivityKinds::class)->of($action))->toBe($kind);
     })->with([
@@ -109,7 +109,7 @@ describe('kind of event (FS-C15)', function () {
     });
 });
 
-describe('security events (OLD-18)', function () {
+describe('security events', function () {
     it('names only real events', function () {
         $catalog = app(ActivityCatalog::class)->keys()->all();
 
@@ -130,7 +130,7 @@ describe('security events (OLD-18)', function () {
     });
 });
 
-describe('server log filters for non-admins (FS-C11)', function () {
+describe('server log filters for non-admins', function () {
     it('lists the server scope\'s events and the kinds, to an activity_log viewer', function () {
         $viewer = User::factory()->create();
         grantPermission($viewer, 'activity_log');

@@ -253,7 +253,7 @@ it('refuses an empty file rather than treating it as "generate one"', function (
         ->assertJsonValidationErrors('compose');
 });
 
-it('tells the user what Docker could not read, not where a log is (RC-29)', function () {
+it('tells the user what Docker could not read, not where a log is', function () {
     // The 422 carries Docker's own error line: the server operations log it used to point at is
     // not something the person who typed the mistake can open.
     Process::fake(function ($process) {
@@ -359,7 +359,7 @@ it('re-renders the vhost when the published port moved', function () {
     expect($wroteVhost)->toBeTrue()->and($reloaded)->toBeTrue();
 });
 
-it('rolls the file and the vhost back when the new vhost fails its test (DS-09)', function () {
+it('rolls the file and the vhost back when the new vhost fails its test', function () {
     // Written and reloaded with neither result read, a vhost that failed `nginx -t` would leave
     // the old one proxying to the old port behind a save that said OK.
     $working = validCompose();
@@ -721,7 +721,7 @@ function networkRemovals(array $ran): array
         ->all();
 }
 
-it('removes the original network on delete when asked to remove Docker resources (BUG-5)', function () {
+it('removes the original network on delete when asked to remove Docker resources', function () {
     // The positive twin of the opt-out test below: it proves this box makes the
     // removal visible, so the opt-out test's silence means something.
     $this->application->forceFill(['docker_network' => 'team-net'])->save();
@@ -734,7 +734,7 @@ it('removes the original network on delete when asked to remove Docker resources
     expect(networkRemovals($ran))->toContain('sv-app-'.$this->application->id.'_default');
 });
 
-it('removes no network on a plain delete, even one the site has moved off (BUG-5 opt-out)', function () {
+it('removes no network on a plain delete, even one the site has moved off', function () {
     // Removing Docker objects stays opt-in: the original-network cleanup rides on
     // `remove_docker_resources` like every other Docker removal on delete.
     $this->application->forceFill(['docker_network' => 'team-net'])->save();

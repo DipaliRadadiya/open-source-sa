@@ -145,7 +145,7 @@ it('issues, records the paths and puts TLS into the vhost', function () {
     $this->assertDatabaseHas('activity_logs', ['type' => 'application', 'action' => 'certificate_issued']);
 });
 
-it('asks what is served right after a reissue, not at the next daily check (FS-C47)', function () {
+it('asks what is served right after a reissue, not at the next daily check', function () {
     // The certificate being replaced: its last look found the old date.
     $certificate = Certificate::create([
         'application_id' => $this->application->id,
@@ -1288,7 +1288,7 @@ it('issues under the site\'s name and removes a lineage named after the domain (
     expect($certificate->fresh()->lineageName())->toBe($slug);
 });
 
-describe('custom certificates in v7\'s layout (operator, 2026-10-08)', function () {
+describe('custom certificates in v7\'s layout', function () {
     /** A fake where the named paths already exist on the box. */
     function certPathsTaken(array $taken): void
     {
@@ -1422,7 +1422,7 @@ describe('custom certificates in v7\'s layout (operator, 2026-10-08)', function 
             && collect((array) $process->command)->contains(fn ($part) => str_starts_with((string) $part, '/etc/ssl/')));
     });
 
-    it('removes a pre-2026-10-08 pair from the panel directory once the upload serves', function () {
+    it('removes a pair older versions kept in the panel directory once the upload serves', function () {
         Certificate::create([
             'application_id' => $this->application->id,
             'type' => CertificateType::Custom,

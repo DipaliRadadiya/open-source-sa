@@ -468,7 +468,7 @@ describe('the minimum engine version', function () {
     });
 });
 
-describe('Moodle and Mautic on Ubuntu 24.04\'s MySQL 8.0 (S-09)', function () {
+describe('Moodle and Mautic on Ubuntu 24.04\'s MySQL 8.0', function () {
     beforeEach(function () {
         $this->su = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
     });

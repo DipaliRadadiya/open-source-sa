@@ -722,7 +722,7 @@ it('leaves the default alone when an install does not move it', function () {
     expect(collect($runs)->contains(fn ($r) => ($r['command'][0] ?? '') === 'update-alternatives' && ($r['command'][1] ?? '') === '--set'))->toBeFalse();
 });
 
-it('lets a failed install be dismissed, not only retried (OLD-7)', function () {
+it('lets a failed install be dismissed, not only retried', function () {
     fakePhp(absent: ['8.2']);
     $tracker = app(InstallTracker::class);
     $tracker->start('php', '8.2');

@@ -127,7 +127,7 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
      * The link scheme must follow the site: with no certificate there is no TLS listener, so an
      * `https://` link is a connection refused that reads as a broken panel.
      */
-    it('refuses a phpMyAdmin site without HTTPS (bug #98)', function () {
+    it('refuses a phpMyAdmin site without HTTPS', function () {
         grantDatabasePermission($this->user);
         DatabaseUser::factory()->create(['database_id' => $this->database->id]);
 

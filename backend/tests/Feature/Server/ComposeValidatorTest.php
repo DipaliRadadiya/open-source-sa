@@ -206,7 +206,7 @@ it('refuses a file Docker itself cannot read', function () {
         ->and($verdict['errors'][0])->toBe(__('errors/application.compose_unparsable_generic'));
 });
 
-it('shows Docker\'s own parse error instead of pointing at a log the user cannot open (RC-29)', function () {
+it('shows Docker\'s own parse error instead of pointing at a log the user cannot open', function () {
     $error = unparsableError("yaml: line 3: did not find expected key\n");
 
     expect($error)->toBe(__('errors/application.compose_unparsable', ['error' => 'yaml: line 3: did not find expected key']))

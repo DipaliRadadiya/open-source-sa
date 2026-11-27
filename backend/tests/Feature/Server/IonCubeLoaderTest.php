@@ -1046,7 +1046,7 @@ describe('a new PHP version on a server with ionCube', function () {
     });
 });
 
-describe('the user may install or remove it without a copy (2026-10-29)', function () {
+describe('the user may install or remove it without a copy', function () {
     $copies = fn (ArrayObject $runs) => collect($runs)->filter(fn (string $c) => str_contains($c, '.panel-ioncube-'));
 
     it('writes no recovery copy, and puts the old files back from memory when the install fails', function () use ($copies) {

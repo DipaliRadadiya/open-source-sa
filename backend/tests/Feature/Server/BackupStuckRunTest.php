@@ -181,7 +181,7 @@ describe('a run stranded in flight', function () {
 
 describe('POST /backups/{backup}/clear', function () {
 
-    it('tells the screen which rows the button will accept (BK-B)', function () {
+    it('tells the screen which rows the button will accept', function () {
         grantPermission($this->user, 'backup');
         $stale = stuckRun(BackupStatus::Running, 24 * 60);
         $live = stuckRun(BackupStatus::Running, 5);

@@ -129,7 +129,7 @@ it('offers one engine choice per database, with MariaDB recommended', function (
     expect($options['mongodb']['recommended'])->toBeFalse();
 });
 
-it('names the engine version plainly (FS-A9)', function () {
+it('names the engine version plainly', function () {
     Process::fake(fn ($process) => match (true) {
         str_contains((string) $process->input, 'VERSION()') && ($process->command[0] ?? '') === 'mariadb' => Process::result(output: '10.11.14-MariaDB-0ubuntu0.24.04.1'),
         ($process->command[0] ?? '') === 'mysql' => Process::result(errorOutput: "can't connect", exitCode: 1),
@@ -140,7 +140,7 @@ it('names the engine version plainly (FS-A9)', function () {
     expect(collect(fetchSetup()['components'])->firstWhere('key', 'database')['detail'])->toBe('MariaDB 10.11.14');
 });
 
-it('says why an engine is not offered (OLD-28)', function () {
+it('says why an engine is not offered', function () {
     // MariaDB answers; MySQL cannot go on beside it.
     Process::fake(fn ($process) => match (true) {
         str_contains((string) $process->input, 'VERSION()') && ($process->command[0] ?? '') === 'mariadb' => Process::result(output: '11.4.2-MariaDB'),
@@ -276,7 +276,7 @@ it('offers wp-cli only where PHP sites are hosted', function () {
     expect(collect(fetchSetup()['components'])->pluck('key'))->not->toContain('wp_cli');
 });
 
-it('shows a fail2ban or build-tools install in flight or failed, not as pending (FS-A7)', function (string $key, string $runtime) {
+it('shows a fail2ban or build-tools install in flight or failed, not as pending', function (string $key, string $runtime) {
     fakeBareServer();
 
     RuntimeInstall::create([
@@ -299,7 +299,7 @@ it('shows a fail2ban or build-tools install in flight or failed, not as pending 
     'build tools' => ['build_tools', 'build_tools'],
 ]);
 
-it('refuses a second install while one is still running (FS-A5)', function (string $endpoint, string $runtime, string $message) {
+it('refuses a second install while one is still running', function (string $endpoint, string $runtime, string $message) {
     fakeBareServer();
     RuntimeInstall::create(['runtime' => $runtime, 'version' => 'latest', 'extension' => '', 'status' => 'installing', 'started_at' => now()]);
 
@@ -313,7 +313,7 @@ it('refuses a second install while one is still running (FS-A5)', function (stri
     'build tools' => ['/api/build-tools/install', 'build_tools', 'errors/build-tools.already_installing'],
 ]);
 
-it('lists Docker as an installed component, with its version, on a Docker-stack server (RC-34)', function () {
+it('lists Docker as an installed component, with its version, on a Docker-stack server', function () {
     recordStackForSetup('docker');
     fakeDockerServer('27.3.1');
 

@@ -254,7 +254,7 @@ it('checks a domain pointed elsewhere once, so a new site does not wait for noth
     expect($checks)->toBe(1)->and(Certificate::count())->toBe(0);
 });
 
-it('says HTTPS is on its way while the certificate it queued has not been served yet (DS-14)', function (?CertificateStatus $status, bool $pending) {
+it('says HTTPS is on its way while the certificate it queued has not been served yet', function (?CertificateStatus $status, bool $pending) {
     // An app can go active seconds before its certificate is served, and https:// fails the TLS
     // handshake in between with nothing in the API to say why.
     if ($status !== null) {

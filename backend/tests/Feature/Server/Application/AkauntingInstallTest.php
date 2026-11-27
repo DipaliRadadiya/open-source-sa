@@ -147,7 +147,7 @@ it('follows the domain when a certificate is issued, and clears the cached confi
         ->toBeTrue();
 });
 
-it('schedules Laravel\'s scheduler every minute, once (bug #15)', function () {
+it('schedules Laravel\'s scheduler every minute, once', function () {
     installAkaunting();
 
     $job = Cronjob::query()->sole();

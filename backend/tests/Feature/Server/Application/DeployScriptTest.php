@@ -175,7 +175,7 @@ it('strips carriage returns from a script pasted on Windows', function () {
     expect($this->application->fresh()->deploy_script)->not->toContain("\r");
 });
 
-it('refuses a branch that does not exist in the repository (bug #71)', function () {
+it('refuses a branch that does not exist in the repository', function () {
     // The repository answers, but has no such branch: an empty ls-remote.
     Process::fake(fn ($process) => Process::result(output: ''));
 

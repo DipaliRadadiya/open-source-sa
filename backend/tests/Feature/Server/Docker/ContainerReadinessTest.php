@@ -181,7 +181,7 @@ it('says nothing answered in time when the port is the declared one', function (
         ->and($this->application->fresh()->last_failure['params'])->toMatchArray(['port' => 5230, 'seconds' => 12]);
 });
 
-it('waits against the clock, not a count of tries (DS-09)', function () {
+it('waits against the clock, not a count of tries', function () {
     // A port that accepts then hangs burns curl's whole --max-time per probe. Counted as tries,
     // "90 seconds" ran ~258 s, near the 300 s FastCGI timeout on the synchronous PUT /container.
     config(['server.docker.readiness.timeout' => 90, 'server.docker.readiness.interval' => 3]);
@@ -223,7 +223,7 @@ it('waits against the clock, not a count of tries (DS-09)', function () {
         ->and($this->application->fresh()->last_failure['params']['seconds'])->toBe((int) round($waited));
 });
 
-it('caps a configured wait well under the request timeout (DS-09)', function () {
+it('caps a configured wait well under the request timeout', function () {
     config(['server.docker.readiness.timeout' => 600, 'server.docker.readiness.interval' => 3]);
     $this->freezeTime();
     Sleep::fake(syncWithCarbon: true);
@@ -255,7 +255,7 @@ function readinessContainers(array $looping): ContainerSupervisor
     return $containers;
 }
 
-it('lets a stack whose app restarts while its database starts come up (DS-09)', function (bool $pasted) {
+it('lets a stack whose app restarts while its database starts come up', function (bool $pasted) {
     // Common pasted-file shape: app + postgres with `restart: unless-stopped`. The app exits once
     // on ECONNREFUSED, restarts and answers; one sighting of that restart must not fail the deploy.
     if ($pasted) {
@@ -272,7 +272,7 @@ it('lets a stack whose app restarts while its database starts come up (DS-09)', 
     expect($this->application->fresh()->container_status)->toBe('running');
 })->with(['generated' => false, 'pasted' => true]);
 
-it('still stops a single image that keeps restarting, before the deadline (DS-09)', function () {
+it('still stops a single image that keeps restarting, before the deadline', function () {
     config(['server.docker.readiness.timeout' => 90, 'server.docker.readiness.interval' => 3, 'server.docker.readiness.restart_grace' => 30]);
     $this->freezeTime();
     Sleep::fake(syncWithCarbon: true);
@@ -288,7 +288,7 @@ it('still stops a single image that keeps restarting, before the deadline (DS-09
     }
 });
 
-it('waits out the deadline on a pasted file, then names the restart (DS-09)', function () {
+it('waits out the deadline on a pasted file, then names the restart', function () {
     $this->application->forceFill(['compose' => "services:\n  app:\n    image: nginx\n", 'container_port' => null])->save();
     config(['server.docker.readiness.timeout' => 90, 'server.docker.readiness.interval' => 3]);
     $this->freezeTime();
@@ -305,7 +305,7 @@ it('waits out the deadline on a pasted file, then names the restart (DS-09)', fu
     }
 });
 
-it('does not name the host port as the container port (DS-09)', function () {
+it('does not name the host port as the container port', function () {
     // A pasted file has no single container port; app_port 3001 is the panel's host loopback port.
     $this->application->forceFill(['compose' => "services:\n  app:\n    image: nginx\n", 'container_port' => null])->save();
     fakeReadinessBox(['curl' => '000']);
@@ -375,7 +375,7 @@ it('does not fail a site on a probe that never ran', function () {
     expect(applyMemos())->toBeNull();
 });
 
-it('leaves one-click apps to their installers, and reports them running (DS-14)', function () {
+it('leaves one-click apps to their installers, and reports them running', function () {
     // The file's origin decides, not its text: a ghost row is a one-click. Its check is running +
     // not bouncing, and passing it is reported as `running`, not null.
     $this->application->forceFill(['site_type' => 'ghost'])->save();
@@ -687,7 +687,7 @@ it('reports a one-click container app as Docker sees it, not null', function () 
  * A container that does not speak HTTP (e.g. `postgres:16-alpine`) must not fail as
  * `container_not_answering`: `/` on a database port can never answer.
  */
-describe('a container whose port is not HTTP (S-09)', function () {
+describe('a container whose port is not HTTP', function () {
     beforeEach(function () {
         $this->application->forceFill(['image' => 'postgres:16-alpine', 'container_port' => 5432])->save();
     });

@@ -104,7 +104,7 @@ describe('parsing engines.node', function () {
     });
 });
 
-describe('Node-RED (bug #16)', function () {
+describe('Node-RED', function () {
     it('declares the floor of the major the installer pins, not "any Node"', function () {
         // The type declared no range. The installer pins major 4, whose
         // engines.node is ">=18.5"; Node-RED 5 would need 22.9.

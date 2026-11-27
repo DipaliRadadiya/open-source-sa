@@ -210,7 +210,7 @@ it('records connecting and disconnecting the central panel', function () {
     $this->assertDatabaseHas('activity_logs', ['type' => 'central', 'action' => 'disconnected', 'user_id' => $this->user->id]);
 });
 
-it('says waiting until Central has used the key, then connected (bug #49)', function () {
+it('says waiting until Central has used the key, then connected', function () {
     $this->seed(PermissionSeeder::class);
     grantAdmin($this->user);
 

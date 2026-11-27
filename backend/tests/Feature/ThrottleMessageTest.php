@@ -48,7 +48,7 @@ it('has the sentence in every locale', function () {
     }
 });
 
-describe('the login limit (bug #2)', function () {
+describe('the login limit', function () {
     it('stops one address trying many usernames', function () {
         // Four tries on each of five names is under the per-name-and-address
         // limit every time. Changing the name used to be a fresh budget.

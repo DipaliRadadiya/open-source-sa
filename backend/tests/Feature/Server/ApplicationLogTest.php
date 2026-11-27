@@ -178,7 +178,7 @@ it('reads the process output from the site\'s own log directory', function () {
         ->toContain('sv-app: listening on 3000');
 });
 
-it('shows a Node app\'s coloured output without the colour codes (bug #63)', function () {
+it('shows a Node app\'s coloured output without the colour codes', function () {
     $this->application->update(['start_command' => 'node server.js']);
     $this->files['/home/logowner/logged-site/logs/app.log'] = "\e[32minfo\e[39m: listening on \e[1m3000\e[22m\n";
     fakeLogs();

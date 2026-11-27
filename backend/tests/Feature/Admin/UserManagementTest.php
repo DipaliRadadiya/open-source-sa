@@ -134,7 +134,7 @@ it('allows an admin to delete another user', function () {
     expect(User::find($target->id))->toBeNull();
 });
 
-it('keeps a deleted user\'s name on what they did, rather than "System" (FS-C22)', function () {
+it('keeps a deleted user\'s name on what they did, rather than "System"', function () {
     $admin = User::factory()->admin()->create();
     $target = User::factory()->create(['username' => 'leaver']);
     app(ActivityLogger::class)->log('user.profile_updated', $target, [], $target);

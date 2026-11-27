@@ -530,7 +530,7 @@ describe('old safety backups', function () {
             ->and(Backup::where('is_safety', true)->count())->toBe($before + 1);
     });
 
-    it('never prunes the safety backup it is restoring from (FS-C4)', function () {
+    it('never prunes the safety backup it is restoring from', function () {
         fakeSafetyBackupTar();
 
         $first = app(RestoreRunner::class)->run(restoreFor(storedBackup()));
@@ -708,7 +708,7 @@ describe('restoring a database', function () {
     });
 });
 
-describe('the user may restore without a safety copy (2026-10-29)', function () {
+describe('the user may restore without a safety copy', function () {
     it('skips the copy, still restores, and leaves no copy of the old site behind', function () {
         fakeRestoreCommands();
         $restore = restoreFor(storedBackup());
@@ -747,7 +747,7 @@ describe('the user may restore without a safety copy (2026-10-29)', function () 
     });
 });
 
-describe('a safety copy that does not fit on the disk (2026-10-29)', function () {
+describe('a safety copy that does not fit on the disk', function () {
     it('stops before anything is overwritten, and says it was the disk', function () {
         fakeRestoreCommands();
         $backup = storedBackup(bytes: 4096);

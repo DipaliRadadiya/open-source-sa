@@ -84,7 +84,7 @@ function fakeDu(int $bytes): void
 }
 
 describe('measuring on demand', function () {
-    it('needs manage, not view (AD-B3)', function () {
+    it('needs manage, not view', function () {
         fakeDu(42);
         $viewer = User::factory()->create();
         grantPermission($viewer, 'application', view: true, manage: false);

@@ -318,7 +318,7 @@ describe('the journal estimate', function () {
     });
 });
 
-describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
+describe('OpenLiteSpeed and site logs', function () {
     /**
      * The server's answer for root-only directories the test process cannot list itself
      * (PHP's glob() saw nothing there).
@@ -386,7 +386,7 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
             ->toContain('truncate --no-create -s 0 /home/shopuser/shop/logs/access.log');
     });
 
-    it('lets site logs go on a schedule (Dipali, 2026-10-26: servers whose disks fill up)', function () {
+    it('lets site logs go on a schedule, for servers whose disks fill up', function () {
         $user = SystemUser::create(['username' => 'shopuser', 'home_path' => '/home/shopuser', 'shell' => '/bin/bash']);
         Application::forceCreate([
             'system_user_id' => $user->id, 'name' => 'Shop', 'slug' => 'shop', 'domain' => 'shop.test',

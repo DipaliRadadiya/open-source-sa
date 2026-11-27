@@ -449,7 +449,7 @@ describe('the shared httpd_config.conf', function () {
             ->and($commands)->toContain(['cp', '-f', '/usr/local/lsws/conf/httpd_config.conf.panel-bak', '/usr/local/lsws/conf/httpd_config.conf']);
     });
 
-    it('removes its copy once the new file passed its test, and keeps it on a failure (2026-10-29)', function () {
+    it('removes its copy once the new file passed its test, and keeps it on a failure', function () {
         $runs = fakeOls(olsConfig());
 
         expect(app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test')->failed())->toBeFalse()

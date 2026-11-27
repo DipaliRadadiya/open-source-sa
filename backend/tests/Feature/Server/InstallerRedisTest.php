@@ -155,7 +155,7 @@ describe('the default user\'s ACL line', function () {
 });
 
 describe('configure_redis', function () {
-    it('gives an open default user a password Redis really applies (the 2026-10-18 server)', function () {
+    it('gives an open default user a password Redis really applies', function () {
         $r = runConfigureRedis(nopassRedisConf());
 
         expect($r['password'])->toHaveLength(32)

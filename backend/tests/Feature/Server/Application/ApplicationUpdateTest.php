@@ -174,7 +174,7 @@ it('says a site type it cannot update is unsupported', function () {
         ->assertJsonPath('update.blocked_reason', 'unsupported');
 });
 
-it('dates the last backup like every other date in the API (RC-10)', function () {
+it('dates the last backup like every other date in the API', function () {
     $application = updateApp('php');
     $this->withHeaders(updateHeaders())->getJson("/api/applications/{$application->id}/update")
         ->assertJsonPath('update.last_backup_at', null);

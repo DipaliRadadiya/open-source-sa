@@ -525,7 +525,7 @@ it('disables the strict function list on a new PHP site', function () {
         ->toBe(ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS);
 });
 
-it('keeps a record of the list a new PHP site was provisioned with (RC-3)', function () {
+it('keeps a record of the list a new PHP site was provisioned with', function () {
     // "Changed" is judged against this, not against whatever the preset says
     // in a later release.
     $app = provisionApp();
@@ -539,7 +539,7 @@ it('keeps a record of the list a new PHP site was provisioned with (RC-3)', func
         ->assertJsonPath('php.overridden.disable_functions', false);
 });
 
-it('records the Nextcloud list for a Nextcloud site and does not call it changed (RC-3)', function () {
+it('records the Nextcloud list for a Nextcloud site and does not call it changed', function () {
     $app = provisionApp(['site_type' => 'nextcloud']);
 
     expect($app->phpSettings->provisioned_disable_functions)

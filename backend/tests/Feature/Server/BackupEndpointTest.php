@@ -1021,7 +1021,7 @@ it('names the clock the scheduler uses, not the one the server runs on', functio
     @unlink($timezoneFile);
 });
 
-describe('a Database backup for a site with no database (bug #33)', function () {
+describe('a Database backup for a site with no database', function () {
     it('is refused, naming the choice that works', function () {
         // n8n keeps its data in files; every run archived nothing.
         $this->withHeaders(backupHeaders())
@@ -1096,7 +1096,7 @@ describe('the last backup', function () {
     });
 });
 
-describe('one application\'s own backups (BK-K)', function () {
+describe('one application\'s own backups', function () {
     it('lists them under the application\'s backup permission alone', function () {
         $mine = seedBackupWithDestination('Offsite');
 
@@ -1137,7 +1137,7 @@ describe('one application\'s own backups (BK-K)', function () {
     });
 });
 
-it('does not count a paused or manual-only target as protected (OLD-9)', function () {
+it('does not count a paused or manual-only target as protected', function () {
     BackupTarget::create(['application_id' => $this->application->id, 'storage_destination_id' => $this->destination->id, 'type' => 'full', 'retention_count' => 7, 'frequency' => 'daily', 'enabled' => false]);
     $blog = Application::forceCreate([
         'system_user_id' => $this->application->system_user_id, 'name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.example.test',

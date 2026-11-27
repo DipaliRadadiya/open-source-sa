@@ -281,7 +281,7 @@ it('leaves an activity entry with a sentence, not its key', function () {
         ->and($entry['description'])->not->toStartWith('activity.');
 });
 
-describe('honest results (frontend QA FS-C26, FS-C27)', function () {
+describe('honest results', function () {
     function handoverHeaders(): array
     {
         $admin = User::factory()->admin()->create();

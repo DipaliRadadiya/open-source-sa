@@ -268,7 +268,7 @@ describe('apt', function () {
     });
 });
 
-describe('apt\'s own lock wait (S-09)', function () {
+describe('apt\'s own lock wait', function () {
     it('tells apt-get not to wait on the lock itself', function () {
         // install.sh leaves a `DPkg::Lock::Timeout "900"` drop-in, so apt-get would wait out the whole
         // install timeout and be killed before the retry runs. It is switched off on the command line

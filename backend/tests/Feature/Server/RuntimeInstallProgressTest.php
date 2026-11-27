@@ -236,7 +236,7 @@ it('keeps the server-operation reference when a removal fails', function () {
         ->toThrow(SettingOperationException::class);
 });
 
-it('says an install is queued until a worker picks it up (FS-B1)', function () {
+it('says an install is queued until a worker picks it up', function () {
     $tracker = app(InstallTracker::class);
     $tracker->start('php', '8.3');
 
@@ -266,7 +266,7 @@ it('marks it picked up from inside the job', function () {
     (new InstallPhpVersion('8.3'))->handle($php, app(ActivityLogger::class), app(InstallTracker::class), app(ServerCapabilities::class));
 });
 
-it('quotes apt\'s error line when the failure has no better reason (FS-C18/FS-C19)', function () {
+it('quotes apt\'s error line when the failure has no better reason', function () {
     $tracker = app(InstallTracker::class);
     $tracker->start('php', '8.3', 'imagick');
     RuntimeInstall::query()->sole()->update(['output' => "Reading package lists...\nE: Unable to correct problems, you have held broken packages.\n"]);
@@ -482,7 +482,7 @@ describe('node', function () {
     });
 });
 
-it('says an install ran out of time rather than that the worker stopped (FS-A8)', function () {
+it('says an install ran out of time rather than that the worker stopped', function () {
     $tracker = app(InstallTracker::class);
     $tracker->start('fail2ban', 'latest');
 

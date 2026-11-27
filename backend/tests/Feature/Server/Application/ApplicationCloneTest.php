@@ -145,7 +145,7 @@ it('clones a WordPress site including its database', function () {
     Process::assertRan(fn ($p) => in_array('runuser', $p->command, true) && in_array('search-replace', $p->command, true));
 });
 
-it('rewrites every spelling of the source address, not just its URL (bug #92)', function () {
+it('rewrites every spelling of the source address, not just its URL', function () {
     fakeCloneServer();
 
     $source = Application::forceCreate([
@@ -549,7 +549,7 @@ it('does not re-harden a clone whose source had relaxed the list', function () {
         ->not->toBe(ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS);
 });
 
-it('carries the provisioned-list record onto the clone so it is judged by the same list (RC-3)', function () {
+it('carries the provisioned-list record onto the clone so it is judged by the same list', function () {
     fakeCloneServer();
 
     $source = phpSourceApp(['disable_functions' => 'exec,system']);
@@ -673,7 +673,7 @@ describe('cloning a git application', function () {
         return $seen;
     }
 
-    it('gives the copy its own database and points its .env at it (CLN-01)', function () {
+    it('gives the copy its own database and points its .env at it', function () {
         $seen = fakeEnvCloneServer(implode("\n", [
             'APP_NAME="Shop API"',
             'APP_URL=https://api.test',
@@ -964,7 +964,7 @@ it('fails the clone when the app dies right after starting, instead of calling i
     expect($record->status->value)->toBe('failed');
 });
 
-describe('frontend QA 2026-09-26 (CL-B1, CL-B2, CL-B4, CL-B5)', function () {
+describe('clones still being made and failed clones', function () {
     function staticSource(): Application
     {
         return Application::forceCreate([
@@ -1067,7 +1067,7 @@ describe('frontend QA 2026-09-26 (CL-B1, CL-B2, CL-B4, CL-B5)', function () {
         return $removed->getArrayCopy();
     }
 
-    it('removes the half-made copy\'s files too, and never the source\'s (CL-B4)', function () {
+    it('removes the half-made copy\'s files too, and never the source\'s', function () {
         $source = staticSource();
         $clone = SiteClone::create(['source_application_id' => $source->id, 'domain' => 'half.test', 'status' => 'running']);
         Application::forceCreate([
@@ -1160,7 +1160,7 @@ function cloneUsableSpace(int $usable): void
     config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1024 ** 3 - $usable]);
 }
 
-it('refuses a clone that would not fit, before anything is queued (2026-10-29)', function () {
+it('refuses a clone that would not fit, before anything is queued', function () {
     fakeCloneServer();
     $source = Application::forceCreate([
         'system_user_id' => $this->systemUser->id, 'name' => 'Big', 'slug' => 'big', 'domain' => 'big.test',

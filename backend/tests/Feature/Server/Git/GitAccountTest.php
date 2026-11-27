@@ -184,7 +184,7 @@ it('accepts a self-hosted gitlab instance and calls it instead of gitlab.com', f
     Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://git.example.com/api/v4/user'));
 });
 
-it('names the provider as people write it (FS-C38)', function () {
+it('names the provider as people write it', function () {
     Http::fake(['api.github.com/*' => Http::response(['message' => 'Bad credentials'], 401)]);
 
     $this->withHeaders(asAdmin())->postJson('/api/integrations/git/accounts', [
@@ -192,7 +192,7 @@ it('names the provider as people write it (FS-C38)', function () {
     ])->assertStatus(422)->assertJsonPath('message', __('errors/git.invalid_credentials', ['provider' => 'GitHub']));
 });
 
-it('says to check the address when a self-hosted instance does not answer (FS-C39)', function () {
+it('says to check the address when a self-hosted instance does not answer', function () {
     Http::fake(fn () => throw new ConnectionException('cURL error 6: Could not resolve host: git.example.com'));
 
     $this->withHeaders(asAdmin())->postJson('/api/integrations/git/accounts', [
@@ -228,14 +228,14 @@ it('maps only allow-listed repository fields from the provider', function () {
     ]);
 });
 
-it('tells people which token permissions deploy on push needs (bug #70)', function () {
+it('tells people which token permissions deploy on push needs', function () {
     // A Bitbucket token that can add a webhook but not delete one leaves deploy on push firing
     // after it is switched off; GitLab's read_api cannot add one at all.
     expect(__('git.token_help.bitbucket'))->toContain('delete')
         ->and(__('git.token_help.gitlab'))->toContain('"api"');
 });
 
-it('leaves out GitLab projects scheduled for deletion (bug #44)', function () {
+it('leaves out GitLab projects scheduled for deletion', function () {
     $account = connectGithub(['provider' => 'gitlab', 'identifier' => 'dev', 'token' => 'glpat_x', 'scopes' => []]);
 
     Http::fake([

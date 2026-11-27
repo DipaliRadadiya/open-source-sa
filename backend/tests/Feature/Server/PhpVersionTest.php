@@ -347,7 +347,7 @@ describe('the common php.ini settings as fields', function () {
     });
 });
 
-describe('the user may save php.ini without a copy (2026-10-29)', function () {
+describe('the user may save php.ini without a copy', function () {
     it('writes no copy, and puts the old text back from memory when php rejects the new one', function () {
         $old = "memory_limit = 128M\n";
         Process::fake(fn ($process) => match (true) {

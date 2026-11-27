@@ -173,7 +173,7 @@ it('lists only unattached databases for the attach picker', function () {
         ->assertJsonPath('databases.0.name', 'taken');
 });
 
-describe('creating a database for an application (FS-C13)', function () {
+describe('creating a database for an application', function () {
     it('refuses a second database for an application that has one', function () {
         $this->db->update(['application_id' => $this->site->id]);
         Process::fake();

@@ -216,7 +216,7 @@ it('records an empty volume list rather than nothing at all', function () {
         ->and(is_dir($this->working.'/volumes'))->toBeFalse();
 });
 
-it('fails a volumes-only run of a site with no volumes, saying so (S-02)', function () {
+it('fails a volumes-only run of a site with no volumes, saying so', function () {
     // A site that declares no volumes must fail here with that reason, not later with the archive
     // step refusing an empty tar and the row blaming the disk.
     $this->target->update(['type' => 'volumes']);
@@ -226,7 +226,7 @@ it('fails a volumes-only run of a site with no volumes, saying so (S-02)', funct
         ->toThrow(NoVolumesToBackUp::class);
 });
 
-it('does not call it "no volumes" when Docker did not answer (S-02)', function () {
+it('does not call it "no volumes" when Docker did not answer', function () {
     $this->target->update(['type' => 'volumes']);
     stubDiscovery(null);
 
@@ -235,7 +235,7 @@ it('does not call it "no volumes" when Docker did not answer (S-02)', function (
     expect($context->manifest['volumes'])->toBe([]);
 });
 
-it('records the reason on the backup row when the runner hits it (S-02)', function () {
+it('records the reason on the backup row when the runner hits it', function () {
     // The scheduled half: a target saved before the save refused it.
     $this->target->update(['type' => 'volumes']);
     stubDiscovery([]);

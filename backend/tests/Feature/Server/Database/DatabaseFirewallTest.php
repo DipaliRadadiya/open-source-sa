@@ -131,7 +131,7 @@ it('still protects the panel\'s own seeded rules', function () {
     fwApi('DELETE', "/api/firewall/rules/{$ssh->id}")->assertUnprocessable();
 });
 
-it('leaves no rule behind when ufw refuses it (MY-01)', function () {
+it('leaves no rule behind when ufw refuses it', function () {
     // The add-on to MY-01: the user was rolled back, the panel's row was not,
     // and ufw — which never had the rule — refused to delete it, so it was
     // stuck on the Firewall screen for good.

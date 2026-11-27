@@ -286,7 +286,7 @@ it('adds a user to an existing database', function () {
     expect(DatabaseUser::where('username', 'later_user')->first()->connection_preference)->toBe('remote');
 });
 
-it('refuses a username that already exists instead of failing with a 500 (bug #36)', function () {
+it('refuses a username that already exists instead of failing with a 500', function () {
     $sqls = new ArrayObject;
     Process::fake(function ($process) use ($sqls) {
         $sql = (string) ($process->input ?? '');
@@ -668,7 +668,7 @@ it('lists tables in a database with rows and size', function () {
         ->assertJsonPath('tables.0.size_bytes', 8192);
 });
 
-it('says the engine is not answering rather than listing no tables (FS-C12)', function () {
+it('says the engine is not answering rather than listing no tables', function () {
     $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
     Process::fake(fn () => Process::result(errorOutput: "ERROR 2002 (HY000): Can't connect to local server\n", exitCode: 1));
 
@@ -763,7 +763,7 @@ function fakeMetricsServer(array $packages): ArrayObject
     return $probes;
 }
 
-it('samples only engines whose server is installed, without probing the rest (bug #22)', function () {
+it('samples only engines whose server is installed, without probing the rest', function () {
     // On a MariaDB server, probing "MySQL" reaches MariaDB's own port as root with no password:
     // an "Access denied" in its log on every sample.
     $probes = fakeMetricsServer(['mariadb-server']);
@@ -978,7 +978,7 @@ it('re-measures the size when a single database is shown', function () {
     expect($db->refresh()->size_bytes)->toBe(1048576);
 });
 
-it('says the size is unknown, not 0, when the engine is down (FS-C12)', function () {
+it('says the size is unknown, not 0, when the engine is down', function () {
     // Everything fails — the engine is stopped.
     Process::fake(fn () => Process::result(exitCode: 1, errorOutput: 'connection refused'));
     $db = Database::create(['name' => 'shop', 'engine' => 'mysql', 'size_bytes' => 0]);
@@ -1245,7 +1245,7 @@ it('keeps an adopted user when the engine cannot say what else it serves', funct
     expect(collect($sqls)->contains(fn ($sql) => str_contains($sql, 'DROP USER')))->toBeFalse();
 });
 
-describe('database usernames (bug #25)', function () {
+describe('database usernames', function () {
     it('refuses a rename onto a name the server already has', function () {
         $sqls = new ArrayObject;
         Process::fake(function ($process) use ($sqls) {

@@ -201,7 +201,7 @@ describe('what an imported account may do', function () {
     });
 });
 
-describe('SSH access of system users (SYNC-01)', function () {
+describe('SSH access of system users', function () {
     it('adopts an account with the SSH access it really has', function () {
         // An account that logs in with its key must be listed with SSH access.
         fakeServer(groups: "sudo:x:27:\n".SshUsersGroup::NAME.":x:1500:siteowner\n");
@@ -2251,7 +2251,7 @@ describe('a proxied node site', function () {
         expect($items[0]['attributes']['app_port'])->toBeNull();
     });
 
-    it('reads a server block written on one line (bug #41)', function () {
+    it('reads a server block written on one line', function () {
         // nginx directives end at `;`, not at a newline. Read line by line,
         // this valid config gave no domain and no root, and Sync skipped it.
         fakeVhosts(['oneline' => 'server { listen 80; server_name one.test www.one.test; root /home/siteowner/oneline/public_html; index index.php; }']);

@@ -248,7 +248,7 @@ it('reports whether the server has any ssh key', function () {
     readSettings()->assertJsonPath('settings.security.has_ssh_key', true);
 });
 
-it('says whether a save will start enforcing SSH access (FS-C6)', function () {
+it('says whether a save will start enforcing SSH access', function () {
     fakeFacts();
     readSettings()->assertJsonPath('settings.security.save_enforces_ssh_access', true);
 
@@ -261,7 +261,7 @@ it('says whether a save will start enforcing SSH access (FS-C6)', function () {
     readSettings()->assertJsonPath('settings.security.save_enforces_ssh_access', false);
 });
 
-it('says the clock is unknown when timedatectl does not answer (OLD-3)', function () {
+it('says the clock is unknown when timedatectl does not answer', function () {
     fakeFacts(['timezone' => Process::result(exitCode: 1, errorOutput: 'Failed to connect to bus')]);
 
     readSettings()

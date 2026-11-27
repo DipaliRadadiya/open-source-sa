@@ -330,7 +330,7 @@ describe('sources the panel cannot open itself', function () {
             ->and($logs['journal']['modified'])->toBeNull();
     });
 
-    it('says when a search only covered the last part of the log (OLD-15)', function () {
+    it('says when a search only covered the last part of the log', function () {
         // A full window: there was more log above it that the search never saw.
         fakePrivilegedLogs(str_repeat("certbot: noise\n", 5000));
 

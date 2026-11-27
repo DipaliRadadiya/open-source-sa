@@ -210,7 +210,7 @@ it('saves a file with warnings, because they are the user\'s business', function
     expect($this->written)->toContain('APP_DEBUG=true');
 });
 
-describe('checking before saving (ENV-1)', function () {
+describe('checking before saving', function () {
     it('reports the warnings a save would leave, and writes nothing', function () {
         fakeSite();
 
@@ -831,7 +831,7 @@ describe('the mode a save leaves the file in', function () {
     });
 });
 
-describe('one-click apps with a .env beside their code (bug #69)', function () {
+describe('one-click apps with a .env beside their code', function () {
     it('opens Mautic\'s real .env and names it Symfony, not Node.js', function () {
         $this->application->forceFill(['site_type' => 'mautic', 'slug' => 'mautic'])->save();
         // Mautic keeps it inside the document root, beside its code, and also ships a package.json
@@ -862,7 +862,7 @@ describe('one-click apps with a .env beside their code (bug #69)', function () {
     });
 });
 
-describe('the key an application encrypts its data with (bug #17)', function () {
+describe('the key an application encrypts its data with', function () {
     beforeEach(function () {
         $this->application->forceFill(['site_type' => 'n8n', 'slug' => 'flows', 'serving_profile' => 'node'])->save();
         $this->env = '/home/envowner/flows/public_html/.env';
@@ -993,7 +993,7 @@ describe('the key an application encrypts its data with (bug #17)', function () 
     });
 });
 
-describe('the user may save without a copy (2026-10-29)', function () {
+describe('the user may save without a copy', function () {
     it('still keeps a copy when nothing is said', function () {
         fakeSite();
 

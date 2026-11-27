@@ -84,7 +84,7 @@ describe('job timeouts', function () {
     });
 });
 
-describe('docker app first install (RC-20)', function () {
+describe('docker app first install', function () {
     it('gives every recipe and the Container tab twenty minutes plus the overhead', function () {
         // Recipes and `docker` have no `installers.<type>.timeout`, so without this they would get
         // the 300 s default — too short for a job that pulls multi-GB images.

@@ -179,7 +179,7 @@ it('still reports a kill that failed on a process that is still there', function
     killPid(4321)->assertStatus(500)->assertJsonPath('code', 'process_kill_failed');
 });
 
-it('answers not found for a PID no process can have (bug #8)', function (string $pid) {
+it('answers not found for a PID no process can have', function (string $pid) {
     $runs = fakeProcess('sleep');
 
     // Past PHP_INT_MAX the route still matches digits, but the value no longer fits an int.
@@ -281,7 +281,7 @@ describe('processes inside a unit the server needs', function () {
     });
 });
 
-describe('database servers (bug #5)', function () {
+describe('database servers', function () {
     // One click would take every site's database offline: refused outright, like SSH; the
     // Services screen restarts them.
     it('refuses a database server by its process name', function (string $command) {
@@ -311,7 +311,7 @@ describe('database servers (bug #5)', function () {
     });
 });
 
-describe('the operating system\'s own services (bug #5)', function () {
+describe('the operating system\'s own services', function () {
     it('refuses a process in a unit the server runs on', function (string $command, string $unit) {
         $runs = fakeProcessInUnit($command, $unit);
 
@@ -343,7 +343,7 @@ describe('the operating system\'s own services (bug #5)', function () {
     ]);
 });
 
-describe('a process that does not exit (bug #6)', function () {
+describe('a process that does not exit', function () {
     /**
      * A process that ignores TERM: `ps` keeps finding it, with the same start
      * time, whatever is sent.

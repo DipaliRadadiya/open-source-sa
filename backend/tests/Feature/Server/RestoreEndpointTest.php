@@ -193,7 +193,7 @@ it('refuses to restore a database from a files-only backup', function () {
         ->assertJsonValidationErrors('type');
 });
 
-describe('a full backup of a site with no database (2026-10-18)', function () {
+describe('a full backup of a site with no database', function () {
     // The dump step records `databases: []` for a site with nothing to dump; a full restore of
     // that must be refused up front, not fail at "Restoring the database".
     function noDatabaseBackup(): Backup
@@ -292,7 +292,7 @@ describe('permissions', function () {
     });
 });
 
-describe('the safety copy switch (2026-10-29)', function () {
+describe('the safety copy switch', function () {
     it('takes a copy unless told not to', function () {
         $backup = endpointBackup();
 

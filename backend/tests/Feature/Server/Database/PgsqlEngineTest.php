@@ -341,7 +341,7 @@ function fakePgOwner(string $owner, string $kind, bool $groupExists = false, arr
     });
 }
 
-describe('a second user on one database (bug #23)', function () {
+describe('a second user on one database', function () {
     // A plain takeover by the second user left them "permission denied" on every table the
     // first had made, and the first without the schema.
     it('moves the first user\'s things to a shared role and makes both members', function () {
@@ -584,7 +584,7 @@ describe('a restore gives the database back to its users', function () {
     });
 });
 
-describe('a server without PostgreSQL (2026-11-05)', function () {
+describe('a server without PostgreSQL', function () {
     // `env` exits 127 when psql is not installed; reads must not log that as a failed command
     // and fill the Error Log of servers without PostgreSQL.
     beforeEach(function () {

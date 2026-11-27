@@ -811,7 +811,7 @@ it('does not ask a non-PHP OpenLiteSpeed vhost for an extUser', function () {
     expect($report['checks'][0]['status'])->not->toBe('fail');
 });
 
-it('answers each check\'s finding in the viewer\'s language (FS-C37)', function () {
+it('answers each check\'s finding in the viewer\'s language', function () {
     Process::fake(function ($process) {
         return $process->command[1] === 'cat'
             ? Process::result(errorOutput: 'No files found.', exitCode: 1)
@@ -829,7 +829,7 @@ it('answers each check\'s finding in the viewer\'s language (FS-C37)', function 
         ->and($detail)->not->toContain('no such unit');
 });
 
-it('has every finding in every language, with the same values in each (FS-C37)', function () {
+it('has every finding in every language, with the same values in each', function () {
     $english = trans('doctor.details', [], 'en');
 
     foreach (['de', 'es', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {

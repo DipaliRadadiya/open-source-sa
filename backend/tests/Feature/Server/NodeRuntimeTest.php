@@ -276,7 +276,7 @@ it('queues an install, once per version however many times it is clicked', funct
         ->not->toBe((new InstallNodeVersion('22.11.0'))->uniqueId());
 });
 
-it('answers 409 to a second install of a version already queued (FS-C25)', function () {
+it('answers 409 to a second install of a version already queued', function () {
     Queue::fake();
     fakeNode();
 
@@ -288,7 +288,7 @@ it('answers 409 to a second install of a version already queued (FS-C25)', funct
     Queue::assertPushed(InstallNodeVersion::class, 1);
 });
 
-it('says the catalogue could not be reached rather than that there is nothing to install (FS-C20)', function () {
+it('says the catalogue could not be reached rather than that there is nothing to install', function () {
     fakeNode();
     Process::fake([
         '*list-remote*' => Process::result(errorOutput: 'error sending request for url (https://nodejs.org/dist/index.json)', exitCode: 1),
@@ -301,7 +301,7 @@ it('says the catalogue could not be reached rather than that there is nothing to
         ->assertJsonPath('node.installable_error', 'unreachable');
 });
 
-it('names fnm\'s reason when a removal fails (FS-C21)', function () {
+it('names fnm\'s reason when a removal fails', function () {
     Process::fake(function ($process) {
         $command = $process->command;
 
@@ -624,7 +624,7 @@ it('records that the server now has Node, so the create screen stops denying it'
     expect(app()->make(ServerCapabilities::class, [])->supports('node'))->toBeTrue();
 });
 
-describe('found on a real server, 2026-09-23', function () {
+describe('Node versions and fnm ownership on a real server', function () {
     it('does not offer a pre-1.0 line the catalog says is dead', function () {
         // Node files 0.x by minor (`0.12`, not `0`); keyed by the major alone, 0.12.18 finds
         // nothing, reads "unknown" as "keep" and offers a long-dead release.
@@ -791,7 +791,7 @@ describe('a Node site created without a version', function () {
     });
 });
 
-describe('a Node version that does not exist (bug #31)', function () {
+describe('a Node version that does not exist', function () {
     it('refuses to install it', function () {
         fakeNode();
 

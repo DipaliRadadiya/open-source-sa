@@ -625,7 +625,7 @@ describe('the endpoint', function () {
         Process::assertRan(fn ($p) => $p->command === ['systemctl', 'restart', "sv-app-{$app->id}.service"]);
     });
 
-    it('keeps a stopped application stopped across a reboot, and a started one starting (bug #99)', function () {
+    it('keeps a stopped application stopped across a reboot, and a started one starting', function () {
         Process::fake(fn () => Process::result(output: ''));
         $app = nodeApp();
         $unit = "sv-app-{$app->id}.service";
@@ -895,7 +895,7 @@ describe('process detail (v7 pm2-detail)', function () {
     });
 });
 
-it('lets an application go back to the port its unit is still running on (FS-C41)', function () {
+it('lets an application go back to the port its unit is still running on', function () {
     // Port changed to 3015 and not yet deployed: 3005 is held by this same
     // app's process, and going back to it was refused as "already in use".
     $dir = sys_get_temp_dir().'/units-'.uniqid();

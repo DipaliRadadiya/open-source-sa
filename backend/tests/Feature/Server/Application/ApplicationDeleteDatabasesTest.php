@@ -261,7 +261,7 @@ it('rejects a flag that is not a boolean', function () {
     Process::assertNothingRan();
 });
 
-describe('removing the system user with the application (OLD-20)', function () {
+describe('removing the system user with the application', function () {
     it('removes the account when it owns nothing else', function () {
         Process::fake();
         $site = siteForDeletion();

@@ -156,7 +156,7 @@ it('says in the log when a restore ran without a safety copy', function (Restore
     'failed' => [RestoreStatus::Failed, 'restore_without_copy_failed'],
 ]);
 
-describe('a backup that a restore got in front of (bug #80)', function () {
+describe('a backup that a restore got in front of', function () {
     beforeEach(function () {
         // A restore of the same site, queued or running: the backup must not
         // capture a half-restored site, so it is skipped.

@@ -332,7 +332,7 @@ it('creates a worker and starts as many copies as asked for', function () {
     expect(WorkerFake::$running[$worker->program] ?? 0)->toBe(3);
 });
 
-it('gives a queue worker time to finish its job, and a custom one the usual 30 seconds (bug #74)', function () {
+it('gives a queue worker time to finish its job, and a custom one the usual 30 seconds', function () {
     fakeWorkerSupervisor();
 
     // supervisord kills a worker that outlives stopwaitsecs; at 30 seconds a

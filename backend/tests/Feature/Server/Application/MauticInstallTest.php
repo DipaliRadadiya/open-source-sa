@@ -212,7 +212,7 @@ it('uses implicit TLS on port 465', function () {
     expect(mauticLocalParameters(installMautic())['mailer_dsn'])->toStartWith('smtps://');
 });
 
-it('schedules the cron jobs Mautic needs, staggered, on the site\'s PHP, once (bug #15)', function () {
+it('schedules the cron jobs Mautic needs, staggered, on the site\'s PHP, once', function () {
     // Without them Mautic installs and nothing happens: segments never fill,
     // campaigns never run, queued messages are never sent.
     installMautic();

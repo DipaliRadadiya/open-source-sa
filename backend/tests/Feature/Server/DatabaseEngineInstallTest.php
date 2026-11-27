@@ -500,7 +500,7 @@ it('protects the panel own database account from deletion', function () {
     expect(app(DatabaseManager::class)->isSystemUser($username))->toBeTrue();
 });
 
-describe('another package install holding the lock (S-09)', function () {
+describe('another package install holding the lock', function () {
     /**
      * A fresh box: unattended-upgrades holds the dpkg lock for every apt-get
      * run until `$freeAfter` of them have been refused (null: never frees).

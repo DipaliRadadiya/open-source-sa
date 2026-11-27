@@ -362,7 +362,7 @@ describe('last run in the list and on a job', function () {
             ->and($reads[0])->toContain('120');
     });
 
-    it('keeps a Run now whose output is longer than the window as manual (RC-38)', function () {
+    it('keeps a Run now whose output is longer than the window as manual', function () {
         // Default window, 16 KB: the start line is long gone from the tail.
         $manual = histJob('Long manual', "--- start pid=7 at 2026-10-27T00:00:00+00:00\n--- exit=0 pid=7 at 2026-10-27T00:00:01+00:00\n"
             ."--- start pid=7 manual at 2026-10-27T01:00:00+00:00\n".str_repeat(str_repeat('x', 99)."\n", 200)

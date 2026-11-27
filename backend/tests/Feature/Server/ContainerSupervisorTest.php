@@ -1355,7 +1355,7 @@ it('leaves a pasted compose file alone, whatever the site mount', function () {
         ->and($written)->not->toContain(':/app');
 });
 
-it('refuses to render a compose file from a value with a line break in it (DS-08)', function (array $attributes) {
+it('refuses to render a compose file from a value with a line break in it', function (array $attributes) {
     // Every field is validated where it is accepted; this is the check every
     // field passes through on the way into the file, so a field added later —
     // or a row written by something other than a request — cannot reopen it.

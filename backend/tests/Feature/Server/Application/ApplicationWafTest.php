@@ -511,7 +511,7 @@ describe('exceptions and custom rules as written into the config', function () {
  * An exception skips every check. Matched against the query string or user agent it would be a
  * password anyone could type (`?x=mobiquo`), and a one-letter one would switch the firewall off.
  */
-describe('exceptions (bug #82)', function () {
+describe('exceptions', function () {
     it('match the path only, on every web server and site kind', function (string $driver, string $profile) {
         $this->application->forceFill(['serving_profile' => $profile, 'app_port' => 3000])->save();
         $config = wafVhost($driver, ['mobiquo']);
@@ -536,7 +536,7 @@ describe('exceptions (bug #82)', function () {
     });
 });
 
-describe('the firewall log (bug #84)', function () {
+describe('the firewall log', function () {
     it('records what nginx blocks, with the rule that matched', function () {
         $writes = [];
         fakeWafWebServer(onWrite: function ($write) use (&$writes) {
@@ -586,7 +586,7 @@ describe('the firewall log (bug #84)', function () {
     });
 });
 
-describe('exceptions on front-controller routes (frontend QA FS-C43)', function () {
+describe('exceptions on front-controller routes', function () {
     it('matches the requested path, which survives the internal redirect to index.php', function (string $profile) {
         $this->application->forceFill(['serving_profile' => $profile, 'app_port' => 3000])->save();
         $config = wafVhost(NginxDriver::class, ['/wp-json/']);

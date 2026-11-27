@@ -798,7 +798,7 @@ it('rejects a command with an unresolved {php} placeholder', function () {
         ->assertJsonValidationErrors('command');
 });
 
-describe('moving a job to another site on edit (2026-10-29)', function () {
+describe('moving a job to another site on edit', function () {
     beforeEach(function () {
         $make = fn (string $slug) => Application::forceCreate([
             'system_user_id' => $this->su->id, 'name' => $slug, 'slug' => $slug, 'domain' => "{$slug}.test",

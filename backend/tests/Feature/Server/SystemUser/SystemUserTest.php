@@ -171,7 +171,7 @@ it('removes the OS account and panel row when SSH-key setup fails', function () 
         && in_array('deploy', $process->command, true));
 });
 
-it('labels the first key with its own comment, not "default" (FS-C30)', function () {
+it('labels the first key with its own comment, not "default"', function () {
     Process::fake();
     $admin = User::factory()->admin()->create();
 
@@ -368,7 +368,7 @@ it('says the user still has processes when userdel exits 8, and keeps the row', 
     Process::assertNotRan(fn ($p) => in_array('kill', $p->command, true));
 });
 
-it('ends the account\'s sessions first when asked, then deletes it (FS-C31)', function () {
+it('ends the account\'s sessions first when asked, then deletes it', function () {
     $alive = new ArrayObject(['4101', '4102']);
 
     Process::fake(function ($p) use ($alive) {
@@ -395,7 +395,7 @@ it('ends the account\'s sessions first when asked, then deletes it (FS-C31)', fu
         && in_array('4101', $p->command, true) && in_array('4102', $p->command, true));
 });
 
-describe('a user already removed from the server (bug #26)', function () {
+describe('a user already removed from the server', function () {
     it('finishes the panel\'s side instead of failing forever', function () {
         // userdel exits 6 for a name the server no longer has; getent agrees.
         Process::fake(fn ($p) => match (true) {

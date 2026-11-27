@@ -1435,7 +1435,7 @@ function serverRam(int $bytes): void
     app()->instance(MemoryBudget::class, $budget);
 }
 
-describe('values that are the right shape but wrong (bug #61)', function () {
+describe('values that are the right shape but wrong', function () {
     beforeEach(function () {
         fakePhpServer();
 
@@ -1477,7 +1477,7 @@ describe('values that are the right shape but wrong (bug #61)', function () {
         $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '2G'])->assertOk();
     });
 
-    it('refuses a memory limit no site can start with (bug #19)', function (string $value, string $suggestion) {
+    it('refuses a memory limit no site can start with', function (string $value, string $suggestion) {
         // `64` is 64 bytes to PHP; `0` is none. Both took the site down.
         $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => $value])
             ->assertUnprocessable()
@@ -1537,7 +1537,7 @@ describe('values that are the right shape but wrong (bug #61)', function () {
     });
 });
 
-it('does not call disable_functions changed when it is the list the site was provisioned with (RC-3)', function () {
+it('does not call disable_functions changed when it is the list the site was provisioned with', function () {
     fakePhpServer();
     $strict = ApplicationPhpSettings::strictDisabledFunctionsFor((string) $this->application->site_type);
     // As provisioned, in another order and spacing: still the same list.

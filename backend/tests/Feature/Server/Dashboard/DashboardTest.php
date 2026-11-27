@@ -119,7 +119,7 @@ it('returns the server process table', function () {
     ]);
 });
 
-it('says which processes Stop would refuse, and why (bug #7)', function () {
+it('says which processes Stop would refuse, and why', function () {
     config(['server.protected_services' => ['nginx', 'php8.4-fpm']]);
     fakeDashboard();
 

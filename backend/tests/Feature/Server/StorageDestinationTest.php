@@ -415,7 +415,7 @@ function ftpServerOffersTls(?bool $answer): ArrayObject
     return $asked;
 }
 
-describe('an FTP server without encryption (bug #39)', function () {
+describe('an FTP server without encryption', function () {
     beforeEach(function () {
         $this->refusingLogin = fn () => $this->app->bind(StorageConnectionProber::class, fn () => makeProber(
             fn (array $config) => new class
@@ -1457,7 +1457,7 @@ it('records creating, updating and deleting a destination, without its credentia
         ->and(json_encode($rows->pluck('properties')))->not->toContain('secret_value');
 });
 
-it('refuses a folder that walks out of the bucket (bug #36)', function (string $prefix) {
+it('refuses a folder that walks out of the bucket', function (string $prefix) {
     $this->withHeaders(storageAdminAuthHeader())
         ->postJson('/api/integrations/storage/destinations', s3Payload(['prefix' => $prefix]))
         ->assertUnprocessable()
@@ -1496,7 +1496,7 @@ function ftpsDestination(array $config = []): StorageDestination
     ]);
 }
 
-describe('FTPS certificate pinning (FTP-01)', function () {
+describe('FTPS certificate pinning', function () {
     it('records the certificate the first time and shows it', function () {
         ftpsPresents('sha256:aa11');
         $dest = ftpsDestination();

@@ -161,7 +161,7 @@ it('refuses a second staging site for the same application', function () {
     expect(Application::where('production_application_id', $this->production->id)->count())->toBe(1);
 });
 
-it('refuses a staging copy of a staging copy (bug #89)', function () {
+it('refuses a staging copy of a staging copy', function () {
     fakeStagingServer();
     $stagingId = $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated()->json('staging.id');
@@ -176,7 +176,7 @@ it('refuses a staging copy of a staging copy (bug #89)', function () {
     expect(Application::where('production_application_id', $stagingId)->exists())->toBeFalse();
 });
 
-it('refuses a push when there is no staging copy (bug #88)', function () {
+it('refuses a push when there is no staging copy', function () {
     fakeStagingServer();
 
     $this->withHeaders(stagingHeaders())
@@ -638,7 +638,7 @@ function searchReplaceTerms(array $commands): array
     return $terms;
 }
 
-it('points the new staging copy at itself under every spelling of the live address (bug #92)', function () {
+it('points the new staging copy at itself under every spelling of the live address', function () {
     fakeStagingServer();
 
     $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
@@ -1380,7 +1380,7 @@ it('refuses a staging domain that is already another site name or the panel host
     expect(Application::where('production_application_id', $this->production->id)->count())->toBe(0);
 });
 
-describe('a backup before the push (FS-B10)', function () {
+describe('a backup before the push', function () {
     beforeEach(function () {
         fakeStagingServer();
         $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
@@ -1467,7 +1467,7 @@ describe('a backup before the push (FS-B10)', function () {
     });
 });
 
-describe('the database copies a push saves first (ST-B3)', function () {
+describe('the database copies a push saves first', function () {
     function fakeSafetyCopies(array &$restores, array &$dumps, array $names): void
     {
         Process::fake(function ($process) use (&$restores, &$dumps, $names) {
@@ -1740,7 +1740,7 @@ describe('updating staging from live', function () {
  * Push and update-from-live run on the queue, not in the request: a large site answered 504
  * while the copy carried on and nothing could say how it ended. The run is the answer.
  */
-describe('push and update from live on the queue (RC-16)', function () {
+describe('push and update from live on the queue', function () {
     beforeEach(function () {
         fakeStagingServer();
         $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
@@ -1854,7 +1854,7 @@ it('runs every wp-cli step on the site\'s own PHP', function () {
     Process::assertNotRan(fn ($p) => $usesWp($p) && ! $onSitePhp($p));
 });
 
-describe('the safety copy switch on push and pull (2026-10-29)', function () {
+describe('the safety copy switch on push and pull', function () {
     /** Every command run, flattened, with production's visibility answered. */
     function stagingCommandsSeen(string $visibility = '1'): ArrayObject
     {
@@ -1995,7 +1995,7 @@ function stagingUsableSpace(int $usable): void
     config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1024 ** 3 - $usable]);
 }
 
-it('refuses a staging copy that would not fit, before anything is made (2026-10-29)', function () {
+it('refuses a staging copy that would not fit, before anything is made', function () {
     fakeStagingServer();
     $this->production->forceFill(['directory_size_bytes' => 100000])->save();
     stagingUsableSpace(99999);

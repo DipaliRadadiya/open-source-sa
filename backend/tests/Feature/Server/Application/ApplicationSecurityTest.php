@@ -136,7 +136,7 @@ it('rejects a username containing a colon', function () {
         ->assertJsonValidationErrors(['username']);
 });
 
-it('rejects a username a browser cannot send reliably (bug #76)', function (string $username) {
+it('rejects a username a browser cannot send reliably', function (string $username) {
     $this->withHeaders(securityHeaders())
         ->putJson(securityUrl(), ['enabled' => true, 'username' => $username, 'password' => 'correct-horse'])
         ->assertUnprocessable()

@@ -108,7 +108,7 @@ it('answers with nothing when docker could not be asked', function () {
     expect(discoverFor(volumeListOps('', answered: false), $application))->toBe([]);
 });
 
-it('tells "has none" apart from "could not ask" for the refusals that act on it (S-02)', function () {
+it('tells "has none" apart from "could not ask" for the refusals that act on it', function () {
     // A `volumes` backup is refused only on `[]`; an unanswered daemon must not refuse a site
     // that has volumes.
     $application = volumeApplication();

@@ -74,7 +74,7 @@ it('signs in with the right token, once', function () {
     expect(runMagicLoader(null, 'right')['output'])->toBe('');
 });
 
-it('lets a wrong value cancel nothing (bug #97)', function () {
+it('lets a wrong value cancel nothing', function () {
     $stored = magicToken('right');
 
     $wrong = runMagicLoader($stored, 'guess');

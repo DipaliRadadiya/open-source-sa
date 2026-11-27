@@ -182,7 +182,7 @@ it('writes nothing at all when nothing changed', function () {
     expect(collect($runs)->filter(fn (array $c) => str_contains(implode(' ', $c), 'set-'))->all())->toBe([]);
 });
 
-it('offers the PHP settings only zones PHP accepts, and accepts every one (FS-B8)', function () {
+it('offers the PHP settings only zones PHP accepts, and accepts every one', function () {
     // The OS list carries names PHP's date.timezone refuses (US/Eastern) and
     // PHP's canonical list misses ones it accepts (Etc/UTC).
     Process::fake(fn () => Process::result(output: "Etc/UTC\nUS/Eastern\nEurope/Berlin\nEtc/GMT+5\n"));

@@ -128,7 +128,7 @@ it('saves the network and brings the container up on it', function () {
         ->toBeTrue();
 });
 
-it('refuses an empty container port rather than rendering port 80 (DS-09)', function () {
+it('refuses an empty container port rather than rendering port 80', function () {
     // A null port used to render as `127.0.0.1:{app_port}:80`, which nothing listens on (502).
     fakeDockerBox();
 
@@ -141,7 +141,7 @@ it('refuses an empty container port rather than rendering port 80 (DS-09)', func
         ->and(dockerRan(fn (array $args): bool => ($args[1] ?? '') === 'compose'))->toBeFalse();
 });
 
-it('renders no compose file for a site with no container port, rather than one on port 80 (DS-12)', function () {
+it('renders no compose file for a site with no container port, rather than one on port 80', function () {
     // Create and PUT refuse a missing port; this is the second guard. A `?: 80` fallback would
     // proxy a port nothing in the image listens on.
     fakeDockerBox();
@@ -166,7 +166,7 @@ it('renders no compose file for a site with no container port, rather than one o
         ->assertJsonPath('message', __('application.failure_reason.container_port_missing'));
 });
 
-it('lets only someone who may view registries point a site at another credential (DS-12)', function () {
+it('lets only someone who may view registries point a site at another credential', function () {
     // Only create was gated, so a stored credential's id was still an oracle through update.
     fakeDockerBox();
     $credential = fn (string $name): Registry => Registry::forceCreate([
@@ -764,7 +764,7 @@ it('says a site has unacknowledged credentials in its payload', function () {
         ->and(json_encode($payload->json()))->not->toContain('hunter2');
 });
 
-it('refuses a mount path that would write new keys into the compose file (DS-08)', function (string $path) {
+it('refuses a mount path that would write new keys into the compose file', function (string $path) {
     // Injected YAML via `app_container` manage could make the container privileged with `/` mounted.
     fakeDockerBoxWithVolumes();
 

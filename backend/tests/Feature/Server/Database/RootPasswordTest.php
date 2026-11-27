@@ -287,7 +287,7 @@ it('does not ask for a password when the server is not answering at all', functi
         ->assertJsonPath('errors.engine.0', __('errors/database.root_server_unreachable', ['engine' => 'MySQL']));
 })->with(['no current password' => [null], 'with one' => ['whatever-it-is-1']]);
 
-describe('root\'s current password, when nothing else gets in (RC-26)', function () {
+describe('root\'s current password, when nothing else gets in', function () {
     it('is not needed, and not tried, while socket login works', function () {
         fakeRootServer('mariadb');
 

@@ -489,7 +489,7 @@ describe('the overview\'s database rows', function () {
     });
 });
 
-it('lets the user restore a database without the copy first (2026-10-29)', function () {
+it('lets the user restore a database without the copy first', function () {
     Queue::fake();
     $backup = dbBackupRow();
     $url = "/api/databases/{$this->db->id}/backups/{$backup->id}/restore";

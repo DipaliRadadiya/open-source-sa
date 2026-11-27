@@ -254,7 +254,7 @@ it('reports memory and swap separately so the fix is obvious', function () {
         ->toBe('700MB available + 300MB swap, 2560MB required');
 });
 
-it('gives the numbers and a sentence in the viewer\'s language, not English megabytes (OLD-19)', function () {
+it('gives the numbers and a sentence in the viewer\'s language, not English megabytes', function () {
     $preflight = new UpdatePreflight(Mockery::mock(InstalledPanelInfo::class)->makePartial());
     app()->setLocale('de');
 
@@ -552,7 +552,7 @@ it('does not fail the update when the firewall backfill is missing', function ()
         ->and($line)->toContain('||');
 });
 
-it('restricts existing PostgreSQL databases without letting it fail the update (bug #35)', function () {
+it('restricts existing PostgreSQL databases without letting it fail the update', function () {
     $line = collect(explode("\n", inPlaceScript()))
         ->first(fn (string $l): bool => str_contains($l, 'databases:restrict-postgres'));
 
@@ -644,7 +644,7 @@ describe('the installed commit after git packs its refs', function () {
  * file's word, which can trail the latest tag. The panel then offered an older release as an
  * update, and the forward-only guard refused the run.
  */
-describe('an install whose version is only the file\'s word (bug #6)', function () {
+describe('an install whose version is only the file\'s word', function () {
     function installedFromFile(string $committedAt): array
     {
         return ['version' => '1.0.14', 'source' => 'file', 'committed_at' => $committedAt];
@@ -715,7 +715,7 @@ it('updates the panel\'s privileges before anything that uses them', function ()
     expect(array_search('sync_privileges', $steps, true))->toBeLessThan(array_search('resync_site_configs', $steps, true));
 });
 
-it('knows the code here already is a release whose tag was never fetched (FS-C36)', function () {
+it('knows the code here already is a release whose tag was never fetched', function () {
     // The release is tagged upstream on the very commit installed here; the
     // server's own clone has no tags. By name it looks like an update.
     $origin = sys_get_temp_dir().'/panel-origin-'.bin2hex(random_bytes(4));

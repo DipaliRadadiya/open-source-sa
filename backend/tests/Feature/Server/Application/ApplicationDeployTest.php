@@ -108,7 +108,7 @@ it('clones a private repository without the token ever touching the command line
     expect($app->fresh()->status->value)->toBe('active');
 });
 
-it('hands the checkout to the site user even when the fetch fails (bug #101)', function () {
+it('hands the checkout to the site user even when the fetch fails', function () {
     // `git init` runs as root; a hand-over only after a successful fetch left a failed first
     // deploy with a root-owned .git the site user could neither repair nor delete.
     Process::fake(fn ($process) => match (true) {
@@ -245,7 +245,7 @@ it('points the remote at the new url before fetching, not after', function () {
         ->and($setUrl)->toBeLessThan($fetch);
 });
 
-it('adds origin only when the checkout does not have it (bug #71)', function (string $remotes, bool $adds) {
+it('adds origin only when the checkout does not have it', function (string $remotes, bool $adds) {
     // Run every time and left to fail, `remote add` logged "remote origin already exists" as an
     // error on every later deploy.
     $ran = collect();
@@ -541,7 +541,7 @@ it('gives the checked-out branch an upstream so a bare git pull works', function
         ->and($upstream)->toBeGreaterThan($reset);
 });
 
-it('points the vhost at the port the app now listens on, on the same deploy (FS-C41)', function () {
+it('points the vhost at the port the app now listens on, on the same deploy', function () {
     // A port changed in the settings reached the systemd unit but not the proxy: visitors got 502.
     $ran = new ArrayObject;
     Process::fake(function ($process) use ($ran) {

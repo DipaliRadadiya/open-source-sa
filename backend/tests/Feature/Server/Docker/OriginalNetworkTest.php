@@ -124,7 +124,7 @@ it('never removes the default network when the site is moved back onto it', func
     expect($this->ran)->not->toContain("rm:{$this->default}");
 });
 
-describe('the user chooses whether the old network goes (Dipali, 2026-10-30)', function () {
+describe('the user chooses whether the old network goes', function () {
     beforeEach(function () {
         $this->seed(PermissionSeeder::class);
         $this->admin = User::factory()->admin()->create();

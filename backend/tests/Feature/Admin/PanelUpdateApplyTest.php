@@ -424,7 +424,7 @@ describe('progress reconciliation', function () {
         @unlink($path);
     });
 
-    it('keeps a finished dry run from reading as an update (FS-C2)', function () {
+    it('keeps a finished dry run from reading as an update', function () {
         $update = PanelUpdate::create([
             'user_id' => $this->admin->id,
             'status' => PanelUpdateStatus::Running,

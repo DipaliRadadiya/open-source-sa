@@ -270,7 +270,7 @@ describe('the generated name', function () {
     });
 });
 
-describe('the name and password the form chose (FS-B9)', function () {
+describe('the name and password the form chose', function () {
     it('creates the site and its account in one request, with that name', function () {
         $response = $this->actingAs($this->admin)
             ->postJson('/api/applications', createPayload(['system_user' => ['username' => 'blogowner', 'password' => 'Strong-Pass-2026!x']]))
@@ -298,7 +298,7 @@ describe('the name and password the form chose (FS-B9)', function () {
             ->assertJsonValidationErrors('system_user');
     });
 
-    it('names the field as a person would, not by its path (RC-7)', function (string $locale, string $word) {
+    it('names the field as a person would, not by its path', function (string $locale, string $word) {
         SystemUser::create(['username' => 'blogowner', 'home_path' => '/home/blogowner']);
         app()->setLocale($locale);
 

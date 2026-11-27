@@ -88,7 +88,7 @@ it('binds every interface and restarts once the restart is agreed', function () 
     Process::assertRan(fn ($p) => array_slice((array) $p->command, -3) === ['systemctl', 'restart', 'mariadb']);
 });
 
-it('names the MySQL drop-in so it loads after mysqld.cnf, and drops the old one (MY-01)', function () {
+it('names the MySQL drop-in so it loads after mysqld.cnf, and drops the old one', function () {
     // Includes are read in name order and digits sort before letters, so
     // `99-panel-remote.cnf` loaded BEFORE Ubuntu's `mysqld.cnf`, whose
     // `bind-address = 127.0.0.1` won. Success was reported, 3306 stayed shut,

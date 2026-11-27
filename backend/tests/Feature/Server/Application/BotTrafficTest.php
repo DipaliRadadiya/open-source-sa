@@ -193,7 +193,7 @@ it('refuses a user without log access', function () {
         ->assertForbidden();
 });
 
-it('counts what the server really refused, not what the settings say now (AB-B)', function () {
+it('counts what the server really refused, not what the settings say now', function () {
     // Blocked by the current settings, but three hits got a 200 before the block existed. Only
     // the 403 is a refusal.
     $this->application->forceFill(['ai_bot_policy' => 'block_training'])->save();

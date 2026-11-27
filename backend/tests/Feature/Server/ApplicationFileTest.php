@@ -230,7 +230,7 @@ it('re-tightens the session directory once the site is isolated', function () {
     expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod -R 0700 /home/siteowner/shop/.panel/sessions');
 });
 
-it('skips the session directory a site does not have instead of failing (bug #96)', function () {
+it('skips the session directory a site does not have instead of failing', function () {
     fakeFileServer();
     // A static or Node site runs as its own user and has no PHP sessions:
     // the directory is absent, so anything touching it fails.
@@ -967,7 +967,7 @@ describe('browsing', function () {
             ->and($response->json('files.2.type'))->toBe('symlink');
     });
 
-    it('gives a folder no size rather than its 4096-byte entry (APP-5)', function () {
+    it('gives a folder no size rather than its 4096-byte entry', function () {
         fakeFileBrowserServer();
 
         $response = $this->actingAs($this->admin)->getJson(filesUrl())->assertOk();
@@ -1231,7 +1231,7 @@ describe('browsing', function () {
         expect(FileBrowserFake::$fs['index.php']['content'])->toBe($content);
     });
 
-    it('saves an empty file (OLD-25)', function () {
+    it('saves an empty file', function () {
         fakeFileBrowserServer();
 
         $this->actingAs($this->admin)
@@ -1241,7 +1241,7 @@ describe('browsing', function () {
         expect(FileBrowserFake::$fs['index.php']['content'])->toBe('');
     });
 
-    it('refuses to save over a change someone else made since it was opened (OLD-27)', function () {
+    it('refuses to save over a change someone else made since it was opened', function () {
         fakeFileBrowserServer();
 
         $version = $this->actingAs($this->admin)->getJson(filesUrl('/content?path=index.php'))
@@ -1901,7 +1901,7 @@ describe('extracting', function () {
             ->assertStatus(422);
     });
 
-    it('names the target folder when it does not exist (FI-B)', function () {
+    it('names the target folder when it does not exist', function () {
         fakeFileBrowserServer();
         FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
             ['type' => '-', 'size' => 4, 'name' => 'file.txt'],
@@ -1991,7 +1991,7 @@ describe('creating a directory', function () {
             ->and(ActivityLog::where('action', 'directory_created')->exists())->toBeTrue();
     });
 
-    it('refuses a folder that already exists (FI-9)', function () {
+    it('refuses a folder that already exists', function () {
         fakeFileBrowserServer();
         FileBrowserFake::$fs['wp-content/uploads'] = ['type' => 'd'];
 
@@ -2098,7 +2098,7 @@ describe('copying', function () {
         FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
     });
 
-    it('names the folder that does not exist, not the file (FI-B)', function () {
+    it('names the folder that does not exist, not the file', function () {
         fakeFileBrowserServer();
 
         $this->actingAs($this->admin)
@@ -2584,7 +2584,7 @@ describe('setting permissions on one file', function () {
             ->assertJsonValidationErrors('mode');
     });
 
-    it('accepts sticky and setgid modes on a folder (OLD-26)', function (string $mode) {
+    it('accepts sticky and setgid modes on a folder', function (string $mode) {
         fakeFileBrowserServer();
 
         $this->actingAs($this->admin)
@@ -3222,7 +3222,7 @@ describe('the directory the browser is rooted at', function () {
     });
 });
 
-describe('the user may save a file without a copy (2026-10-29)', function () {
+describe('the user may save a file without a copy', function () {
     beforeEach(function () {
         FileBrowserFake::reset();
         FileBrowserFake::$fs['index.php'] = ['type' => 'f', 'size' => 20, 'content' => 'v2'];
@@ -3285,7 +3285,7 @@ function filesUsableSpace(int $usable): void
     config(['server.backups.local.min_free_percent' => 0, 'server.backups.local.min_free_bytes' => 1024 ** 3 - $usable]);
 }
 
-describe('room on the disk first (2026-10-29)', function () {
+describe('room on the disk first', function () {
     it('refuses to compress what would not fit, before anything is queued', function () {
         FileBrowserFake::reset();
         FileBrowserFake::$fs['my-plugin'] = ['type' => 'd'];
@@ -3336,7 +3336,7 @@ describe('room on the disk first (2026-10-29)', function () {
     });
 });
 
-describe('the application\'s own folder as a destination (2026-10-29)', function () {
+describe('the application\'s own folder as a destination', function () {
     beforeEach(function () {
         FileBrowserFake::reset();
         FileBrowserFake::$fs['thing.zip'] = ['type' => 'f', 'size' => 100];

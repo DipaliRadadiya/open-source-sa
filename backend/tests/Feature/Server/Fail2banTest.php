@@ -429,7 +429,7 @@ it('refuses any address inside the loopback range, not just the literal one', fu
         ->assertJsonPath('message', __('errors/fail2ban.ip_own_address'));
 });
 
-it('refuses to ban the server\'s own public and interface addresses (bug #27)', function (string $ip) {
+it('refuses to ban the server\'s own public and interface addresses', function (string $ip) {
     // Behind NAT the public address is on no interface, so the two come from
     // different places; banning either on `recidive` cut the panel off.
     $addresses = Mockery::mock(ServerAddresses::class);
@@ -836,7 +836,7 @@ it('does nothing on a server that has never installed fail2ban', function () {
     expect(File::exists("{$this->jailD}/jail.local"))->toBeFalse();
 });
 
-it('restarts only the jails that watch the SSH port, so their rule moves with it (bug #31)', function () {
+it('restarts only the jails that watch the SSH port, so their rule moves with it', function () {
     fakeFail2ban(bans: ['sshd' => [], 'recidive' => []]);
 
     app(Fail2banManager::class)->restartSshJails();
@@ -894,7 +894,7 @@ it('bans the address in the form fail2ban uses', function () {
     expect(collect($runs)->pluck('command')->contains(fn ($c) => in_array('banip', $c, true) && in_array('192.0.2.44', $c, true)))->toBeTrue();
 });
 
-it('keeps the per-site jails\' bans out of recidive (FB-K)', function () {
+it('keeps the per-site jails\' bans out of recidive', function () {
     // recidive bans on every port for a week after three bans in a day from any jail. A site jail
     // bans for one site, so counting it would let three of them take the whole server away.
     fakeFail2ban(bans: []);

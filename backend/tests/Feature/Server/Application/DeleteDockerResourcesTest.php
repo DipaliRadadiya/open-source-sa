@@ -286,7 +286,7 @@ it('says so when Docker could not be asked at all', function () {
         ->and($ran)->toBe([]);
 });
 
-describe('the network the site was created on, after it moved (BUG-5)', function () {
+describe('the network the site was created on, after it moved', function () {
     // A site moved off its own network leaves `sv-app-<id>_default` behind on delete.
 
     function movedSite(): Application

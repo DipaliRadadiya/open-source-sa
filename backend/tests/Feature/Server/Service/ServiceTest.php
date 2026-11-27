@@ -529,7 +529,7 @@ it('leaves the clusters alone for start, stop and restart, which reach them alre
         && str_starts_with((string) ($p->command[2] ?? ''), 'postgresql@'));
 });
 
-it('reports PostgreSQL\'s memory from its clusters, not the empty meta unit (bug #13)', function () {
+it('reports PostgreSQL\'s memory from its clusters, not the empty meta unit', function () {
     // `postgresql` is a oneshot wrapper: systemd tracks no memory for it, so the row would read "—"
     // forever while the cluster uses memory.
     $memory = [

@@ -384,7 +384,7 @@ it('puts the previous jail back and reloads again when the reload fails', functi
         ->and($this->application->fresh()->fail2ban_jail_content)->toBeNull();
 });
 
-it('gives fail2ban\'s own reason when it refuses the jail on reload (bug #95)', function () {
+it('gives fail2ban\'s own reason when it refuses the jail on reload', function () {
     $this->application = createFail2banApp('Shop', 'shop.test');
     $runs = new ArrayObject;
     // `-t` passes this filter, but the reload refuses it.
@@ -1067,7 +1067,7 @@ it('keeps the database and restores owned v7 files when disable reload fails', f
         ->and($this->application->fresh()->fail2ban_jail_name)->toBe('shop');
 });
 
-describe('the user may change a jail without a copy (2026-10-29)', function () {
+describe('the user may change a jail without a copy', function () {
     /** The site's jail and filter on disk, as the fake reads them. */
     function existingShopJail(): string
     {

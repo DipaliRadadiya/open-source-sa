@@ -418,7 +418,7 @@ it('has every status and error reason translated in all eight locales', function
     }
 });
 
-it('points the registry help at Integrations → Docker Registries in every locale (RC-29)', function () {
+it('points the registry help at Integrations → Docker Registries in every locale', function () {
     // The help names the sidebar's Integrations section, whose own labels are the source of truth,
     // so it cannot name a menu the sidebar spells differently.
     foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {

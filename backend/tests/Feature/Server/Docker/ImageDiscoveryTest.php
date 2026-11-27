@@ -279,7 +279,7 @@ it('prefers a web port among several and falls back to the lowest plain one', fu
         ->and($odd->json('suggested_port'))->toBe(7001);
 });
 
-it('never suggests a TLS port, even when it is the only one declared (DS-09)', function () {
+it('never suggests a TLS port, even when it is the only one declared', function () {
     // Proxied over plain HTTP, 443 answers 400 — which the readiness check
     // counts as answering — and every visitor gets that 400.
     imgRegistry([
@@ -437,7 +437,7 @@ it('warns about a large download', function () {
         ->assertOk()->assertJsonPath('warnings', [__('docker.image.warning_large', ['size' => '31 MB'])]);
 });
 
-it('gives every warning a code beside its sentence, in the same order (RC-32)', function () {
+it('gives every warning a code beside its sentence, in the same order', function () {
     // All five that can occur together: a documented required setting (postgres), an empty one
     // (`EXTRA=`), an arm64-only build, a download over the threshold, and no declared port.
     config(['server.docker.images.large_bytes' => 1]);
@@ -464,7 +464,7 @@ it('codes the several-ports warning, and keeps the sentences unchanged', functio
         ->and($response->json('warnings'))->toBe([__('docker.image.warning_several_ports', ['ports' => '80, 9000', 'port' => 80])]);
 });
 
-it('sends the same codes whatever language the sentences are in (RC-32)', function () {
+it('sends the same codes whatever language the sentences are in', function () {
     config(['server.docker.images.large_bytes' => 1]);
     imgRegistry(['docker.io/acme/big:1' => imgConfig(['ExposedPorts' => ['80/tcp' => []]])]);
 
@@ -687,7 +687,7 @@ it('recommends a dotted release over a bare number that only outranks it numeric
         ->assertOk()->assertJsonPath('recommended', '12');
 });
 
-it('recommends a dated release pinned to its commit over latest (DS-14)', function () {
+it('recommends a dated release pinned to its commit over latest', function () {
     // The real corentinth/it-tools list: no plain version, only date-commit releases. `latest`
     // must not be recommended while numbered versions are listed.
     Http::fake(['hub.docker.com/v2/repositories/corentinth/it-tools/tags*' => Http::response(['results' => array_map(
@@ -743,7 +743,7 @@ function imgTagSources(array $ghcr, array $hub = []): void
     });
 }
 
-it('does not recommend a leftover date tag over the current version (DS-09)', function () {
+it('does not recommend a leftover date tag over the current version', function () {
     // tags/list carries no dates: a date-shaped tag beside real versions is a leftover, though
     // numerically it wins.
     imgTagSources([
@@ -771,7 +771,7 @@ it('does not recommend a leftover date tag over the current version (DS-09)', fu
         ->assertOk()->assertJsonPath('recommended', '2026.10.1');
 });
 
-it('prefers a tag that says it is stable over the alphabetically first one, and otherwise asks (DS-09)', function () {
+it('prefers a tag that says it is stable over the alphabetically first one, and otherwise asks', function () {
     imgTagSources(['acme/branches' => ['alpha', 'main', 'stable'], 'acme/guess' => ['beta', 'prod']]);
 
     $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=ghcr.io/acme/branches')
@@ -782,7 +782,7 @@ it('prefers a tag that says it is stable over the alphabetically first one, and 
         ->assertOk()->assertJsonPath('recommended', null);
 });
 
-it('always lists the version it recommends (DS-09)', function () {
+it('always lists the version it recommends', function () {
     // Thirty bare-number aliases rank above the one dotted release, which sits past the 20-tag
     // page: the recommendation must still be in the list.
     Http::fake(['hub.docker.com/v2/repositories/acme/aliases/tags*' => Http::response(['results' => array_map(
@@ -797,7 +797,7 @@ it('always lists the version it recommends (DS-09)', function () {
         ->and(array_column($response->json('tags'), 'name'))->toContain('4.104.1');
 });
 
-it('reads only whole words as pre-release markers (DS-09)', function () {
+it('reads only whole words as pre-release markers', function () {
     Http::fake(['hub.docker.com/v2/repositories/acme/variants/tags*' => Http::response(['results' => array_map(
         fn (string $name): array => ['name' => $name, 'last_updated' => '2026-10-02T00:00:00Z', 'tag_status' => 'active'],
         ['3.2.1-nextcloud', '3.2.1-devuan', '3.2.1-rc1', '3.2.1-beta', '3.2.1-devel', '3.2.1'],
@@ -813,7 +813,7 @@ it('reads only whole words as pre-release markers (DS-09)', function () {
         ->and($tags['3.2.1-devel'])->toBeFalse();
 });
 
-it('still reads -prerelease and -testing as pre-releases (DS-12)', function () {
+it('still reads -prerelease and -testing as pre-releases', function () {
     // Anchored as whole words, `pre` and `test` stopped at the next letter.
     Http::fake(['hub.docker.com/v2/repositories/acme/prerelease/tags*' => Http::response(['results' => array_map(
         fn (string $name): array => ['name' => $name, 'last_updated' => '2026-10-02T00:00:00Z', 'tag_status' => 'active'],
@@ -843,7 +843,7 @@ function imgHubTags(array $names): array
     );
 }
 
-it('never recommends a pre-release, and flags it in the list (RC-33)', function () {
+it('never recommends a pre-release, and flags it in the list', function () {
     // The shape of Hub's openjdk list: an early-access build is the newest number but not stable.
     imgTagSources([], ['library/openjdk' => imgHubTags([
         '28-ea-oraclelinux9', '28-ea-jdk-slim', '27-jdk-oraclelinux9', '25-jdk-oraclelinux9', '21-jdk-oraclelinux9',
@@ -930,7 +930,7 @@ it('skips a newer pre-release for the newest stable tag, and leaves the order of
         ->assertOk()->assertJsonPath('recommended', 'weekly');
 });
 
-it('keeps no state between images on one ImageTags (DS-12)', function () {
+it('keeps no state between images on one ImageTags', function () {
     // Demoted date tags must not live on the instance shared by rank() and recommended(): it
     // breaks as soon as the class is a singleton or recommended() gets a second caller.
     $state = array_filter(
@@ -1057,7 +1057,7 @@ it('never lets a matching publisher with almost no pulls outrank the image peopl
     'busy squatter' => ['memos', [['memosapp/memos', 1000000], ['neosmemo/memos', 11672941]], 'neosmemo/memos'],
 ]);
 
-it('weights a matching publisher on a ramp, not a step (DS-12)', function (array $results, string $first) {
+it('weights a matching publisher on a ramp, not a step', function (array $results, string $first) {
     // With a hard 10k floor one pull decided the order: the project's own image at 9,999 lost to
     // an unrelated 10,001.
     Http::fake(['hub.docker.com/v2/search/repositories/*' => Http::response(['results' => array_map(
@@ -1074,7 +1074,7 @@ it('weights a matching publisher on a ramp, not a step (DS-12)', function (array
     'no pulls to speak of' => [[['newapp/newapp', 900], ['someone/newapp', 901]], 'someone/newapp'],
 ]);
 
-it('weights the project, not every repository its publisher owns (DS-12)', function () {
+it('weights the project, not every repository its publisher owns', function () {
     // Hub's real pull counts. Matched as a substring, the renderer plugin would outrank promtail
     // on a "grafana" search.
     Http::fake(['hub.docker.com/v2/search/repositories/*' => Http::response(['results' => [

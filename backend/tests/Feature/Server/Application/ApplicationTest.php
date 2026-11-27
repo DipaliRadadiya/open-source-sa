@@ -184,7 +184,7 @@ it('creates a git application from a public url with no account', function () {
     $response->assertJsonPath('application.repository_url', 'https://github.com/laravel/laravel.git');
 });
 
-describe('a git repository that is not there (bug #101)', function () {
+describe('a git repository that is not there', function () {
     // A wrong URL must create nothing, instead of a site that says "Running" and fails to deploy.
     function createFromPublicUrl(string $branch = 'main'): TestResponse
     {
@@ -668,7 +668,7 @@ it('refuses an application name that would be two systemd directives', function 
         ->assertJsonValidationErrors('name');
 });
 
-it('refuses a hostname with an empty or hyphen-edged label (bug #9)', function (string $domain) {
+it('refuses a hostname with an empty or hyphen-edged label', function (string $domain) {
     $this->withHeaders(appHeaders())->postJson('/api/applications', [
         'site_type' => 'static',
         'name' => 'Bad host',
@@ -680,7 +680,7 @@ it('refuses a hostname with an empty or hyphen-edged label (bug #9)', function (
     expect(Application::count())->toBe(0);
 })->with(['-bad-.example.com', 'qa..example.com']);
 
-it('accepts a punycode top-level domain (bug #11)', function () {
+it('accepts a punycode top-level domain', function () {
     $response = $this->withHeaders(appHeaders())->postJson('/api/applications', [
         'site_type' => 'static',
         'name' => 'Punycode',
@@ -691,7 +691,7 @@ it('accepts a punycode top-level domain (bug #11)', function () {
     expect($response->json('errors.domain'))->toBeNull();
 });
 
-it('answers an unknown site type with a database engine as a 422, not a 500 (bug #12)', function () {
+it('answers an unknown site type with a database engine as a 422, not a 500', function () {
     $this->withHeaders(appHeaders())->postJson('/api/applications', [
         'site_type' => 'not-a-type',
         'name' => 'Unknown',
@@ -701,7 +701,7 @@ it('answers an unknown site type with a database engine as a 422, not a 500 (bug
     ])->assertStatus(422)->assertJsonValidationErrors('site_type');
 });
 
-it('refuses a Joomla table prefix that does not start with a letter (bug #13)', function () {
+it('refuses a Joomla table prefix that does not start with a letter', function () {
     // Joomla's own installer refuses it, after the site has been created.
     $this->withHeaders(appHeaders())->postJson('/api/applications', [
         'site_type' => 'joomla',
@@ -712,7 +712,7 @@ it('refuses a Joomla table prefix that does not start with a letter (bug #13)', 
     ])->assertStatus(422)->assertJsonValidationErrors('table_prefix');
 });
 
-it('names the password rule an admin password misses (FS-B6)', function () {
+it('names the password rule an admin password misses', function () {
     capableServer();
 
     // n8n: lowercase, uppercase, number — no symbol rule.

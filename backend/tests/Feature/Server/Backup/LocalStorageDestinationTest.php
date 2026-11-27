@@ -460,7 +460,7 @@ it('is never touched by the disk cleaner', function () {
     }
 });
 
-describe('the space check before every backup (2026-10-29)', function () {
+describe('the space check before every backup', function () {
 
     beforeEach(function () {
         $this->home = "{$this->base}/home";

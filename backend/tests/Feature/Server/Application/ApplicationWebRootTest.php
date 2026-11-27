@@ -129,7 +129,7 @@ it('switches to an existing folder, re-renders the vhost and reloads', function 
     expect(webRootRan(fn ($args) => ($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t'))->toBeTrue();
 });
 
-it('refuses a web root reached through a symlink, at any depth, and touches nothing (WR-01)', function (string $webRoot, string $link) {
+it('refuses a web root reached through a symlink, at any depth, and touches nothing', function (string $webRoot, string $link) {
     // public_html/pub -> /opt/target, then web root "pub", would make root chown /opt/target to
     // the site user.
     fakeWebRootServer(linkAt: $link);

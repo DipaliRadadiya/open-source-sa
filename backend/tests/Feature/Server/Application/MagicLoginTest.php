@@ -248,7 +248,7 @@ it('stores only the hash of the token on the site, never the token', function ()
     });
 });
 
-it('mints in one WP-CLI run, not three (FS-C16)', function () {
+it('mints in one WP-CLI run, not three', function () {
     fakeWpCli(admins());
 
     $this->actingAs($this->admin)
