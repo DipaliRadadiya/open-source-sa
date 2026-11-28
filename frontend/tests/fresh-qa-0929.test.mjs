@@ -73,7 +73,9 @@ test("B1: git package-manager templates survive the site-types schema", async ()
 test("B1: build_command is multi-line and follows the package manager until edited", () => {
   const src = read("components/applications/create-application-form.jsx");
   assert.match(src, /config\.type === "textarea" \|\| config\.name === "build_command"/);
-  assert.match(src, /if \(current && !Object\.values\(templates\)\.includes\(current\)\) return;/);
+  // The "until edited" rule lives in lib/applications/build-command.js; tests/build-command.test.mjs runs it.
+  assert.match(src, /nextBuildCommand\(\{/);
+  assert.match(read("lib/applications/build-command.js"), /const untouched = !current \|\| Object\.values\(templates\)\.includes\(current\);\s*if \(!untouched\) return undefined;/);
 });
 
 test("B1: the fix-it links only follow blocked cards that are on screen", () => {

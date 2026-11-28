@@ -41,6 +41,7 @@ import {
   getRepositories,
 } from "@/lib/api/applications";
 import { generatePassword } from "@/lib/applications/generate-password";
+import { nextBuildCommand } from "@/lib/applications/build-command";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Badge } from "@/components/ui/badge";
@@ -1210,21 +1211,22 @@ export function CreateApplicationForm({
   }, [form, name, selected]);
 
   useEffect(() => {
-    if (!packageManager) return;
     const field = selected?.fields?.find(
       (item) => item.name === "package_manager",
     );
-    const templates = field?.build_templates ?? {};
-    const current = form.getValues("build_command") ?? "";
-    if (current && !Object.values(templates).includes(current)) return;
-    const template = templates[packageManager];
-    if (template) {
-      form.setValue("build_command", template, {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-    }
-  }, [form, packageManager, selected]);
+    if (!field) return;
+    const next = nextBuildCommand({
+      renderingType,
+      packageManager,
+      templates: field.build_templates ?? {},
+      current: form.getValues("build_command") ?? "",
+    });
+    if (next === undefined) return;
+    form.setValue("build_command", next, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [form, packageManager, renderingType, selected]);
 
   useEffect(() => {
     let cancelled = false;
