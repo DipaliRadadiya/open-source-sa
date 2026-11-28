@@ -575,6 +575,7 @@ describe('node version constraints', function () {
 
     it('allows a Node the current release does not exclude', function () {
         capableServer();
+        config(['server.installers.n8n.node_max' => null]);
 
         // n8n 2.x declares no upper bound, so a hand-written `max` would refuse a Node it accepts.
         AppPackageRelease::create([
@@ -592,6 +593,27 @@ describe('node version constraints', function () {
             'admin_password' => 'Flows-Pass-2026',
             'node_version' => '25',
         ])->assertCreated();
+    });
+
+    it('refuses n8n on a Node newer than its configured ceiling', function () {
+        capableServer();
+
+        // Allowed by n8n itself, but its Kafka client would compile from source past the timeout.
+        AppPackageRelease::create([
+            'package' => 'n8n',
+            'version' => '2.49.8',
+            'node_range' => '>=24.0.0',
+        ]);
+
+        $this->withHeaders(appHeaders())->postJson('/api/applications', [
+            'site_type' => 'n8n',
+            'name' => 'Flows',
+            'domain' => 'flows.example.com',
+            'system_user_id' => test()->su->id,
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'Flows-Pass-2026',
+            'node_version' => '26',
+        ])->assertUnprocessable()->assertJsonValidationErrors('node_version');
     });
 
     it('refuses a Node its installed n8n cannot run on, even though 1.x could', function () {
@@ -646,9 +668,10 @@ describe('node version constraints', function () {
 
         $types = collect($response->json('site_types'))->keyBy('name');
 
-        // No release is stored here, so the site type's fallback answers (n8n: floor 24, no ceiling).
+        // No release is stored here, so the site type's fallback answers (n8n: floor 24, capped at
+        // the configured ceiling).
         expect($types['nodebb']['node_version_range'])->toBe(['min' => '22', 'max' => null])
-            ->and($types['n8n']['node_version_range'])->toBe(['min' => '24', 'max' => null])
+            ->and($types['n8n']['node_version_range'])->toBe(['min' => '24', 'max' => '24'])
             ->and($types['wordpress']['node_version_range'])->toBeNull();
     });
 });

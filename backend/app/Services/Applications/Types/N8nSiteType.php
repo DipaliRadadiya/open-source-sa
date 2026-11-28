@@ -65,11 +65,26 @@ class N8nSiteType extends AbstractSiteType
      * Read from the package, since the installer resolves `latest` and a hard-coded range goes
      * stale. The literal is only the fallback (no egress or unrefreshed catalog), kept narrow on
      * purpose: too strict costs a dropdown entry, too loose gives a site that will not boot.
+     *
+     * Capped at `server.installers.n8n.node_max` on top: n8n's own range has no ceiling, but a
+     * native dependency ships prebuilt binaries only up to that major. On a newer Node npm
+     * compiles it from source, which outlasts the install timeout. Ignored once n8n's floor is
+     * above it: an empty range would offer no Node at all, and a slow install beats none.
      */
     public function supportedNodeRange(): ?array
     {
-        return app(AppPackageCatalog::class)->nodeRange($this->npmPackage())
+        $range = app(AppPackageCatalog::class)->nodeRange($this->npmPackage())
             ?? ['min' => '24', 'max' => null];
+
+        $ceiling = config('server.installers.n8n.node_max');
+
+        if (filled($ceiling)
+            && (int) $ceiling >= (int) ($range['min'] ?? 0)
+            && ($range['max'] === null || (int) $ceiling < (int) $range['max'])) {
+            $range['max'] = (string) $ceiling;
+        }
+
+        return $range;
     }
 
     /**

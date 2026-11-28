@@ -62,7 +62,7 @@ it('falls back to the range the site type declares when nothing is stored', func
     $range = app(SiteTypeManager::class)->find('n8n')->supportedNodeRange();
 
     // A server with no egress still gets a working form.
-    expect($range)->toBe(['min' => '24', 'max' => null]);
+    expect($range)->toBe(['min' => '24', 'max' => '24']);
 });
 
 it('lets the stored range override the declared one', function () {
@@ -71,6 +71,38 @@ it('lets the stored range override the declared one', function () {
 
     expect(app(SiteTypeManager::class)->find('n8n')->supportedNodeRange())
         ->toBe(['min' => '26.0.0', 'max' => null]);
+});
+
+describe('n8n Node ceiling', function () {
+    $range = fn () => app(SiteTypeManager::class)->find('n8n')->supportedNodeRange();
+
+    it('caps an open-ended range at the configured major', function () use ($range) {
+        // n8n allows any Node from 24 up, but its Kafka client has no prebuilt binary past 24.
+        AppPackageRelease::create(['package' => 'n8n', 'version' => '2.49.8', 'node_range' => '>=24.0.0']);
+
+        expect($range())->toBe(['min' => '24.0.0', 'max' => '24']);
+    });
+
+    it('keeps the package ceiling when it is lower', function () use ($range) {
+        config(['server.installers.n8n.node_max' => '26']);
+        AppPackageRelease::create(['package' => 'n8n', 'version' => '2.0.0', 'node_range' => '>=20.19 <= 24.x']);
+
+        expect($range())->toBe(['min' => '20.19', 'max' => '24']);
+    });
+
+    it('lowers the package ceiling when the configured one is lower', function () use ($range) {
+        config(['server.installers.n8n.node_max' => '22']);
+        AppPackageRelease::create(['package' => 'n8n', 'version' => '2.0.0', 'node_range' => '>=20.19 <= 24.x']);
+
+        expect($range())->toBe(['min' => '20.19', 'max' => '22']);
+    });
+
+    it('has no ceiling when none is configured', function () use ($range) {
+        config(['server.installers.n8n.node_max' => null]);
+        AppPackageRelease::create(['package' => 'n8n', 'version' => '2.49.8', 'node_range' => '>=24.0.0']);
+
+        expect($range())->toBe(['min' => '24.0.0', 'max' => null]);
+    });
 });
 
 describe('parsing engines.node', function () {
