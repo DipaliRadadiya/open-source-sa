@@ -50,6 +50,12 @@ beforeEach(function () {
         // answers nothing turns every provision into a failed lookup.
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
+        // Installed Node versions, for the tests that create a site through the API: with none
+        // installed, a Node app with no version chosen is refused.
+        if (test()->fnmList !== null && str_ends_with((string) ($args[0] ?? ''), 'fnm')) {
+            return Process::result(output: test()->fnmList);
+        }
+
         if (($args[0] ?? '') === 'git' && ($args[1] ?? '') === 'ls-remote') {
             return Process::result(output: str_repeat('a', 40)."\trefs/tags/2.5.3");
         }
@@ -70,6 +76,7 @@ beforeEach(function () {
     });
 
     $this->n8nOwner = false;
+    $this->fnmList = null;
     Sleep::fake();
 });
 
@@ -160,6 +167,8 @@ it('never asks for a start command — the installer knows it', function () {
 it('allocates a port even though nothing asked for one', function () {
     // A one-click app never sends a start command (the installer writes it later), so keying
     // port allocation on one left these with no port and a proxy pointed at nothing.
+    $this->fnmList = '* v24.11.1 default';
+
     $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
         ->postJson('/api/applications', [
             'system_user_id' => $this->su->id,
@@ -1172,6 +1181,8 @@ it('sends the Kuma setup only after Kuma has attached its handlers', function ()
 });
 
 it('asks for the administrator when creating n8n and Uptime Kuma', function (string $type, array $admin, string $weakField) {
+    $this->fnmList = '* v24.11.1 default';
+
     $post = fn (array $extra) => $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
         ->postJson('/api/applications', array_merge([
             'system_user_id' => $this->su->id,

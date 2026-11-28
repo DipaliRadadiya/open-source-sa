@@ -254,6 +254,7 @@ return [
     'docker_network_taken' => 'Já existe uma rede chamada \':name\' neste servidor. Escolha-a na lista acima em vez de criar uma segunda.',
     'docker_volume_taken' => 'Já existe um volume chamado \':name\' neste servidor. Monte o existente a partir do cartão Contentor da aplicação em vez de criar um segundo.',
     'node_version_unsupported' => 'A aplicação :type funciona com Node :range. Escolha uma versão dentro desse intervalo — fora dele a aplicação recusa-se a arrancar e não serve nada.',
+    'node_version_none_installed' => 'A aplicação :type precisa do Node :range e nenhuma versão compatível está instalada neste servidor. Instale-a primeiro na página do Node.js e depois crie a aplicação.',
     'php_version_unsupported' => 'A aplicação :type funciona com PHP :range. Escolha uma versão dentro desse intervalo — fora dele a instalação falha a meio, dentro do código da própria aplicação, e deixa uma aplicação meio instalada para limpar.',
     'php_version_default_unsupported' => 'A aplicação :type funciona com PHP :range. Deixar este campo vazio usa a predefinição do servidor (:default), que está fora desse intervalo — escolha antes uma versão dentro do intervalo.',
     'web_root_fixed' => 'O :type é servido a partir de :web_root e instala-se em torno desse caminho, pelo que a raiz web não pode ser alterada aqui. Qualquer outro valor deixa a aplicação inacessível e publica o seu código-fonte.',

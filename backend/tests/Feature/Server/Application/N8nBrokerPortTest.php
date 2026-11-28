@@ -55,7 +55,7 @@ function createN8n(string $name): array
         'system_user_id' => test()->su->id,
         'admin_email' => 'owner@example.com',
         'admin_password' => 'Flows-Pass-2026',
-        'node_version' => '25',
+        'node_version' => '24.11.1',
     ])->assertCreated()->json('application');
 }
 

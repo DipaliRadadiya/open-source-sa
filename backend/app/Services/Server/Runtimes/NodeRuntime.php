@@ -6,6 +6,7 @@ use App\Contracts\Runtime;
 use App\Exceptions\Server\Runtime\NodeRemovalException;
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Exceptions\Server\Setting\SettingOperationException;
+use App\Rules\SupportedNodeVersion;
 use App\Services\Runtime\InstallFailureClassifier;
 use App\Services\Runtime\LifecycleCatalog;
 use App\Services\Runtime\NpmCatalog;
@@ -263,6 +264,29 @@ class NodeRuntime implements Runtime
     public function installed(string $version): bool
     {
         return collect($this->versions())->contains('version', $version);
+    }
+
+    /**
+     * The installed version a site with no Node chosen runs on: the default when it is inside the
+     * range, else the newest installed one that is. Null when none is.
+     *
+     * One answer for the form, which refuses the null case, and for the create, which records it.
+     */
+    public function bestFit(?string $min, ?string $max): ?string
+    {
+        $fits = fn (?string $version): bool => $version !== null
+            && SupportedNodeVersion::admits($min, $max, $version);
+
+        $default = $this->default();
+
+        if ($fits($default)) {
+            return $default;
+        }
+
+        return collect($this->versions())
+            ->pluck('version')
+            ->sort(fn (string $a, string $b) => version_compare($b, $a))
+            ->first($fits);
     }
 
     /**
