@@ -6,6 +6,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
 
 /**
@@ -102,4 +103,41 @@ it('does not refuse anything when no versions could be detected', function () {
     fakeFnm([], fnmPresent: false);
 
     createNodeVersionSite(['node_version' => '22.9.0'])->assertSuccessful();
+});
+
+describe('no Node chosen', function () {
+    $n8n = fn (array $overrides = []) => createNodeVersionSite(array_merge([
+        'name' => 'Flows',
+        'domain' => 'flows.example.com',
+        'site_type' => 'n8n',
+        'admin_email' => 'owner@example.com',
+        'admin_password' => 'Flows-Pass-2026',
+    ], $overrides));
+
+    it('refuses the site when no installed Node fits its range', function () use ($n8n) {
+        Queue::fake();
+        // Only a Node above n8n's ceiling: left blank it would install on that one and fail.
+        fakeFnm(['26.13.1']);
+
+        $n8n()->assertUnprocessable()
+            ->assertJsonValidationErrors(['node_version' => 'needs Node 24, and none is installed']);
+
+        expect(Application::query()->count())->toBe(0);
+    });
+
+    it('pins the installed Node that fits when the default does not', function () use ($n8n) {
+        Queue::fake();
+        fakeFnm(['26.13.1', '24.11.1']);
+
+        $n8n()->assertCreated();
+
+        expect(Application::query()->sole()->node_version)->toBe('24.11.1');
+    });
+
+    it('names a single-major range as that major in the refusal of a chosen version', function () use ($n8n) {
+        fakeFnm(['26.13.1', '24.11.1']);
+
+        $n8n(['node_version' => '26.13.1'])->assertUnprocessable()
+            ->assertJsonValidationErrors(['node_version' => 'runs on Node 24. Choose']);
+    });
 });

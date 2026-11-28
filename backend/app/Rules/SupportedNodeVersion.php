@@ -61,19 +61,23 @@ class SupportedNodeVersion implements ValidationRule
     {
         return __('validation.node_version_unsupported', [
             'type' => $this->typeTitle,
-            'range' => $this->range(),
+            'range' => self::describe($this->min, $this->max),
         ]);
     }
 
     /**
      * The range as the project states it, so the user knows what to pick instead.
+     *
+     * A floor at the start of the ceiling's major is that one major: `24`, not `24.0.0 – 24`.
      */
-    private function range(): string
+    public static function describe(?string $min, ?string $max): string
     {
         return match (true) {
-            $this->min !== null && $this->max !== null => "{$this->min} – {$this->max}",
-            $this->min !== null => "{$this->min}+",
-            default => "≤ {$this->max}",
+            $min !== null && $max !== null && self::major($min) === self::major($max)
+                && preg_match('/^\d+(\.0)*$/', $min) === 1 => (string) self::major($max),
+            $min !== null && $max !== null => "{$min} – {$max}",
+            $min !== null => "{$min}+",
+            default => "≤ {$max}",
         };
     }
 }

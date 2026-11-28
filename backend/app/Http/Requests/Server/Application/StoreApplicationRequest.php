@@ -392,6 +392,26 @@ class StoreApplicationRequest extends FormRequest
                 }
             },
 
+            // No Node chosen: the site gets the installed one that fits ({@see NodeRuntime::bestFit()}).
+            // With none installed it would install on whatever `node` is on PATH, outside the range
+            // the field rule enforces for a chosen version.
+            function (Validator $validator) {
+                $type = app(SiteTypeManager::class)->find((string) $this->input('site_type'));
+
+                if ($type === null || filled($this->input('node_version')) || $validator->errors()->isNotEmpty()
+                    || ServingProfile::resolve($type, $this->all()) !== 'node'
+                    || ($range = $type->supportedNodeRange()) === null) {
+                    return;
+                }
+
+                if (app(NodeRuntime::class)->bestFit($range['min'] ?? null, $range['max'] ?? null) === null) {
+                    $validator->errors()->add('node_version', __('validation.node_version_none_installed', [
+                        'type' => app(SiteTypeText::class)->title($type->name()),
+                        'range' => SupportedNodeVersion::describe($range['min'] ?? null, $range['max'] ?? null),
+                    ]));
+                }
+            },
+
             // A pasted compose file, checked here rather than at deploy time, so a refusal arrives
             // on the field before any row or vhost exists. Still checked in the supervisor too:
             // the form is not the only way a row changes.

@@ -252,6 +252,7 @@ return [
     'docker_network_taken' => 'Ein Netzwerk namens \':name\' existiert auf diesem Server bereits. Wählen Sie es oben aus der Liste, statt ein zweites zu erstellen.',
     'docker_volume_taken' => 'Ein Volume namens \':name\' existiert auf diesem Server bereits. Binden Sie das vorhandene über die Container-Karte der Website ein, statt ein zweites zu erstellen.',
     'node_version_unsupported' => 'Die Anwendung :type läuft mit Node :range. Wählen Sie eine Version in diesem Bereich — außerhalb davon startet die Anwendung nicht und liefert nichts aus.',
+    'node_version_none_installed' => 'Die Anwendung :type benötigt Node :range, und auf diesem Server ist keine solche Version installiert. Installiere sie zuerst auf der Node.js-Seite und lege dann die Anwendung an.',
     'php_version_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wählen Sie eine Version in diesem Bereich — außerhalb davon bricht die Installation mitten im Code der Anwendung ab und hinterlässt eine Anwendung, die aufgeräumt werden muss.',
     'php_version_default_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wird dieses Feld leer gelassen, gilt die Servervorgabe (:default) — die außerhalb dieses Bereichs liegt. Wählen Sie stattdessen eine Version im Bereich.',
     'web_root_fixed' => ':type wird aus :web_root ausgeliefert und installiert sich um diesen Pfad herum, daher lässt sich der Web-Root hier nicht ändern. Jeder andere Wert macht die Seite unerreichbar und veröffentlicht ihren Quellcode.',

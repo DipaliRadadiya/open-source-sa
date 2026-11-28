@@ -287,6 +287,7 @@ return [
     'docker_network_taken' => 'A network called \':name\' already exists on this server. Pick it from the list above instead of creating a second one.',
     'docker_volume_taken' => 'A volume called \':name\' already exists on this server. Mount the existing one from the application\'s Container card instead of creating a second one.',
     'node_version_unsupported' => 'The :type application runs on Node :range. Choose a version in that range — outside it the application refuses to start and serves nothing.',
+    'node_version_none_installed' => 'The :type application needs Node :range, and none is installed on this server. Install it on the Node.js page first, then create the application.',
     'php_version_unsupported' => 'The :type application runs on PHP :range. Choose a version in that range — outside it the install fails part-way through, inside the application\'s own code, leaving a half-installed application to clean up.',
     'php_version_default_unsupported' => 'The :type application runs on PHP :range. Leaving this empty uses the server default (:default), which is outside that range — choose a version in the range instead.',
     'web_root_fixed' => ':type serves from :web_root and installs itself around that path, so the web root cannot be changed here. Any other value leaves the application unreachable and publishes its source.',

@@ -12,7 +12,6 @@ use App\Models\ApplicationDomain;
 use App\Models\ApplicationRun;
 use App\Models\SystemUser;
 use App\Rules\ContainerMountPath;
-use App\Rules\SupportedNodeVersion;
 use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
@@ -403,7 +402,7 @@ class CreateApplication
      * (see {@see NodeRuntime::setDefault()}).
      *
      * The server default when it fits the type's range, else the newest installed version
-     * that does. Null when nothing fits; the installer reports that case.
+     * that does ({@see NodeRuntime::bestFit()}). Null when nothing fits; the form refuses that.
      *
      * @param  array<string, mixed>  $data
      */
@@ -414,19 +413,8 @@ class CreateApplication
         }
 
         $range = $type?->supportedNodeRange() ?? [];
-        $fits = fn (?string $version): bool => $version !== null
-            && SupportedNodeVersion::admits($range['min'] ?? null, $range['max'] ?? null, $version);
 
-        $default = $this->node->default();
-
-        if ($fits($default)) {
-            return $default;
-        }
-
-        return collect($this->node->versions())
-            ->pluck('version')
-            ->sort(fn (string $a, string $b) => version_compare($b, $a))
-            ->first($fits);
+        return $this->node->bestFit($range['min'] ?? null, $range['max'] ?? null);
     }
 
     /**
