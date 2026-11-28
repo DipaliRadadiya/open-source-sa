@@ -47,7 +47,10 @@ UPDATE_STATE_DIR="${UPDATE_STATE_DIR:-/var/lib/${PANEL_SLUG}-update}"
 INSTALL_STATE_DIR="${INSTALL_STATE_DIR:-/var/lib/${PANEL_SLUG}-install}"
 LOGIN_SCRIPT="/etc/profile.d/${PANEL_SLUG}-login.sh"
 PHP_VERSION="${PHP_VERSION:-8.4}"
-NODE_VERSION="${NODE_VERSION:-24}"
+# `lts`: the newest LTS major on the day of the install (resolve_node_version). A number pins a major.
+NODE_VERSION="${NODE_VERSION:-lts}"
+# Used when nodejs.org cannot be asked; the newest major the panel's frontend is known to build on.
+NODE_VERSION_FALLBACK="24"
 FRONTEND_PORT="${FRONTEND_PORT:-3100}"
 FNM_DIR="/opt/fnm"
 FNM_BIN="/usr/local/bin/fnm"
@@ -1443,6 +1446,8 @@ resolve_stack() {
 
     derive_php_runtime
 
+    resolve_node_version
+
     # PHP and Node are installed whatever the stack: the panel's API is PHP, its UI is Next.js.
     ok "${STACK} — ${WEB_SERVER}, PHP ${PHP_VERSION}, Node ${NODE_VERSION}"
 }
@@ -2578,6 +2583,28 @@ install_fnm_binary() {
 #
 # fnm, not apt or nodesource: the panel's Node feature manages versions with fnm and treats any
 # other Node as an untouchable system binary.
+
+# NODE_VERSION=lts becomes the newest LTS major nodejs.org lists (index.json is newest first, and
+# an LTS release carries its codename in "lts"). Unreachable or unreadable: the fallback, so the
+# install never stops over this. Anything else must be a plain major.
+resolve_node_version() {
+    if [[ "$NODE_VERSION" == "lts" ]]; then
+        local major
+        major=$(curl -fsS -m 15 https://nodejs.org/dist/index.json 2>/dev/null \
+            | tr '{' '\n' | grep -v '"lts":false' \
+            | grep -m1 -oE '"version":"v[0-9]+' | grep -oE '[0-9]+$') || true
+
+        if [[ "$major" =~ ^[0-9]+$ ]] && (( major >= NODE_VERSION_FALLBACK )); then
+            NODE_VERSION="$major"
+        else
+            warn "could not read the newest Node LTS from nodejs.org; using Node ${NODE_VERSION_FALLBACK}"
+            NODE_VERSION="$NODE_VERSION_FALLBACK"
+        fi
+    fi
+
+    [[ "$NODE_VERSION" =~ ^[0-9]+$ ]] \
+        || die "NODE_VERSION must be a major version like 24, or lts. Got: ${NODE_VERSION}"
+}
 
 install_node() {
     step "Installing Node ${NODE_VERSION} (fnm)"
