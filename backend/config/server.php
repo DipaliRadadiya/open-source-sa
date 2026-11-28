@@ -1385,6 +1385,11 @@ return [
             // drift when n8n's next major raises its floor. Pin the major, or derive the range from
             // `engines.node` at install time, to remove the coupling.
             'version' => env('SERVER_N8N_VERSION', 'latest'),
+            // Newest Node major n8n is offered on. Its Kafka client (@confluentinc/kafka-javascript)
+            // ships prebuilt binaries per Node ABI; on a newer major npm builds librdkafka from
+            // source, which outlasts `timeout` on a small server. Raise once a release lists the
+            // newer ABI: https://github.com/confluentinc/confluent-kafka-javascript/releases
+            'node_max' => env('SERVER_N8N_NODE_MAX', '24'),
             // The largest npm install in the catalog by some distance.
             'timeout' => (int) env('SERVER_N8N_TIMEOUT', 1800),
         ],
